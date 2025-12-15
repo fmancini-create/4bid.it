@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { Resend } from "resend"
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmail } from "@/lib/email-smtp"
 
 export async function GET() {
   try {
@@ -49,8 +47,6 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    console.log("[v0] Attempting to insert project submission...")
-
     const { data, error } = await supabase
       .from("project_submissions")
       .insert([
@@ -78,11 +74,8 @@ export async function POST(request: Request) {
     console.log("[v0] Project submission inserted successfully:", data.id)
 
     try {
-      console.log("[v0] Attempting to send emails...")
-
       // Email 1: Conferma all'utente
-      const userEmailResult = await resend.emails.send({
-        from: "4BID.IT <delivered@resend.dev>", // Using Resend test domain
+      await sendEmail({
         to: email,
         subject: "✅ Proposta progetto ricevuta - 4BID.IT",
         html: `
@@ -166,11 +159,8 @@ export async function POST(request: Request) {
         `,
       })
 
-      console.log("[v0] User confirmation email result:", userEmailResult)
-
       // Email 2: Notifica all'admin
-      const adminEmailResult = await resend.emails.send({
-        from: "4BID.IT <delivered@resend.dev>", // Using Resend test domain
+      await sendEmail({
         to: "f.mancini@4bid.it",
         subject: `🚀 Nuova Proposta Progetto: ${project_title}`,
         html: `
@@ -286,11 +276,9 @@ export async function POST(request: Request) {
         `,
       })
 
-      console.log("[v0] Admin notification email result:", adminEmailResult)
-      console.log("[v0] Both emails sent successfully for project submission:", data.id)
+      console.log("[v0] Both emails sent successfully via SMTP for project submission:", data.id)
     } catch (emailError) {
-      console.error("[v0] Email error details:", emailError)
-      // Don't fail the request if email fails
+      console.error("[v0] SMTP email error:", emailError)
     }
 
     return NextResponse.json(data, { status: 201 })

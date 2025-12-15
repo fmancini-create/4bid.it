@@ -1,22 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { Resend } from "resend"
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmail } from "@/lib/email-smtp"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { name, email, phone, company, inquiryType, interestedProjects, investmentAmount, message } = body
 
-    // Validate required fields
     if (!name || !email || !inquiryType || !message) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     const supabase = await createClient()
 
-    // Insert into database
     const { data, error } = await supabase
       .from("investor_inquiries")
       .insert([
@@ -40,7 +36,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error" }, { status: 500 })
     }
 
-    // Prepare inquiry type label
     const inquiryTypeLabels: Record<string, string> = {
       investment: "Investimento",
       collaboration: "Collaborazione",
@@ -55,10 +50,9 @@ export async function POST(request: NextRequest) {
       autoexel: "AUTOEXEL - Smart Excel",
     }
 
-    // Send confirmation email to user
     try {
-      await resend.emails.send({
-        from: "4BID.IT <noreply@4bid.it>",
+      // Email 1: Conferma all'utente
+      await sendEmail({
         to: email,
         subject: "Richiesta Ricevuta - 4BID.IT",
         html: `
@@ -90,10 +84,6 @@ export async function POST(request: NextRequest) {
                 </ul>
               </div>
               
-              <p style="font-size: 16px; color: #374151; line-height: 1.6;">
-                Nel frattempo, puoi visitare il nostro sito per scoprire di più sui nostri progetti e servizi.
-              </p>
-              
               <div style="text-align: center; margin-top: 30px;">
                 <a href="https://4bid.it" style="background: linear-gradient(135deg, #5B9BD5 0%, #4A8BC2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
                   Visita 4BID.IT
@@ -103,21 +93,17 @@ export async function POST(request: NextRequest) {
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
               
               <p style="font-size: 14px; color: #6b7280; text-align: center; margin: 0;">
-                4BID.IT - Innovazione e Consulenza<br>
+                4BID.IT - Via Benedetto Croce, 50, 52025 Montevarchi (AR)<br>
+                P.IVA: 02033250518<br>
                 <a href="https://4bid.it" style="color: #5B9BD5; text-decoration: none;">www.4bid.it</a>
               </p>
             </div>
           </div>
         `,
       })
-    } catch (emailError) {
-      console.error("Error sending confirmation email:", emailError)
-    }
 
-    // Send notification email to admin
-    try {
-      await resend.emails.send({
-        from: "4BID.IT <noreply@4bid.it>",
+      // Email 2: Notifica all'admin
+      await sendEmail({
         to: "f.mancini@4bid.it",
         subject: `🚀 Nuova Richiesta ${inquiryTypeLabels[inquiryType]} - ${name}`,
         html: `
@@ -219,8 +205,10 @@ export async function POST(request: NextRequest) {
           </div>
         `,
       })
+
+      console.log("[v0] Both emails sent successfully via SMTP for investor inquiry")
     } catch (emailError) {
-      console.error("Error sending admin notification:", emailError)
+      console.error("[v0] SMTP email error:", emailError)
     }
 
     return NextResponse.json({ success: true, data })
