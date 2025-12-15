@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { CookieConsent } from "@/components/cookie-consent"
 import { ScrollToTop } from "@/components/scroll-to-top"
+import { LandingPagePopup } from "@/components/landing-page-popup"
 import Script from "next/script"
 import "./globals.css"
 
@@ -72,6 +73,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <Analytics />
         <Toaster />
         <CookieConsent />
+        <LandingPagePopup />
       </body>
     </html>
   )
