@@ -1,21 +1,67 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { TrendingUp, Target, Users, BarChart3, CheckCircle2, Euro, Clock, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Consulenza Revenue Management Hotel | 4BID.IT",
   description:
     "Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico e ottimizzazione tariffe.",
   keywords:
     "consulenza revenue management, revenue manager hotel, consulenza alberghiera, pricing hotel, ottimizzazione tariffe hotel, revenue management Italia",
+  alternates: {
+    canonical: "https://4bid.it/consulenza-revenue-management-hotel",
+  },
+  openGraph: {
+    title: "Consulenza Revenue Management Hotel | 4BID.IT",
+    description:
+      "Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico.",
+    url: "https://4bid.it/consulenza-revenue-management-hotel",
+    siteName: "4BID.IT",
+    locale: "it_IT",
+    type: "website",
+    images: [
+      {
+        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "4BID.IT Revenue Management",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Consulenza Revenue Management Hotel | 4BID.IT",
+    description: "Aumenta i ricavi del tuo hotel fino al 30% con strategie personalizzate di pricing dinamico.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 }
 
 export default function ConsulenzaRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Consulenza Revenue Management Hotel"
+        description="Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico."
+        url="https://4bid.it/consulenza-revenue-management-hotel"
+      />
+
       <LandingPageTracker slug="consulenza-revenue-management-hotel" />
 
       <Header />
@@ -52,7 +98,7 @@ export default function ConsulenzaRevenueManagementPage() {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-card rounded-xl p-8 shadow-lg border border-border">
-              <Euro className="h-12 w-12 text-primary-blue mb-4" />
+              <Euro className="h-12 w-12 text-primary-blue mb-4" aria-hidden="true" />
               <h3 className="text-2xl font-bold text-card-foreground mb-3">Zero Rischio</h3>
               <p className="text-muted-foreground">
                 Paghi solo una percentuale sui risultati ottenuti. Nessun costo fisso, massima trasparenza.
@@ -60,7 +106,7 @@ export default function ConsulenzaRevenueManagementPage() {
             </div>
 
             <div className="bg-card rounded-xl p-8 shadow-lg border border-border">
-              <Clock className="h-12 w-12 text-primary-blue mb-4" />
+              <Clock className="h-12 w-12 text-primary-blue mb-4" aria-hidden="true" />
               <h3 className="text-2xl font-bold text-card-foreground mb-3">Risultati Rapidi</h3>
               <p className="text-muted-foreground">
                 I primi miglioramenti sono visibili entro 30 giorni dall'implementazione delle strategie.
@@ -68,7 +114,7 @@ export default function ConsulenzaRevenueManagementPage() {
             </div>
 
             <div className="bg-card rounded-xl p-8 shadow-lg border border-border">
-              <Award className="h-12 w-12 text-primary-blue mb-4" />
+              <Award className="h-12 w-12 text-primary-blue mb-4" aria-hidden="true" />
               <h3 className="text-2xl font-bold text-card-foreground mb-3">Esperienza Consolidata</h3>
               <p className="text-muted-foreground">
                 Oltre 50 strutture gestite con successo in tutta Italia, dal boutique hotel al resort di lusso.
