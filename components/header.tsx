@@ -61,10 +61,10 @@ export function Header() {
   const navItems = [
     { label: "HOME", href: "#home" },
     { label: "DOVE INTERVENIAMO", href: "#services" },
-    { label: "PORFOLIO", href: "#portfolio" },
-    { label: "REVENUE MANAGEMENT", href: "#revenue" },
+    { label: "PORTFOLIO", href: "#portfolio" }, // Fixed typo from PORFOLIO to PORTFOLIO
+    { label: "CHI SIAMO", href: "#about" }, // Changed from REVENUE MANAGEMENT to CHI SIAMO with correct anchor
     { label: "PROGETTI IN SVILUPPO", href: "#projects" },
-    { label: "APP SVILUPPATE", href: "#apps" },
+    { label: "APP SVILUPPATE", href: "#app" }, // Fixed anchor from #apps to #app to match section ID
     { label: "PROPONI LA TUA IDEA", href: "/proponi-idea" },
     { label: "CONTATTACI", href: "#contact" },
   ]
