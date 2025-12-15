@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CheckCircle2, TrendingUp, Users, Calendar, PieChart, Target } from "lucide-react"
 import Link from "next/link"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata: Metadata = {
   title: "Revenue Management per Agriturismi | Ottimizza Prezzi e Occupazione | 4BID.IT",
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function RevenueMangementAgriturismPage() {
   return (
     <>
+      <LandingPageTracker slug="revenue-management-agriturismi" />
       <Header />
       <main className="min-h-screen">
         {/* Hero Section */}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CheckCircle2, TrendingUp, Zap, BarChart3, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata: Metadata = {
   title: "Dynamic Pricing per Hotel | Prezzi Dinamici Automatizzati | 4BID.IT",
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function DynamicPricingPage() {
   return (
     <>
+      <LandingPageTracker slug="dynamic-pricing-hotel" />
       <Header />
       <main className="min-h-screen">
         {/* Hero Section */}

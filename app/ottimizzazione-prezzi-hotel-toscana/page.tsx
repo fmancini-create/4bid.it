@@ -3,6 +3,7 @@ import { MapPin, TrendingUp, Target, BarChart3, CheckCircle2, Euro, Award } from
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "Ottimizzazione Prezzi Hotel in Toscana | Revenue Management",
@@ -15,6 +16,7 @@ export const metadata = {
 export default function OttimizzazionePrezziToscanaPage() {
   return (
     <div className="min-h-screen bg-background">
+      <LandingPageTracker slug="ottimizzazione-prezzi-hotel-toscana" />
       <Header />
 
       {/* Hero Section */}

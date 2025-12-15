@@ -4,6 +4,7 @@ import { Bot, Brain, TrendingUp, Zap, Globe, CheckCircle2, Euro, BarChart3, Sett
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "SANTADDEO - Software Revenue Management Hotel AI | 4BID.IT",
@@ -16,6 +17,8 @@ export const metadata = {
 export default function SoftwareRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <LandingPageTracker slug="software-revenue-management-santaddeo" />
+
       <Header />
 
       {/* Hero Section */}

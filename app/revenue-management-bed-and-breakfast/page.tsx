@@ -3,6 +3,7 @@ import { Home, TrendingUp, Users, Euro, CheckCircle2, Target, Award, Calendar } 
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "Revenue Management per Bed & Breakfast | Ottimizza i Tuoi Ricavi",
@@ -15,6 +16,8 @@ export const metadata = {
 export default function RevenueManagementBBPage() {
   return (
     <div className="min-h-screen bg-background">
+      <LandingPageTracker slug="revenue-management-bed-and-breakfast" />
+
       <Header />
 
       {/* Hero Section */}

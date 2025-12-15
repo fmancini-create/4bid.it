@@ -3,6 +3,7 @@ import { TrendingUp, Target, Users, BarChart3, CheckCircle2, Euro, Clock, Award 
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "Consulenza Revenue Management Hotel | 4BID.IT",
@@ -15,6 +16,8 @@ export const metadata = {
 export default function ConsulenzaRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <LandingPageTracker slug="consulenza-revenue-management-hotel" />
+
       <Header />
 
       {/* Hero Section */}
