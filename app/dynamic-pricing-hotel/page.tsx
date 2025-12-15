@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { CheckCircle2, TrendingUp, Zap, BarChart3, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 
 export const metadata: Metadata = {
   title: "Dynamic Pricing per Hotel | Prezzi Dinamici Automatizzati | 4BID.IT",
@@ -134,6 +135,12 @@ export default function DynamicPricingPage() {
                 </Card>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="py-16 px-4 bg-background">
+          <div className="container mx-auto max-w-6xl">
+            <SantaddeoUniqueCallout />
           </div>
         </section>
 

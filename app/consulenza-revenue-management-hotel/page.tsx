@@ -6,6 +6,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 
 export const metadata: Metadata = {
   title: "Consulenza Revenue Management Hotel | 4BID.IT",
@@ -230,6 +231,14 @@ export default function ConsulenzaRevenueManagementPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Santaddeo Unique Callout Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-foreground mb-12">Il Nostro Software Proprietario</h2>
+          <SantaddeoUniqueCallout />
         </div>
       </section>
 
