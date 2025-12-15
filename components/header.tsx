@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
-export default function Header() {
+export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
@@ -184,4 +184,4 @@ export default function Header() {
   )
 }
 
-export { Header }
+export default Header
