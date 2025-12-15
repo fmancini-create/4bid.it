@@ -9,18 +9,18 @@ import { StructuredData } from "@/components/seo-structured-data"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 
 export const metadata: Metadata = {
-  title: "Consulenza Revenue Management Hotel | 4BID.IT",
+  title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
   description:
-    "Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico e ottimizzazione tariffe.",
+    "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati. Analisi gratuita.",
   keywords:
-    "consulenza revenue management, revenue manager hotel, consulenza alberghiera, pricing hotel, ottimizzazione tariffe hotel, revenue management Italia",
+    "consulenza revenue management hotel, revenue manager hotel, consulenza alberghiera professionale, ottimizzazione tariffe hotel, pricing hotel strategico, aumento ricavi hotel",
   alternates: {
     canonical: "https://4bid.it/consulenza-revenue-management-hotel",
   },
   openGraph: {
-    title: "Consulenza Revenue Management Hotel | 4BID.IT",
+    title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
     description:
-      "Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico.",
+      "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati.",
     url: "https://4bid.it/consulenza-revenue-management-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
@@ -36,8 +36,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Consulenza Revenue Management Hotel | 4BID.IT",
-    description: "Aumenta i ricavi del tuo hotel fino al 30% con strategie personalizzate di pricing dinamico.",
+    title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
+    description:
+      "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati.",
     images: ["https://4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {

@@ -22,18 +22,18 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
-  title: "Cos'è il Revenue Management? Guida Completa 2025 | 4BID.IT",
+  title: "Cos'è il Revenue Management Hotel? Guida Completa 2025 | 4BID.IT",
   description:
-    "Scopri cos'è il Revenue Management in modo semplice: significato, dove si applica (hotel, B&B, resort), perché è fondamentale e come aumenta i ricavi fino al 30%.",
+    "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
   keywords:
-    "cos'è revenue management, revenue management significato, revenue management hotel spiegazione, cosa significa revenue management, revenue management definizione",
+    "cos'è revenue management, cosa significa revenue management, revenue management spiegazione semplice, revenue management definizione hotel, guida revenue management completa, revenue management come funziona",
   alternates: {
     canonical: "https://4bid.it/cose-il-revenue-management",
   },
   openGraph: {
-    title: "Cos'è il Revenue Management? Guida Completa 2025",
+    title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
     description:
-      "Scopri in modo semplice cos'è il Revenue Management, dove si applica e perché può aumentare i ricavi del tuo hotel fino al 30%.",
+      "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
     url: "https://4bid.it/cose-il-revenue-management",
     siteName: "4BID.IT",
     locale: "it_IT",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cos'è il Revenue Management? Guida Completa 2025",
+    title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
     description: "Guida semplice e completa al Revenue Management per hotel e strutture ricettive.",
     images: ["https://4bid.it/4bid-colorful-logo.jpg"],
   },
@@ -71,8 +71,8 @@ export default function CoseIlRevenueManagementPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
-        title="Cos'è il Revenue Management? Guida Completa"
-        description="Guida completa per comprendere cos'è il Revenue Management, dove si applica (hotel, B&B, resort, agriturismi) e perché è fondamentale per massimizzare i ricavi."
+        title="Cos'è il Revenue Management Hotel? Guida Completa"
+        description="Guida completa per comprendere cos'è il Revenue Management Hotel, dove si applica e perché è fondamentale per massimizzare i ricavi."
         url="https://4bid.it/cose-il-revenue-management"
       />
 
@@ -84,9 +84,9 @@ export default function CoseIlRevenueManagementPage() {
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">Cos'è il Revenue Management?</h1>
+            <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">Cos'è il Revenue Management Hotel?</h1>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
-              Una guida semplice e completa per capire cos'è il Revenue Management, dove si applica e perché è
+              Una guida semplice e completa per capire cos'è il Revenue Management Hotel, dove si applica e perché è
               fondamentale per hotel, B&B, resort e agriturismi.
             </p>
           </div>
@@ -308,7 +308,7 @@ export default function CoseIlRevenueManagementPage() {
                 <li className="flex items-start gap-3">
                   <span className="text-destructive font-bold mt-1">✗</span>
                   <span>
-                    <strong>Decisioni a "sensazione"</strong>: Senza dati e analisi, le decisioni di pricing sono basate
+                    <strong>Decisioni a 'sensazione'</strong>: Senza dati e analisi, le decisioni di pricing sono basate
                     sull'intuito invece che sui numeri
                   </span>
                 </li>

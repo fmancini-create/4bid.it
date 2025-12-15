@@ -6,11 +6,11 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
-  title: "Revenue Management per Bed & Breakfast | Ottimizza i Tuoi Ricavi",
+  title: "Revenue Management Bed & Breakfast: Aumenta Ricavi B&B +40% | 4BID.IT",
   description:
-    "Servizio specializzato di Revenue Management per B&B e piccole strutture ricettive. Aumenta occupazione e tariffe medie con strategie dedicate alle strutture familiari.",
+    "Revenue management per bed and breakfast e piccole strutture familiari. Strategie pricing B&B, riduzione commissioni OTA, aumento prenotazioni dirette. Solo performance-based.",
   keywords:
-    "revenue management bed and breakfast, revenue management b&b, pricing bed and breakfast, occupazione b&b, tariffe bed and breakfast",
+    "revenue management bed and breakfast, revenue b&b, pricing bed and breakfast, ottimizzazione tariffe b&b, consulenza bed breakfast, aumento ricavi b&b piccole strutture",
 }
 
 export default function RevenueManagementBBPage() {

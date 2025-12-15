@@ -6,11 +6,11 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
-  title: "Strategie Pricing Hotel: Massimizza Ricavi con Dynamic Pricing | 4BID.IT",
+  title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2025 | 4BID.IT",
   description:
-    "Scopri le strategie pricing più efficaci per hotel: dynamic pricing, price fencing, BAR strategy. Aumenta RevPAR e margini con tecniche comprovate.",
+    "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente. Aumenta RevPAR +37%. Guida completa.",
   keywords:
-    "strategie pricing hotel, dynamic pricing, hotel pricing, BAR strategy, price fencing, revenue management, ottimizzazione tariffe hotel",
+    "strategie pricing hotel, BAR strategy hotel, dynamic pricing strategico, price fencing alberghiero, length of stay restrictions, strategie tariffe hotel avanzate, pricing optimization",
 }
 
 export default function StrategiePricingHotelPage() {

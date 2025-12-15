@@ -7,10 +7,21 @@ import AppsSection from "@/components/apps-section"
 import About from "@/components/about"
 import Contact from "@/components/contact"
 import { Footer } from "@/components/footer"
+import Script from "next/script"
 
 export default function Home() {
   return (
     <div className="min-h-screen">
+      <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-S6YEEXE4C3');
+        `}
+      </Script>
+
       <Header />
       <Hero />
       <Services />

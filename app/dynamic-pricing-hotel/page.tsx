@@ -9,11 +9,11 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 
 export const metadata: Metadata = {
-  title: "Dynamic Pricing per Hotel | Prezzi Dinamici Automatizzati | 4BID.IT",
+  title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
   description:
-    "Sistema di dynamic pricing per hotel che ottimizza automaticamente le tariffe in tempo reale. Aumenta revenue fino al 30% con algoritmi avanzati di pricing dinamico.",
+    "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale. +50 fattori analizzati, aggiornamento continuo su tutti i canali. ROI garantito 90 giorni.",
   keywords:
-    "dynamic pricing hotel, prezzi dinamici hotel, pricing automatico hotel, ottimizzazione tariffe real-time, revenue management automatizzato",
+    "dynamic pricing hotel, prezzi dinamici hotel automatici, pricing dinamico real-time, ottimizzazione tariffe automatica, algoritmo pricing hotel, revenue optimization AI",
 }
 
 export default function DynamicPricingPage() {
