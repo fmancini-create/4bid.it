@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
+import { Eye, EyeOff } from "lucide-react"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -66,6 +69,51 @@ export default function AdminLoginPage() {
     }
   }
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      if (email !== SUPER_ADMIN_EMAIL) {
+        toast({
+          title: "Accesso Negato",
+          description: "Non hai i permessi per accedere a questa area.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin/reset-password`,
+      })
+
+      if (error) {
+        toast({
+          title: "Errore",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Email Inviata",
+          description: "Controlla la tua casella email per il link di reset della password.",
+        })
+        setIsResetting(false)
+      }
+    } catch (error) {
+      console.error("Password reset error:", error)
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore. Riprova.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -73,10 +121,10 @@ export default function AdminLoginPage() {
           <div className="flex justify-center mb-4">
             <Image src="/logo.png" alt="4bid Logo" width={120} height={60} />
           </div>
-          <CardTitle className="text-2xl">Accesso Amministratore</CardTitle>
+          <CardTitle className="text-2xl">{isResetting ? "Recupera Password" : "Accesso Amministratore"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={isResetting ? handlePasswordReset : handleLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2">
                 Email
@@ -91,23 +139,50 @@ export default function AdminLoginPage() {
                 disabled={isLoading}
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={isLoading}
-              />
-            </div>
+            {!isResetting && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-              {isLoading ? "Accesso in corso..." : "Accedi"}
+              {isLoading
+                ? isResetting
+                  ? "Invio in corso..."
+                  : "Accesso in corso..."
+                : isResetting
+                  ? "Invia Link di Reset"
+                  : "Accedi"}
             </Button>
+            <button
+              type="button"
+              onClick={() => setIsResetting(!isResetting)}
+              className="w-full text-sm text-blue-600 hover:text-blue-700 underline"
+              disabled={isLoading}
+            >
+              {isResetting ? "Torna al Login" : "Password Dimenticata?"}
+            </button>
           </form>
         </CardContent>
       </Card>
