@@ -14,34 +14,48 @@ export default function Header() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
-
     const checkAdmin = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        setIsAdmin(user.email === "f.mancini@4bid.it")
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (user) {
+          setIsAdmin(user.email === "f.mancini@4bid.it")
+        }
+      } catch (error) {
+        console.log("[v0] Error checking admin status:", error)
+        // Silently fail - user is not admin
+        setIsAdmin(false)
       }
     }
 
     checkAdmin()
 
     // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkAdmin()
-    })
+    try {
+      const supabase = createClient()
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(() => {
+        checkAdmin()
+      })
 
-    return () => subscription.unsubscribe()
+      return () => subscription.unsubscribe()
+    } catch (error) {
+      console.log("[v0] Error setting up auth listener:", error)
+    }
   }, [])
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    setIsAdmin(false)
-    router.push("/")
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      setIsAdmin(false)
+      router.push("/")
+    } catch (error) {
+      console.log("[v0] Error during logout:", error)
+    }
   }
 
   const navItems = [
