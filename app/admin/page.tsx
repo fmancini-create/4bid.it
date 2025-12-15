@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import AdminContacts from "@/components/admin-contacts"
 import AdminLandingPages from "@/components/admin-landing-pages"
+import AdminProjectSubmissions from "@/components/admin-project-submissions"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -28,9 +29,10 @@ export default async function AdminPage() {
     )
   }
 
-  const [contactsResult, landingPagesResult] = await Promise.all([
+  const [contactsResult, landingPagesResult, projectSubmissionsResult] = await Promise.all([
     supabase.from("contacts").select("*").order("created_at", { ascending: false }),
     supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
+    supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
   ])
 
   if (contactsResult.error) {
@@ -41,10 +43,18 @@ export default async function AdminPage() {
     console.error("Error fetching landing pages:", landingPagesResult.error)
   }
 
+  if (projectSubmissionsResult.error) {
+    console.error("Error fetching project submissions:", projectSubmissionsResult.error)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8">
         <AdminLandingPages landingPages={landingPagesResult.data || []} />
+
+        <div className="mt-12">
+          <AdminProjectSubmissions projectSubmissions={projectSubmissionsResult.data || []} />
+        </div>
 
         <div className="mt-12">
           <AdminContacts contacts={contactsResult.data || []} userEmail={user.email || ""} />

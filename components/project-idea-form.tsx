@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createClient } from "@/lib/supabase/client"
 import { Loader2, CheckCircle2 } from "lucide-react"
 
 export default function ProjectIdeaForm() {
@@ -33,10 +32,12 @@ export default function ProjectIdeaForm() {
     setIsSubmitting(true)
 
     try {
-      const supabase = createClient()
-
-      const { error } = await supabase.from("project_submissions").insert([
-        {
+      const response = await fetch("/api/project-submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -46,11 +47,11 @@ export default function ProjectIdeaForm() {
           budget_range: formData.budgetRange,
           timeline: formData.timeline,
           interested_in_revenue_share: formData.interestedInRevenueShare,
-          status: "pending",
-        },
-      ])
+        }),
+      })
 
-      if (error) {
+      if (!response.ok) {
+        const error = await response.json()
         console.error("[v0] Error submitting project idea:", error)
         alert("Si è verificato un errore. Riprova più tardi.")
         return
@@ -85,6 +86,9 @@ export default function ProjectIdeaForm() {
           <p className="text-lg text-muted-foreground mb-6">
             Grazie per aver condiviso la tua idea con noi. Il nostro team la valuterà e ti risponderà entro{" "}
             <strong>24 ore</strong> con una proposta dettagliata.
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Riceverai a breve una <strong>email di conferma</strong> all'indirizzo fornito.
           </p>
           <Button onClick={() => setIsSuccess(false)} className="bg-[#5B9BD5] hover:bg-[#4A8BC4] text-white">
             Invia un'altra Idea
