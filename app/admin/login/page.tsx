@@ -25,10 +25,14 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] Login form submitted")
+    console.log("[v0] Email:", email)
+    console.log("[v0] Password length:", password.length)
     setIsLoading(true)
 
     try {
       if (email !== SUPER_ADMIN_EMAIL) {
+        console.log("[v0] Email doesn't match SUPER_ADMIN_EMAIL")
         toast({
           title: "Accesso Negato",
           description: "Non hai i permessi per accedere a questa area.",
@@ -38,19 +42,23 @@ export default function AdminLoginPage() {
         return
       }
 
+      console.log("[v0] Creating Supabase client...")
       const supabase = createClient()
+      console.log("[v0] Attempting sign in...")
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
+        console.log("[v0] Login error:", error)
         toast({
           title: "Errore di accesso",
           description: error.message,
           variant: "destructive",
         })
       } else {
+        console.log("[v0] Login successful, redirecting...")
         toast({
           title: "Accesso effettuato",
           description: "Benvenuto nel pannello admin!",
@@ -58,13 +66,14 @@ export default function AdminLoginPage() {
         router.push("/admin")
       }
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("[v0] Unexpected error:", error)
       toast({
         title: "Errore",
         description: "Si è verificato un errore. Riprova.",
         variant: "destructive",
       })
     } finally {
+      console.log("[v0] Setting loading to false")
       setIsLoading(false)
     }
   }
