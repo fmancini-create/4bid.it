@@ -17,7 +17,9 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
+  Reply,
 } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface InvestorInquiry {
   id: string
@@ -42,6 +44,9 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
   const safeInquiries = inquiries || []
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({})
+  const [replyingTo, setReplyingTo] = useState<InvestorInquiry | null>(null)
+  const [replyMessage, setReplyMessage] = useState("")
+  const [sendingReply, setSendingReply] = useState(false)
 
   const inquiryTypeIcons: Record<string, any> = {
     investment: TrendingUp,
@@ -100,6 +105,36 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
       }
     } catch (error) {
       console.error("Error saving notes:", error)
+    }
+  }
+
+  const handleReply = async () => {
+    if (!replyingTo || !replyMessage.trim()) return
+
+    setSendingReply(true)
+    try {
+      const response = await fetch("/api/admin/reply-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: replyingTo.email,
+          name: replyingTo.name,
+          replyMessage: replyMessage,
+        }),
+      })
+
+      if (response.ok) {
+        alert("Risposta inviata con successo!")
+        setReplyingTo(null)
+        setReplyMessage("")
+      } else {
+        alert("Errore nell'invio della risposta")
+      }
+    } catch (error) {
+      console.error("[v0] Error sending reply:", error)
+      alert("Errore nell'invio della risposta")
+    } finally {
+      setSendingReply(false)
     }
   }
 
@@ -162,6 +197,18 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setReplyingTo(inquiry)
+                          }}
+                        >
+                          <Reply className="h-4 w-4 mr-2" />
+                          Rispondi
+                        </Button>
                         <Badge className={statusColors[inquiry.status]}>{statusLabels[inquiry.status]}</Badge>
                         <Badge variant="outline">{inquiryTypeLabels[inquiry.inquiry_type]}</Badge>
                         {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -276,6 +323,44 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
           </div>
         </CardContent>
       </Card>
+
+      {/* Reply Dialog */}
+      <Dialog open={!!replyingTo} onOpenChange={() => setReplyingTo(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Rispondi a {replyingTo?.name}</DialogTitle>
+            <DialogDescription>Invia una risposta via email a {replyingTo?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-2">Messaggio originale:</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{replyingTo?.message}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">La tua risposta:</label>
+              <Textarea
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Scrivi qui la tua risposta..."
+                rows={8}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setReplyingTo(null)}>
+                Annulla
+              </Button>
+              <Button
+                onClick={handleReply}
+                disabled={sendingReply || !replyMessage.trim()}
+                className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+              >
+                <Reply className="w-4 h-4 mr-2" />
+                {sendingReply ? "Invio..." : "Invia Risposta"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

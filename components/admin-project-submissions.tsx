@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { CheckCircle2, Clock, XCircle, Eye, Save } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, Eye, Save, Reply } from "lucide-react"
 
 type ProjectSubmission = {
   id: string
@@ -31,6 +31,9 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
   const [adminNotes, setAdminNotes] = useState("")
   const [status, setStatus] = useState("")
   const [saving, setSaving] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<ProjectSubmission | null>(null)
+  const [replyMessage, setReplyMessage] = useState("")
+  const [sendingReply, setSendingReply] = useState(false)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -81,6 +84,36 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
       console.error("Error saving notes:", error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleReply = async () => {
+    if (!replyingTo || !replyMessage.trim()) return
+
+    setSendingReply(true)
+    try {
+      const response = await fetch("/api/admin/reply-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: replyingTo.email,
+          name: replyingTo.name,
+          replyMessage: replyMessage,
+        }),
+      })
+
+      if (response.ok) {
+        alert("Risposta inviata con successo!")
+        setReplyingTo(null)
+        setReplyMessage("")
+      } else {
+        alert("Errore nell'invio della risposta")
+      }
+    } catch (error) {
+      console.error("[v0] Error sending reply:", error)
+      alert("Errore nell'invio della risposta")
+    } finally {
+      setSendingReply(false)
     }
   }
 
@@ -181,9 +214,14 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
                       </TableCell>
                       <TableCell>{getStatusBadge(submission.status)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openDialog(submission)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => setReplyingTo(submission)} title="Rispondi">
+                            <Reply className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDialog(submission)} title="Dettagli">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -289,6 +327,43 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!replyingTo} onOpenChange={() => setReplyingTo(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Rispondi a {replyingTo?.name}</DialogTitle>
+            <DialogDescription>Invia una risposta via email a {replyingTo?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-2">Progetto: {replyingTo?.project_title}</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{replyingTo?.project_description}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">La tua risposta:</label>
+              <Textarea
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Scrivi qui la tua risposta..."
+                rows={8}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setReplyingTo(null)}>
+                Annulla
+              </Button>
+              <Button
+                onClick={handleReply}
+                disabled={sendingReply || !replyMessage.trim()}
+                className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+              >
+                <Reply className="w-4 h-4 mr-2" />
+                {sendingReply ? "Invio..." : "Invia Risposta"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

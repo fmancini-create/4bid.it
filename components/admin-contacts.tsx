@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Phone, Calendar, User, LogOut, RefreshCw } from "lucide-react"
+import { Mail, Phone, Calendar, User, LogOut, RefreshCw, Reply } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 type Contact = {
   id: string
@@ -27,6 +29,9 @@ export default function AdminContacts({
 }) {
   const [contacts, setContacts] = useState(initialContacts || [])
   const router = useRouter()
+  const [replyingTo, setReplyingTo] = useState<Contact | null>(null)
+  const [replyMessage, setReplyMessage] = useState("")
+  const [sendingReply, setSendingReply] = useState(false)
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -45,6 +50,36 @@ export default function AdminContacts({
 
   const handleRefresh = () => {
     router.refresh()
+  }
+
+  const handleReply = async () => {
+    if (!replyingTo || !replyMessage.trim()) return
+
+    setSendingReply(true)
+    try {
+      const response = await fetch("/api/admin/reply-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: replyingTo.email,
+          name: replyingTo.name,
+          replyMessage: replyMessage,
+        }),
+      })
+
+      if (response.ok) {
+        alert("Risposta inviata con successo!")
+        setReplyingTo(null)
+        setReplyMessage("")
+      } else {
+        alert("Errore nell'invio della risposta")
+      }
+    } catch (error) {
+      console.error("[v0] Error sending reply:", error)
+      alert("Errore nell'invio della risposta")
+    } finally {
+      setSendingReply(false)
+    }
   }
 
   const unreadCount = contacts.filter((c) => !c.read).length
@@ -112,11 +147,22 @@ export default function AdminContacts({
                       </Badge>
                     )}
                   </CardTitle>
-                  {!contact.read && (
-                    <Button onClick={() => handleMarkAsRead(contact.id)} size="sm" variant="outline">
-                      Segna come letto
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setReplyingTo(contact)}
+                      size="sm"
+                      variant="default"
+                      className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+                    >
+                      <Reply className="w-4 h-4 mr-2" />
+                      Rispondi
                     </Button>
-                  )}
+                    {!contact.read && (
+                      <Button onClick={() => handleMarkAsRead(contact.id)} size="sm" variant="outline">
+                        Segna come letto
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -152,6 +198,43 @@ export default function AdminContacts({
           ))
         )}
       </div>
+
+      <Dialog open={!!replyingTo} onOpenChange={() => setReplyingTo(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Rispondi a {replyingTo?.name}</DialogTitle>
+            <DialogDescription>Invia una risposta via email a {replyingTo?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-2">Messaggio originale:</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{replyingTo?.message}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">La tua risposta:</label>
+              <Textarea
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Scrivi qui la tua risposta..."
+                rows={8}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setReplyingTo(null)}>
+                Annulla
+              </Button>
+              <Button
+                onClick={handleReply}
+                disabled={sendingReply || !replyMessage.trim()}
+                className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+              >
+                <Reply className="w-4 h-4 mr-2" />
+                {sendingReply ? "Invio..." : "Invia Risposta"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
