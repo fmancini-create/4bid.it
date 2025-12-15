@@ -93,6 +93,76 @@ export default function CoseIlRevenueManagementPage() {
         </div>
       </section>
 
+      {/* Per Chi è Indispensabile il Revenue Management? */}
+      <section className="py-20 bg-yellow/5">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-yellow/10 rounded-2xl p-10 border-2 border-yellow/30">
+              <h2 className="text-3xl font-bold text-foreground mb-6 flex items-center gap-3">
+                <TrendingUp className="h-10 w-10 text-yellow" />
+                Per Chi è Indispensabile il Revenue Management?
+              </h2>
+              <p className="text-lg text-foreground leading-relaxed mb-6">
+                Il Revenue Management è{" "}
+                <strong>necessario per tutte quelle attività che non possono fare magazzino</strong> e i cui
+                prodotti/servizi hanno un'<strong>alta deperibilità</strong>.
+              </p>
+
+              <div className="bg-card/50 rounded-xl p-6 mb-6">
+                <h3 className="text-xl font-bold text-card-foreground mb-4">L'Esempio delle Camere d'Hotel</h3>
+                <p className="text-muted-foreground mb-4">
+                  Una camera d'hotel <strong className="text-foreground">dura solo 24 ore</strong>. Se non viene venduta
+                  oggi, quella opportunità di ricavo è persa per sempre. Non puoi "metterla in magazzino" per venderla
+                  domani.
+                </p>
+                <p className="text-muted-foreground">
+                  Inoltre, i <strong className="text-foreground">costi fissi rimangono invariati</strong>{" "}
+                  indipendentemente dall'occupazione: personale, utenze, manutenzione, affitto. Una camera vuota genera
+                  zero ricavi ma i costi continuano a essere sostenuti.
+                </p>
+              </div>
+
+              <h3 className="text-xl font-bold text-foreground mb-4">
+                Settori Dove il Revenue Management è Fondamentale
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  {
+                    title: "Turismo e Hospitality",
+                    examples: "Hotel, B&B, Resort, Agriturismi, Case vacanza, Ostelli",
+                  },
+                  {
+                    title: "Trasporti",
+                    examples: "Biglietti aerei, Treni, Autobus, Traghetti, Noleggio auto",
+                  },
+                  {
+                    title: "Intrattenimento",
+                    examples: "Cinema, Teatri, Concerti, Eventi sportivi, Parchi tematici",
+                  },
+                  {
+                    title: "Altri Settori",
+                    examples: "Ristoranti, Spa e centri benessere, Parcheggi, Coworking",
+                  },
+                ].map((sector, index) => (
+                  <div key={index} className="bg-card rounded-lg p-5 border border-border">
+                    <h4 className="font-bold text-card-foreground mb-2">{sector.title}</h4>
+                    <p className="text-sm text-muted-foreground">{sector.examples}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-5 bg-primary-blue/10 rounded-lg border-l-4 border-primary-blue">
+                <p className="text-muted-foreground">
+                  <strong className="text-foreground">Regola generale:</strong> Se il tuo prodotto/servizio ha una
+                  "scadenza" (ore, giorni, settimane) e non puoi accumulare inventory, il Revenue Management può
+                  aumentare drasticamente i tuoi ricavi.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Definizione Semplice */}
       <section className="py-20">
         <div className="container mx-auto px-6">
