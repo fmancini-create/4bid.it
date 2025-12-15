@@ -1,9 +1,15 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import InvestorInquiryModal from "@/components/investor-inquiry-modal"
 
 export default function ProjectsSection() {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const projects = [
     {
       id: "autoexel",
@@ -143,16 +149,17 @@ export default function ProjectsSection() {
         {/* Bottom CTA */}
         <div className="text-center">
           <p className="text-gray-600 mb-4">Interessato a investire o collaborare?</p>
-          <Link href="#contact">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-[#5B9BD5] to-[#4A8BC2] text-white hover:from-[#4A8BC2] hover:to-[#3A7AB2] shadow-lg"
-            >
-              Contattaci
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            onClick={() => setIsModalOpen(true)}
+            className="bg-gradient-to-r from-[#5B9BD5] to-[#4A8BC2] text-white hover:from-[#4A8BC2] hover:to-[#3A7AB2] shadow-lg"
+          >
+            Contattaci
+          </Button>
         </div>
       </div>
+      {/* Investor Inquiry Modal */}
+      <InvestorInquiryModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   )
 }

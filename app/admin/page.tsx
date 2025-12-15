@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import AdminContacts from "@/components/admin-contacts"
 import AdminLandingPages from "@/components/admin-landing-pages"
 import AdminProjectSubmissions from "@/components/admin-project-submissions"
+import AdminInvestorInquiries from "@/components/admin-investor-inquiries" // Added import
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -29,10 +30,14 @@ export default async function AdminPage() {
     )
   }
 
-  const [contactsResult, landingPagesResult, projectSubmissionsResult] = await Promise.all([
+  const [contactsResult, landingPagesResult, projectSubmissionsResult, investorInquiriesResult] = await Promise.all([
     supabase.from("contacts").select("*").order("created_at", { ascending: false }),
     supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
     supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("investor_inquiries")
+      .select("*")
+      .order("created_at", { ascending: false }), // Added investor inquiries fetch
   ])
 
   if (contactsResult.error) {
@@ -47,10 +52,18 @@ export default async function AdminPage() {
     console.error("Error fetching project submissions:", projectSubmissionsResult.error)
   }
 
+  if (investorInquiriesResult.error) {
+    console.error("Error fetching investor inquiries:", investorInquiriesResult.error) // Added error handling for investor inquiries
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8">
         <AdminLandingPages landingPages={landingPagesResult.data || []} />
+
+        <div className="mt-12">
+          <AdminInvestorInquiries inquiries={investorInquiriesResult.data || []} /> // Added investor inquiries section
+        </div>
 
         <div className="mt-12">
           <AdminProjectSubmissions projectSubmissions={projectSubmissionsResult.data || []} />
