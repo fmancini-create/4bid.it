@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function RevenueMangementAgriturismPage() {
   return (
     <>
-      <LandingPageTracker slug="revenue-management-agriturismi" />
+      <LandingPageTracker slug="revenue-management-agriturismo" />
       <Header />
       <main className="min-h-screen">
         {/* Hero Section */}
