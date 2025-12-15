@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 

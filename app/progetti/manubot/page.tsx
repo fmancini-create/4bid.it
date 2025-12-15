@@ -2,8 +2,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Rocket, MessageSquare, BarChart3, Smartphone, Globe, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 
 export default function ManubotPage() {
   return (

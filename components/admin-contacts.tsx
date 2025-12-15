@@ -25,7 +25,7 @@ export default function AdminContacts({
   contacts: Contact[]
   userEmail: string
 }) {
-  const [contacts, setContacts] = useState(initialContacts)
+  const [contacts, setContacts] = useState(initialContacts || [])
   const router = useRouter()
 
   const handleSignOut = async () => {

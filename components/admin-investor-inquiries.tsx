@@ -39,6 +39,7 @@ interface AdminInvestorInquiriesProps {
 }
 
 export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInquiriesProps) {
+  const safeInquiries = inquiries || []
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({})
 
@@ -103,10 +104,10 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
   }
 
   const stats = {
-    total: inquiries.length,
-    pending: inquiries.filter((i) => i.status === "pending").length,
-    investment: inquiries.filter((i) => i.inquiry_type === "investment").length,
-    collaboration: inquiries.filter((i) => i.inquiry_type === "collaboration").length,
+    total: safeInquiries.length,
+    pending: safeInquiries.filter((i) => i.status === "pending").length,
+    investment: safeInquiries.filter((i) => i.inquiry_type === "investment").length,
+    collaboration: safeInquiries.filter((i) => i.inquiry_type === "collaboration").length,
   }
 
   return (
@@ -139,7 +140,7 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
 
           {/* Inquiries List */}
           <div className="space-y-4">
-            {inquiries.map((inquiry) => {
+            {safeInquiries.map((inquiry) => {
               const Icon = inquiryTypeIcons[inquiry.inquiry_type] || HelpCircle
               const isExpanded = expandedId === inquiry.id
 
@@ -269,7 +270,7 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
               )
             })}
 
-            {inquiries.length === 0 && (
+            {safeInquiries.length === 0 && (
               <div className="text-center py-12 text-gray-500">Nessuna richiesta ricevuta ancora.</div>
             )}
           </div>

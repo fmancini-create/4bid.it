@@ -21,18 +21,20 @@ interface AdminLandingPagesProps {
 }
 
 export default function AdminLandingPages({ landingPages }: AdminLandingPagesProps) {
+  const safePages = landingPages || []
+
   const categories = ["revenue-management", "progetti", "servizi", "altro"]
 
   const groupedPages = categories.reduce(
     (acc, category) => {
-      acc[category] = landingPages.filter((page) => page.category === category)
+      acc[category] = safePages.filter((page) => page.category === category)
       return acc
     },
     {} as Record<string, LandingPage[]>,
   )
 
-  const totalViews = landingPages.reduce((sum, page) => sum + (page.views || 0), 0)
-  const totalConversions = landingPages.reduce((sum, page) => sum + (page.conversions || 0), 0)
+  const totalViews = safePages.reduce((sum, page) => sum + (page.views || 0), 0)
+  const totalConversions = safePages.reduce((sum, page) => sum + (page.conversions || 0), 0)
 
   return (
     <div className="space-y-6">

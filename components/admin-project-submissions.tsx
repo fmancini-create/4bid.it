@@ -26,6 +26,7 @@ type ProjectSubmission = {
 }
 
 export default function AdminProjectSubmissions({ submissions }: { submissions: ProjectSubmission[] }) {
+  const safeSubmissions = submissions || []
   const [selectedSubmission, setSelectedSubmission] = useState<ProjectSubmission | null>(null)
   const [adminNotes, setAdminNotes] = useState("")
   const [status, setStatus] = useState("")
@@ -90,11 +91,11 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
   }
 
   const stats = {
-    total: submissions.length,
-    pending: submissions.filter((s) => s.status === "pending").length,
-    approved: submissions.filter((s) => s.status === "approved").length,
-    rejected: submissions.filter((s) => s.status === "rejected").length,
-    revenueShare: submissions.filter((s) => s.interested_in_revenue_share).length,
+    total: safeSubmissions.length,
+    pending: safeSubmissions.filter((s) => s.status === "pending").length,
+    approved: safeSubmissions.filter((s) => s.status === "approved").length,
+    rejected: safeSubmissions.filter((s) => s.status === "rejected").length,
+    revenueShare: safeSubmissions.filter((s) => s.interested_in_revenue_share).length,
   }
 
   return (
@@ -153,14 +154,14 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.length === 0 ? (
+                {safeSubmissions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Nessuna proposta di progetto ricevuta
                     </TableCell>
                   </TableRow>
                 ) : (
-                  submissions.map((submission) => (
+                  safeSubmissions.map((submission) => (
                     <TableRow key={submission.id}>
                       <TableCell className="text-sm">
                         {new Date(submission.created_at).toLocaleDateString("it-IT")}
