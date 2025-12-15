@@ -21,10 +21,7 @@ export default function Header() {
         data: { user },
       } = await supabase.auth.getUser()
       if (user) {
-        // Check if user has admin role in profiles table
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-
-        setIsAdmin(profile?.role === "admin")
+        setIsAdmin(user.email === "f.mancini@4bid.it")
       }
     }
 
