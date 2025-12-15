@@ -16,7 +16,7 @@ export const metadata = {
 export default function RevenueManagementBBPage() {
   return (
     <div className="min-h-screen bg-background">
-      <LandingPageTracker slug="revenue-management-bed-and-breakfast" />
+      <LandingPageTracker slug="revenue-management-bed-breakfast" />
 
       <Header />
 
