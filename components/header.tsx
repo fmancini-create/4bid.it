@@ -65,6 +65,7 @@ export function Header() {
     { label: "REVENUE MANAGEMENT", href: "#revenue" },
     { label: "PROGETTI IN SVILUPPO", href: "#projects" },
     { label: "APP SVILUPPATE", href: "#apps" },
+    { label: "PROPONI LA TUA IDEA", href: "/proponi-idea" },
     { label: "CONTATTACI", href: "#contact" },
   ]
 
