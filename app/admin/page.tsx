@@ -3,14 +3,14 @@ import { createClient } from "@/lib/supabase/server"
 import AdminContacts from "@/components/admin-contacts"
 import AdminLandingPages from "@/components/admin-landing-pages"
 import AdminProjectSubmissions from "@/components/admin-project-submissions"
-import AdminInvestorInquiries from "@/components/admin-investor-inquiries" // Added import
+import AdminInvestorInquiries from "@/components/admin-investor-inquiries"
+import AdminNavigation from "@/components/admin-navigation"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
 export default async function AdminPage() {
   const supabase = await createClient()
 
-  // Check if user is authenticated
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -34,10 +34,7 @@ export default async function AdminPage() {
     supabase.from("contacts").select("*").order("created_at", { ascending: false }),
     supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
     supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
-    supabase
-      .from("investor_inquiries")
-      .select("*")
-      .order("created_at", { ascending: false }), // Added investor inquiries fetch
+    supabase.from("investor_inquiries").select("*").order("created_at", { ascending: false }),
   ])
 
   if (contactsResult.error) {
@@ -53,23 +50,25 @@ export default async function AdminPage() {
   }
 
   if (investorInquiriesResult.error) {
-    console.error("Error fetching investor inquiries:", investorInquiriesResult.error) // Added error handling for investor inquiries
+    console.error("Error fetching investor inquiries:", investorInquiriesResult.error)
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-8">
+      <AdminNavigation userEmail={user.email || ""} />
+
+      <div className="lg:ml-64 container mx-auto p-8 space-y-16">
         <AdminLandingPages landingPages={landingPagesResult.data || []} />
 
-        <div className="mt-12">
-          <AdminInvestorInquiries inquiries={investorInquiriesResult.data || []} /> // Added investor inquiries section
+        <div id="investor-inquiries">
+          <AdminInvestorInquiries inquiries={investorInquiriesResult.data || []} />
         </div>
 
-        <div className="mt-12">
+        <div id="project-submissions">
           <AdminProjectSubmissions projectSubmissions={projectSubmissionsResult.data || []} />
         </div>
 
-        <div className="mt-12">
+        <div id="contacts">
           <AdminContacts contacts={contactsResult.data || []} userEmail={user.email || ""} />
         </div>
       </div>

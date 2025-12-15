@@ -1,8 +1,9 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Eye, TrendingUp } from "lucide-react"
+import { ExternalLink, Eye, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
 interface LandingPage {
   id: string
@@ -20,14 +21,48 @@ interface AdminLandingPagesProps {
   landingPages: LandingPage[]
 }
 
+type SortField = "title" | "views" | "conversions"
+type SortDirection = "asc" | "desc"
+
 export default function AdminLandingPages({ landingPages }: AdminLandingPagesProps) {
   const safePages = landingPages || []
+  const [sortField, setSortField] = useState<SortField>("views")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+
+  const sortedPages = useMemo(() => {
+    return [...safePages].sort((a, b) => {
+      let comparison = 0
+
+      if (sortField === "title") {
+        comparison = a.title.localeCompare(b.title)
+      } else if (sortField === "views") {
+        comparison = (a.views || 0) - (b.views || 0)
+      } else if (sortField === "conversions") {
+        comparison = (a.conversions || 0) - (b.conversions || 0)
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison
+    })
+  }, [safePages, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("desc")
+    }
+  }
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-2" />
+    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4 ml-2" /> : <ArrowDown className="h-4 w-4 ml-2" />
+  }
 
   const categories = ["revenue-management", "progetti", "servizi", "altro"]
-
   const groupedPages = categories.reduce(
     (acc, category) => {
-      acc[category] = safePages.filter((page) => page.category === category)
+      acc[category] = sortedPages.filter((page) => page.category === category)
       return acc
     },
     {} as Record<string, LandingPage[]>,
@@ -37,7 +72,7 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
   const totalConversions = safePages.reduce((sum, page) => sum + (page.conversions || 0), 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" id="landing-pages">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-foreground">Landing Pages</h2>
@@ -68,6 +103,40 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
           </Card>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ordina per</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Button
+              variant={sortField === "title" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleSort("title")}
+            >
+              Nome
+              <SortIcon field="title" />
+            </Button>
+            <Button
+              variant={sortField === "views" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleSort("views")}
+            >
+              Visite
+              <SortIcon field="views" />
+            </Button>
+            <Button
+              variant={sortField === "conversions" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleSort("conversions")}
+            >
+              Conversioni
+              <SortIcon field="conversions" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {categories.map((category) => {
         const pages = groupedPages[category]
