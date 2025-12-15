@@ -30,12 +30,18 @@ export default async function AdminPage() {
     )
   }
 
-  const [contactsResult, landingPagesResult, projectSubmissionsResult, investorInquiriesResult] = await Promise.all([
-    supabase.from("contacts").select("*").order("created_at", { ascending: false }),
-    supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
-    supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
-    supabase.from("investor_inquiries").select("*").order("created_at", { ascending: false }),
-  ])
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split("T")[0]
+
+  const [contactsResult, landingPagesResult, yesterdayStatsResult, projectSubmissionsResult, investorInquiriesResult] =
+    await Promise.all([
+      supabase.from("contacts").select("*").order("created_at", { ascending: false }),
+      supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
+      supabase.from("landing_page_daily_stats").select("*").eq("date", yesterdayStr),
+      supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
+      supabase.from("investor_inquiries").select("*").order("created_at", { ascending: false }),
+    ])
 
   if (contactsResult.error) {
     console.error("Error fetching contacts:", contactsResult.error)
@@ -43,6 +49,10 @@ export default async function AdminPage() {
 
   if (landingPagesResult.error) {
     console.error("Error fetching landing pages:", landingPagesResult.error)
+  }
+
+  if (yesterdayStatsResult.error) {
+    console.error("Error fetching yesterday stats:", yesterdayStatsResult.error)
   }
 
   if (projectSubmissionsResult.error) {
@@ -53,12 +63,23 @@ export default async function AdminPage() {
     console.error("Error fetching investor inquiries:", investorInquiriesResult.error)
   }
 
+  const yesterdayStatsMap = new Map((yesterdayStatsResult.data || []).map((stat) => [stat.landing_page_id, stat]))
+
+  const landingPagesWithYesterday = (landingPagesResult.data || []).map((page) => {
+    const yesterdayData = yesterdayStatsMap.get(page.id)
+    return {
+      ...page,
+      yesterday_views: yesterdayData?.views,
+      yesterday_conversions: yesterdayData?.conversions,
+    }
+  })
+
   return (
     <div className="min-h-screen bg-background">
       <AdminNavigation userEmail={user.email || ""} />
 
       <div className="lg:ml-64 container mx-auto p-8 space-y-16">
-        <AdminLandingPages landingPages={landingPagesResult.data || []} />
+        <AdminLandingPages landingPages={landingPagesWithYesterday} />
 
         <div id="investor-inquiries">
           <AdminInvestorInquiries inquiries={investorInquiriesResult.data || []} />

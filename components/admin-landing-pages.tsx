@@ -3,7 +3,25 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Eye, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Calendar, TrendingDown } from "lucide-react"
+import {
+  ExternalLink,
+  Eye,
+  TrendingUp,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Calendar,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+} from "lucide-react"
+
+interface DailyStats {
+  date: string
+  views: number
+  conversions: number
+}
 
 interface LandingPage {
   id: string
@@ -16,6 +34,8 @@ interface LandingPage {
   published: boolean
   created_at: string
   launch_date?: string
+  yesterday_views?: number
+  yesterday_conversions?: number
 }
 
 interface AdminLandingPagesProps {
@@ -38,8 +58,6 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
   const totalConversions = safePages.reduce((sum, page) => sum + (page.conversions || 0), 0)
   const averageDailyViews = (totalViews / daysOnline).toFixed(1)
 
-  // Calculate trend (comparing last 7 days vs previous 7 days)
-  // For now we'll show positive trend if views > 50, neutral if 20-50, negative if < 20
   const viewsTrend = totalViews > 100 ? "up" : totalViews > 50 ? "neutral" : "down"
 
   const sortedPages = useMemo(() => {
@@ -72,7 +90,7 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4 ml-2" /> : <ArrowDown className="h-4 w-4 ml-2" />
   }
 
-  const categories = ["revenue-management", "progetti", "servizi", "altro"]
+  const categories = ["homepage", "revenue-management", "progetti", "servizi", "altro"]
   const groupedPages = categories.reduce(
     (acc, category) => {
       acc[category] = sortedPages.filter((page) => page.category === category)
@@ -80,6 +98,32 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
     },
     {} as Record<string, LandingPage[]>,
   )
+
+  const DailyChangeIndicator = ({ current, yesterday }: { current: number; yesterday?: number }) => {
+    if (yesterday === undefined || yesterday === null) return null
+
+    const diff = current - yesterday
+    if (diff > 0) {
+      return (
+        <span className="inline-flex items-center text-green-600 text-xs ml-2">
+          <ArrowUpRight className="h-3 w-3" />+{diff}
+        </span>
+      )
+    } else if (diff < 0) {
+      return (
+        <span className="inline-flex items-center text-red-600 text-xs ml-2">
+          <ArrowDownRight className="h-3 w-3" />
+          {diff}
+        </span>
+      )
+    } else {
+      return (
+        <span className="inline-flex items-center text-gray-500 text-xs ml-2">
+          <Minus className="h-3 w-3" />0
+        </span>
+      )
+    }
+  }
 
   return (
     <div className="space-y-6" id="landing-pages">
@@ -135,8 +179,10 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Landing Pages</h2>
-          <p className="text-muted-foreground mt-2">Gestisci e monitora tutte le landing pages SEO</p>
+          <h2 className="text-3xl font-bold text-foreground">Tutte le Pagine del Sito</h2>
+          <p className="text-muted-foreground mt-2">
+            Monitora performance di tutte le pagine con confronto giornaliero
+          </p>
         </div>
         <div className="flex gap-4">
           <Card>
@@ -202,13 +248,21 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
         const pages = groupedPages[category]
         if (pages.length === 0) return null
 
+        const categoryLabels: Record<string, string> = {
+          homepage: "Homepage",
+          "revenue-management": "Revenue Management",
+          progetti: "Progetti",
+          servizi: "Pagine Servizi",
+          altro: "Altro",
+        }
+
         return (
           <Card key={category}>
             <CardHeader>
-              <CardTitle className="capitalize">
-                {category === "revenue-management" ? "Revenue Management" : category}
-              </CardTitle>
-              <CardDescription>{pages.length} landing pages</CardDescription>
+              <CardTitle>{categoryLabels[category] || category}</CardTitle>
+              <CardDescription>
+                {pages.length} {pages.length === 1 ? "pagina" : "pagine"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -219,19 +273,40 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
                   >
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{page.title}</h3>
-                      <p className="text-sm text-muted-foreground">/{page.slug}</p>
+                      <p className="text-sm text-muted-foreground">/{page.slug || ""}</p>
                       {page.project_name && (
                         <p className="text-xs text-muted-foreground mt-1">Progetto: {page.project_name}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <p className="text-lg font-semibold">{page.views || 0}</p>
-                        <p className="text-xs text-muted-foreground">Views</p>
+                    <div className="flex items-center gap-6">
+                      <div className="text-center min-w-[100px]">
+                        <p className="text-xs text-muted-foreground mb-1">Ieri</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {page.yesterday_views !== undefined ? page.yesterday_views : "-"}
+                        </p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-lg font-semibold">{page.conversions || 0}</p>
-                        <p className="text-xs text-muted-foreground">Conv.</p>
+                      <div className="text-center min-w-[100px]">
+                        <p className="text-xs text-muted-foreground mb-1">Visite Totali</p>
+                        <div className="flex items-center justify-center">
+                          <p className="text-lg font-semibold">{page.views || 0}</p>
+                          <DailyChangeIndicator current={page.views || 0} yesterday={page.yesterday_views} />
+                        </div>
+                      </div>
+                      <div className="text-center min-w-[100px]">
+                        <p className="text-xs text-muted-foreground mb-1">Conv. Ieri</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {page.yesterday_conversions !== undefined ? page.yesterday_conversions : "-"}
+                        </p>
+                      </div>
+                      <div className="text-center min-w-[100px]">
+                        <p className="text-xs text-muted-foreground mb-1">Conv. Totali</p>
+                        <div className="flex items-center justify-center">
+                          <p className="text-lg font-semibold">{page.conversions || 0}</p>
+                          <DailyChangeIndicator
+                            current={page.conversions || 0}
+                            yesterday={page.yesterday_conversions}
+                          />
+                        </div>
                       </div>
                       <Button asChild variant="outline" size="sm">
                         <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
