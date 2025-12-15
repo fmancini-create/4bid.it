@@ -65,7 +65,7 @@ export default async function AdminPage() {
         </div>
 
         <div id="project-submissions">
-          <AdminProjectSubmissions projectSubmissions={projectSubmissionsResult.data || []} />
+          <AdminProjectSubmissions submissions={projectSubmissionsResult.data || []} />
         </div>
 
         <div id="contacts">
