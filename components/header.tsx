@@ -59,15 +59,15 @@ export function Header() {
   }
 
   const navItems = [
-    { label: "HOME", href: "#home" },
-    { label: "DOVE INTERVENIAMO", href: "#services" },
-    { label: "PORTFOLIO", href: "#portfolio" },
+    { label: "HOME", href: "/" },
+    { label: "DOVE INTERVENIAMO", href: "/#services" },
+    { label: "PORTFOLIO", href: "/#portfolio" },
     { label: "REVENUE MANAGEMENT", href: "/cose-il-revenue-management" },
-    { label: "CHI SIAMO", href: "#about" },
-    { label: "PROGETTI IN SVILUPPO", href: "#projects" },
-    { label: "APP SVILUPPATE", href: "#app" },
+    { label: "CHI SIAMO", href: "/#about" },
+    { label: "PROGETTI IN SVILUPPO", href: "/#projects" },
+    { label: "APP SVILUPPATE", href: "/#app" },
     { label: "PROPONI LA TUA IDEA", href: "/proponi-idea" },
-    { label: "CONTATTACI", href: "#contact" },
+    { label: "CONTATTACI", href: "/#contact" },
   ]
 
   return (
