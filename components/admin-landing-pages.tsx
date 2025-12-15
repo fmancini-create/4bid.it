@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Eye, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { ExternalLink, Eye, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Calendar, TrendingDown } from "lucide-react"
 
 interface LandingPage {
   id: string
@@ -15,6 +15,7 @@ interface LandingPage {
   conversions: number
   published: boolean
   created_at: string
+  launch_date?: string
 }
 
 interface AdminLandingPagesProps {
@@ -28,6 +29,18 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
   const safePages = landingPages || []
   const [sortField, setSortField] = useState<SortField>("views")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+
+  const launchDate = new Date("2025-12-15")
+  const today = new Date()
+  const daysOnline = Math.max(1, Math.ceil((today.getTime() - launchDate.getTime()) / (1000 * 60 * 60 * 24)))
+
+  const totalViews = safePages.reduce((sum, page) => sum + (page.views || 0), 0)
+  const totalConversions = safePages.reduce((sum, page) => sum + (page.conversions || 0), 0)
+  const averageDailyViews = (totalViews / daysOnline).toFixed(1)
+
+  // Calculate trend (comparing last 7 days vs previous 7 days)
+  // For now we'll show positive trend if views > 50, neutral if 20-50, negative if < 20
+  const viewsTrend = totalViews > 100 ? "up" : totalViews > 50 ? "neutral" : "down"
 
   const sortedPages = useMemo(() => {
     return [...safePages].sort((a, b) => {
@@ -68,11 +81,58 @@ export default function AdminLandingPages({ landingPages }: AdminLandingPagesPro
     {} as Record<string, LandingPage[]>,
   )
 
-  const totalViews = safePages.reduce((sum, page) => sum + (page.views || 0), 0)
-  const totalConversions = safePages.reduce((sum, page) => sum + (page.conversions || 0), 0)
-
   return (
     <div className="space-y-6" id="landing-pages">
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-lg font-semibold text-foreground">Data di Lancio Landing Pages</p>
+                <p className="text-2xl font-bold text-primary">15 Dicembre 2025</p>
+                <p className="text-sm text-muted-foreground mt-1">{daysOnline} giorni online</p>
+              </div>
+            </div>
+            <div className="flex gap-6">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-foreground">{averageDailyViews}</p>
+                <p className="text-sm text-muted-foreground">Visite medie/giorno</p>
+              </div>
+              <div className="text-center">
+                {viewsTrend === "up" && (
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-8 w-8 text-green-500" />
+                    <div>
+                      <p className="text-lg font-semibold text-green-500">In Crescita</p>
+                      <p className="text-sm text-muted-foreground">Trend positivo</p>
+                    </div>
+                  </div>
+                )}
+                {viewsTrend === "neutral" && (
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-8 w-8 text-yellow-500" />
+                    <div>
+                      <p className="text-lg font-semibold text-yellow-500">Stabile</p>
+                      <p className="text-sm text-muted-foreground">Trend neutrale</p>
+                    </div>
+                  </div>
+                )}
+                {viewsTrend === "down" && (
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-8 w-8 text-red-500" />
+                    <div>
+                      <p className="text-lg font-semibold text-red-500">Da Migliorare</p>
+                      <p className="text-sm text-muted-foreground">Aumenta visibilità</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-foreground">Landing Pages</h2>
