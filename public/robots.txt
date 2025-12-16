@@ -1,0 +1,10 @@
+# robots.txt per 4BID.IT
+User-agent: *
+Allow: /
+
+# Esclusione pagine admin
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://4bid.it/sitemap.xml

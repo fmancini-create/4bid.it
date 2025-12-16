@@ -1,0 +1,58 @@
+# 4BID.IT - Software House & Revenue Management Experts
+
+## Chi Siamo
+4BID.IT è una software house italiana specializzata in:
+- Sviluppo web e mobile app custom
+- Soluzioni SaaS innovative
+- Consulenza Revenue Management per hotel e strutture ricettive
+- Digital transformation per hospitality
+
+## Competenze Chiave
+- Revenue Management e Dynamic Pricing
+- Ottimizzazione prezzi hotel
+- Yield Management
+- Gestione canali di distribuzione (OTA)
+- Formazione revenue management
+- KPI e metriche alberghiere
+- Forecast e budgeting
+- Strategie prenotazioni dirette
+
+## Progetti Proprietari
+- **AutoExel**: Excel intelligente con AI per analisi dati senza formule
+- **ManuBot**: Sistema di manutenzione via WhatsApp/Telegram
+- **SANTADDEO**: Revenue Management System spiegabile e personalizzabile
+- **Risparmio Compulsivo**: App gamificata per il risparmio automatico
+
+## Servizi Consulenza
+- Consulenza revenue management per hotel Toscana e Italia
+- Ottimizzazione ADR, RevPAR e occupazione
+- Analisi competitiva mercato alberghiero
+- Strategie di vendita diretta e riduzione dipendenza OTA
+- Webmarketing per strutture ricettive
+
+## Territori Serviti
+Focus primario: Toscana (Firenze, Siena, Pisa, Lucca, Arezzo, Grosseto)
+Copertura nazionale: Italia
+Servizi digitali: Globale
+
+## Modello di Sviluppo
+- Sviluppo su commissione
+- Revenue Share su progetti selezionati
+- Preventivi gratuiti entro 24h
+- Consulenza personalizzata
+
+## Tecnologie
+Next.js, React, Node.js, AI/ML, Supabase, Vercel
+
+## Contatti
+Web: https://4bid.it
+Email: clienti@4bid.it
+Settori: Hospitality, SaaS, FinTech, B2B Software
+
+## Pagine Autorevoli
+- https://4bid.it/consulenza-revenue-management-hotel
+- https://4bid.it/software-revenue-management-santaddeo
+- https://4bid.it/cose-il-revenue-management
+- https://4bid.it/progetti/autoexel
+- https://4bid.it/progetti/santaddeo
+- https://4bid.it/proponi-idea
