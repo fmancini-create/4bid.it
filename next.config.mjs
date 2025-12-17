@@ -43,21 +43,7 @@ const nextConfig = {
       },
     ]
   },
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "www.4bid.it",
-          },
-        ],
-        destination: "https://4bid.it/:path*",
-        permanent: true,
-      },
-    ]
-  },
+  // The www to non-www redirect should be configured in Vercel project settings
 }
 
 export default nextConfig
