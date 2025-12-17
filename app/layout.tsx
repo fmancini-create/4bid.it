@@ -9,6 +9,7 @@ import { LandingPagePopup } from "@/components/landing-page-popup"
 import Script from "next/script"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
+import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -103,7 +104,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           </div>
         </noscript>
 
-        <YandexMetrika />
+        <Suspense fallback={null}>
+          <YandexMetrika />
+        </Suspense>
         <ScrollToTop />
         {children}
         <Analytics />
