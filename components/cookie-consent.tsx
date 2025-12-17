@@ -11,39 +11,16 @@ export function CookieConsent() {
     const consent = localStorage.getItem("cookie-consent")
     if (!consent) {
       setShowBanner(true)
-    } else if (consent === "accepted") {
-      // If previously accepted, enable analytics
-      enableAnalytics()
     }
+    // Yandex now initializes automatically in layout
   }, [])
 
-  const enableAnalytics = () => {
+  const handleAccept = () => {
+    localStorage.setItem("cookie-consent", "accepted")
     // Enable Google Analytics
     window.gtag?.("consent", "update", {
       analytics_storage: "granted",
     })
-
-    if (typeof window.ym !== "undefined") {
-      try {
-        window.ym(105859080, "init", {
-          clickmap: true,
-          trackLinks: true,
-          accurateTrackBounce: true,
-          webvisor: true,
-          ecommerce: "dataLayer",
-        })
-        console.log("[v0] Yandex Metrika initialized successfully")
-      } catch (error) {
-        console.error("[v0] Yandex Metrika initialization error:", error)
-      }
-    } else {
-      console.warn("[v0] Yandex Metrika function (ym) not available yet")
-    }
-  }
-
-  const handleAccept = () => {
-    localStorage.setItem("cookie-consent", "accepted")
-    enableAnalytics()
     setShowBanner(false)
   }
 
@@ -53,7 +30,9 @@ export function CookieConsent() {
     window.gtag?.("consent", "update", {
       analytics_storage: "denied",
     })
-
+    if (typeof window.ym !== "undefined") {
+      window.ym(105859080, "notBounce")
+    }
     setShowBanner(false)
   }
 
