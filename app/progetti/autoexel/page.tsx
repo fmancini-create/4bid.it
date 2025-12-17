@@ -4,48 +4,14 @@ import { ArrowLeft, CheckCircle, TrendingUp, BarChart3, FileSpreadsheet, Zap, Do
 import { Button } from "@/components/ui/button"
 
 export const metadata = {
-  title: "AutoExel: Excel Automatico con AI | Analisi Dati Senza Formule",
+  title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
   description:
-    "AutoExel è il primo foglio di calcolo intelligente che usa AI per analizzare Excel/CSV senza formule. Carica file, ottieni KPI automatici e crea fogli con linguaggio naturale.",
-  keywords:
-    "autoexel, excel automatico, analisi dati AI, fogli di calcolo intelligenti, KPI automatici, excel senza formule",
-  openGraph: {
-    title: "AutoExel - Excel Automatico con Intelligenza Artificiale",
-    description: "Analizza dati e crea fogli di calcolo senza conoscere formule. AI che parla italiano.",
-    type: "website",
-    url: "https://4bid.it/progetti/autoexel",
-  },
-  alternates: {
-    canonical: "https://4bid.it/progetti/autoexel",
-  },
+    "Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti usando comandi in linguaggio naturale — senza formule.",
 }
 
 export default function AutoExelPage() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "AutoExel",
-    description:
-      "Il primo Excel per chi non sa usare Excel. Sistema di analisi dati automatica con AI che genera KPI, grafici e report senza formule.",
-    url: "https://www.autoexel.it",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: "12.90",
-      priceCurrency: "EUR",
-    },
-    provider: {
-      "@type": "Organization",
-      name: "4BID.IT",
-      url: "https://4bid.it",
-    },
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
-
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-r from-green-500 to-emerald-600 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -64,13 +30,11 @@ export default function AutoExelPage() {
                 <CheckCircle className="h-5 w-5" />
                 <span className="font-semibold">On line</span>
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                AutoExel: Excel Automatico con Intelligenza Artificiale
-              </h1>
-              <p className="text-2xl mb-8 text-white/90">Analisi dati senza formule, solo linguaggio naturale</p>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">AUTOEXEL</h1>
+              <p className="text-2xl mb-8 text-white/90">Il primo Excel per chi non sa usare Excel</p>
               <p className="text-lg leading-relaxed mb-8 text-white/80">
-                Carica file Excel o CSV per ottenere KPI automatici, grafici interattivi e report professionali. Oppure
-                crea fogli intelligenti usando comandi in italiano — zero formule da ricordare.
+                Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea da zero un
+                foglio intelligente usando comandi in linguaggio naturale — senza formule.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button asChild size="lg" className="bg-white text-green-600 hover:bg-white/90 shadow-lg">
@@ -108,14 +72,12 @@ export default function AutoExelPage() {
       <section className="py-20">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Il Problema: Excel Troppo Complesso per Milioni di Utenti
-            </h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">Il Problema</h2>
             <div className="w-24 h-1 bg-green-500 mb-8"></div>
             <p className="text-xl text-gray-700 leading-relaxed">
-              Nel mondo, milioni di professionisti devono analizzare dati quotidianamente ma non conoscono Excel
-              avanzato. Le formule sono criptiche, le funzioni complesse e gli errori frequenti. Le aziende perdono ore
-              preziose in analisi manuali che potrebbero essere automatizzate.
+              Milioni di persone nel mondo devono analizzare dati ma non conoscono Excel o trovano le formule troppo
+              complesse. Le aziende perdono tempo prezioso in analisi manuali, e molti professionisti evitano
+              completamente i fogli di calcolo per paura di sbagliare.
             </p>
           </div>
         </div>
@@ -125,14 +87,11 @@ export default function AutoExelPage() {
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              AutoExel: Analisi Dati Automatica Senza Competenze Tecniche
-            </h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">La Soluzione</h2>
             <div className="w-24 h-1 bg-green-500 mb-8"></div>
             <p className="text-xl text-gray-700 leading-relaxed mb-8">
-              Un sistema di AI conversazionale che comprende il linguaggio naturale e trasforma richieste semplici in
-              analisi complesse. Basta dire "calcola la media di questa colonna" o "crea un grafico delle vendite" e
-              AutoExel esegue per te.
+              AutoExel è un sistema intelligente che permette di analizzare dati e creare fogli di calcolo senza
+              conoscere formule o funzioni complesse.
             </p>
           </div>
 

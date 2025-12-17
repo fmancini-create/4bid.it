@@ -4,31 +4,24 @@ import { Footer } from "@/components/footer"
 import ProjectIdeaForm from "@/components/project-idea-form"
 
 export const metadata: Metadata = {
-  title: "Proponi il Tuo Progetto Digitale - Risposta in 24h | 4BID.IT",
+  title: "Proponi la Tua Idea - 4BID.IT",
   description:
-    "Hai un'idea per app, web app o software? Inviaci il tuo progetto e ricevi valutazione di fattibilità, preventivo e tempi in 24 ore. Revenue share disponibile per idee selezionate.",
+    "Hai un'idea innovativa? Descrivici il tuo progetto e in 24 ore ti risponderemo con fattibilità, costi e tempi. In alcuni casi sviluppiamo con revenue share senza costi iniziali.",
   keywords: [
-    "proponi progetto digitale",
-    "sviluppo app su commissione",
-    "preventivo software",
-    "revenue share sviluppo",
-    "idea startup",
-    "sviluppo mvp",
-    "validazione idea business",
+    "proponi progetto",
+    "idea digitale",
+    "sviluppo su commissione",
+    "revenue share",
+    "preventivo gratuito",
+    "sviluppo app",
+    "consulenza IT",
   ],
   openGraph: {
-    title: "Trasforma la Tua Idea in Realtà - Risposta Entro 24 Ore",
+    title: "Proponi la Tua Idea - 4BID.IT",
     description:
-      "Descrivi il tuo progetto e ricevi analisi di fattibilità completa entro 24h. Sviluppiamo anche con revenue share senza costi iniziali.",
+      "Trasforma la tua idea in realtà. Risposta entro 24h con fattibilità, costi e tempi. Anche con revenue share senza costi iniziali.",
     type: "website",
     url: "https://4bid.it/proponi-idea",
-  },
-  alternates: {
-    canonical: "https://4bid.it/proponi-idea",
-  },
-  robots: {
-    index: true,
-    follow: true,
   },
 }
 
@@ -42,7 +35,7 @@ export default function ProponiIdeaPage() {
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-                Trasforma la Tua Idea Digitale in <span className="text-[#5B9BD5]">Realtà Concreta</span>
+                Hai un'Idea? <span className="text-[#5B9BD5]">Parliamone!</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
                 Descrivici il tuo progetto e <strong>in 24 ore</strong> riceverai una risposta dal nostro team con
@@ -145,27 +138,6 @@ export default function ProponiIdeaPage() {
             </div>
           </div>
         </section>
-
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Service",
-              name: "Valutazione Progetti Digitali",
-              description:
-                "Analisi di fattibilità e preventivo per progetti digitali entro 24 ore. Sviluppo con revenue share disponibile.",
-              provider: {
-                "@type": "Organization",
-                name: "4BID.IT",
-                url: "https://4bid.it",
-              },
-              serviceType: "Sviluppo Software Custom",
-              url: "https://4bid.it/proponi-idea",
-              areaServed: "Worldwide",
-            }),
-          }}
-        />
       </main>
       <Footer />
     </>

@@ -62,7 +62,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           `}
         </Script>
 
-        {/* Yandex.Metrika */}
+        {/* Yandex.Metrika tracking code */}
         <Script
           id="yandex-metrika"
           strategy="afterInteractive"
@@ -73,14 +73,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                 m[i].l=1*new Date();
                 for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
                 k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-              })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=105859080', 'ym');
-              ym(105859080, 'init', {
-                clickmap:true,
-                trackLinks:true,
-                accurateTrackBounce:true,
-                webvisor:true,
-                ecommerce:"dataLayer"
-              });
+              })(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
+              ym(105859080, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
             `,
           }}
         />

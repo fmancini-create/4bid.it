@@ -5,48 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-export const metadata = {
-  title: "ManuBot: Gestione Manutenzioni Hotel via WhatsApp | Sistema Smart",
-  description:
-    "ManuBot è il sistema intelligente per gestire manutenzioni hotel e facility via WhatsApp/Telegram. Zero app da installare, dashboard avanzata per manager. Tracciabilità totale.",
-  keywords:
-    "manubot, gestione manutenzioni hotel, facility management, whatsapp bot, telegram bot, manutenzioni alberghiere",
-  openGraph: {
-    title: "ManuBot - Gestione Manutenzioni Intelligente via WhatsApp",
-    description: "Il sistema universale che trasforma WhatsApp in un potente strumento di facility management.",
-    type: "website",
-    url: "https://4bid.it/progetti/manubot",
-  },
-  alternates: {
-    canonical: "https://4bid.it/progetti/manubot",
-  },
-}
-
 export default function ManubotPage() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "ManuBot",
-    description:
-      "Sistema intelligente di gestione manutenzioni hotel che usa WhatsApp e Telegram per operativi, con dashboard avanzata per manager.",
-    url: "https://4bid.it/progetti/manubot",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, iOS, Android",
-    offers: {
-      "@type": "Offer",
-      price: "39.00",
-      priceCurrency: "EUR",
-    },
-    provider: {
-      "@type": "Organization",
-      name: "4BID.IT",
-      url: "https://4bid.it",
-    },
-  }
-
   return (
     <div className="min-h-screen bg-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}
@@ -62,12 +23,10 @@ export default function ManubotPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <Image src="/manubot-logo.jpg" alt="MANUBOT Logo" width={500} height={200} className="mb-8 max-w-md" />
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">
-                ManuBot: Gestione Manutenzioni Hotel via WhatsApp
-              </h1>
+              <h1 className="text-5xl font-bold text-gray-900 mb-6">The Smart Maintenance Assistant</h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
-                Il primo sistema che trasforma WhatsApp e Telegram in potenti strumenti di facility management per
-                hotel, strutture ricettive e condomini. Zero app da installare per gli operativi.
+                Il sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti:
+                WhatsApp e Telegram.
               </p>
               <div className="flex gap-4">
                 <Link href="#contact">
@@ -123,25 +82,20 @@ export default function ManubotPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div className="bg-red-50 rounded-2xl p-8">
               <MessageSquare className="h-12 w-12 text-red-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Manutenzioni Hotel: Gestione Caotica e Perdita di Tempo
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Il Problema</h3>
               <p className="text-gray-700 leading-relaxed">
-                Nelle strutture ricettive, aziende e condomini, le richieste di manutenzione arrivano via telefono,
-                WhatsApp personale, email sparse. Risultato: nessuna tracciabilità, interventi persi, inefficienza
-                totale e conflitti tra team.
+                Nelle strutture ricettive, aziende o condomini, le manutenzioni vengono spesso gestite in modo caotico:
+                chiamate, messaggi sparsi, assenza di tracciabilità e nessun controllo sull'avanzamento dei lavori.
               </p>
             </div>
 
             <div className="bg-orange-50 rounded-2xl p-8">
               <Rocket className="h-12 w-12 text-orange-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Sistema Ibrido: WhatsApp per Operativi, Dashboard per Manager
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">La Soluzione</h3>
               <p className="text-gray-700 leading-relaxed">
-                ManuBot centralizza tutto in un unico sistema. Gli operativi usano solo WhatsApp/Telegram (che già
-                conoscono), mentre i responsabili accedono a una dashboard web completa con statistiche avanzate,
-                storico interventi e KPI di performance.
+                Un sistema ibrido e intelligente: gli operativi usano solo WhatsApp/Telegram (semplice e familiare),
+                mentre i manager hanno una dashboard completa con statistiche, storico interventi e performance del
+                team.
               </p>
             </div>
           </div>

@@ -22,10 +22,6 @@ export function CookieConsent() {
     window.gtag?.("consent", "update", {
       analytics_storage: "granted",
     })
-
-    if (typeof window !== "undefined" && (window as any).ym) {
-      ;(window as any).ym(105859080, "setUserID", Date.now().toString())
-    }
   }
 
   const handleAccept = () => {
@@ -40,10 +36,6 @@ export function CookieConsent() {
     window.gtag?.("consent", "update", {
       analytics_storage: "denied",
     })
-
-    if (typeof window !== "undefined" && (window as any).ym) {
-      ;(window as any).ym(105859080, "notBounce")
-    }
     setShowBanner(false)
   }
 

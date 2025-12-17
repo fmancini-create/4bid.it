@@ -5,49 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-export const metadata = {
-  title: "SANTADDEO: Revenue Management Explainable AI per Hotel | Sistema RMS",
-  description:
-    "SANTADDEO è il primo RMS con AI trasparente che spiega ogni decisione di pricing. Personalizza strategie revenue per hotel, B&B e resort. Modello pay-per-performance.",
-  keywords:
-    "santaddeo, revenue management AI, RMS hotel, explainable AI, pricing hotel, revenue management system, yield management",
-  openGraph: {
-    title: "SANTADDEO - The Human Revenue Manager con Explainable AI",
-    description:
-      "Il primo sistema RMS che spiega ogni decisione di prezzo e si adatta completamente alla tua struttura.",
-    type: "website",
-    url: "https://4bid.it/progetti/santaddeo",
-  },
-  alternates: {
-    canonical: "https://4bid.it/progetti/santaddeo",
-  },
-}
-
 export default function SantaddeoPage() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "SANTADDEO",
-    description:
-      "Il primo Revenue Management System con Explainable AI che spiega ogni decisione di pricing e si personalizza per ogni struttura ricettiva.",
-    url: "https://4bid.it/software-revenue-management-santaddeo",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: "99.00",
-      priceCurrency: "EUR",
-    },
-    provider: {
-      "@type": "Organization",
-      name: "4BID.IT",
-      url: "https://4bid.it",
-    },
-  }
-
   return (
     <div className="min-h-screen bg-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}
@@ -69,12 +29,10 @@ export default function SantaddeoPage() {
                 height={200}
                 className="mb-8 max-w-md"
               />
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">
-                SANTADDEO: Revenue Management AI che Spiega Ogni Decisione
-              </h1>
+              <h1 className="text-5xl font-bold text-gray-900 mb-6">The Human Revenue Manager</h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
-                Il primo sistema RMS con Explainable AI: comprendi esattamente perché viene proposto ogni prezzo,
-                personalizza le strategie per la tua struttura e paga solo per i risultati ottenuti.
+                Il primo sistema di Revenue Management Intelligente e Umano, che spiega le proprie decisioni e si adatta
+                ad ogni struttura nel mondo.
               </p>
               <div className="flex gap-4">
                 <Link href="#contact">
@@ -130,25 +88,19 @@ export default function SantaddeoPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div className="bg-red-50 rounded-2xl p-8">
               <Target className="h-12 w-12 text-red-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                RMS Tradizionali: Black Box Incomprensibili per Albergatori
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Il Problema</h3>
               <p className="text-gray-700 leading-relaxed">
-                I Revenue Management System attuali sono scatole nere: l'albergatore non capisce come vengono calcolati
-                i prezzi, non può personalizzare le strategie sulla propria realtà e paga canoni fissi indipendentemente
-                dai risultati.
+                Gli albergatori non capiscono come i sistemi RMS determinano i prezzi e non possono personalizzarli
+                secondo la propria realtà.
               </p>
             </div>
 
             <div className="bg-teal-50 rounded-2xl p-8">
               <Zap className="h-12 w-12 text-teal-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Explainable AI + Configurazione Totale + Pay per Performance
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">La Soluzione</h3>
               <p className="text-gray-700 leading-relaxed">
-                SANTADDEO usa algoritmi trasparenti che spiegano ogni scelta di pricing in linguaggio chiaro. Puoi
-                configurare pesi e variabili (meteo, eventi, domanda, competitor) e attivare il modello pay-per-result:
-                paghi solo se aumenti il fatturato.
+                Un algoritmo trasparente e configurabile che combina AI + logica umana, permettendo di regolare i pesi
+                delle variabili (meteo, domanda, eventi, trend, OTA, ecc.) e comprendere ogni scelta di prezzo.
               </p>
             </div>
           </div>

@@ -5,48 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-export const metadata = {
-  title: "Risparmio Compulsivo: App Gamificata per Risparmiare Automaticamente",
-  description:
-    "Risparmio Compulsivo trasforma il risparmio in un gioco globale con sfide, premi e community. Risparmio automatico, salvadanai bloccati e open banking. Scarica l'app gratis.",
-  keywords:
-    "risparmio compulsivo, app risparmio, gamification risparmio, salvadanaio digitale, open banking, risparmio automatico",
-  openGraph: {
-    title: "Risparmio Compulsivo - Save. Play. Win.",
-    description: "L'app che rende il risparmio un gioco motivante con sfide globali e premi reali.",
-    type: "website",
-    url: "https://4bid.it/progetti/risparmio-compulsivo",
-  },
-  alternates: {
-    canonical: "https://4bid.it/progetti/risparmio-compulsivo",
-  },
-}
-
 export default function RisparmioCompulsivoPage() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Risparmio Compulsivo",
-    description:
-      "App di risparmio gamificata che trasforma l'accantonamento in un gioco globale con sfide, classifiche e community motivante.",
-    url: "https://4bid.it/progetti/risparmio-compulsivo",
-    applicationCategory: "FinanceApplication",
-    operatingSystem: "iOS, Android",
-    offers: {
-      "@type": "Offer",
-      price: "2.99",
-      priceCurrency: "EUR",
-    },
-    provider: {
-      "@type": "Organization",
-      name: "4BID.IT",
-      url: "https://4bid.it",
-    },
-  }
-
   return (
     <div className="min-h-screen bg-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}
@@ -68,12 +29,9 @@ export default function RisparmioCompulsivoPage() {
                 height={200}
                 className="mb-8 max-w-md"
               />
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">
-                Risparmio Compulsivo: L'App che Rende il Risparmio un Gioco
-              </h1>
+              <h1 className="text-5xl font-bold text-gray-900 mb-6">Save. Play. Win.</h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
-                Trasforma l'accantonamento in sfide motivanti con community globale, classifiche, premi reali e
-                risparmio automatico. Connetti il tuo conto e inizia a giocare con i tuoi obiettivi finanziari.
+                L'app che trasforma il risparmio personale in un gioco globale, motivante e automatico.
               </p>
               <div className="flex gap-4">
                 <Link href="#contact">
@@ -129,24 +87,19 @@ export default function RisparmioCompulsivoPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div className="bg-red-50 rounded-2xl p-8">
               <PiggyBank className="h-12 w-12 text-red-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                70% delle Persone Non Riesce a Risparmiare con Costanza
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Il Problema</h3>
               <p className="text-gray-700 leading-relaxed">
-                Nel mondo miliardi di persone vorrebbero risparmiare ma mancano disciplina, motivazione e gratificazione
-                immediata. I metodi tradizionali sono noiosi e demotivanti, portando all'abbandono dopo poche settimane.
+                Nel mondo, il 70% delle persone non riesce a risparmiare con costanza: mancano disciplina, motivazione e
+                gratificazione immediata.
               </p>
             </div>
 
             <div className="bg-green-50 rounded-2xl p-8">
               <Trophy className="h-12 w-12 text-green-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Gamification + Open Banking + Community Globale Motivante
-              </h2>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">La Soluzione</h3>
               <p className="text-gray-700 leading-relaxed">
-                Un'app che si connette al tuo conto corrente e crea salvadanai digitali bloccati. Ogni giorno nuove
-                sfide, obiettivi gamificati, premi virtuali e reali, classifiche mondiali e una community che ti
-                sostiene nel percorso di risparmio.
+                Un'app che connette il conto dell'utente e crea salvadanai bloccati con risparmio automatico, sfide
+                gamificate, premi, classifiche e una community internazionale motivante.
               </p>
             </div>
           </div>
