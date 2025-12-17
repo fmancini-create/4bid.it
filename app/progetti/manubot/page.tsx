@@ -4,7 +4,6 @@ import { ArrowLeft, Rocket, MessageSquare, BarChart3, Smartphone, Globe, CheckCi
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { SoftwareAppSchema } from "@/lib/schema-markup"
 
 export const metadata = {
   title: "ManuBot: Gestione Manutenzioni Hotel via WhatsApp | Sistema Smart",
@@ -25,7 +24,12 @@ export const metadata = {
 
 export default function ManubotPage() {
   const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
     name: "ManuBot",
+    description:
+      "Sistema intelligente di gestione manutenzioni hotel che usa WhatsApp e Telegram per operativi, con dashboard avanzata per manager.",
+    url: "https://4bid.it/progetti/manubot",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, iOS, Android",
     offers: {
@@ -33,14 +37,16 @@ export default function ManubotPage() {
       price: "39.00",
       priceCurrency: "EUR",
     },
-    description:
-      "Sistema intelligente di gestione manutenzioni hotel che usa WhatsApp e Telegram per operativi, con dashboard avanzata per manager.",
-    url: "https://4bid.it/progetti/manubot",
+    provider: {
+      "@type": "Organization",
+      name: "4BID.IT",
+      url: "https://4bid.it",
+    },
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <SoftwareAppSchema data={schemaData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}

@@ -4,7 +4,6 @@ import { ArrowLeft, TrendingUp, Target, Zap, Globe, BarChart3, CheckCircle2 } fr
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { SoftwareAppSchema } from "@/lib/schema-markup"
 
 export const metadata = {
   title: "SANTADDEO: Revenue Management Explainable AI per Hotel | Sistema RMS",
@@ -26,7 +25,12 @@ export const metadata = {
 
 export default function SantaddeoPage() {
   const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
     name: "SANTADDEO",
+    description:
+      "Il primo Revenue Management System con Explainable AI che spiega ogni decisione di pricing e si personalizza per ogni struttura ricettiva.",
+    url: "https://4bid.it/software-revenue-management-santaddeo",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     offers: {
@@ -34,14 +38,16 @@ export default function SantaddeoPage() {
       price: "99.00",
       priceCurrency: "EUR",
     },
-    description:
-      "Il primo Revenue Management System con Explainable AI che spiega ogni decisione di pricing e si personalizza per ogni struttura ricettiva.",
-    url: "https://4bid.it/software-revenue-management-santaddeo",
+    provider: {
+      "@type": "Organization",
+      name: "4BID.IT",
+      url: "https://4bid.it",
+    },
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <SoftwareAppSchema data={schemaData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}

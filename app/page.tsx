@@ -7,7 +7,6 @@ import AppsSection from "@/components/apps-section"
 import About from "@/components/about"
 import Contact from "@/components/contact"
 import { Footer } from "@/components/footer"
-import { getOrganizationSchema, getWebSiteSchema } from "@/lib/schema-markup"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -50,8 +49,38 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
-  const organizationSchema = getOrganizationSchema()
-  const websiteSchema = getWebSiteSchema()
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "4BID.IT",
+    url: "https://4bid.it",
+    logo: "https://4bid.it/logo.png",
+    description: "Software house e consulenza Revenue Management per hotel in Italia",
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "IT",
+      addressRegion: "Toscana",
+    },
+    sameAs: [],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer service",
+      email: "clienti@4bid.it",
+      availableLanguage: ["it", "en"],
+    },
+  }
+
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "4BID.IT",
+    url: "https://4bid.it",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://4bid.it/?s={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  }
 
   return (
     <div className="min-h-screen">

@@ -4,7 +4,6 @@ import { ArrowLeft, PiggyBank, Trophy, Users, Globe, Smartphone, CheckCircle2 } 
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { SoftwareAppSchema } from "@/lib/schema-markup"
 
 export const metadata = {
   title: "Risparmio Compulsivo: App Gamificata per Risparmiare Automaticamente",
@@ -25,7 +24,12 @@ export const metadata = {
 
 export default function RisparmioCompulsivoPage() {
   const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
     name: "Risparmio Compulsivo",
+    description:
+      "App di risparmio gamificata che trasforma l'accantonamento in un gioco globale con sfide, classifiche e community motivante.",
+    url: "https://4bid.it/progetti/risparmio-compulsivo",
     applicationCategory: "FinanceApplication",
     operatingSystem: "iOS, Android",
     offers: {
@@ -33,14 +37,16 @@ export default function RisparmioCompulsivoPage() {
       price: "2.99",
       priceCurrency: "EUR",
     },
-    description:
-      "App di risparmio gamificata che trasforma l'accantonamento in un gioco globale con sfide, classifiche e community motivante.",
-    url: "https://4bid.it/progetti/risparmio-compulsivo",
+    provider: {
+      "@type": "Organization",
+      name: "4BID.IT",
+      url: "https://4bid.it",
+    },
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <SoftwareAppSchema data={schemaData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <Header />
 
       {/* Hero Section */}

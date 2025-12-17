@@ -2,7 +2,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, CheckCircle, TrendingUp, BarChart3, FileSpreadsheet, Zap, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SoftwareAppSchema } from "@/lib/schema-markup"
 
 export const metadata = {
   title: "AutoExel: Excel Automatico con AI | Analisi Dati Senza Formule",
@@ -23,7 +22,12 @@ export const metadata = {
 
 export default function AutoExelPage() {
   const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
     name: "AutoExel",
+    description:
+      "Il primo Excel per chi non sa usare Excel. Sistema di analisi dati automatica con AI che genera KPI, grafici e report senza formule.",
+    url: "https://www.autoexel.it",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     offers: {
@@ -31,14 +35,16 @@ export default function AutoExelPage() {
       price: "12.90",
       priceCurrency: "EUR",
     },
-    description:
-      "Il primo Excel per chi non sa usare Excel. Sistema di analisi dati automatica con AI che genera KPI, grafici e report senza formule.",
-    url: "https://www.autoexel.it",
+    provider: {
+      "@type": "Organization",
+      name: "4BID.IT",
+      url: "https://4bid.it",
+    },
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <SoftwareAppSchema data={schemaData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
 
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-r from-green-500 to-emerald-600 text-white overflow-hidden">
