@@ -62,6 +62,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           `}
         </Script>
 
+        {/* Yandex.Metrika */}
         <Script
           id="yandex-metrika"
           strategy="afterInteractive"
