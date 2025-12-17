@@ -5,18 +5,26 @@ export function proxy(request: NextRequest) {
   const hostname = request.headers.get("host") || ""
   const url = request.nextUrl.clone()
 
-  // Blocca accessi diretti via IP (es. 159.69.22.72) o domini non autorizzati
-  const allowedHosts = ["4bid.it", "www.4bid.it", "localhost:3000"]
-  const isAllowedHost = allowedHosts.some((host) => hostname.includes(host))
+  const isDevelopment =
+    process.env.NODE_ENV === "development" ||
+    hostname.includes("localhost") ||
+    hostname.includes("v0.app") ||
+    hostname.includes("v0-preview")
 
-  if (!isAllowedHost && !hostname.includes("vercel.app")) {
-    // Redirect permanente a dominio canonico
-    return NextResponse.redirect("https://4bid.it" + url.pathname, 301)
-  }
+  if (!isDevelopment) {
+    // Blocca accessi diretti via IP (es. 159.69.22.72) o domini non autorizzati SOLO in produzione
+    const allowedHosts = ["4bid.it", "www.4bid.it"]
+    const isAllowedHost = allowedHosts.some((host) => hostname.includes(host))
 
-  if (hostname === "www.4bid.it") {
-    url.host = "4bid.it"
-    return NextResponse.redirect(url, 301)
+    if (!isAllowedHost && !hostname.includes("vercel.app")) {
+      // Redirect permanente a dominio canonico
+      return NextResponse.redirect("https://4bid.it" + url.pathname, 301)
+    }
+
+    if (hostname === "www.4bid.it") {
+      url.host = "4bid.it"
+      return NextResponse.redirect(url, 301)
+    }
   }
 
   const response = NextResponse.next()
