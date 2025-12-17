@@ -9,6 +9,7 @@ declare global {
   }
 }
 
+// Necessario perché Next.js App Router non ricarica la pagina durante la navigazione
 export function YandexMetrika() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -28,14 +29,19 @@ export function YandexMetrika() {
 
     // Track only if route actually changed
     if (pathname !== prevPathname || currentSearchParams !== prevSearchParams) {
-      console.log("[v0] Yandex tracking page view:", url)
+      const trackPageView = () => {
+        if (typeof window !== "undefined" && window.ym) {
+          window.ym(105859080, "hit", url)
+          console.log("[v0] Yandex page view tracked:", url)
+        }
+      }
 
-      // Send hit to Yandex Metrika
-      if (typeof window !== "undefined" && window.ym) {
-        window.ym(105859080, "hit", url)
-        console.log("[v0] Yandex hit sent successfully")
+      // Se Yandex è già caricato, traccia immediatamente
+      if (window.yandexMetrikaLoaded) {
+        trackPageView()
       } else {
-        console.warn("[v0] Yandex Metrika not loaded yet")
+        // Altrimenti attendi un po' e riprova (per la prima visita dopo il consenso)
+        setTimeout(trackPageView, 1000)
       }
 
       // Update previous values

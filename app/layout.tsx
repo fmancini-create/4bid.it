@@ -69,27 +69,57 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           `}
         </Script>
 
-        <Script id="yandex-metrika" strategy="afterInteractive">
-          {`
-            (function(m,e,t,r,i,k,a){
-              m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-              m[i].l=1*new Date();
-              for (var j = 0; j < document.scripts.length; j++) {
-                if (document.scripts[j].src === r) { return; }
+        {/* Script inline ufficiale Yandex con Session Replay (webvisor) abilitato */}
+        {/* Viene eseguito solo dopo che l'utente accetta i cookie (vedi CookieConsent) */}
+        <Script
+          id="yandex-metrika-loader"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Funzione che carica e inizializza Yandex Metrika
+              window.initYandexMetrika = function() {
+                // Previeni doppio caricamento
+                if (window.yandexMetrikaLoaded) {
+                  console.log("[v0] Yandex Metrika already loaded");
+                  return;
+                }
+                
+                console.log("[v0] Loading Yandex Metrika...");
+                
+                // Carica lo script tag ufficiale Yandex
+                (function(m,e,t,r,i,k,a){
+                  m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+                  m[i].l=1*new Date();
+                  for (var j = 0; j < document.scripts.length; j++) {
+                    if (document.scripts[j].src === r) { return; }
+                  }
+                  k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+                })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+                
+                // Inizializza Yandex Metrika con tutte le features
+                ym(105859080, "init", {
+                  clickmap: true,           // Mappa di calore dei click
+                  trackLinks: true,         // Traccia i click sui link esterni
+                  accurateTrackBounce: true, // Tracciamento accurato della frequenza di rimbalzo
+                  webvisor: true,           // SESSION REPLAY - registra le sessioni utente
+                  ecommerce: "dataLayer"    // Integrazione con Google Analytics dataLayer
+                });
+                
+                window.yandexMetrikaLoaded = true;
+                console.log("[v0] Yandex Metrika loaded successfully with Session Replay enabled");
+              };
+              
+              // Controlla se il consenso è già stato dato
+              if (typeof window !== "undefined") {
+                const consent = localStorage.getItem("cookie-consent");
+                if (consent === "accepted") {
+                  // Carica immediatamente se l'utente ha già accettato
+                  window.initYandexMetrika();
+                }
               }
-              k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-            })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-            
-            ym(105859080, "init", {
-              clickmap:true,
-              trackLinks:true,
-              accurateTrackBounce:true,
-              webvisor:true,
-              ecommerce:"dataLayer"
-            });
-            console.log("[v0] Yandex Metrika initialized with ID 105859080");
-          `}
-        </Script>
+            `,
+          }}
+        />
       </head>
       <body className={`${inter.className} antialiased`}>
         {/* GTM noscript fallback */}

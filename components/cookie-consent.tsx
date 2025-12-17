@@ -12,27 +12,32 @@ export function CookieConsent() {
     if (!consent) {
       setShowBanner(true)
     }
-    // Yandex now initializes automatically in layout
   }, [])
 
   const handleAccept = () => {
     localStorage.setItem("cookie-consent", "accepted")
-    // Enable Google Analytics
+
     window.gtag?.("consent", "update", {
       analytics_storage: "granted",
     })
+
+    if (typeof window !== "undefined" && window.initYandexMetrika) {
+      window.initYandexMetrika()
+      console.log("[v0] Cookie consent accepted - Yandex Metrika initialized")
+    }
+
     setShowBanner(false)
   }
 
   const handleDecline = () => {
     localStorage.setItem("cookie-consent", "declined")
-    // Deny analytics
+
     window.gtag?.("consent", "update", {
       analytics_storage: "denied",
     })
-    if (typeof window.ym !== "undefined") {
-      window.ym(105859080, "notBounce")
-    }
+
+    console.log("[v0] Cookie consent declined - Analytics disabled")
+
     setShowBanner(false)
   }
 
@@ -63,4 +68,12 @@ export function CookieConsent() {
       </div>
     </div>
   )
+}
+
+declare global {
+  interface Window {
+    initYandexMetrika?: () => void
+    yandexMetrikaLoaded?: boolean
+    gtag?: (...args: any[]) => void
+  }
 }
