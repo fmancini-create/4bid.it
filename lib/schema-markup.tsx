@@ -1,6 +1,4 @@
-import type { Organization, WithContext, WebSite, Service, SoftwareApplication, LocalBusiness } from "schema-dts"
-
-export function getOrganizationSchema(): WithContext<Organization> {
+export function getOrganizationSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -23,7 +21,7 @@ export function getOrganizationSchema(): WithContext<Organization> {
   }
 }
 
-export function getWebSiteSchema(): WithContext<WebSite> {
+export function getWebSiteSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -42,7 +40,7 @@ export function getServiceSchema(service: {
   description: string
   url: string
   areaServed?: string
-}): WithContext<Service> {
+}) {
   return {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -64,7 +62,7 @@ export function getSoftwareSchema(software: {
   description: string
   url: string
   category: string
-}): WithContext<SoftwareApplication> {
+}) {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -85,7 +83,7 @@ export function getSoftwareSchema(software: {
   }
 }
 
-export function getLocalBusinessSchema(): WithContext<LocalBusiness> {
+export function getLocalBusinessSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -141,7 +139,7 @@ export function SoftwareAppSchema({
     }
   }
 }) {
-  const schema: WithContext<SoftwareApplication> = {
+  const schema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: data.name,
