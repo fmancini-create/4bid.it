@@ -85,27 +85,29 @@ export default function AdminContacts({
   const unreadCount = contacts.filter((c) => !c.read).length
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Pannello Amministrativo</h1>
-          <p className="text-gray-600">
-            Connesso come: <span className="font-semibold">{userEmail}</span>
-          </p>
-        </div>
-        <div className="flex gap-4">
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Aggiorna
-          </Button>
-          <Button onClick={handleSignOut} variant="destructive">
-            <LogOut className="w-4 h-4 mr-2" />
-            Esci
-          </Button>
+    <div className="container mx-auto">
+      <div className="fixed top-0 left-0 right-0 bg-white p-4 shadow z-50">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Pannello Amministrativo</h1>
+            <p className="text-gray-600">
+              Connesso come: <span className="font-semibold">{userEmail}</span>
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Aggiorna
+            </Button>
+            <Button onClick={handleSignOut} variant="destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              Esci
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 mt-20">
         <Card>
           <CardContent className="pt-6">
             <div className="grid md:grid-cols-3 gap-4">

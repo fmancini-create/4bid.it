@@ -5,6 +5,7 @@ import AdminLandingPages from "@/components/admin-landing-pages"
 import AdminProjectSubmissions from "@/components/admin-project-submissions"
 import AdminInvestorInquiries from "@/components/admin-investor-inquiries"
 import AdminNavigation from "@/components/admin-navigation"
+import { Button } from "@/components/ui/button"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -76,9 +77,43 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background border-b border-border px-8 py-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Pannello Amministrativo</h1>
+            <p className="text-sm text-muted-foreground">
+              Connesso come: <span className="font-semibold">{user.email}</span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <form action="/admin" method="get">
+              <Button type="submit" variant="outline" size="sm">
+                <span className="hidden sm:inline mr-2">Aggiorna</span>
+                <span className="sm:hidden">⟳</span>
+              </Button>
+            </form>
+            <form
+              action={async () => {
+                "use server"
+                const supabase = await createClient()
+                await supabase.auth.signOut()
+                redirect("/admin/login")
+              }}
+            >
+              <Button type="submit" variant="destructive" size="sm">
+                <span className="hidden sm:inline">Esci</span>
+                <span className="sm:hidden">ESC</span>
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {/* End of added fixed top header */}
+
       <AdminNavigation userEmail={user.email || ""} />
 
-      <div className="lg:ml-64 container mx-auto p-8 space-y-16">
+      <div className="lg:ml-64 pt-24 container mx-auto p-8 space-y-16">
+        {/* End of added top padding */}
         <AdminLandingPages landingPages={landingPagesWithYesterday} />
 
         <div id="investor-inquiries">
