@@ -13,7 +13,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 export default function Home() {
   return (
     <div className="min-h-screen">
-      <LandingPageTracker slug="" />
+      <LandingPageTracker slug="home" />
 
       <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
       <Script id="google-analytics" strategy="afterInteractive">

@@ -3,7 +3,7 @@
 
 -- Homepage
 INSERT INTO landing_pages (slug, title, category, launch_date, published)
-VALUES ('', 'Homepage 4BID.IT', 'homepage', '2025-12-15', true)
+VALUES ('home', 'Homepage 4BID.IT', 'homepage', '2025-12-15', true)
 ON CONFLICT (slug) DO UPDATE SET
   title = EXCLUDED.title,
   category = EXCLUDED.category,
