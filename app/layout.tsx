@@ -14,17 +14,33 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://4bid.it"),
   title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
   description:
     "4BID offre consulenza revenue management per hotel, software innovativi e soluzioni tecnologiche per ottimizzare ricavi e performance aziendali.",
   keywords: "4bid, revenue management, consulenza turistica, hotel management, tecnologia, innovazione",
   authors: [{ name: "4BID SRL" }],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
     description: "Consulenza revenue management, software e soluzioni tecnologiche innovative",
     type: "website",
     locale: "it_IT",
     siteName: "4BID.IT",
+    url: "https://4bid.it",
+  },
+  alternates: {
+    canonical: "https://4bid.it",
   },
   icons: {
     icon: [
@@ -42,43 +58,44 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const isProduction = process.env.NODE_ENV === "production"
+
   return (
     <html lang="it" className="scroll-smooth">
       <head>
-        {/* Google Tag Manager */}
-        <Script
-          id="gtm-script"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        {isProduction && (
+          <>
+            {/* Google Tag Manager */}
+            <Script
+              id="gtm-script"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-K8PFZCBS');`,
-          }}
-        />
+              }}
+            />
 
-        {/* Google Analytics */}
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
+            {/* Google Analytics */}
+            <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-S6YEEXE4C3');
           `}
-        </Script>
+            </Script>
 
-        {/* Script inline ufficiale Yandex con Session Replay (webvisor) abilitato */}
-        {/* Viene eseguito solo dopo che l'utente accetta i cookie (vedi CookieConsent) */}
-        <Script
-          id="yandex-metrika-loader"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Funzione che carica e inizializza Yandex Metrika
+            {/* Script inline ufficiale Yandex con Session Replay (webvisor) abilitato */}
+            <Script
+              id="yandex-metrika-loader"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
               window.initYandexMetrika = function() {
-                // Previeni doppio caricamento
                 if (window.yandexMetrikaLoaded) {
                   console.log("[v0] Yandex Metrika already loaded");
                   return;
@@ -86,7 +103,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                 
                 console.log("[v0] Loading Yandex Metrika...");
                 
-                // Carica lo script tag ufficiale Yandex
                 (function(m,e,t,r,i,k,a){
                   m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
                   m[i].l=1*new Date();
@@ -96,55 +112,64 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
                 })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
                 
-                // Inizializza Yandex Metrika con tutte le features
                 ym(105859080, "init", {
-                  clickmap: true,           // Mappa di calore dei click
-                  trackLinks: true,         // Traccia i click sui link esterni
-                  accurateTrackBounce: true, // Tracciamento accurato della frequenza di rimbalzo
-                  webvisor: true,           // SESSION REPLAY - registra le sessioni utente
-                  ecommerce: "dataLayer"    // Integrazione con Google Analytics dataLayer
+                  clickmap: true,
+                  trackLinks: true,
+                  accurateTrackBounce: true,
+                  webvisor: true,
+                  ecommerce: "dataLayer"
                 });
                 
                 window.yandexMetrikaLoaded = true;
                 console.log("[v0] Yandex Metrika loaded successfully with Session Replay enabled");
               };
               
-              // Controlla se il consenso è già stato dato
               if (typeof window !== "undefined") {
                 const consent = localStorage.getItem("cookie-consent");
                 if (consent === "accepted") {
-                  // Carica immediatamente se l'utente ha già accettato
                   window.initYandexMetrika();
                 }
               }
             `,
-          }}
-        />
+              }}
+            />
+          </>
+        )}
       </head>
       <body className={`${inter.className} antialiased`}>
-        {/* GTM noscript fallback */}
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-K8PFZCBS"
-            height="0"
-            width="0"
-            style={{ display: "none", visibility: "hidden" }}
-          />
-        </noscript>
+        {/* GTM noscript fallback - solo produzione */}
+        {isProduction && (
+          <noscript>
+            <iframe
+              src="https://www.googletagmanager.com/ns.html?id=GTM-K8PFZCBS"
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
+        )}
 
-        {/* Yandex.Metrika noscript fallback */}
-        <noscript>
-          <div>
-            <img src="https://mc.yandex.ru/watch/105859080" style={{ position: "absolute", left: "-9999px" }} alt="" />
-          </div>
-        </noscript>
+        {/* Yandex.Metrika noscript fallback - solo produzione */}
+        {isProduction && (
+          <noscript>
+            <div>
+              <img
+                src="https://mc.yandex.ru/watch/105859080"
+                style={{ position: "absolute", left: "-9999px" }}
+                alt=""
+              />
+            </div>
+          </noscript>
+        )}
 
-        <Suspense fallback={null}>
-          <YandexMetrika />
-        </Suspense>
+        {isProduction && (
+          <Suspense fallback={null}>
+            <YandexMetrika />
+          </Suspense>
+        )}
         <ScrollToTop />
         {children}
-        <Analytics />
+        {isProduction && <Analytics />}
         <Toaster />
         <CookieConsent />
         <LandingPagePopup />

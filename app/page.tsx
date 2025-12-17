@@ -21,12 +21,12 @@ export const metadata: Metadata = {
     title: "4BID.IT - Innovazione e Tecnologia per il Tuo Business",
     description: "Consulenza revenue management, software e soluzioni tecnologiche innovative per hotel e aziende",
     type: "website",
-    url: "https://www.4bid.it",
+    url: "https://4bid.it",
     locale: "it_IT",
     siteName: "4BID.IT",
   },
   alternates: {
-    canonical: "https://www.4bid.it",
+    canonical: "https://4bid.it",
   },
 }
 
