@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, CheckCircle, TrendingUp, BarChart3, FileSpreadsheet, Zap, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
@@ -12,6 +13,8 @@ export const metadata = {
 export default function AutoExelPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <LandingPageTracker slug="progetti/autoexel" />
+
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-r from-green-500 to-emerald-600 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>

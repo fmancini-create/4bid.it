@@ -4,10 +4,13 @@ import { ArrowLeft, Rocket, MessageSquare, BarChart3, Smartphone, Globe, CheckCi
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export default function ManubotPage() {
   return (
     <div className="min-h-screen bg-white">
+      <LandingPageTracker slug="progetti/manubot" />
+
       <Header />
 
       {/* Hero Section */}

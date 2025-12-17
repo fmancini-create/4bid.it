@@ -4,10 +4,13 @@ import { ArrowLeft, PiggyBank, Trophy, Users, Globe, Smartphone, CheckCircle2 } 
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export default function RisparmioCompulsivoPage() {
   return (
     <div className="min-h-screen bg-white">
+      <LandingPageTracker slug="progetti/risparmio-compulsivo" />
+
       <Header />
 
       {/* Hero Section */}

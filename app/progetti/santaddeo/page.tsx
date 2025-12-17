@@ -4,10 +4,13 @@ import { ArrowLeft, TrendingUp, Target, Zap, Globe, BarChart3, CheckCircle2 } fr
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export default function SantaddeoPage() {
   return (
     <div className="min-h-screen bg-white">
+      <LandingPageTracker slug="progetti/santaddeo" />
+
       <Header />
 
       {/* Hero Section */}
