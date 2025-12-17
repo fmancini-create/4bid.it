@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export default function RisparmioCompulsivoPage() {
   return (
@@ -37,14 +38,12 @@ export default function RisparmioCompulsivoPage() {
                 L'app che trasforma il risparmio personale in un gioco globale, motivante e automatico.
               </p>
               <div className="flex gap-4">
-                <Link href="#contact">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800"
-                  >
-                    Richiedi Accesso Beta
-                  </Button>
-                </Link>
+                <ContactButton
+                  size="lg"
+                  className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800"
+                >
+                  Richiedi Accesso Beta
+                </ContactButton>
               </div>
             </div>
 
@@ -211,14 +210,12 @@ export default function RisparmioCompulsivoPage() {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Iscriviti alla beta o contattaci per investire in questa rivoluzione del risparmio
           </p>
-          <Link href="/#contact">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800"
-            >
-              Contattaci Ora
-            </Button>
-          </Link>
+          <ContactButton
+            size="lg"
+            className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800"
+          >
+            Contattaci Ora
+          </ContactButton>
         </div>
       </section>
 
