@@ -8,6 +8,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { LandingPagePopup } from "@/components/landing-page-popup"
 import Script from "next/script"
 import "./globals.css"
+import { YandexMetrika } from "@/components/yandex-metrika"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -73,7 +74,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
             })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
             
-            // Initialize immediately without waiting for consent
             ym(105859080, "init", {
               clickmap:true,
               trackLinks:true,
@@ -81,6 +81,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               webvisor:true,
               ecommerce:"dataLayer"
             });
+            console.log("[v0] Yandex Metrika initialized with ID 105859080");
           `}
         </Script>
       </head>
@@ -102,6 +103,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           </div>
         </noscript>
 
+        <YandexMetrika />
         <ScrollToTop />
         {children}
         <Analytics />
