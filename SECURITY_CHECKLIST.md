@@ -10,7 +10,7 @@
 - [x] Meta robots noindex su /admin/login
 
 ### 2. SECURITY HEADERS
-Configurati in `next.config.mjs` e `proxy.ts`:
+Configurati in `next.config.mjs`:
 - [x] X-Frame-Options: DENY (previene clickjacking)
 - [x] X-Content-Type-Options: nosniff (previene MIME sniffing)
 - [x] Referrer-Policy: strict-origin-when-cross-origin
@@ -19,12 +19,11 @@ Configurati in `next.config.mjs` e `proxy.ts`:
 - [x] X-DNS-Prefetch-Control: on
 - [x] X-XSS-Protection: 1; mode=block
 
-### 3. BLOCCO ACCESSI NON AUTORIZZATI
-Implementato in `proxy.ts`:
-- [x] Controllo hostname: solo 4bid.it e www.4bid.it (+ localhost dev)
-- [x] Redirect 301 permanente per accessi via IP o domini non autorizzati
-- [x] Redirect 301 da www.4bid.it a 4bid.it (versione canonica)
-- [x] Blocco URL Vercel preview (*.vercel.app) esclusi
+### 3. REDIRECT WWW → NON-WWW
+Implementato in `next.config.mjs` con async redirects():
+- [x] Redirect 301 permanente da www.4bid.it a 4bid.it (versione canonica)
+- [x] Mantiene pathname e query params
+- [x] Non crea loop di redirect
 
 ### 4. ROBOTS.TXT E SITEMAP
 - [x] robots.ts generato dinamicamente
@@ -44,17 +43,15 @@ Implementato in `proxy.ts`:
 
 ### 6. FILES MODIFICATI
 
-#### Nuovi File:
-- `proxy.ts` - Middleware con controlli host e security headers
-- `components/canonical-meta.tsx` - Componente per canonical dinamico (non usato, metadataBase sufficiente)
-- `SECURITY_CHECKLIST.md` - Questo documento
+#### File Eliminati:
+- `proxy.ts` - RIMOSSO per evitare loop di redirect
 
 #### File Modificati:
-- `next.config.mjs` - Aggiunto async headers() con security headers globali
+- `next.config.mjs` - Aggiunto async headers() e async redirects()
 - `app/layout.tsx` - Aggiunto metadataBase, alternates.canonical, env check per tracking
 - `app/page.tsx` - Corretto canonical da www.4bid.it a 4bid.it
 - `app/robots.ts` - Aggiunto host, disallow paths aggiuntivi
-- `app/sitemap.ts` - Già corretto con baseUrl assoluto
+- `SECURITY_CHECKLIST.md` - Questo documento aggiornato
 
 ---
 
@@ -147,12 +144,11 @@ curl https://4bid.it/sitemap.xml | head -20
 
 ## 📝 NOTE TECNICHE
 
-### Perché proxy.ts invece di middleware.ts?
-Next.js 16 rinomina middleware.ts in proxy.ts (backwards compatible).
-Il file gestisce:
-- Controllo hostname
-- Redirect domini non autorizzati
-- Iniezione security headers
+### Perché niente proxy.ts/middleware.ts?
+Il file proxy.ts causava loop di redirect infiniti (ERR_TOO_MANY_REDIRECTS).
+Ora tutto è gestito da next.config.mjs che è più affidabile:
+- `async headers()` per security headers
+- `async redirects()` per redirect www → non-www
 
 ### MetadataBase
 Configurato nel layout.tsx:

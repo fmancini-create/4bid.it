@@ -31,7 +31,30 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains; preload",
           },
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
         ],
+      },
+    ]
+  },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.4bid.it",
+          },
+        ],
+        destination: "https://4bid.it/:path*",
+        permanent: true,
       },
     ]
   },
