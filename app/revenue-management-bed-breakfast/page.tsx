@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata = {
   title: "Revenue Management Bed & Breakfast: Aumenta Ricavi B&B +40% | 4BID.IT",
@@ -36,11 +37,9 @@ export default function RevenueManagementBBPage() {
               perdere la tua autenticità e il rapporto personale con gli ospiti.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <Link href="/#contact">
-                <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-                  Richiedi Consulenza Gratuita
-                </Button>
-              </Link>
+              <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+                Richiedi Consulenza Gratuita
+              </ContactButton>
               <Link href="/progetti/santaddeo">
                 <Button size="lg" variant="outline">
                   Scopri SANTADDEO RMS
@@ -320,11 +319,9 @@ export default function RevenueManagementBBPage() {
                 una piccola % su questo incremento, mantenendo la maggior parte dei nuovi ricavi.
               </p>
             </div>
-            <Link href="/#contact">
-              <Button size="lg" className="w-full bg-primary-blue hover:bg-primary-blue/90">
-                Richiedi Analisi Gratuita
-              </Button>
-            </Link>
+            <ContactButton size="lg" className="w-full bg-primary-blue hover:bg-primary-blue/90">
+              Richiedi Analisi Gratuita
+            </ContactButton>
           </div>
         </div>
       </section>
@@ -339,11 +336,9 @@ export default function RevenueManagementBBPage() {
             consulenza è sempre gratuita.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/#contact">
-              <Button size="lg" variant="secondary">
-                Richiedi Consulenza Gratuita
-              </Button>
-            </Link>
+            <ContactButton size="lg" variant="secondary">
+              Richiedi Consulenza Gratuita
+            </ContactButton>
             <Link href="/progetti/santaddeo">
               <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10 bg-transparent">
                 Scopri SANTADDEO RMS

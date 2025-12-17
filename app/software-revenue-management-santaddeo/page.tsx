@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata = {
   title: "SANTADDEO: Software Revenue Management Hotel AI Trasparente | 4BID.IT",
@@ -36,11 +37,9 @@ export default function SoftwareRevenueManagementPage() {
                 Personalizza i pesi delle variabili e comprendi ogni scelta strategica.
               </p>
               <div className="flex gap-4 flex-wrap">
-                <Link href="/#contact">
-                  <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-                    Richiedi Demo
-                  </Button>
-                </Link>
+                <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+                  Richiedi Demo
+                </ContactButton>
                 <Link href="/progetti/santaddeo">
                   <Button size="lg" variant="outline">
                     Scopri il Progetto
@@ -259,11 +258,9 @@ export default function SoftwareRevenueManagementPage() {
             Richiedi una demo personalizzata di SANTADDEO e scopri come aumentare i ricavi del tuo hotel con l'AI
             trasparente.
           </p>
-          <Link href="/#contact">
-            <Button size="lg" variant="secondary" className="bg-white text-primary-blue hover:bg-white/90">
-              Richiedi Demo Gratuita
-            </Button>
-          </Link>
+          <ContactButton size="lg" variant="secondary" className="bg-white text-primary-blue hover:bg-white/90">
+            Richiedi Demo Gratuita
+          </ContactButton>
         </div>
       </section>
 

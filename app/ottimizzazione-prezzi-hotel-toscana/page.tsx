@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata = {
   title: "Ottimizzazione Prezzi Hotel Toscana: Revenue Management Locale | 4BID.IT",
@@ -35,11 +36,9 @@ export default function OttimizzazionePrezziToscanaPage() {
               tutta la Toscana per massimizzare i tuoi ricavi.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <Link href="/#contact">
-                <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-                  Richiedi Analisi Gratuita
-                </Button>
-              </Link>
+              <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+                Richiedi Analisi Gratuita
+              </ContactButton>
               <Link href="/progetti/santaddeo">
                 <Button size="lg" variant="outline">
                   Scopri SANTADDEO RMS
@@ -331,11 +330,9 @@ export default function OttimizzazionePrezziToscanaPage() {
                 <span>Supporto continuo e formazione del team inclusi</span>
               </li>
             </ul>
-            <Link href="/#contact">
-              <Button size="lg" className="w-full bg-primary-blue hover:bg-primary-blue/90">
-                Richiedi Analisi Gratuita
-              </Button>
-            </Link>
+            <ContactButton size="lg" className="w-full bg-primary-blue hover:bg-primary-blue/90">
+              Richiedi Analisi Gratuita
+            </ContactButton>
           </div>
         </div>
       </section>
@@ -349,11 +346,9 @@ export default function OttimizzazionePrezziToscanaPage() {
             Unisciti a loro.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/#contact">
-              <Button size="lg" variant="secondary">
-                Richiedi Consulenza
-              </Button>
-            </Link>
+            <ContactButton size="lg" variant="secondary">
+              Richiedi Consulenza
+            </ContactButton>
             <Link href="/progetti/santaddeo">
               <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10 bg-transparent">
                 Scopri SANTADDEO

@@ -7,6 +7,7 @@ import { CheckCircle2, TrendingUp, Zap, BarChart3, Calendar, DollarSign } from "
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata: Metadata = {
   title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
@@ -34,11 +35,9 @@ export default function DynamicPricingPage() {
                 intervento manuale
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="#contatti">
-                  <Button size="lg" className="bg-yellow text-foreground hover:bg-yellow/90 font-semibold">
-                    Richiedi Demo Gratuita
-                  </Button>
-                </Link>
+                <ContactButton size="lg" className="bg-yellow text-foreground hover:bg-yellow/90 font-semibold">
+                  Richiedi Demo Gratuita
+                </ContactButton>
                 <Link href="#come-funziona">
                   <Button size="lg" variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20">
                     Scopri Come Funziona
@@ -298,11 +297,9 @@ export default function DynamicPricingPage() {
               Richiedi una demo gratuita di SANTADDEO e scopri quanto puoi guadagnare con il dynamic pricing
               automatizzato.
             </p>
-            <Link href="/#contatti">
-              <Button size="lg" className="bg-yellow text-foreground hover:bg-yellow/90 font-semibold">
-                Richiedi Demo Gratuita
-              </Button>
-            </Link>
+            <ContactButton size="lg" className="bg-yellow text-foreground hover:bg-yellow/90 font-semibold">
+              Richiedi Demo Gratuita
+            </ContactButton>
             <p className="text-sm mt-6 opacity-75">Nessun impegno • Setup in 48 ore • ROI garantito in 90 giorni</p>
           </div>
         </section>
