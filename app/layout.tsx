@@ -14,20 +14,25 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "4 Bid SRL – Offerte & Tecnologia",
+  title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
   description:
-    "Consulenza specializzata per il settore turistico-ricettivo. Revenue management, strategie commerciali e supporto operativo per hotel e strutture ricettive.",
-  keywords: "revenue management, consulenza turistica, hotel management, 4bid, offerte, tecnologia",
-  authors: [{ name: "4 Bid SRL" }],
+    "4BID offre consulenza revenue management per hotel, software innovativi e soluzioni tecnologiche per ottimizzare ricavi e performance aziendali.",
+  keywords: "4bid, revenue management, consulenza turistica, hotel management, tecnologia, innovazione",
+  authors: [{ name: "4BID SRL" }],
   openGraph: {
-    title: "4 Bid SRL – Offerte & Tecnologia",
-    description: "Consulenza specializzata per il settore turistico-ricettivo",
+    title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
+    description: "Consulenza revenue management, software e soluzioni tecnologiche innovative",
     type: "website",
     locale: "it_IT",
+    siteName: "4BID.IT",
   },
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico",
   },
   generator: "v0.app",
 }
