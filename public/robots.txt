@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow admin pages
+User-agent: *
+Disallow: /admin/
+
+# Sitemap
+Sitemap: https://4bid.it/sitemap.xml
