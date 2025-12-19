@@ -61,6 +61,8 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     setMessages((prev) => [...prev, tempUserMessage])
 
     try {
+      console.log("[v0] Sending message to AI support API...")
+
       const response = await fetch("/api/ai-support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,28 +74,36 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
         }),
       })
 
+      console.log("[v0] API response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Failed to send message")
+        const errorData = await response.json()
+        console.error("[v0] API error:", errorData)
+        throw new Error(errorData.error || "Failed to send message")
       }
 
       const data = await response.json()
+      console.log("[v0] API response data received")
 
       // Update conversation ID if first message
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId)
+        console.log("[v0] Set conversation ID:", data.conversationId)
       }
 
       // Add assistant response
       const assistantMessage: Message = {
-        id: data.messageId,
+        id: data.messageId || `msg-${Date.now()}`,
         role: data.role || "assistant",
         content: data.response,
         created_at: new Date().toISOString(),
       }
 
       setMessages((prev) => [...prev.filter((m) => m.id !== tempUserMessage.id), tempUserMessage, assistantMessage])
+      console.log("[v0] Message exchange complete")
     } catch (err) {
-      setError("Si è verificato un errore. Riprova.")
+      const errorMessage = err instanceof Error ? err.message : "Si è verificato un errore. Riprova."
+      setError(errorMessage)
       console.error("[v0] AI Support Chat error:", err)
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id))

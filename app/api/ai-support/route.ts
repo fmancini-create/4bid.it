@@ -67,24 +67,20 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient()
 
-    // Check authentication
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Non autenticato" }, { status: 401 })
-    }
-
     const body = await request.json()
     const { message, conversationId, userEmail, accountType } = body
 
-    if (!message || !userEmail || !accountType) {
-      return NextResponse.json({ error: "Dati mancanti" }, { status: 400 })
+    console.log("[v0] AI Support request:", { userEmail, accountType, hasConversationId: !!conversationId })
+
+    if (!message) {
+      return NextResponse.json({ error: "Messaggio mancante" }, { status: 400 })
     }
 
+    const effectiveEmail = userEmail || "anonymous@4bid.it"
+    const effectiveAccountType = accountType || "pro"
+
     // Check account type (only pro/business)
-    if (accountType === "free") {
+    if (effectiveAccountType === "free") {
       return NextResponse.json({ error: "Chat AI disponibile solo per account Pro e Business" }, { status: 403 })
     }
 
@@ -92,11 +88,13 @@ export async function POST(request: Request) {
 
     // Create new conversation if first message
     if (!currentConversationId) {
+      console.log("[v0] Creating new conversation for:", effectiveEmail)
+
       const { data: newConversation, error: convError } = await supabase
         .from("chat_conversations")
         .insert({
-          user_email: userEmail,
-          account_type: accountType,
+          user_email: effectiveEmail,
+          account_type: effectiveAccountType,
           status: "active",
         })
         .select()
@@ -104,13 +102,16 @@ export async function POST(request: Request) {
 
       if (convError) {
         console.error("[v0] Error creating conversation:", convError)
-        return NextResponse.json({ error: "Errore nel creare la conversazione" }, { status: 500 })
+        return NextResponse.json({ error: "Errore nel creare la conversazione: " + convError.message }, { status: 500 })
       }
 
       currentConversationId = newConversation.id
+      console.log("[v0] Created conversation:", currentConversationId)
     }
 
     // Save user message
+    console.log("[v0] Saving user message to conversation:", currentConversationId)
+
     const { error: userMsgError } = await supabase.from("chat_messages").insert({
       conversation_id: currentConversationId,
       role: "user",
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
     if (userMsgError) {
       console.error("[v0] Error saving user message:", userMsgError)
-      return NextResponse.json({ error: "Errore nel salvare il messaggio" }, { status: 500 })
+      return NextResponse.json({ error: "Errore nel salvare il messaggio: " + userMsgError.message }, { status: 500 })
     }
 
     // Get conversation history (last 5 messages)
@@ -136,6 +137,8 @@ export async function POST(request: Request) {
       .join("\n")
 
     // Generate AI response
+    console.log("[v0] Generating AI response...")
+
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
@@ -143,6 +146,8 @@ export async function POST(request: Request) {
       system: KNOWLEDGE_BASE,
       prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile.`,
     })
+
+    console.log("[v0] AI response generated, length:", aiResponse.length)
 
     // Check for escalation keywords
     const needsEscalation =
@@ -170,7 +175,7 @@ export async function POST(request: Request) {
       try {
         await sendEmail({
           to: SUPER_ADMIN_EMAIL,
-          subject: `🎫 Supporto AI Escalation - ${userEmail}`,
+          subject: `🎫 Supporto AI Escalation - ${effectiveEmail}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
               <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; border-radius: 10px 10px 0 0;">
@@ -178,8 +183,8 @@ export async function POST(request: Request) {
               </div>
               
               <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
-                <p><strong>Utente:</strong> ${userEmail}</p>
-                <p><strong>Account:</strong> ${accountType.toUpperCase()}</p>
+                <p><strong>Utente:</strong> ${effectiveEmail}</p>
+                <p><strong>Account:</strong> ${effectiveAccountType.toUpperCase()}</p>
                 <p><strong>Conversation ID:</strong> ${currentConversationId}</p>
                 
                 <h3>Ultima domanda utente:</h3>
@@ -214,7 +219,7 @@ export async function POST(request: Request) {
     }
 
     // Save AI response
-    const { data: assistantMessage } = await supabase
+    const { data: assistantMessage, error: assistantError } = await supabase
       .from("chat_messages")
       .insert({
         conversation_id: currentConversationId,
@@ -224,6 +229,12 @@ export async function POST(request: Request) {
       .select()
       .single()
 
+    if (assistantError) {
+      console.error("[v0] Error saving assistant message:", assistantError)
+    }
+
+    console.log("[v0] Response complete for conversation:", currentConversationId)
+
     return NextResponse.json({
       response: aiResponse,
       conversationId: currentConversationId,
@@ -231,6 +242,11 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error("[v0] AI Support error:", error)
-    return NextResponse.json({ error: "Errore del server" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Errore del server: " + (error instanceof Error ? error.message : String(error)),
+      },
+      { status: 500 },
+    )
   }
 }
