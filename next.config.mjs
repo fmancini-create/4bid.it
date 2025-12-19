@@ -43,6 +43,40 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Redirect index.html to homepage
+      {
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
+      },
+      // Redirect WordPress page_id parameter to homepage
+      {
+        source: '/',
+        has: [
+          {
+            type: 'query',
+            key: 'page_id',
+          },
+        ],
+        destination: '/',
+        permanent: true,
+      },
+      // Redirect WordPress RSS feed to homepage
+      {
+        source: '/',
+        has: [
+          {
+            type: 'query',
+            key: 'feed',
+          },
+        ],
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
