@@ -15,15 +15,12 @@ export function ContactButton({ children, ...props }: ContactButtonProps) {
 
   const handleClick = () => {
     if (window.location.pathname === "/") {
-      // Already on homepage, just scroll to contact
       const contactElement = document.getElementById("contact")
       if (contactElement) {
         contactElement.scrollIntoView({ behavior: "smooth", block: "start" })
       }
     } else {
-      // Navigate to homepage first, then scroll
       router.push("/#contact")
-      // Wait for navigation and scroll
       setTimeout(() => {
         const contactElement = document.getElementById("contact")
         if (contactElement) {
