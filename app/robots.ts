@@ -6,12 +6,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/_next/", "/scripts/"],
+        disallow: ["/admin/", "/api/", "/_next/static/", "/_next/image", "/scripts/", "/*.js$", "/*.css$", "/*.json$"],
       },
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: ["/admin/", "/api/"],
+        disallow: ["/admin/", "/api/", "/_next/static/", "/_next/image"],
       },
     ],
     sitemap: "https://4bid.it/sitemap.xml",
