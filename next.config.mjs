@@ -43,7 +43,28 @@ const nextConfig = {
       },
     ]
   },
-  // The www to non-www redirect should be configured in Vercel project settings
+  async redirects() {
+    return [
+      // Redirect /index.html to homepage
+      {
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
+      },
+      // Redirect www URLs to non-www (handled by Vercel but adding as backup)
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.4bid.it',
+          },
+        ],
+        destination: 'https://4bid.it/:path*',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig
