@@ -177,16 +177,9 @@ export default async function KnowledgeBasePage() {
                       <span>{site.pages_crawled} pagine</span>
                     </div>
                   </div>
-                  <form
-                    action={async () => {
-                      "use server"
-                      // This would trigger the crawl API
-                    }}
-                  >
-                    <Button variant="outline" size="sm" type="button">
-                      Crawl Ora
-                    </Button>
-                  </form>
+                  <Button variant="outline" size="sm" disabled>
+                    Crawl Ora
+                  </Button>
                 </div>
               ))}
             </div>
