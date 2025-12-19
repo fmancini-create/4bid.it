@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Globe } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function KnowledgeBaseActions() {
   const router = useRouter()
+  const { toast } = useToast()
   const [isScrapingDialogOpen, setIsScrapingDialogOpen] = useState(false)
   const [scrapeUrl, setScrapeUrl] = useState("")
   const [scrapeCategory, setScrapeCategory] = useState("website")
@@ -28,16 +30,27 @@ export default function KnowledgeBaseActions() {
       })
 
       if (response.ok) {
-        alert("URL scansionato con successo!")
+        toast({
+          title: "Successo!",
+          description: "URL scansionato e aggiunto al knowledge base",
+        })
         setIsScrapingDialogOpen(false)
         setScrapeUrl("")
         router.refresh()
       } else {
         const error = await response.json()
-        alert(`Errore: ${error.error}`)
+        toast({
+          title: "Errore durante la scansione",
+          description: error.error || "Si è verificato un errore",
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      alert("Errore durante la scansione")
+      toast({
+        title: "Errore di rete",
+        description: "Impossibile contattare il server",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }

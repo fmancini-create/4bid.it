@@ -1,9 +1,11 @@
+"use client"
+
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Database, ExternalLink, Clock } from "lucide-react"
+import { BookOpen, Database, ExternalLink, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import KnowledgeBaseActions from "@/components/knowledge-base-actions"
 
@@ -20,14 +22,61 @@ export default async function KnowledgeBasePage() {
     redirect("/admin/login")
   }
 
-  // Fetch knowledge items
-  const { data: knowledgeItems } = await supabase
+  // Fetch knowledge items with error handling
+  const { data: knowledgeItems, error: knowledgeError } = await supabase
     .from("knowledge_base")
     .select("*")
     .order("updated_at", { ascending: false })
 
-  // Fetch external sites
-  const { data: externalSites } = await supabase.from("external_sites").select("*").order("name")
+  // Fetch external sites with error handling
+  const { data: externalSites, error: sitesError } = await supabase.from("external_sites").select("*").order("name")
+
+  // Check if we're in a cache refresh state (tables exist but not in cache)
+  const isCacheRefreshing = knowledgeError?.code === "PGRST205" || sitesError?.code === "PGRST205"
+
+  if (isCacheRefreshing) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-3xl mx-auto">
+          <Card className="border-orange-500">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-6 w-6 text-orange-500" />
+                <CardTitle>Aggiornamento Cache in Corso</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Le tabelle del knowledge base sono state create con successo, ma la cache di Supabase si sta ancora
+                aggiornando.
+              </p>
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                <p className="font-semibold">Cosa sta succedendo:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Le tabelle sono state create nel database</li>
+                  <li>La cache PostgREST di Supabase si sta aggiornando (1-2 minuti)</li>
+                  <li>Questo è un processo automatico normale</li>
+                </ul>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={() => window.location.reload()} className="w-full">
+                  Ricarica Pagina
+                </Button>
+                <Link href="/admin" className="w-full">
+                  <Button variant="outline" className="w-full bg-transparent">
+                    Torna alla Dashboard
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Attendi 1-2 minuti e ricarica la pagina. Se il problema persiste dopo 5 minuti, contatta il supporto.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   const allItems = knowledgeItems || []
   const activeItems = allItems.filter((item) => item.is_active)
