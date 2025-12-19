@@ -5,63 +5,52 @@ import { sendEmail } from "@/lib/email-smtp"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
-// Knowledge base for AI
-const KNOWLEDGE_BASE = `
-Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative.
+// Function to build dynamic knowledge base from database
+async function buildDynamicKnowledgeBase(supabase: any): Promise<string> {
+  // Fetch active knowledge from database
+  const { data: knowledgeItems } = await supabase
+    .from("knowledge_base")
+    .select("*")
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(50)
 
-INFORMAZIONI AZIENDALI:
-- Sede: Via Benedetto Croce, 50, 52025 Montevarchi (AR)
-- P.IVA: 02033250518
-- Email: info@4bid.it
-- Sito web: https://4bid.it
+  if (!knowledgeItems || knowledgeItems.length === 0) {
+    // Fallback to basic info if no knowledge base yet
+    return `Sei un assistente AI per 4BID.IT. Rispondi educatamente e suggerisci di contattare info@4bid.it per maggiori informazioni.`
+  }
 
-PROGETTI PRINCIPALI:
+  // Group knowledge by category
+  const byCategory = knowledgeItems.reduce((acc: any, item: any) => {
+    if (!acc[item.category]) acc[item.category] = []
+    acc[item.category].push(item)
+    return acc
+  }, {})
 
-1. SANTADDEO - Revenue Management per Hotel
-   - Sistema avanzato di gestione tariffe alberghiere
-   - Ottimizzazione ADR e RevPAR
-   - Dynamic pricing automatico
-   - Analytics e reporting avanzati
+  // Build knowledge base string
+  let knowledgeBase = `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative.
 
-2. MANUBOT - Maintenance Assistant
-   - Bot intelligente per gestione manutenzioni
-   - Pianificazione interventi automatica
-   - Tracciamento storico manutenzioni
+INFORMAZIONI DALLA KNOWLEDGE BASE:\n\n`
 
-3. RISPARMIO COMPULSIVO - Savings App
-   - App per gestione risparmi personali
-   - Obiettivi finanziari personalizzati
-   - Analytics spese e budget
+  for (const [category, items] of Object.entries(byCategory)) {
+    knowledgeBase += `\n=== ${category.toUpperCase()} ===\n`
+    for (const item of items as any[]) {
+      knowledgeBase += `\n${item.title}:\n${item.content}\n`
+      if (item.source_url) {
+        knowledgeBase += `Link: ${item.source_url}\n`
+      }
+    }
+  }
 
-4. AUTOEXEL - Smart Excel
-   - Automazione fogli di calcolo Excel
-   - Intelligenza artificiale per data analysis
-
-PIANI ACCOUNT:
-- FREE: Accesso limitato, progetti demo
-- PRO: Accesso completo a 2 progetti, supporto email
-- BUSINESS: Tutti i progetti, supporto prioritario, personalizzazioni
-
-SERVIZI:
-- Sviluppo software personalizzato
-- Consulenza tecnologica
-- Revenue management per hotel
-- Integrazione sistemi gestionali
-- Formazione e supporto tecnico
-
-COME AIUTARE:
-1. Rispondi alle domande sui progetti e servizi
-2. Fornisci informazioni su piani e prezzi
-3. Guida gli utenti verso le soluzioni giuste
-4. Per richieste complesse o commerciali, ESCALATION: rispondi "ticket" o "Non sono sicuro"
-
-REGOLE IMPORTANTI:
-- Sii cortese e professionale
-- Usa un linguaggio chiaro e diretto
+  knowledgeBase += `\n\nREGOLE IMPORTANTI:
+- Rispondi in italiano in modo cortese e professionale
+- Usa le informazioni della knowledge base sopra
 - Se non conosci la risposta, ammettilo e suggerisci l'escalation
-- Per preventivi, contratti, dati sensibili → ESCALATION
-- Fornisci sempre link a https://4bid.it per approfondimenti
-`
+- Per preventivi, contratti, dati sensibili → di' "ticket" per escalation
+- Fornisci sempre link a https://4bid.it quando utile`
+
+  return knowledgeBase
+}
 
 export async function POST(request: Request) {
   try {
@@ -136,14 +125,16 @@ export async function POST(request: Request) {
       .map((msg) => `${msg.role}: ${msg.content}`)
       .join("\n")
 
+    const knowledgeBase = await buildDynamicKnowledgeBase(supabase)
+
     // Generate AI response
-    console.log("[v0] Generating AI response...")
+    console.log("[v0] Generating AI response with dynamic knowledge...")
 
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 500,
-      system: KNOWLEDGE_BASE,
+      system: knowledgeBase,
       prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile.`,
     })
 
