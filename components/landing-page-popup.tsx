@@ -99,8 +99,8 @@ export function LandingPagePopup() {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 w-80 transform transition-all duration-500 ease-out ${
-        isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+      className={`fixed bottom-6 left-6 z-50 w-80 transform transition-all duration-500 ease-out ${
+        isVisible ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
       }`}
     >
       <div className="relative overflow-hidden rounded-lg border border-border bg-card shadow-2xl">

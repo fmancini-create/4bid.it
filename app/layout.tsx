@@ -7,6 +7,7 @@ import { CookieConsent } from "@/components/cookie-consent"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { LandingPagePopup } from "@/components/landing-page-popup"
 import Script from "next/script"
+import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
 import { Suspense } from "react"
@@ -172,7 +173,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {isProduction && <Analytics />}
         <Toaster />
         <CookieConsent />
-        <LandingPagePopup />
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <LandingPagePopup />
+          <AISupportChat userEmail="" accountType="pro" />
+        </div>
       </body>
     </html>
   )
