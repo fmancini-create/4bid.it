@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  alternates: {
+    canonical: "https://4bid.it/admin/login",
+  },
 }
 
 export default function AdminLoginPage() {

@@ -45,9 +45,32 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Redirect /index.html to homepage
       {
         source: '/index.html',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/',
+        has: [
+          {
+            type: 'query',
+            key: 'page_id',
+            value: '.*',
+          },
+        ],
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/',
+        has: [
+          {
+            type: 'query',
+            key: 'feed',
+            value: '.*',
+          },
+        ],
         destination: '/',
         permanent: true,
       },
