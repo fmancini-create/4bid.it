@@ -1,5 +1,3 @@
-"use client"
-
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,9 +57,9 @@ export default async function KnowledgeBasePage() {
                 </ul>
               </div>
               <div className="flex gap-3">
-                <Button onClick={() => window.location.reload()} className="w-full">
-                  Ricarica Pagina
-                </Button>
+                <Link href="/admin/knowledge-base" className="w-full">
+                  <Button className="w-full">Ricarica Pagina</Button>
+                </Link>
                 <Link href="/admin" className="w-full">
                   <Button variant="outline" className="w-full bg-transparent">
                     Torna alla Dashboard
@@ -227,10 +225,10 @@ export default async function KnowledgeBasePage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" disabled>
                       Modifica
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" disabled>
                       {item.is_active ? "Disattiva" : "Attiva"}
                     </Button>
                   </div>
