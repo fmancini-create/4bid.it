@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { Facebook } from "lucide-react"
 
 export function Footer() {
   return (
@@ -15,6 +16,18 @@ export function Footer() {
             </p>
             <div className="mt-6 space-y-2 text-sm text-gray-400">
               <p>Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)</p>
+            </div>
+            <div className="mt-4">
+              <Link
+                href="https://www.facebook.com/4bidrevenueguru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                aria-label="Seguici su Facebook"
+              >
+                <Facebook className="w-6 h-6" />
+                <span className="text-sm">Seguici su Facebook</span>
+              </Link>
             </div>
           </div>
 
