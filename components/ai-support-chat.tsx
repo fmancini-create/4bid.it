@@ -17,6 +17,18 @@ interface Message {
   created_at: string
 }
 
+interface LeadState {
+  isCollecting: boolean
+  reason: "consulenza" | "contatto" | "non_so_rispondere" | null
+  collectedData: {
+    nome?: string
+    email?: string
+    telefono?: string
+    messaggio?: string
+  }
+  step: "nome" | "email" | "telefono" | "messaggio" | "conferma" | "completato" | null
+}
+
 interface AISupportChatProps {
   userEmail: string
   accountType: "free" | "pro" | "business"
@@ -29,6 +41,7 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [leadState, setLeadState] = useState<LeadState | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when messages change
@@ -61,8 +74,6 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     setMessages((prev) => [...prev, tempUserMessage])
 
     try {
-      console.log("[v0] Sending message to AI support API...")
-
       const response = await fetch("/api/ai-support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,24 +82,24 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
           conversationId,
           userEmail,
           accountType,
+          leadState,
         }),
       })
 
-      console.log("[v0] API response status:", response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("[v0] API error:", errorData)
         throw new Error(errorData.error || "Failed to send message")
       }
 
       const data = await response.json()
-      console.log("[v0] API response data received")
 
       // Update conversation ID if first message
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId)
-        console.log("[v0] Set conversation ID:", data.conversationId)
+      }
+
+      if (data.leadState) {
+        setLeadState(data.leadState)
       }
 
       const responseMessage: Message = {
@@ -103,7 +114,6 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
         const filtered = prev.filter((m) => m.id !== tempUserMessage.id)
         return [...filtered, { ...tempUserMessage, id: `user-${Date.now()}` }, responseMessage]
       })
-      console.log("[v0] Message exchange complete")
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Si è verificato un errore. Riprova."
       setError(errorMessage)
@@ -119,6 +129,24 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
+    }
+  }
+
+  const getPlaceholder = () => {
+    if (!leadState?.isCollecting) return "Scrivi la tua domanda..."
+    switch (leadState.step) {
+      case "nome":
+        return "Inserisci il tuo nome..."
+      case "email":
+        return "Inserisci la tua email..."
+      case "telefono":
+        return "Inserisci telefono o scrivi 'salta'..."
+      case "messaggio":
+        return "Descrivi la tua richiesta..."
+      case "conferma":
+        return "Scrivi 'sì' per confermare o 'no' per annullare..."
+      default:
+        return "Scrivi la tua domanda..."
     }
   }
 
@@ -143,7 +171,8 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
               <div>
                 <CardTitle className="text-base md:text-lg">Supporto AI 4BID.IT</CardTitle>
                 <p className="text-xs md:text-sm text-blue-100 mt-1">
-                  Risposta in tempo reale • Account{" "}
+                  {leadState?.isCollecting ? <>Raccolta dati in corso</> : <>Risposta in tempo reale</>}
+                  {" • "}
                   <Badge variant="secondary" className="ml-1 text-xs">
                     {accountType.toUpperCase()}
                   </Badge>
@@ -169,6 +198,9 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
                   <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 text-blue-500" />
                   <p className="font-medium text-sm md:text-base">Ciao! Come posso aiutarti?</p>
                   <p className="text-xs md:text-sm mt-2">Scrivi la tua domanda e riceverai una risposta immediata.</p>
+                  <p className="text-xs mt-3 text-blue-600">
+                    Se vuoi essere ricontattato, dimmelo e raccoglierò i tuoi dati!
+                  </p>
                 </div>
               )}
 
@@ -189,12 +221,19 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
                     }`}
                   >
                     {message.role === "admin" && (
-                      <div className="text-xs font-semibold mb-1 text-green-700">👤 Admin Team</div>
+                      <div className="text-xs font-semibold mb-1 text-green-700">Admin Team</div>
                     )}
                     {message.role === "system" && (
-                      <div className="text-xs font-semibold mb-1 text-yellow-700">🔔 Sistema</div>
+                      <div className="text-xs font-semibold mb-1 text-yellow-700">Sistema</div>
                     )}
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+                        if (part.startsWith("**") && part.endsWith("**")) {
+                          return <strong key={i}>{part.slice(2, -2)}</strong>
+                        }
+                        return part
+                      })}
+                    </p>
                     <span className="text-xs opacity-70 mt-1 block">
                       {new Date(message.created_at).toLocaleTimeString("it-IT", {
                         hour: "2-digit",
@@ -223,6 +262,26 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
               </div>
             )}
 
+            {leadState?.isCollecting && (
+              <div className="px-3 py-2 bg-blue-50 border-t border-blue-200">
+                <div className="flex items-center gap-2 text-xs text-blue-700">
+                  <span>Raccolta dati:</span>
+                  <div className="flex gap-1">
+                    {["nome", "email", "telefono", "messaggio", "conferma"].map((step, index) => (
+                      <div
+                        key={step}
+                        className={`h-2 w-6 rounded ${
+                          ["nome", "email", "telefono", "messaggio", "conferma"].indexOf(leadState.step || "") >= index
+                            ? "bg-blue-600"
+                            : "bg-blue-200"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className="p-3 md:p-4 border-t bg-background">
               <div className="flex gap-2">
@@ -230,7 +289,7 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Scrivi la tua domanda..."
+                  placeholder={getPlaceholder()}
                   className="resize-none min-h-[50px] md:min-h-[60px] text-sm md:text-base"
                   disabled={isLoading}
                 />

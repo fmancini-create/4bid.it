@@ -5,6 +5,108 @@ import { sendEmail } from "@/lib/email-smtp"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
+interface LeadCollectionState {
+  isCollecting: boolean
+  reason: "consulenza" | "contatto" | "non_so_rispondere" | null
+  collectedData: {
+    nome?: string
+    email?: string
+    telefono?: string
+    messaggio?: string
+  }
+  step: "nome" | "email" | "telefono" | "messaggio" | "conferma" | "completato" | null
+}
+
+const CONSULENZA_KEYWORDS = [
+  "consulenza",
+  "contattare",
+  "contattatemi",
+  "chiamatemi",
+  "richiamatemi",
+  "preventivo",
+  "informazioni",
+  "interessato",
+  "vorrei sapere di più",
+  "come posso acquistare",
+  "quanto costa",
+  "prezzo",
+  "demo",
+  "appuntamento",
+  "incontro",
+  "parlare con qualcuno",
+  "assistenza",
+  "supporto umano",
+]
+
+function shouldCollectLead(
+  message: string,
+  aiResponse: string,
+): "consulenza" | "contatto" | "non_so_rispondere" | null {
+  const lowerMessage = message.toLowerCase()
+  const lowerResponse = aiResponse.toLowerCase()
+
+  // Check if user wants consultation/contact
+  if (CONSULENZA_KEYWORDS.some((kw) => lowerMessage.includes(kw))) {
+    return "consulenza"
+  }
+
+  // Check if AI doesn't know the answer
+  if (
+    lowerResponse.includes("non sono in grado") ||
+    lowerResponse.includes("non posso aiutarti") ||
+    lowerResponse.includes("non ho informazioni") ||
+    lowerResponse.includes("non sono sicuro") ||
+    lowerResponse.includes("ti consiglio di contattare") ||
+    lowerResponse.includes("contatta il team")
+  ) {
+    return "non_so_rispondere"
+  }
+
+  return null
+}
+
+function extractDataFromMessage(message: string, step: string): string | null {
+  const trimmed = message.trim()
+
+  if (step === "email") {
+    // Simple email validation
+    const emailMatch = trimmed.match(/[\w.-]+@[\w.-]+\.\w+/)
+    return emailMatch ? emailMatch[0] : null
+  }
+
+  if (step === "telefono") {
+    // Extract phone number (digits, spaces, +, -)
+    const phoneMatch = trimmed.match(/[\d\s+\-()]{6,}/)
+    return phoneMatch ? phoneMatch[0].trim() : null
+  }
+
+  // For nome and messaggio, just return the trimmed message
+  return trimmed || null
+}
+
+function getLeadCollectionPrompt(state: LeadCollectionState): string {
+  const reason =
+    state.reason === "consulenza"
+      ? "Ottimo! Sarò felice di aiutarti a metterti in contatto con il nostro team."
+      : "Mi dispiace di non poterti aiutare direttamente su questo. Ti metto in contatto con il nostro team che potrà risponderti."
+
+  switch (state.step) {
+    case "nome":
+      return `${reason}\n\nPer poterti ricontattare, ho bisogno di alcune informazioni.\n\n**Qual è il tuo nome?**`
+    case "email":
+      return `Perfetto, ${state.collectedData.nome}! 👋\n\n**Qual è la tua email?**`
+    case "telefono":
+      return `Grazie! **Qual è il tuo numero di telefono?** (opzionale, scrivi "salta" per saltare)`
+    case "messaggio":
+      return `Ottimo! **Descrivi brevemente la tua richiesta o domanda:**`
+    case "conferma":
+      const data = state.collectedData
+      return `Perfetto! Ecco un riepilogo dei tuoi dati:\n\n📛 **Nome:** ${data.nome}\n📧 **Email:** ${data.email}\n📱 **Telefono:** ${data.telefono || "Non fornito"}\n💬 **Messaggio:** ${data.messaggio}\n\n**Confermi l'invio?** (rispondi "sì" o "no")`
+    default:
+      return ""
+  }
+}
+
 // Function to build dynamic knowledge base from database
 async function buildDynamicKnowledgeBase(supabase: any): Promise<string> {
   // Fetch active knowledge from database
@@ -16,8 +118,22 @@ async function buildDynamicKnowledgeBase(supabase: any): Promise<string> {
     .limit(50)
 
   if (!knowledgeItems || knowledgeItems.length === 0) {
-    // Fallback to basic info if no knowledge base yet
-    return `Sei un assistente AI per 4BID.IT. Rispondi educatamente e suggerisci di contattare info@4bid.it per maggiori informazioni.`
+    return `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative e Revenue Management per hotel.
+
+SERVIZI PRINCIPALI:
+- Consulenza Revenue Management per Hotel
+- Sviluppo Software Personalizzato
+- Applicazioni AI (SantAddeo, Manubot, MyPetSenseAI, ecc.)
+- Formazione e Coaching
+
+CONTATTI:
+- Email: info@4bid.it
+- Sito: https://4bid.it
+
+REGOLE IMPORTANTI:
+- Rispondi SEMPRE in italiano
+- Se l'utente chiede consulenza, preventivo, demo, contatto, o vuole essere richiamato → NON rimandare al form, ma raccogli i dati direttamente in chat
+- Se non sai rispondere a una domanda specifica → raccogli i dati per creare un ticket`
   }
 
   // Group knowledge by category
@@ -27,7 +143,6 @@ async function buildDynamicKnowledgeBase(supabase: any): Promise<string> {
     return acc
   }, {})
 
-  // Build knowledge base string
   let knowledgeBase = `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative.
 
 INFORMAZIONI DALLA KNOWLEDGE BASE:\n\n`
@@ -43,11 +158,11 @@ INFORMAZIONI DALLA KNOWLEDGE BASE:\n\n`
   }
 
   knowledgeBase += `\n\nREGOLE IMPORTANTI:
-- Rispondi in italiano in modo cortese e professionale
+- Rispondi SEMPRE in italiano in modo cortese e professionale
 - Usa le informazioni della knowledge base sopra
-- Se non conosci la risposta, ammettilo e suggerisci l'escalation
-- Per preventivi, contratti, dati sensibili → di' "ticket" per escalation
-- Fornisci sempre link a https://4bid.it quando utile`
+- Se l'utente chiede consulenza, preventivo, demo, contatto, o vuole essere richiamato → NON rimandare al form, ma rispondi che raccoglierai i dati in chat
+- Se non conosci la risposta → rispondi che non hai le informazioni e che creerai un ticket
+- NON dire mai "compila il form" o "contatta via email" - raccogli sempre i dati in chat`
 
   return knowledgeBase
 }
@@ -57,9 +172,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
 
     const body = await request.json()
-    const { message, conversationId, userEmail, accountType } = body
-
-    console.log("[v0] AI Support request:", { userEmail, accountType, hasConversationId: !!conversationId })
+    const { message, conversationId, userEmail, accountType, leadState } = body
 
     if (!message) {
       return NextResponse.json({ error: "Messaggio mancante" }, { status: 400 })
@@ -68,7 +181,6 @@ export async function POST(request: Request) {
     const effectiveEmail = userEmail || "anonymous@4bid.it"
     const effectiveAccountType = accountType || "pro"
 
-    // Check account type (only pro/business)
     if (effectiveAccountType === "free") {
       return NextResponse.json({ error: "Chat AI disponibile solo per account Pro e Business" }, { status: 403 })
     }
@@ -77,8 +189,6 @@ export async function POST(request: Request) {
 
     // Create new conversation if first message
     if (!currentConversationId) {
-      console.log("[v0] Creating new conversation for:", effectiveEmail)
-
       const { data: newConversation, error: convError } = await supabase
         .from("chat_conversations")
         .insert({
@@ -95,12 +205,9 @@ export async function POST(request: Request) {
       }
 
       currentConversationId = newConversation.id
-      console.log("[v0] Created conversation:", currentConversationId)
     }
 
     // Save user message
-    console.log("[v0] Saving user message to conversation:", currentConversationId)
-
     const { error: userMsgError } = await supabase.from("chat_messages").insert({
       conversation_id: currentConversationId,
       role: "user",
@@ -112,7 +219,165 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio: " + userMsgError.message }, { status: 500 })
     }
 
-    // Get conversation history (last 5 messages)
+    let currentLeadState: LeadCollectionState = leadState || {
+      isCollecting: false,
+      reason: null,
+      collectedData: {},
+      step: null,
+    }
+
+    // If we're already collecting lead data
+    if (currentLeadState.isCollecting && currentLeadState.step) {
+      const lowerMessage = message.toLowerCase().trim()
+
+      // Handle confirmation step
+      if (currentLeadState.step === "conferma") {
+        if (
+          lowerMessage === "sì" ||
+          lowerMessage === "si" ||
+          lowerMessage === "yes" ||
+          lowerMessage === "ok" ||
+          lowerMessage === "confermo"
+        ) {
+          // Save to contacts table
+          const { error: contactError } = await supabase.from("contacts").insert({
+            name: currentLeadState.collectedData.nome,
+            email: currentLeadState.collectedData.email,
+            phone: currentLeadState.collectedData.telefono || null,
+            message: `[Ticket da Chat AI - ${currentLeadState.reason}]\n\n${currentLeadState.collectedData.messaggio}`,
+            read: false,
+          })
+
+          if (contactError) {
+            console.error("[v0] Error saving contact:", contactError)
+          }
+
+          // Update conversation status
+          await supabase.from("chat_conversations").update({ status: "escalated" }).eq("id", currentConversationId)
+
+          // Send email notification to admin
+          try {
+            await sendEmail({
+              to: SUPER_ADMIN_EMAIL,
+              subject: `🎫 Nuovo Ticket Chat AI - ${currentLeadState.collectedData.nome}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+                  <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+                    <h1 style="color: white; margin: 0;">🎫 Nuovo Ticket dalla Chat AI</h1>
+                  </div>
+                  
+                  <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                    <p style="color: #6b7280; margin-bottom: 20px;">
+                      <strong>Motivo:</strong> ${currentLeadState.reason === "consulenza" ? "Richiesta consulenza/contatto" : "AI non ha saputo rispondere"}
+                    </p>
+                    
+                    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                      <h3 style="margin-top: 0; color: #374151;">Dati del contatto:</h3>
+                      <p><strong>📛 Nome:</strong> ${currentLeadState.collectedData.nome}</p>
+                      <p><strong>📧 Email:</strong> ${currentLeadState.collectedData.email}</p>
+                      <p><strong>📱 Telefono:</strong> ${currentLeadState.collectedData.telefono || "Non fornito"}</p>
+                    </div>
+                    
+                    <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                      <h3 style="margin-top: 0; color: #1e40af;">💬 Messaggio:</h3>
+                      <p style="color: #1e40af;">${currentLeadState.collectedData.messaggio}</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                      <a href="https://4bid.it/admin/chat-conversations/${currentConversationId}" 
+                         style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                        Visualizza Conversazione
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              `,
+            })
+          } catch (emailError) {
+            console.error("[v0] Error sending notification email:", emailError)
+          }
+
+          const successMessage = `✅ **Perfetto!** Ho creato un ticket con i tuoi dati.\n\nIl nostro team ti contatterà al più presto all'indirizzo ${currentLeadState.collectedData.email}.\n\nGrazie per averci contattato! 🙏`
+
+          await supabase.from("chat_messages").insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: successMessage,
+          })
+
+          return NextResponse.json({
+            response: successMessage,
+            conversationId: currentConversationId,
+            leadState: { isCollecting: false, reason: null, collectedData: {}, step: null },
+          })
+        } else if (lowerMessage === "no" || lowerMessage === "annulla" || lowerMessage === "cancella") {
+          const cancelMessage = "Ok, ho annullato la richiesta. Come posso aiutarti altrimenti?"
+
+          await supabase.from("chat_messages").insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: cancelMessage,
+          })
+
+          return NextResponse.json({
+            response: cancelMessage,
+            conversationId: currentConversationId,
+            leadState: { isCollecting: false, reason: null, collectedData: {}, step: null },
+          })
+        }
+      }
+
+      // Process current step
+      if (currentLeadState.step === "nome") {
+        currentLeadState.collectedData.nome = message.trim()
+        currentLeadState.step = "email"
+      } else if (currentLeadState.step === "email") {
+        const email = extractDataFromMessage(message, "email")
+        if (!email) {
+          const retryMessage = "Per favore, inserisci un indirizzo email valido (es: mario@esempio.it):"
+
+          await supabase.from("chat_messages").insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: retryMessage,
+          })
+
+          return NextResponse.json({
+            response: retryMessage,
+            conversationId: currentConversationId,
+            leadState: currentLeadState,
+          })
+        }
+        currentLeadState.collectedData.email = email
+        currentLeadState.step = "telefono"
+      } else if (currentLeadState.step === "telefono") {
+        if (lowerMessage === "salta" || lowerMessage === "skip" || lowerMessage === "no") {
+          currentLeadState.collectedData.telefono = undefined
+        } else {
+          currentLeadState.collectedData.telefono = message.trim()
+        }
+        currentLeadState.step = "messaggio"
+      } else if (currentLeadState.step === "messaggio") {
+        currentLeadState.collectedData.messaggio = message.trim()
+        currentLeadState.step = "conferma"
+      }
+
+      const nextPrompt = getLeadCollectionPrompt(currentLeadState)
+
+      await supabase.from("chat_messages").insert({
+        conversation_id: currentConversationId,
+        role: "assistant",
+        content: nextPrompt,
+      })
+
+      return NextResponse.json({
+        response: nextPrompt,
+        conversationId: currentConversationId,
+        leadState: currentLeadState,
+      })
+    }
+
+    // Get conversation history
     const { data: historyMessages } = await supabase
       .from("chat_messages")
       .select("role, content")
@@ -128,8 +393,6 @@ export async function POST(request: Request) {
     const knowledgeBase = await buildDynamicKnowledgeBase(supabase)
 
     // Generate AI response
-    console.log("[v0] Generating AI response with dynamic knowledge...")
-
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
@@ -138,79 +401,34 @@ export async function POST(request: Request) {
       prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile.`,
     })
 
-    console.log("[v0] AI response generated, length:", aiResponse.length)
+    const leadTrigger = shouldCollectLead(message, aiResponse)
 
-    // Check for escalation keywords
-    const needsEscalation =
-      aiResponse.toLowerCase().includes("non sono sicuro") ||
-      aiResponse.toLowerCase().includes("ticket") ||
-      message.toLowerCase().includes("preventivo") ||
-      message.toLowerCase().includes("contratto")
-
-    if (needsEscalation) {
-      // Create escalation system message
-      const escalationMsg =
-        "🎫 La tua richiesta è stata inoltrata al team. Riceverai una risposta via email entro 24 ore."
-
-      // Save system message
-      await supabase.from("chat_messages").insert({
-        conversation_id: currentConversationId,
-        role: "system",
-        content: escalationMsg,
-      })
-
-      // Update conversation status to escalated
-      await supabase.from("chat_conversations").update({ status: "escalated" }).eq("id", currentConversationId)
-
-      // Send email to admin
-      try {
-        await sendEmail({
-          to: SUPER_ADMIN_EMAIL,
-          subject: `🎫 Supporto AI Escalation - ${effectiveEmail}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-              <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; border-radius: 10px 10px 0 0;">
-                <h1 style="color: white; margin: 0;">🎫 Ticket Supporto Escalation</h1>
-              </div>
-              
-              <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
-                <p><strong>Utente:</strong> ${effectiveEmail}</p>
-                <p><strong>Account:</strong> ${effectiveAccountType.toUpperCase()}</p>
-                <p><strong>Conversation ID:</strong> ${currentConversationId}</p>
-                
-                <h3>Ultima domanda utente:</h3>
-                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626;">
-                  ${message}
-                </div>
-                
-                <h3>Risposta AI:</h3>
-                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px;">
-                  ${aiResponse}
-                </div>
-                
-                <div style="text-align: center; margin-top: 30px;">
-                  <a href="https://4bid.it/admin/chat-conversations/${currentConversationId}" 
-                     style="background: linear-gradient(135deg, #5B9BD5 0%, #4A8BC2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                    Visualizza Conversazione
-                  </a>
-                </div>
-              </div>
-            </div>
-          `,
-        })
-      } catch (emailError) {
-        console.error("[v0] Error sending escalation email:", emailError)
+    if (leadTrigger) {
+      // Start lead collection flow
+      currentLeadState = {
+        isCollecting: true,
+        reason: leadTrigger,
+        collectedData: {},
+        step: "nome",
       }
 
+      const leadPrompt = getLeadCollectionPrompt(currentLeadState)
+
+      await supabase.from("chat_messages").insert({
+        conversation_id: currentConversationId,
+        role: "assistant",
+        content: leadPrompt,
+      })
+
       return NextResponse.json({
-        response: escalationMsg,
+        response: leadPrompt,
         conversationId: currentConversationId,
-        role: "system",
+        leadState: currentLeadState,
       })
     }
 
-    // Save AI response
-    const { data: assistantMessage, error: assistantError } = await supabase
+    // Save normal AI response
+    const { data: assistantMessage } = await supabase
       .from("chat_messages")
       .insert({
         conversation_id: currentConversationId,
@@ -220,16 +438,11 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (assistantError) {
-      console.error("[v0] Error saving assistant message:", assistantError)
-    }
-
-    console.log("[v0] Response complete for conversation:", currentConversationId)
-
     return NextResponse.json({
       response: aiResponse,
       conversationId: currentConversationId,
       messageId: assistantMessage?.id,
+      leadState: currentLeadState,
     })
   } catch (error) {
     console.error("[v0] AI Support error:", error)
