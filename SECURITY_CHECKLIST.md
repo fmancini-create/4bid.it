@@ -60,43 +60,43 @@ Implementato in `next.config.mjs` con async redirects():
 ### Test Automatici (dopo deploy su Vercel):
 
 1. **Canonical URL**
-```bash
+\`\`\`bash
 curl -I https://4bid.it/ | grep -i "link.*canonical"
 # Verifica che restituisca: <link rel="canonical" href="https://4bid.it/" />
-```
+\`\`\`
 
 2. **Security Headers**
-```bash
+\`\`\`bash
 curl -I https://4bid.it/ | grep -i "x-frame-options\|strict-transport"
 # Verifica presenza degli header di sicurezza
-```
+\`\`\`
 
 3. **Blocco IP Diretto** (sostituisci con IP effettivo se disponibile)
-```bash
+\`\`\`bash
 curl -I http://159.69.22.72/
 # Dovrebbe fare redirect 301 a https://4bid.it
-```
+\`\`\`
 
 4. **Redirect WWW**
-```bash
+\`\`\`bash
 curl -I https://www.4bid.it/
 # Dovrebbe fare redirect 301 a https://4bid.it/
-```
+\`\`\`
 
 5. **Robots.txt**
-```bash
+\`\`\`bash
 curl https://4bid.it/robots.txt
 # Verifica:
 # - Host: https://4bid.it
 # - Disallow: /admin/, /api/
 # - Sitemap: https://4bid.it/sitemap.xml
-```
+\`\`\`
 
 6. **Sitemap.xml**
-```bash
+\`\`\`bash
 curl https://4bid.it/sitemap.xml | head -20
 # Verifica che tutti gli URL inizino con https://4bid.it
-```
+\`\`\`
 
 ### Test Manuali:
 
@@ -152,16 +152,16 @@ Ora tutto è gestito da next.config.mjs che è più affidabile:
 
 ### MetadataBase
 Configurato nel layout.tsx:
-```ts
+\`\`\`ts
 metadataBase: new URL("https://4bid.it")
-```
+\`\`\`
 Garantisce che TUTTI i canonical relativi vengano convertiti in assoluti.
 
 ### Tracking Condizionale
 Tutti gli script analytics caricano SOLO se:
-```ts
+\`\`\`ts
 process.env.NODE_ENV === "production"
-```
+\`\`\`
 Evita tracking in sviluppo e preview Vercel.
 
 ### GDPR Compliance

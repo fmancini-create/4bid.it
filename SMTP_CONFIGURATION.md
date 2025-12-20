@@ -4,14 +4,14 @@
 
 Aggiungi queste variabili d'ambiente nel tuo progetto Vercel (Settings → Environment Variables):
 
-```
+\`\`\`
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=clienti@4bid.it
 SMTP_PASSWORD=Pippolo75@clienti
 SMTP_FROM=clienti@4bid.it
-```
+\`\`\`
 
 ## Note Importanti
 
