@@ -91,15 +91,18 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
         console.log("[v0] Set conversation ID:", data.conversationId)
       }
 
-      // Add assistant response
-      const assistantMessage: Message = {
+      const responseMessage: Message = {
         id: data.messageId || `msg-${Date.now()}`,
         role: data.role || "assistant",
         content: data.response,
         created_at: new Date().toISOString(),
       }
 
-      setMessages((prev) => [...prev.filter((m) => m.id !== tempUserMessage.id), tempUserMessage, assistantMessage])
+      // Replace temp message with real one and add response
+      setMessages((prev) => {
+        const filtered = prev.filter((m) => m.id !== tempUserMessage.id)
+        return [...filtered, { ...tempUserMessage, id: `user-${Date.now()}` }, responseMessage]
+      })
       console.log("[v0] Message exchange complete")
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Si è verificato un errore. Riprova."
