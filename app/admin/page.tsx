@@ -6,6 +6,7 @@ import AdminProjectSubmissions from "@/components/admin-project-submissions"
 import AdminInvestorInquiries from "@/components/admin-investor-inquiries"
 import AdminNavigation from "@/components/admin-navigation"
 import { Button } from "@/components/ui/button"
+import TriggerSnapshotButton from "@/components/trigger-snapshot-button"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -35,14 +36,21 @@ export default async function AdminPage() {
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayStr = yesterday.toISOString().split("T")[0]
 
-  const [contactsResult, landingPagesResult, yesterdayStatsResult, projectSubmissionsResult, investorInquiriesResult] =
-    await Promise.all([
-      supabase.from("contacts").select("*").order("created_at", { ascending: false }),
-      supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
-      supabase.from("landing_page_daily_stats").select("*").eq("date", yesterdayStr),
-      supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
-      supabase.from("investor_inquiries").select("*").order("created_at", { ascending: false }),
-    ])
+  const [
+    contactsResult,
+    landingPagesResult,
+    yesterdayStatsResult,
+    projectSubmissionsResult,
+    investorInquiriesResult,
+    lastSnapshotResult,
+  ] = await Promise.all([
+    supabase.from("contacts").select("*").order("created_at", { ascending: false }),
+    supabase.from("landing_pages").select("*").order("created_at", { ascending: false }),
+    supabase.from("landing_page_daily_stats").select("*").eq("date", yesterdayStr),
+    supabase.from("project_submissions").select("*").order("created_at", { ascending: false }),
+    supabase.from("investor_inquiries").select("*").order("created_at", { ascending: false }),
+    supabase.from("landing_page_daily_stats").select("date").order("date", { ascending: false }).limit(1),
+  ])
 
   if (contactsResult.error) {
     console.error("Error fetching contacts:", contactsResult.error)
@@ -74,6 +82,9 @@ export default async function AdminPage() {
       yesterday_conversions: yesterdayData?.conversions,
     }
   })
+
+  const lastSnapshotDate = lastSnapshotResult.data?.[0]?.date || "Mai"
+  const totalYesterdayViews = (yesterdayStatsResult.data || []).reduce((sum, stat) => sum + (stat.views || 0), 0)
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,12 +119,31 @@ export default async function AdminPage() {
           </div>
         </div>
       </div>
-      {/* End of added fixed top header */}
 
       <AdminNavigation userEmail={user.email || ""} />
 
       <div className="lg:ml-64 pt-24 container mx-auto p-8 space-y-16">
-        {/* End of added top padding */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Visite Ieri ({yesterdayStr})</h3>
+            <p className="text-2xl font-bold text-foreground">{totalYesterdayViews}</p>
+            {totalYesterdayViews === 0 && (
+              <p className="text-xs text-amber-500 mt-1">Nessun dato - snapshot mancante?</p>
+            )}
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Ultimo Snapshot</h3>
+            <p className="text-2xl font-bold text-foreground">{lastSnapshotDate}</p>
+            {lastSnapshotDate !== yesterdayStr && lastSnapshotDate !== "Mai" && (
+              <p className="text-xs text-amber-500 mt-1">Non aggiornato</p>
+            )}
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Azioni</h3>
+            <TriggerSnapshotButton />
+          </div>
+        </div>
+
         <AdminLandingPages landingPages={landingPagesWithYesterday} />
 
         <div id="investor-inquiries">
