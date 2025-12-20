@@ -270,45 +270,53 @@ export async function POST(request: Request) {
           await supabase.from("chat_conversations").update({ status: "escalated" }).eq("id", currentConversationId)
 
           // Send email notification to admin
-          try {
-            await sendEmail({
-              to: SUPER_ADMIN_EMAIL,
-              subject: `🎫 Nuovo Ticket Chat AI - ${currentLeadState.collectedData.nome}`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-                  <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0;">
-                    <h1 style="color: white; margin: 0;">🎫 Nuovo Ticket dalla Chat AI</h1>
+          const emailResult = await sendEmail({
+            to: SUPER_ADMIN_EMAIL,
+            subject: `🎫 Nuovo Ticket Chat AI - ${currentLeadState.collectedData.nome}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+                <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+                  <h1 style="color: white; margin: 0;">🎫 Nuovo Ticket dalla Chat AI</h1>
+                </div>
+                
+                <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                  <p style="color: #6b7280; margin-bottom: 20px;">
+                    <strong>Motivo:</strong> ${currentLeadState.reason === "consulenza" ? "Richiesta consulenza/contatto" : "AI non ha saputo rispondere"}
+                  </p>
+                  
+                  <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #374151;">Dati del contatto:</h3>
+                    <p><strong>📛 Nome:</strong> ${currentLeadState.collectedData.nome}</p>
+                    <p><strong>📧 Email:</strong> ${currentLeadState.collectedData.email}</p>
+                    <p><strong>📱 Telefono:</strong> ${currentLeadState.collectedData.telefono || "Non fornito"}</p>
                   </div>
                   
-                  <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
-                    <p style="color: #6b7280; margin-bottom: 20px;">
-                      <strong>Motivo:</strong> ${currentLeadState.reason === "consulenza" ? "Richiesta consulenza/contatto" : "AI non ha saputo rispondere"}
-                    </p>
-                    
-                    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                      <h3 style="margin-top: 0; color: #374151;">Dati del contatto:</h3>
-                      <p><strong>📛 Nome:</strong> ${currentLeadState.collectedData.nome}</p>
-                      <p><strong>📧 Email:</strong> ${currentLeadState.collectedData.email}</p>
-                      <p><strong>📱 Telefono:</strong> ${currentLeadState.collectedData.telefono || "Non fornito"}</p>
-                    </div>
-                    
-                    <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                      <h3 style="margin-top: 0; color: #1e40af;">💬 Messaggio:</h3>
-                      <p style="color: #1e40af;">${currentLeadState.collectedData.messaggio}</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                      <a href="https://4bid.it/admin/chat-conversations/${currentConversationId}" 
-                         style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                        Visualizza Conversazione
-                      </a>
-                    </div>
+                  <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                    <h3 style="margin-top: 0; color: #1e40af;">💬 Messaggio:</h3>
+                    <p style="color: #1e40af;">${currentLeadState.collectedData.messaggio}</p>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 30px;">
+                    <a href="https://4bid.it/admin/chat-conversations/${currentConversationId}" 
+                       style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                      Visualizza Conversazione
+                    </a>
                   </div>
                 </div>
-              `,
+              </div>
+            `,
+          })
+
+          console.log("[v0] Email notification result:", emailResult)
+
+          if (!emailResult.success) {
+            console.error("[v0] Failed to send email notification:", emailResult.error)
+            // Try to save email failure in database for later retry
+            await supabase.from("chat_messages").insert({
+              conversation_id: currentConversationId,
+              role: "system",
+              content: `[ERRORE INVIO EMAIL] ${emailResult.error}`,
             })
-          } catch (emailError) {
-            console.error("[v0] Error sending notification email:", emailError)
           }
 
           const successMessage = `✅ **Perfetto!** Ho creato un ticket con i tuoi dati.\n\nIl nostro team ti contatterà al più presto all'indirizzo ${currentLeadState.collectedData.email}.\n\nGrazie per averci contattato! 🙏`
