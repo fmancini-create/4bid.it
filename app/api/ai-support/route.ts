@@ -174,6 +174,14 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { message, conversationId, userEmail, accountType, leadState } = body
 
+    console.log("[v0] AI Support - Received:", {
+      message,
+      conversationId,
+      hasLeadState: !!leadState,
+      leadStateStep: leadState?.step,
+      leadStateIsCollecting: leadState?.isCollecting,
+    })
+
     if (!message) {
       return NextResponse.json({ error: "Messaggio mancante" }, { status: 400 })
     }
@@ -219,15 +227,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio: " + userMsgError.message }, { status: 500 })
     }
 
-    let currentLeadState: LeadCollectionState = leadState || {
-      isCollecting: false,
-      reason: null,
-      collectedData: {},
-      step: null,
-    }
+    let currentLeadState: LeadCollectionState =
+      leadState && leadState.isCollecting
+        ? leadState
+        : {
+            isCollecting: false,
+            reason: null,
+            collectedData: {},
+            step: null,
+          }
 
-    // If we're already collecting lead data
+    console.log("[v0] Current lead state:", currentLeadState)
+
     if (currentLeadState.isCollecting && currentLeadState.step) {
+      console.log("[v0] Processing lead collection step:", currentLeadState.step)
+
       const lowerMessage = message.toLowerCase().trim()
 
       // Handle confirmation step
@@ -327,10 +341,12 @@ export async function POST(request: Request) {
         }
       }
 
-      // Process current step
+      let nextStep = currentLeadState.step
+
       if (currentLeadState.step === "nome") {
         currentLeadState.collectedData.nome = message.trim()
-        currentLeadState.step = "email"
+        nextStep = "email"
+        console.log("[v0] Collected nome:", currentLeadState.collectedData.nome)
       } else if (currentLeadState.step === "email") {
         const email = extractDataFromMessage(message, "email")
         if (!email) {
@@ -349,20 +365,26 @@ export async function POST(request: Request) {
           })
         }
         currentLeadState.collectedData.email = email
-        currentLeadState.step = "telefono"
+        nextStep = "telefono"
+        console.log("[v0] Collected email:", currentLeadState.collectedData.email)
       } else if (currentLeadState.step === "telefono") {
         if (lowerMessage === "salta" || lowerMessage === "skip" || lowerMessage === "no") {
           currentLeadState.collectedData.telefono = undefined
         } else {
           currentLeadState.collectedData.telefono = message.trim()
         }
-        currentLeadState.step = "messaggio"
+        nextStep = "messaggio"
+        console.log("[v0] Collected telefono:", currentLeadState.collectedData.telefono)
       } else if (currentLeadState.step === "messaggio") {
         currentLeadState.collectedData.messaggio = message.trim()
-        currentLeadState.step = "conferma"
+        nextStep = "conferma"
+        console.log("[v0] Collected messaggio:", currentLeadState.collectedData.messaggio)
       }
 
+      currentLeadState.step = nextStep as any
+
       const nextPrompt = getLeadCollectionPrompt(currentLeadState)
+      console.log("[v0] Next prompt for step", nextStep, ":", nextPrompt.substring(0, 50))
 
       await supabase.from("chat_messages").insert({
         conversation_id: currentConversationId,
@@ -376,6 +398,8 @@ export async function POST(request: Request) {
         leadState: currentLeadState,
       })
     }
+
+    console.log("[v0] Not in lead collection, generating AI response")
 
     // Get conversation history
     const { data: historyMessages } = await supabase
