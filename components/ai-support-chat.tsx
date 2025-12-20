@@ -5,9 +5,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { MessageCircle, X, Send, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 
 interface Message {
@@ -42,13 +40,11 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [leadState, setLeadState] = useState<LeadState | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   // Hide chat for free users
@@ -165,11 +161,12 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed inset-x-0 bottom-0 md:inset-auto md:bottom-6 md:right-6 md:w-96 md:h-[600px] h-[100dvh] w-full md:rounded-lg rounded-none shadow-2xl z-50 flex flex-col">
-          <CardHeader className="border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white md:rounded-t-lg">
+        <div className="fixed inset-0 md:inset-auto md:bottom-6 md:right-6 md:w-96 md:h-[600px] z-50 flex flex-col bg-background md:rounded-lg shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="shrink-0 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base md:text-lg">Supporto AI 4BID.IT</CardTitle>
+                <h2 className="text-base md:text-lg font-semibold">Supporto AI 4BID.IT</h2>
                 <p className="text-xs md:text-sm text-blue-100 mt-1">
                   {leadState?.isCollecting ? <>Raccolta dati in corso</> : <>Risposta in tempo reale</>}
                   {" • "}
@@ -188,124 +185,132 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
                 <X className="h-5 w-5" />
               </Button>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
-            {/* Messages Area */}
-            <ScrollArea className="flex-1 p-3 md:p-4" ref={scrollRef}>
-              {messages.length === 0 && (
-                <div className="text-center text-muted-foreground py-8">
-                  <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 text-blue-500" />
-                  <p className="font-medium text-sm md:text-base">Ciao! Come posso aiutarti?</p>
-                  <p className="text-xs md:text-sm mt-2">Scrivi la tua domanda e riceverai una risposta immediata.</p>
-                  <p className="text-xs mt-3 text-blue-600">
-                    Se vuoi essere ricontattato, dimmelo e raccoglierò i tuoi dati!
-                  </p>
-                </div>
-              )}
+          {/* Messages Area */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
+            {messages.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">
+                <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 text-blue-500" />
+                <p className="font-medium text-sm md:text-base">Ciao! Come posso aiutarti?</p>
+                <p className="text-xs md:text-sm mt-2">Scrivi la tua domanda e riceverai una risposta immediata.</p>
+                <p className="text-xs mt-3 text-blue-600">
+                  Se vuoi essere ricontattato, dimmelo e raccoglierò i tuoi dati!
+                </p>
+              </div>
+            )}
 
-              {messages.map((message) => (
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`mb-3 md:mb-4 ${message.role === "user" ? "flex justify-end" : "flex justify-start"}`}
+              >
                 <div
-                  key={message.id}
-                  className={`mb-3 md:mb-4 ${message.role === "user" ? "flex justify-end" : "flex justify-start"}`}
+                  className={`max-w-[90%] md:max-w-[85%] rounded-lg px-3 py-2 md:px-4 ${
+                    message.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : message.role === "admin"
+                        ? "bg-green-100 text-green-900 border border-green-300"
+                        : message.role === "system"
+                          ? "bg-yellow-100 text-yellow-900 border border-yellow-300"
+                          : "bg-muted text-foreground"
+                  }`}
                 >
-                  <div
-                    className={`max-w-[90%] md:max-w-[85%] rounded-lg px-3 py-2 md:px-4 ${
-                      message.role === "user"
-                        ? "bg-blue-600 text-white"
-                        : message.role === "admin"
-                          ? "bg-green-100 text-green-900 border border-green-300"
-                          : message.role === "system"
-                            ? "bg-yellow-100 text-yellow-900 border border-yellow-300"
-                            : "bg-muted text-foreground"
-                    }`}
-                  >
-                    {message.role === "admin" && (
-                      <div className="text-xs font-semibold mb-1 text-green-700">Admin Team</div>
-                    )}
-                    {message.role === "system" && (
-                      <div className="text-xs font-semibold mb-1 text-yellow-700">Sistema</div>
-                    )}
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
-                        if (part.startsWith("**") && part.endsWith("**")) {
-                          return <strong key={i}>{part.slice(2, -2)}</strong>
-                        }
-                        return part
-                      })}
-                    </p>
-                    <span className="text-xs opacity-70 mt-1 block">
-                      {new Date(message.created_at).toLocaleTimeString("it-IT", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
+                  {message.role === "admin" && (
+                    <div className="text-xs font-semibold mb-1 text-green-700">Admin Team</div>
+                  )}
+                  {message.role === "system" && (
+                    <div className="text-xs font-semibold mb-1 text-yellow-700">Sistema</div>
+                  )}
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {message.content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+                      if (part.startsWith("**") && part.endsWith("**")) {
+                        return <strong key={i}>{part.slice(2, -2)}</strong>
+                      }
+                      return part
+                    })}
+                  </p>
+                  <span className="text-xs opacity-70 mt-1 block">
+                    {new Date(message.created_at).toLocaleTimeString("it-IT", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex justify-start mb-4">
-                  <div className="bg-muted rounded-lg px-3 py-2 md:px-4 md:py-3 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Sto elaborando...</span>
-                  </div>
-                </div>
-              )}
-            </ScrollArea>
-
-            {/* Error Banner */}
-            {error && (
-              <div className="px-3 py-2 md:px-4 bg-red-50 border-t border-red-200 flex items-center gap-2 text-red-700">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span className="text-xs md:text-sm">{error}</span>
               </div>
-            )}
+            ))}
 
-            {leadState?.isCollecting && (
-              <div className="px-3 py-2 bg-blue-50 border-t border-blue-200">
-                <div className="flex items-center gap-2 text-xs text-blue-700">
-                  <span>Raccolta dati:</span>
-                  <div className="flex gap-1">
-                    {["nome", "email", "telefono", "messaggio", "conferma"].map((step, index) => (
-                      <div
-                        key={step}
-                        className={`h-2 w-6 rounded ${
-                          ["nome", "email", "telefono", "messaggio", "conferma"].indexOf(leadState.step || "") >= index
-                            ? "bg-blue-600"
-                            : "bg-blue-200"
-                        }`}
-                      />
-                    ))}
-                  </div>
+            {isLoading && (
+              <div className="flex justify-start mb-4">
+                <div className="bg-muted rounded-lg px-3 py-2 md:px-4 md:py-3 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Sto elaborando...</span>
                 </div>
               </div>
             )}
 
-            {/* Input Area */}
-            <div className="p-3 md:p-4 border-t bg-background">
-              <div className="flex gap-2">
-                <Textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={getPlaceholder()}
-                  className="resize-none min-h-[50px] md:min-h-[60px] text-sm md:text-base"
-                  disabled={isLoading}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!input.trim() || isLoading}
-                  size="icon"
-                  className="shrink-0 h-[50px] w-[50px] md:h-10 md:w-10"
-                  aria-label="Invia messaggio"
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <div className="shrink-0 px-3 py-2 md:px-4 bg-red-50 border-t border-red-200 flex items-center gap-2 text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span className="text-xs md:text-sm">{error}</span>
+            </div>
+          )}
+
+          {/* Lead State Progress */}
+          {leadState?.isCollecting && (
+            <div className="shrink-0 px-3 py-2 bg-blue-50 border-t border-blue-200">
+              <div className="flex items-center gap-2 text-xs text-blue-700">
+                <span>Raccolta dati:</span>
+                <div className="flex gap-1">
+                  {["nome", "email", "telefono", "messaggio", "conferma"].map((step, index) => (
+                    <div
+                      key={step}
+                      className={`h-2 w-6 rounded ${
+                        ["nome", "email", "telefono", "messaggio", "conferma"].indexOf(leadState.step || "") >= index
+                          ? "bg-blue-600"
+                          : "bg-blue-200"
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Input Area */}
+          <div className="shrink-0 p-3 md:p-4 border-t bg-background">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSendMessage()
+              }}
+              className="flex gap-2"
+            >
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={getPlaceholder()}
+                className="resize-none min-h-[44px] max-h-[100px] text-sm md:text-base flex-1"
+                disabled={isLoading}
+                rows={1}
+              />
+              <Button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                size="icon"
+                className="shrink-0 h-[44px] w-[44px]"
+                aria-label="Invia messaggio"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </form>
+          </div>
+        </div>
       )}
     </>
   )
