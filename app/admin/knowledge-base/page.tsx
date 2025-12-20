@@ -7,6 +7,7 @@ import { BookOpen, Database, ExternalLink, Clock, AlertCircle } from "lucide-rea
 import Link from "next/link"
 import KnowledgeBaseActions from "@/components/knowledge-base-actions"
 import ExternalSiteCard from "@/components/external-site-card"
+import KnowledgeItemActions from "@/components/knowledge-item-actions"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -193,14 +194,7 @@ export default async function KnowledgeBasePage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" disabled>
-                      Modifica
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled>
-                      {item.is_active ? "Disattiva" : "Attiva"}
-                    </Button>
-                  </div>
+                  <KnowledgeItemActions item={item} />
                 </div>
               ))}
             </div>
