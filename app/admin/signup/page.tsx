@@ -95,7 +95,7 @@ export default function AdminSignupPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 bg-gray-50 flex items-center justify-center p-4">
+      <main className="flex-1 bg-gray-50 flex items-center justify-center p-4 pt-24">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">

@@ -5,14 +5,16 @@ export async function POST(request: NextRequest) {
   try {
     const { slug } = await request.json()
 
-    if (!slug) {
+    if (slug === undefined || slug === null) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 })
     }
 
     const supabase = createAdminClient()
 
+    const pageSlug = slug === "" ? "home" : slug
+
     const { data, error } = await supabase.rpc("increment_landing_page_views", {
-      page_slug: slug,
+      page_slug: pageSlug,
     })
 
     if (error) {

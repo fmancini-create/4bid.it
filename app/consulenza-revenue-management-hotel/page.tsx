@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata: Metadata = {
   title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
@@ -80,11 +81,9 @@ export default function ConsulenzaRevenueManagementPage() {
               ottimizzazione tariffe. Esperti di Revenue Management al tuo servizio.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <Link href="/#contact">
-                <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-                  Richiedi Consulenza Gratuita
-                </Button>
-              </Link>
+              <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+                Richiedi Consulenza Gratuita
+              </ContactButton>
               <Link href="/progetti/santaddeo">
                 <Button size="lg" variant="outline">
                   Scopri SANTADDEO RMS
@@ -329,11 +328,9 @@ export default function ConsulenzaRevenueManagementPage() {
             Richiedi una consulenza gratuita. Analizzeremo la tua struttura e ti proporremo un piano personalizzato per
             aumentare i tuoi ricavi.
           </p>
-          <Link href="/#contact">
-            <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-              Richiedi Consulenza Gratuita
-            </Button>
-          </Link>
+          <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+            Richiedi Consulenza Gratuita
+          </ContactButton>
         </div>
       </section>
 

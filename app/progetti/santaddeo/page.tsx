@@ -2,12 +2,16 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, TrendingUp, Target, Zap, Globe, BarChart3, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ContactButton } from "@/components/contact-button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export default function SantaddeoPage() {
   return (
     <div className="min-h-screen bg-white">
+      <LandingPageTracker slug="progetti/santaddeo" />
+
       <Header />
 
       {/* Hero Section */}
@@ -35,14 +39,12 @@ export default function SantaddeoPage() {
                 ad ogni struttura nel mondo.
               </p>
               <div className="flex gap-4">
-                <Link href="#contact">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
-                  >
-                    Richiedi Demo
-                  </Button>
-                </Link>
+                <ContactButton
+                  size="lg"
+                  className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
+                >
+                  Richiedi Demo
+                </ContactButton>
               </div>
             </div>
 
@@ -197,14 +199,12 @@ export default function SantaddeoPage() {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Contattaci per investire, collaborare o ricevere una demo appena disponibile
           </p>
-          <Link href="/#contact">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
-            >
-              Contattaci Ora
-            </Button>
-          </Link>
+          <ContactButton
+            size="lg"
+            className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
+          >
+            Contattaci Ora
+          </ContactButton>
         </div>
       </section>
 

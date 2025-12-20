@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Home, MessageSquare, FolderKanban, Users, TrendingUp, Menu, X } from "lucide-react"
+import { Home, MessageSquare, FolderKanban, Users, TrendingUp, Menu, X, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AdminNavigationProps {
@@ -63,6 +63,22 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
               </button>
             )
           })}
+
+          <a
+            href="/admin/chat-conversations"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-left"
+          >
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <span className="font-medium">Chat AI</span>
+          </a>
+
+          <a
+            href="/admin/knowledge-base"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-left"
+          >
+            <BookOpen className="h-5 w-5 text-primary" />
+            <span className="font-medium">Knowledge Base</span>
+          </a>
         </nav>
 
         <div className="pt-4 border-t border-border">

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import ProjectIdeaForm from "@/components/project-idea-form"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata: Metadata = {
   title: "Proponi la Tua Idea - 4BID.IT",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Proponi la Tua Idea - 4BID.IT",
     description:
-      "Trasforma la tua idea in realtà. Risposta entro 24h con fattibilità, costi e tempi. Anche con revenue share senza costi iniziali.",
+      "Trasforma la tua idea in realtà. Risposta entro 24h con fattibilità, costi e tempi di realizzazione. Anche con revenue share senza costi iniziali.",
     type: "website",
     url: "https://4bid.it/proponi-idea",
   },
@@ -28,6 +29,8 @@ export const metadata: Metadata = {
 export default function ProponiIdeaPage() {
   return (
     <>
+      <LandingPageTracker slug="proponi-idea" />
+
       <Header />
       <main className="min-h-screen bg-background">
         {/* Hero Section */}

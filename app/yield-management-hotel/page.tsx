@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export const metadata = {
   title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
@@ -32,11 +33,9 @@ export default function YieldManagementHotelPage() {
               camera giusta, al cliente giusto, al momento giusto, al prezzo giusto.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <Link href="/#contact">
-                <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-                  Richiedi Consulenza Gratuita
-                </Button>
-              </Link>
+              <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+                Richiedi Consulenza Gratuita
+              </ContactButton>
               <Link href="/progetti/santaddeo">
                 <Button size="lg" variant="outline">
                   Scopri SANTADDEO Yield System
@@ -263,11 +262,9 @@ export default function YieldManagementHotelPage() {
             Richiedi una consulenza gratuita. Analizzeremo il tuo hotel e ti mostreremo come ottimizzare capacità e
             tariffe per massimizzare i ricavi.
           </p>
-          <Link href="/#contact">
-            <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
-              Richiedi Consulenza Gratuita
-            </Button>
-          </Link>
+          <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
+            Richiedi Consulenza Gratuita
+          </ContactButton>
         </div>
       </section>
 

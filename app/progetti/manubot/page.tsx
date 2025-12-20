@@ -4,10 +4,14 @@ import { ArrowLeft, Rocket, MessageSquare, BarChart3, Smartphone, Globe, CheckCi
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { ContactButton } from "@/components/contact-button"
 
 export default function ManubotPage() {
   return (
     <div className="min-h-screen bg-white">
+      <LandingPageTracker slug="progetti/manubot" />
+
       <Header />
 
       {/* Hero Section */}
@@ -29,14 +33,12 @@ export default function ManubotPage() {
                 WhatsApp e Telegram.
               </p>
               <div className="flex gap-4">
-                <Link href="#contact">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:from-orange-600 hover:to-amber-700"
-                  >
-                    Richiedi Demo
-                  </Button>
-                </Link>
+                <ContactButton
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:from-orange-600 hover:to-amber-700"
+                >
+                  Richiedi Demo
+                </ContactButton>
               </div>
             </div>
 
@@ -195,14 +197,12 @@ export default function ManubotPage() {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Contattaci per una demo o per discutere opportunità di investimento e collaborazione
           </p>
-          <Link href="/#contact">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:from-orange-600 hover:to-amber-700"
-            >
-              Contattaci Ora
-            </Button>
-          </Link>
+          <ContactButton
+            size="lg"
+            className="bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:from-orange-600 hover:to-amber-700"
+          >
+            Contattaci Ora
+          </ContactButton>
         </div>
       </section>
 
