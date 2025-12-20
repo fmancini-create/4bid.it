@@ -70,6 +70,12 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     setMessages((prev) => [...prev, tempUserMessage])
 
     try {
+      console.log("[v0] Sending to API:", {
+        message: userMessage,
+        conversationId,
+        leadState,
+      })
+
       const response = await fetch("/api/ai-support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,12 +95,19 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
 
       const data = await response.json()
 
+      console.log("[v0] Received from API:", {
+        hasLeadState: !!data.leadState,
+        leadStateIsCollecting: data.leadState?.isCollecting,
+        leadStateStep: data.leadState?.step,
+      })
+
       // Update conversation ID if first message
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId)
       }
 
-      if (data.leadState) {
+      if (data.leadState !== undefined) {
+        console.log("[v0] Updating leadState to:", data.leadState)
         setLeadState(data.leadState)
       }
 
@@ -261,22 +274,36 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
           )}
 
           {/* Lead State Progress */}
-          {leadState?.isCollecting && (
-            <div className="shrink-0 px-3 py-2 bg-blue-50 border-t border-blue-200">
-              <div className="flex items-center gap-2 text-xs text-blue-700">
-                <span>Raccolta dati:</span>
-                <div className="flex gap-1">
-                  {["nome", "email", "telefono", "messaggio", "conferma"].map((step, index) => (
+          {leadState?.isCollecting && leadState.step && (
+            <div className="shrink-0 px-3 py-3 bg-blue-50 border-t border-blue-200">
+              <div className="flex items-center justify-between text-xs text-blue-700 mb-2">
+                <span className="font-medium">📝 Raccolta dati in corso</span>
+                <span>{["nome", "email", "telefono", "messaggio", "conferma"].indexOf(leadState.step) + 1}/5</span>
+              </div>
+              <div className="flex gap-1">
+                {["nome", "email", "telefono", "messaggio", "conferma"].map((step, index) => {
+                  const currentIndex = ["nome", "email", "telefono", "messaggio", "conferma"].indexOf(
+                    leadState.step || "",
+                  )
+                  const isCompleted = index < currentIndex
+                  const isCurrent = index === currentIndex
+                  return (
                     <div
                       key={step}
-                      className={`h-2 w-6 rounded ${
-                        ["nome", "email", "telefono", "messaggio", "conferma"].indexOf(leadState.step || "") >= index
-                          ? "bg-blue-600"
-                          : "bg-blue-200"
+                      className={`h-2 flex-1 rounded transition-colors ${
+                        isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-600" : "bg-blue-200"
                       }`}
+                      title={step.charAt(0).toUpperCase() + step.slice(1)}
                     />
-                  ))}
-                </div>
+                  )
+                })}
+              </div>
+              <div className="flex justify-between text-[10px] text-blue-500 mt-1">
+                <span>Nome</span>
+                <span>Email</span>
+                <span>Tel</span>
+                <span>Msg</span>
+                <span>✓</span>
               </div>
             </div>
           )}

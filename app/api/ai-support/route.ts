@@ -87,21 +87,21 @@ function extractDataFromMessage(message: string, step: string): string | null {
 function getLeadCollectionPrompt(state: LeadCollectionState): string {
   const reason =
     state.reason === "consulenza"
-      ? "Ottimo! Sarò felice di aiutarti a metterti in contatto con il nostro team."
-      : "Mi dispiace di non poterti aiutare direttamente su questo. Ti metto in contatto con il nostro team che potrà risponderti."
+      ? "🎯 Ottimo! Sarò felice di aiutarti a metterti in contatto con il nostro team."
+      : "🤔 Mi dispiace di non poterti aiutare direttamente su questo. Ti metto in contatto con il nostro team che potrà risponderti."
 
   switch (state.step) {
     case "nome":
-      return `${reason}\n\nPer poterti ricontattare, ho bisogno di alcune informazioni.\n\n**Qual è il tuo nome?**`
+      return `${reason}\n\n📝 Per poterti ricontattare, ho bisogno di alcune informazioni.\n\n**Qual è il tuo nome?**`
     case "email":
-      return `Perfetto, ${state.collectedData.nome}! 👋\n\n**Qual è la tua email?**`
+      return `👋 Piacere di conoscerti, **${state.collectedData.nome}**!\n\n📧 **Qual è la tua email?**`
     case "telefono":
-      return `Grazie! **Qual è il tuo numero di telefono?** (opzionale, scrivi "salta" per saltare)`
+      return `✅ Perfetto!\n\n📱 **Qual è il tuo numero di telefono?**\n_(opzionale, scrivi "salta" per saltare)_`
     case "messaggio":
-      return `Ottimo! **Descrivi brevemente la tua richiesta o domanda:**`
+      return `👍 Ottimo!\n\n💬 **Descrivi brevemente la tua richiesta o domanda:**`
     case "conferma":
       const data = state.collectedData
-      return `Perfetto! Ecco un riepilogo dei tuoi dati:\n\n📛 **Nome:** ${data.nome}\n📧 **Email:** ${data.email}\n📱 **Telefono:** ${data.telefono || "Non fornito"}\n💬 **Messaggio:** ${data.messaggio}\n\n**Confermi l'invio?** (rispondi "sì" o "no")`
+      return `📋 **Riepilogo dei tuoi dati:**\n\n👤 **Nome:** ${data.nome}\n📧 **Email:** ${data.email}\n📱 **Telefono:** ${data.telefono || "Non fornito"}\n💬 **Messaggio:** ${data.messaggio}\n\n✅ **Confermi l'invio?** _(rispondi "sì" o "no")_`
     default:
       return ""
   }
@@ -227,17 +227,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio: " + userMsgError.message }, { status: 500 })
     }
 
-    let currentLeadState: LeadCollectionState =
-      leadState && leadState.isCollecting
-        ? leadState
-        : {
-            isCollecting: false,
-            reason: null,
-            collectedData: {},
-            step: null,
-          }
+    let currentLeadState: LeadCollectionState = {
+      isCollecting: false,
+      reason: null,
+      collectedData: {},
+      step: null,
+    }
 
-    console.log("[v0] Current lead state:", currentLeadState)
+    // Only use incoming leadState if it's valid and isCollecting is true
+    if (leadState && leadState.isCollecting === true && leadState.step) {
+      currentLeadState = {
+        isCollecting: true,
+        reason: leadState.reason || null,
+        collectedData: leadState.collectedData || {},
+        step: leadState.step,
+      }
+      console.log("[v0] Restored lead state from client:", currentLeadState)
+    }
 
     if (currentLeadState.isCollecting && currentLeadState.step) {
       console.log("[v0] Processing lead collection step:", currentLeadState.step)
@@ -350,49 +356,59 @@ export async function POST(request: Request) {
       }
 
       let nextStep = currentLeadState.step
+      let responseMessage = ""
 
-      if (currentLeadState.step === "nome") {
-        currentLeadState.collectedData.nome = message.trim()
-        nextStep = "email"
-        console.log("[v0] Collected nome:", currentLeadState.collectedData.nome)
-      } else if (currentLeadState.step === "email") {
-        const email = extractDataFromMessage(message, "email")
-        if (!email) {
-          const retryMessage = "Per favore, inserisci un indirizzo email valido (es: mario@esempio.it):"
+      switch (currentLeadState.step) {
+        case "nome":
+          currentLeadState.collectedData.nome = message.trim()
+          nextStep = "email"
+          console.log("[v0] Collected nome:", currentLeadState.collectedData.nome)
+          break
 
-          await supabase.from("chat_messages").insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: retryMessage,
-          })
+        case "email":
+          const email = extractDataFromMessage(message, "email")
+          if (!email) {
+            responseMessage = "⚠️ Per favore, inserisci un indirizzo email valido (es: mario@esempio.it):"
 
-          return NextResponse.json({
-            response: retryMessage,
-            conversationId: currentConversationId,
-            leadState: currentLeadState,
-          })
-        }
-        currentLeadState.collectedData.email = email
-        nextStep = "telefono"
-        console.log("[v0] Collected email:", currentLeadState.collectedData.email)
-      } else if (currentLeadState.step === "telefono") {
-        if (lowerMessage === "salta" || lowerMessage === "skip" || lowerMessage === "no") {
-          currentLeadState.collectedData.telefono = undefined
-        } else {
-          currentLeadState.collectedData.telefono = message.trim()
-        }
-        nextStep = "messaggio"
-        console.log("[v0] Collected telefono:", currentLeadState.collectedData.telefono)
-      } else if (currentLeadState.step === "messaggio") {
-        currentLeadState.collectedData.messaggio = message.trim()
-        nextStep = "conferma"
-        console.log("[v0] Collected messaggio:", currentLeadState.collectedData.messaggio)
+            await supabase.from("chat_messages").insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: responseMessage,
+            })
+
+            return NextResponse.json({
+              response: responseMessage,
+              conversationId: currentConversationId,
+              leadState: currentLeadState,
+            })
+          }
+          currentLeadState.collectedData.email = email
+          nextStep = "telefono"
+          console.log("[v0] Collected email:", currentLeadState.collectedData.email)
+          break
+
+        case "telefono":
+          if (lowerMessage === "salta" || lowerMessage === "skip" || lowerMessage === "no") {
+            currentLeadState.collectedData.telefono = undefined
+          } else {
+            currentLeadState.collectedData.telefono = message.trim()
+          }
+          nextStep = "messaggio"
+          console.log("[v0] Collected telefono:", currentLeadState.collectedData.telefono)
+          break
+
+        case "messaggio":
+          currentLeadState.collectedData.messaggio = message.trim()
+          nextStep = "conferma"
+          console.log("[v0] Collected messaggio:", currentLeadState.collectedData.messaggio)
+          break
       }
 
+      // Update state with next step
       currentLeadState.step = nextStep as any
 
       const nextPrompt = getLeadCollectionPrompt(currentLeadState)
-      console.log("[v0] Next prompt for step", nextStep, ":", nextPrompt.substring(0, 50))
+      console.log("[v0] Next step:", nextStep, "- Prompt:", nextPrompt.substring(0, 50))
 
       await supabase.from("chat_messages").insert({
         conversation_id: currentConversationId,
@@ -403,7 +419,12 @@ export async function POST(request: Request) {
       return NextResponse.json({
         response: nextPrompt,
         conversationId: currentConversationId,
-        leadState: currentLeadState,
+        leadState: {
+          isCollecting: true,
+          reason: currentLeadState.reason,
+          collectedData: currentLeadState.collectedData,
+          step: currentLeadState.step,
+        },
       })
     }
 
@@ -436,15 +457,15 @@ export async function POST(request: Request) {
     const leadTrigger = shouldCollectLead(message, aiResponse)
 
     if (leadTrigger) {
-      // Start lead collection flow
-      currentLeadState = {
+      const newLeadState: LeadCollectionState = {
         isCollecting: true,
         reason: leadTrigger,
         collectedData: {},
         step: "nome",
       }
 
-      const leadPrompt = getLeadCollectionPrompt(currentLeadState)
+      const leadPrompt = getLeadCollectionPrompt(newLeadState)
+      console.log("[v0] Starting lead collection with state:", newLeadState)
 
       await supabase.from("chat_messages").insert({
         conversation_id: currentConversationId,
@@ -455,7 +476,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         response: leadPrompt,
         conversationId: currentConversationId,
-        leadState: currentLeadState,
+        leadState: newLeadState,
       })
     }
 
