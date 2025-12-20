@@ -2,17 +2,68 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, PiggyBank, Trophy, Users, Globe, Smartphone, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "RISPARMIO COMPULSIVO - App Gamificata per il Risparmio | 4BID.IT",
+  description:
+    "Risparmio Compulsivo: l'app che trasforma il risparmio in un gioco. Risparmio automatico, sfide, community globale e salvadanai bloccati. Save. Play. Win.",
+  keywords:
+    "risparmio compulsivo, app risparmio, gamification saving, risparmio automatico, salvadanaio digitale, fintech, personal finance app",
+  openGraph: {
+    title: "RISPARMIO COMPULSIVO - L'App che Gamifica il Risparmio",
+    description: "Trasforma il risparmio in un gioco con sfide, community e reward. Save. Play. Win.",
+    type: "website",
+    url: "https://4bid.it/progetti/risparmio-compulsivo",
+    locale: "it_IT",
+    siteName: "4BID.IT",
+    images: [
+      {
+        url: "https://4bid.it/risparmio-compulsivo-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "RISPARMIO COMPULSIVO Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RISPARMIO COMPULSIVO - App Gamificata per il Risparmio",
+    description: "Risparmio automatico, sfide e community. Trasforma il risparmio in un gioco",
+    images: ["https://4bid.it/risparmio-compulsivo-logo.png"],
+  },
+  alternates: {
+    canonical: "https://4bid.it/progetti/risparmio-compulsivo",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+}
 
 export default function RisparmioCompulsivoPage() {
   return (
     <div className="min-h-screen bg-white">
-      <LandingPageTracker slug="progetti/risparmio-compulsivo" />
+      <StructuredData
+        type="Service"
+        title="RISPARMIO COMPULSIVO - App Risparmio Gamificato"
+        description="App che trasforma il risparmio personale in un gioco globale con sfide, community e reward"
+        url="https://4bid.it/progetti/risparmio-compulsivo"
+        image="https://4bid.it/risparmio-compulsivo-logo.png"
+      />
 
-      <Header />
+      <LandingPageTracker slug="progetti/risparmio-compulsivo" />
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-green-50 via-emerald-50 to-white">

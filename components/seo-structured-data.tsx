@@ -3,13 +3,15 @@
 import Script from "next/script"
 
 interface StructuredDataProps {
-  type?: "Article" | "Service" | "Organization" | "LocalBusiness"
+  type?: "Article" | "Service" | "Organization" | "LocalBusiness" | "Product"
   title: string
   description: string
   url: string
   image?: string
   datePublished?: string
   dateModified?: string
+  price?: string
+  currency?: string
 }
 
 export function StructuredData({
@@ -20,8 +22,10 @@ export function StructuredData({
   image = "https://4bid.it/4bid-colorful-logo.jpg",
   datePublished = new Date().toISOString(),
   dateModified = new Date().toISOString(),
+  price,
+  currency = "EUR",
 }: StructuredDataProps) {
-  const structuredData = {
+  const baseStructure = {
     "@context": "https://schema.org",
     "@type": type,
     name: title,
@@ -45,6 +49,10 @@ export function StructuredData({
       },
       sameAs: ["https://4bid.it"],
     },
+  }
+
+  const structuredData = {
+    ...baseStructure,
     ...(type === "Service" && {
       serviceType: "Revenue Management Hotel",
       areaServed: {
@@ -52,6 +60,25 @@ export function StructuredData({
         name: "Italia",
       },
     }),
+    ...(type === "Organization" && {
+      "@type": "Organization",
+      contactPoint: {
+        "@type": "ContactPoint",
+        telephone: "+39-055-1234567",
+        contactType: "customer service",
+        areaServed: "IT",
+        availableLanguage: ["Italian", "English"],
+      },
+    }),
+    ...(type === "Product" &&
+      price && {
+        offers: {
+          "@type": "Offer",
+          price,
+          priceCurrency: currency,
+          availability: "https://schema.org/InStock",
+        },
+      }),
   }
 
   return (
