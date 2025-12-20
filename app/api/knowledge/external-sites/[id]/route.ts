@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
+    const { id } = await params
     const body = await request.json()
 
     const { name, base_url, description, crawl_frequency, is_active } = body
@@ -21,7 +22,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         crawl_frequency,
         is_active,
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single()
 
