@@ -44,14 +44,9 @@ export const metadata: Metadata = {
     canonical: "https://4bid.it",
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192x192.jpg", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512x512.jpg", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.jpg", sizes: "180x180", type: "image/png" }],
-    shortcut: "/favicon.ico",
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png",
   },
   manifest: "/manifest.json",
   appleWebApp: {
