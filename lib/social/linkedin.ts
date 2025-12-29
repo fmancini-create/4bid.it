@@ -21,7 +21,7 @@ export async function publishToLinkedIn(
           shareCommentary: {
             text: content,
           },
-          shareMediaCategory: imageUrl ? "IMAGE" : "NONE",
+          shareMediaCategory: "NONE",
         },
       },
       visibility: {
@@ -29,11 +29,10 @@ export async function publishToLinkedIn(
       },
     }
 
-    // Se c'è un'immagine, dobbiamo prima caricarla
+    // Se c'è un'immagine, la aggiungiamo come link nel testo
+    // L'upload nativo di immagini su LinkedIn richiede un processo più complesso
     if (imageUrl) {
-      // Per ora supportiamo solo post di testo
-      // L'upload di immagini su LinkedIn richiede un processo più complesso
-      console.log("[v0] LinkedIn image upload not yet implemented, posting text only")
+      console.log("[v0] LinkedIn: image URL provided, but native upload not supported yet")
     }
 
     const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
