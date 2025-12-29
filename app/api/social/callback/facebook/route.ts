@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
   // Redirect base URL
   const redirectUrl = new URL("/admin/social-media", request.url)
 
+  console.log("[v0] Facebook callback started, code:", code ? "present" : "missing")
+
   if (error) {
+    console.log("[v0] Facebook OAuth error:", error, errorDescription)
     redirectUrl.searchParams.set("error", errorDescription || error)
     return NextResponse.redirect(redirectUrl)
   }
@@ -21,6 +24,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+    console.log("[v0] Exchanging code for token...")
+
     // Scambia il code per un access token
     const tokenResponse = await fetch(
       `https://graph.facebook.com/v18.0/oauth/access_token?` +
@@ -34,10 +41,13 @@ export async function GET(request: NextRequest) {
     )
 
     const tokenData = await tokenResponse.json()
+    console.log("[v0] Token response:", tokenData.error ? tokenData.error : "success")
 
     if (tokenData.error) {
       throw new Error(tokenData.error.message)
     }
+
+    console.log("[v0] Getting long-lived token...")
 
     // Ottieni un long-lived token (valido ~60 giorni)
     const longLivedResponse = await fetch(
@@ -52,52 +62,59 @@ export async function GET(request: NextRequest) {
     )
 
     const longLivedData = await longLivedResponse.json()
+    console.log("[v0] Long-lived token:", longLivedData.error ? longLivedData.error : "success")
 
     // Ottieni le pagine gestite dall'utente
+    console.log("[v0] Fetching pages...")
     const pagesResponse = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?access_token=${longLivedData.access_token}`,
       { method: "GET" },
     )
 
     const pagesData = await pagesResponse.json()
+    console.log("[v0] Pages found:", pagesData.data?.length || 0)
 
     if (!pagesData.data || pagesData.data.length === 0) {
-      redirectUrl.searchParams.set("error", "Nessuna pagina Facebook trovata")
+      redirectUrl.searchParams.set("error", "Nessuna pagina Facebook trovata. Assicurati di gestire almeno una pagina.")
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Prendi la prima pagina (o puoi permettere all'utente di scegliere)
+    // Prendi la prima pagina
     const page = pagesData.data[0]
+    console.log("[v0] Saving page:", page.name, page.id)
 
-    // Salva nel database
-    const supabase = await createClient()
+    await supabase.from("social_accounts").delete().eq("platform", "facebook")
 
-    const { error: dbError } = await supabase.from("social_accounts").upsert(
-      {
+    const { data: insertData, error: dbError } = await supabase
+      .from("social_accounts")
+      .insert({
         platform: "facebook",
         account_name: page.name,
         account_id: page.id,
         page_id: page.id,
-        access_token: page.access_token, // Page access token (long-lived)
-        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // ~60 giorni
+        access_token: page.access_token,
+        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "platform" },
-    )
+      })
+      .select()
+
+    console.log("[v0] DB insert result:", dbError ? dbError.message : "success", insertData)
 
     if (dbError) throw dbError
 
     // Controlla se la pagina ha Instagram collegato
+    console.log("[v0] Checking for Instagram...")
     const igResponse = await fetch(
       `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`,
       { method: "GET" },
     )
 
     const igData = await igResponse.json()
+    console.log("[v0] Instagram linked:", !!igData.instagram_business_account)
 
     if (igData.instagram_business_account) {
-      // Salva anche l'account Instagram
       const igAccountResponse = await fetch(
         `https://graph.facebook.com/v18.0/${igData.instagram_business_account.id}?fields=username&access_token=${page.access_token}`,
         { method: "GET" },
@@ -105,25 +122,27 @@ export async function GET(request: NextRequest) {
 
       const igAccountData = await igAccountResponse.json()
 
-      await supabase.from("social_accounts").upsert(
-        {
-          platform: "instagram",
-          account_name: igAccountData.username || "Instagram Business",
-          account_id: igData.instagram_business_account.id,
-          access_token: page.access_token, // Usa lo stesso token della pagina
-          token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "platform" },
-      )
+      // Delete existing Instagram account first
+      await supabase.from("social_accounts").delete().eq("platform", "instagram")
+
+      await supabase.from("social_accounts").insert({
+        platform: "instagram",
+        account_name: igAccountData.username || "Instagram Business",
+        account_id: igData.instagram_business_account.id,
+        access_token: page.access_token,
+        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
     }
 
+    console.log("[v0] Facebook OAuth completed successfully!")
     redirectUrl.searchParams.set("success", "Facebook collegato con successo!")
     return NextResponse.redirect(redirectUrl)
   } catch (error) {
     console.error("[v0] Facebook OAuth error:", error)
-    redirectUrl.searchParams.set("error", "Errore durante il collegamento")
+    redirectUrl.searchParams.set("error", `Errore: ${error instanceof Error ? error.message : "sconosciuto"}`)
     return NextResponse.redirect(redirectUrl)
   }
 }
