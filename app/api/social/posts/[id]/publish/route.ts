@@ -25,11 +25,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Recupera gli account attivi
     const { data: accounts } = await supabase.from("social_accounts").select("*").eq("is_active", true)
 
+    let platformsToPublish = post.platforms || []
+    if (!platformsToPublish || platformsToPublish.length === 0) {
+      const uniquePlatforms = [...new Set(accounts?.map((a) => a.platform) || [])]
+      platformsToPublish = uniquePlatforms
+    }
+
+    if (platformsToPublish.length === 0) {
+      return NextResponse.json({ error: "Nessuna piattaforma configurata" }, { status: 400 })
+    }
+
     const platformPostIds: Record<string, string> = {}
     const errors: string[] = []
 
     // Pubblica su ogni piattaforma
-    for (const platform of post.platforms) {
+    for (const platform of platformsToPublish) {
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
       if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
@@ -66,7 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           } else if (platform === "linkedin") {
             const result = await publishToLinkedIn(
               account.access_token,
-              account.account_id, // This is the person URN (sub from userinfo)
+              account.account_id,
               post.content,
               post.image_url,
             )

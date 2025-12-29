@@ -197,6 +197,11 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
   const savePost = async (status: "draft" | "pending_approval" | "scheduled") => {
     try {
+      if (newPost.platforms.length === 0) {
+        toast.error("Seleziona almeno una piattaforma")
+        return
+      }
+
       const response = await fetch("/api/social/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
