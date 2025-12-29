@@ -131,6 +131,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     auto_publish: false,
     scheduled_for: "",
     ai_topic: "",
+    target_accounts: [] as string[],
   })
 
   const generateAIPost = async (topic?: string) => {
@@ -183,6 +184,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
         auto_publish: false,
         scheduled_for: "",
         ai_topic: "",
+        target_accounts: [],
       })
       toast.success("Post salvato!")
       router.refresh()
@@ -618,6 +620,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                           platforms: isSelected
                             ? prev.platforms.filter((p) => p !== platform)
                             : [...prev.platforms, platform],
+                          target_accounts: platform === "facebook" && isSelected ? [] : prev.target_accounts,
                         }))
                       }}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
@@ -631,6 +634,45 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 })}
               </div>
             </div>
+
+            {newPost.platforms.includes("facebook") &&
+              accounts.filter((a) => a.platform === "facebook" && a.is_active).length > 0 && (
+                <div className="space-y-2">
+                  <Label>Pagine Facebook</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Seleziona su quali pagine pubblicare (se nessuna è selezionata, pubblica su tutte)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {accounts
+                      .filter((a) => a.platform === "facebook" && a.is_active)
+                      .map((account) => {
+                        const isSelected = newPost.target_accounts.includes(account.id)
+                        return (
+                          <button
+                            key={account.id}
+                            onClick={() => {
+                              setNewPost((prev) => ({
+                                ...prev,
+                                target_accounts: isSelected
+                                  ? prev.target_accounts.filter((id) => id !== account.id)
+                                  : [...prev.target_accounts, account.id],
+                              }))
+                            }}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                                : "border-muted hover:border-blue-300"
+                            }`}
+                          >
+                            <Facebook className={`h-4 w-4 ${isSelected ? "text-blue-500" : "text-muted-foreground"}`} />
+                            <span>{account.account_name}</span>
+                            {isSelected && <Check className="h-3 w-3 text-blue-500" />}
+                          </button>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
 
             {/* Schedule */}
             <div className="space-y-2">

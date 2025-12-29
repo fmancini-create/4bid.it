@@ -29,7 +29,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Pubblica su ogni piattaforma
     for (const platform of post.platforms) {
-      const platformAccounts = accounts?.filter((a) => a.platform === platform) || []
+      let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
+
+      if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
+        platformAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
+      }
 
       if (platformAccounts.length === 0) {
         errors.push(`Account ${platform} non configurato`)
