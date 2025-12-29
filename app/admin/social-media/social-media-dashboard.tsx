@@ -109,14 +109,20 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
 
 export default function SocialMediaDashboard({ initialAccounts, initialPosts, initialSettings, userEmail }: Props) {
   const router = useRouter()
-  const [accounts, setAccounts] = useState(initialAccounts)
-  const [posts, setPosts] = useState(initialPosts)
+  const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts)
+  const [posts, setPosts] = useState<SocialPost[]>(initialPosts)
   const [settings, setSettings] = useState<SocialSettings | null>(initialSettings)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [showNewPostDialog, setShowNewPostDialog] = useState(false)
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showConnectDialog, setShowConnectDialog] = useState(false)
-  const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null)
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
+
+  const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
+  const [manualPageId, setManualPageId] = useState("")
+  const [manualPageName, setManualPageName] = useState("")
+  const [manualAccessToken, setManualAccessToken] = useState("")
+  const [isSavingManual, setIsSavingManual] = useState(false)
 
   // New post form state
   const [newPost, setNewPost] = useState({
@@ -170,7 +176,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
       const savedPost = await response.json()
       setPosts((prev) => [savedPost, ...prev])
-      setShowNewPostDialog(false)
+      setShowCreateDialog(false)
       setNewPost({
         content: "",
         platforms: ["facebook", "instagram", "linkedin"],
@@ -253,6 +259,52 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
+  const saveManualConnection = async (platform: string) => {
+    if (!manualPageId || !manualPageName || !manualAccessToken) {
+      toast.error("Compila tutti i campi")
+      return
+    }
+
+    setIsSavingManual(true)
+    try {
+      const response = await fetch("/api/social/connect/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          pageId: manualPageId,
+          pageName: manualPageName,
+          accessToken: manualAccessToken,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Errore durante il salvataggio")
+      }
+
+      const data = await response.json()
+      toast.success(`Account ${platform} collegato con successo!`)
+
+      // Refresh accounts
+      setAccounts((prev) => {
+        const filtered = prev.filter((a) => a.platform !== platform)
+        return [...filtered, data.account]
+      })
+
+      setShowManualConnect(null)
+      setManualPageId("")
+      setManualPageName("")
+      setManualAccessToken("")
+      setShowConnectDialog(false)
+    } catch (error) {
+      console.error("Errore:", error)
+      toast.error(error instanceof Error ? error.message : "Errore durante il salvataggio")
+    } finally {
+      setIsSavingManual(false)
+    }
+  }
+
   const pendingApproval = posts.filter((p) => p.status === "pending_approval")
   const scheduled = posts.filter((p) => p.status === "scheduled" || p.status === "approved")
   const published = posts.filter((p) => p.status === "published")
@@ -279,7 +331,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 <Settings className="h-4 w-4 mr-2" />
                 Impostazioni
               </Button>
-              <Button onClick={() => setShowNewPostDialog(true)}>
+              <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nuovo Post
               </Button>
@@ -372,35 +424,38 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
                 const account = accounts.find((a) => a.platform === platform)
 
+                const connectUrls: Record<string, string> = {
+                  facebook: "/api/social/connect/facebook",
+                  instagram: "/api/social/connect/facebook", // Instagram usa Facebook OAuth
+                  linkedin: "/api/social/connect/linkedin",
+                }
+
                 return (
-                  <div
-                    key={platform}
-                    className={`p-4 rounded-lg border-2 ${
-                      account?.is_active
-                        ? "border-green-500 bg-green-500/10"
-                        : "border-dashed border-muted-foreground/30"
-                    }`}
-                  >
+                  <div key={platform} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-12 h-12 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
                       >
-                        <Icon className="h-6 w-6 text-white" />
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold capitalize">{platform}</p>
-                        {account?.is_active ? (
-                          <p className="text-sm text-green-600">{account.account_name}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Non collegato</p>
-                        )}
+                      <div>
+                        <p className="font-medium capitalize">{platform}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {account?.is_active ? account.account_name : "Non collegato"}
+                        </p>
                       </div>
-                      {account?.is_active && (
-                        <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500">
-                          Attivo
-                        </Badge>
-                      )}
                     </div>
+                    <Button
+                      variant={account?.is_active ? "outline" : "default"}
+                      size="sm"
+                      onClick={() =>
+                        account?.is_active
+                          ? setShowManualConnect(platform)
+                          : (window.location.href = connectUrls[platform])
+                      }
+                    >
+                      {account?.is_active ? "Riconnetti" : "Collega"}
+                    </Button>
                   </div>
                 )
               })}
@@ -493,7 +548,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
       </main>
 
       {/* New Post Dialog */}
-      <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Crea Nuovo Post</DialogTitle>
@@ -601,7 +656,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </div>
 
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowNewPostDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Annulla
             </Button>
             <Button variant="secondary" onClick={() => savePost("draft")} disabled={!newPost.content}>
@@ -728,7 +783,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
       {/* Connect Account Dialog */}
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Collega Account Social</DialogTitle>
             <DialogDescription>
@@ -748,27 +803,78 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
               }
 
               return (
-                <div key={platform} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
-                    >
-                      <Icon className="h-5 w-5 text-white" />
+                <div key={platform} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium capitalize">{platform}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {account?.is_active ? account.account_name : "Non collegato"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium capitalize">{platform}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {account?.is_active ? account.account_name : "Non collegato"}
-                      </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowManualConnect(showManualConnect === platform ? null : platform)}
+                      >
+                        Manuale
+                      </Button>
+                      <Button
+                        variant={account?.is_active ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => (window.location.href = connectUrls[platform])}
+                      >
+                        {account?.is_active ? "Riconnetti" : "OAuth"}
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant={account?.is_active ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => (window.location.href = connectUrls[platform])}
-                  >
-                    {account?.is_active ? "Riconnetti" : "Collega"}
-                  </Button>
+
+                  {showManualConnect === platform && (
+                    <div className="space-y-3 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        Inserisci manualmente i dati. Puoi ottenere il Page Access Token da{" "}
+                        <a
+                          href="https://developers.facebook.com/tools/explorer/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline"
+                        >
+                          Graph API Explorer
+                        </a>
+                      </p>
+                      <Input
+                        placeholder="Page ID (es: 123456789)"
+                        value={manualPageId}
+                        onChange={(e) => setManualPageId(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Nome Pagina (es: 4BID)"
+                        value={manualPageName}
+                        onChange={(e) => setManualPageName(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Page Access Token"
+                        value={manualAccessToken}
+                        onChange={(e) => setManualAccessToken(e.target.value)}
+                        type="password"
+                      />
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => saveManualConnection(platform)}
+                        disabled={isSavingManual}
+                      >
+                        {isSavingManual ? "Salvataggio..." : "Salva Connessione"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -785,6 +891,56 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Connect Dialog */}
+      {showManualConnect && (
+        <Dialog open={true} onOpenChange={() => setShowManualConnect(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Collega {showManualConnect} Manuale</DialogTitle>
+              <DialogDescription>
+                Inserisci i dettagli del tuo account {showManualConnect} per collegarlo manualmente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>ID Pagina</Label>
+                <Input placeholder="ID Pagina" value={manualPageId} onChange={(e) => setManualPageId(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nome Pagina</Label>
+                <Input
+                  placeholder="Nome Pagina"
+                  value={manualPageName}
+                  onChange={(e) => setManualPageName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Token di Accesso</Label>
+                <Input
+                  placeholder="Token di Accesso"
+                  value={manualAccessToken}
+                  onChange={(e) => setManualAccessToken(e.target.value)}
+                  type="password"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowManualConnect(null)}>
+                Annulla
+              </Button>
+              <Button onClick={() => saveManualConnection(showManualConnect)}>
+                {isSavingManual ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                Collega
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
