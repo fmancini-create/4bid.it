@@ -494,11 +494,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                     <Button
                       variant={account?.is_active ? "outline" : "default"}
                       size="sm"
-                      onClick={() =>
-                        account?.is_active
-                          ? setShowManualConnect(platform)
-                          : (window.location.href = connectUrls[platform])
-                      }
+                      onClick={() => (window.location.href = connectUrls[platform])}
                     >
                       {account?.is_active ? "Riconnetti" : "Collega"}
                     </Button>
@@ -971,70 +967,17 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowManualConnect(showManualConnect === platform ? null : platform)}
-                      >
-                        Manuale
-                      </Button>
-                      <Button
-                        variant={account?.is_active ? "outline" : "default"}
-                        size="sm"
-                        onClick={() => (window.location.href = connectUrls[platform])}
-                      >
-                        {account?.is_active ? "Riconnetti" : "OAuth"}
-                      </Button>
-                    </div>
+                    <Button
+                      variant={account?.is_active ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => (window.location.href = connectUrls[platform])}
+                    >
+                      {account?.is_active ? "Riconnetti" : "OAuth"}
+                    </Button>
                   </div>
-
-                  {showManualConnect === platform && (
-                    <div className="space-y-3 pt-3 border-t">
-                      <p className="text-xs text-muted-foreground">
-                        Inserisci manualmente i dati. Puoi ottenere il Page Access Token da{" "}
-                        <a
-                          href="https://developers.facebook.com/tools/explorer/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 underline"
-                        >
-                          Graph API Explorer
-                        </a>
-                      </p>
-                      <Input
-                        placeholder="Page ID (es: 123456789)"
-                        value={manualPageId}
-                        onChange={(e) => setManualPageId(e.target.value)}
-                      />
-                      <Input
-                        placeholder="Nome Pagina (es: 4BID)"
-                        value={manualPageName}
-                        onChange={(e) => setManualPageName(e.target.value)}
-                      />
-                      <Input
-                        placeholder="Page Access Token"
-                        value={manualAccessToken}
-                        onChange={(e) => setManualAccessToken(e.target.value)}
-                        type="password"
-                      />
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        onClick={() => saveManualConnection(platform)}
-                        disabled={isSavingManual}
-                      >
-                        {isSavingManual ? "Salvataggio..." : "Salva Connessione"}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )
             })}
-
-            <p className="text-xs text-muted-foreground">
-              Nota: Instagram richiede un account business collegato a una pagina Facebook.
-            </p>
           </div>
 
           <DialogFooter>
