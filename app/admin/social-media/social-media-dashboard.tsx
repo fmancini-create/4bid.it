@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   AlertCircle,
   CheckCircle2,
+  ImageIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -132,7 +133,12 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     scheduled_for: "",
     ai_topic: "",
     target_accounts: [] as string[],
+    image_url: "",
+    image_topic: "",
+    image_style: "professional" as string,
   })
+
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
   const generateAIPost = async (topic?: string) => {
     setIsGenerating(true)
@@ -160,6 +166,35 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
+  const generateAIImage = async () => {
+    if (!newPost.image_topic && !newPost.ai_topic) {
+      toast.error("Inserisci un argomento per l'immagine")
+      return
+    }
+
+    setIsGeneratingImage(true)
+    try {
+      const response = await fetch("/api/social/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: newPost.image_topic || newPost.ai_topic || "hospitality, hotel, revenue management",
+          style: newPost.image_style,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore nella generazione")
+
+      const data = await response.json()
+      setNewPost((prev) => ({ ...prev, image_url: data.imageUrl }))
+      toast.success("Immagine generata con AI!")
+    } catch (error) {
+      toast.error("Errore nella generazione dell'immagine")
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }
+
   const savePost = async (status: "draft" | "pending_approval" | "scheduled") => {
     try {
       const response = await fetch("/api/social/posts", {
@@ -170,6 +205,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           status,
           is_ai_generated: newPost.content.includes("#") && newPost.ai_topic !== "",
           ai_topic: newPost.ai_topic,
+          image_url: newPost.image_url || null,
         }),
       })
 
@@ -185,6 +221,9 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
         scheduled_for: "",
         ai_topic: "",
         target_accounts: [],
+        image_url: "",
+        image_topic: "",
+        image_style: "professional",
       })
       toast.success("Post salvato!")
       router.refresh()
@@ -589,6 +628,73 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                   ),
                 )}
               </div>
+            </div>
+
+            {/* AI Image Generation Section */}
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-purple-600" />
+                <span className="font-medium">Genera Immagine AI</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Input
+                  placeholder="Descrivi l'immagine (es: hotel di lusso con piscina)"
+                  value={newPost.image_topic}
+                  onChange={(e) => setNewPost((prev) => ({ ...prev, image_topic: e.target.value }))}
+                  className="md:col-span-2"
+                />
+                <Select
+                  value={newPost.image_style}
+                  onValueChange={(value) => setNewPost((prev) => ({ ...prev, image_style: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Stile" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="professional">Professionale</SelectItem>
+                    <SelectItem value="creative">Creativo</SelectItem>
+                    <SelectItem value="minimal">Minimale</SelectItem>
+                    <SelectItem value="luxury">Lusso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={generateAIImage}
+                disabled={isGeneratingImage}
+                variant="outline"
+                className="w-full border-purple-300 hover:bg-purple-100 dark:border-purple-700 dark:hover:bg-purple-900/50 bg-transparent"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Generazione in corso...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Genera Immagine
+                  </>
+                )}
+              </Button>
+
+              {/* Anteprima immagine generata */}
+              {newPost.image_url && (
+                <div className="relative mt-2">
+                  <img
+                    src={newPost.image_url || "/placeholder.svg"}
+                    alt="Immagine generata"
+                    className="w-full h-48 object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => setNewPost((prev) => ({ ...prev, image_url: "" }))}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Content */}
@@ -1036,6 +1142,13 @@ function PostCard({
 
             {/* Content */}
             <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+
+            {/* Image */}
+            {post.image_url && (
+              <div className="mt-4">
+                <img src={post.image_url || "/placeholder.svg"} alt="Generated Image" className="w-full rounded-lg" />
+              </div>
+            )}
 
             {/* Meta */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
