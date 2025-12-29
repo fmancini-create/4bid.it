@@ -13,7 +13,7 @@ export async function publishToLinkedIn(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    const postBody: any = {
+    const postBody = {
       author: `urn:li:person:${personUrn}`,
       lifecycleState: "PUBLISHED",
       specificContent: {
@@ -29,11 +29,7 @@ export async function publishToLinkedIn(
       },
     }
 
-    // Se c'è un'immagine, la aggiungiamo come link nel testo
-    // L'upload nativo di immagini su LinkedIn richiede un processo più complesso
-    if (imageUrl) {
-      console.log("[v0] LinkedIn: image URL provided, but native upload not supported yet")
-    }
+    console.log("[v0] LinkedIn: Publishing post with body:", JSON.stringify(postBody, null, 2))
 
     const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
@@ -45,16 +41,23 @@ export async function publishToLinkedIn(
       body: JSON.stringify(postBody),
     })
 
+    const responseText = await response.text()
+    console.log("[v0] LinkedIn API response status:", response.status)
+    console.log("[v0] LinkedIn API response:", responseText)
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      console.error("[v0] LinkedIn API error:", errorData)
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      try {
+        const errorData = JSON.parse(responseText)
+        errorMessage = errorData.message || errorMessage
+      } catch {}
       return {
         success: false,
-        error: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        error: errorMessage,
       }
     }
 
-    const data = await response.json()
+    const data = JSON.parse(responseText)
     return {
       success: true,
       postId: data.id,
@@ -76,7 +79,7 @@ export async function publishToLinkedInOrganization(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    const postBody: any = {
+    const postBody = {
       author: `urn:li:organization:${organizationId}`,
       lifecycleState: "PUBLISHED",
       specificContent: {
