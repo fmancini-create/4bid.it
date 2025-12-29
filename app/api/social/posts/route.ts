@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
         ai_topic: body.ai_topic || null,
         hashtags: body.content.match(/#\w+/g) || [],
         target_accounts: body.target_accounts && body.target_accounts.length > 0 ? body.target_accounts : null,
+        image_url: body.image_url || null,
       })
       .select()
       .single()
