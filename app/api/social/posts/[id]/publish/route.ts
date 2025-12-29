@@ -29,52 +29,50 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Pubblica su ogni piattaforma
     for (const platform of post.platforms) {
-      const account = accounts?.find((a) => a.platform === platform)
+      const platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-      if (!account) {
+      if (platformAccounts.length === 0) {
         errors.push(`Account ${platform} non configurato`)
         continue
       }
 
-      try {
-        if (platform === "facebook") {
-          const result = await publishToFacebook(
-            account.page_id,
-            account.access_token,
-            post.content,
-            post.link_url,
-            post.image_url,
-          )
+      for (const account of platformAccounts) {
+        try {
+          if (platform === "facebook") {
+            const result = await publishToFacebook(
+              account.page_id,
+              account.access_token,
+              post.content,
+              post.link_url,
+              post.image_url,
+            )
 
-          if (result.success && result.postId) {
-            platformPostIds[platform] = result.postId
-          } else {
-            errors.push(`Facebook: ${result.error || "Errore sconosciuto"}`)
+            if (result.success && result.postId) {
+              platformPostIds[`facebook_${account.account_name}`] = result.postId
+            } else {
+              errors.push(`Facebook (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
+            }
+          } else if (platform === "instagram") {
+            if (!post.image_url) {
+              errors.push("Instagram richiede un'immagine per pubblicare")
+            } else {
+              errors.push("Instagram: pubblicazione in sviluppo")
+            }
+          } else if (platform === "linkedin") {
+            errors.push("LinkedIn: pubblicazione in sviluppo")
           }
-        } else if (platform === "instagram") {
-          // Instagram richiede prima il caricamento del media, poi la pubblicazione
-          // Per ora segniamo come non supportato se non c'è immagine
-          if (!post.image_url) {
-            errors.push("Instagram richiede un'immagine per pubblicare")
-          } else {
-            // TODO: Implementare Instagram publish via Facebook Graph API
-            errors.push("Instagram: pubblicazione in sviluppo")
-          }
-        } else if (platform === "linkedin") {
-          // TODO: Implementare LinkedIn Marketing API
-          errors.push("LinkedIn: pubblicazione in sviluppo")
+        } catch (err) {
+          errors.push(`Errore pubblicazione ${platform} (${account.account_name}): ${err}`)
         }
-      } catch (err) {
-        errors.push(`Errore pubblicazione ${platform}: ${err}`)
       }
     }
 
     // Aggiorna lo stato del post
-    const allFailed = errors.length === post.platforms.length
+    const hasPublished = Object.keys(platformPostIds).length > 0
     const { data, error } = await supabase
       .from("social_posts")
       .update({
-        status: allFailed ? "failed" : "published",
+        status: hasPublished ? "published" : "failed",
         published_at: new Date().toISOString(),
         platform_post_ids: platformPostIds,
         error_message: errors.length > 0 ? errors.join("; ") : null,
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error) throw error
 
     return NextResponse.json({
-      success: !allFailed,
+      success: hasPublished,
       post: data,
       published: Object.keys(platformPostIds),
       errors,
