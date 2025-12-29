@@ -127,3 +127,27 @@ export async function publishToLinkedInOrganization(
     }
   }
 }
+
+export async function publishToLinkedInWithFallback(
+  accessToken: string,
+  organizationId: string,
+  personUrn: string,
+  content: string,
+  imageUrl?: string,
+): Promise<LinkedInPostResult & { publishedAs?: "organization" | "personal" }> {
+  // Prima prova con la pagina aziendale
+  const orgResult = await publishToLinkedInOrganization(accessToken, organizationId, content, imageUrl)
+
+  if (orgResult.success) {
+    return { ...orgResult, publishedAs: "organization" }
+  }
+
+  // Se errore 403 (ACCESS_DENIED), prova con il profilo personale
+  if (orgResult.error?.includes("403") || orgResult.error?.includes("ACCESS_DENIED")) {
+    console.log("[v0] LinkedIn: Organization access denied, falling back to personal profile")
+    const personalResult = await publishToLinkedIn(accessToken, personUrn, content, imageUrl)
+    return { ...personalResult, publishedAs: "personal" }
+  }
+
+  return orgResult
+}

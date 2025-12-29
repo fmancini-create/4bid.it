@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
-import { publishToLinkedInOrganization } from "@/lib/social/linkedin"
+import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -74,15 +74,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               errors.push("Instagram: pubblicazione in sviluppo")
             }
           } else if (platform === "linkedin") {
-            const result = await publishToLinkedInOrganization(
+            const result = await publishToLinkedInWithFallback(
               account.access_token,
-              account.account_id, // Organization ID
+              account.account_id, // Organization ID (110665381)
+              account.page_id, // Person URN (salvato come page_id per LinkedIn)
               post.content,
               post.image_url,
             )
 
             if (result.success && result.postId) {
-              platformPostIds[`linkedin_${account.account_name}`] = result.postId
+              const suffix = result.publishedAs === "personal" ? " (profilo personale)" : ""
+              platformPostIds[`linkedin_${account.account_name}${suffix}`] = result.postId
             } else {
               errors.push(`LinkedIn (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
             }
