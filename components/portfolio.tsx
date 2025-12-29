@@ -104,18 +104,53 @@ export default function Portfolio() {
 
   return (
     <section id="portfolio" className="py-20 bg-gray-50">
-      <div className="container mx-auto px-6">
+      <div className="container mx-auto px-4 md:px-6">
         {/* Header */}
         <div className="max-w-5xl mx-auto text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Portfolio</h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Portfolio</h2>
+          <p className="text-base md:text-lg text-gray-600 leading-relaxed">
             Alcuni dei success cases raccolti nel portfolio. Come si può vedere dai numeri, l'incremento medio è
             notevole, e si raggiunge il massimo dell'efficienza dopo 3 anni di consulenza.
           </p>
         </div>
 
-        {/* Table */}
-        <div className="max-w-7xl mx-auto overflow-x-auto">
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-4">
+          {portfolioData.map((item, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900">{item.type}</h3>
+                  <p className="text-sm text-gray-600">
+                    {item.location} • {item.rooms} camere
+                  </p>
+                </div>
+                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-semibold">
+                  +{item.increase}%
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-gray-50 rounded p-2">
+                  <p className="text-xs text-gray-500">Before</p>
+                  <p className="font-mono font-semibold text-gray-900">
+                    {item.revenueBefore > 0 ? `${item.revenueBefore}K` : "Startup"}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded p-2">
+                  <p className="text-xs text-gray-500">Year 1</p>
+                  <p className="font-mono font-semibold text-gray-900">{item.revenueYear1}K</p>
+                </div>
+                <div className="bg-blue-50 rounded p-2">
+                  <p className="text-xs text-gray-500">Year 2</p>
+                  <p className="font-mono font-semibold text-blue-600">{item.revenueYear2}K</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block max-w-7xl mx-auto overflow-x-auto">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="w-full">
               <thead className="bg-[#5B9BD5] text-white">
@@ -150,10 +185,10 @@ export default function Portfolio() {
                     <td className="px-4 py-4 text-sm text-gray-600">{item.location}</td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-center">{item.rooms}</td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right font-mono">
-                      {item.revenueBefore > 0 ? item.revenueBefore : "Startup"}
+                      {item.revenueBefore > 0 ? `${item.revenueBefore}K` : "Startup"}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-900 text-right font-mono">{item.revenueYear1}</td>
-                    <td className="px-4 py-4 text-sm text-gray-900 text-right font-mono">{item.revenueYear2}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900 text-right font-mono">{item.revenueYear1}K</td>
+                    <td className="px-4 py-4 text-sm font-semibold text-blue-600 text-right">{item.revenueYear2}K</td>
                     <td className="px-4 py-4 text-sm font-semibold text-green-600 text-right">+{item.increase}%</td>
                   </tr>
                 ))}
@@ -164,10 +199,10 @@ export default function Portfolio() {
 
         {/* CTA */}
         <div className="text-center mt-12">
-          <p className="text-gray-600 mb-4 text-lg">Vuoi risultati simili per la tua struttura?</p>
+          <p className="text-gray-600 mb-4 text-base md:text-lg">Vuoi risultati simili per la tua struttura?</p>
           <a
             href="#contact"
-            className="inline-block bg-[#5B9BD5] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#4A8BC4] transition-colors"
+            className="inline-block bg-[#5B9BD5] text-white px-6 md:px-8 py-3 rounded-lg font-semibold hover:bg-[#4A8BC4] transition-colors text-sm md:text-base"
           >
             Richiedi una consulenza gratuita
           </a>

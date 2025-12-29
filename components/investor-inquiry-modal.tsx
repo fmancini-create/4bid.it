@@ -31,6 +31,7 @@ export default function InvestorInquiryModal({ isOpen, onClose }: InvestorInquir
   const projects = [
     { id: "santaddeo", name: "SANTADDEO - Revenue Management" },
     { id: "manubot", name: "MANUBOT - Maintenance Assistant" },
+    { id: "hotel-accelerator", name: "HOTEL ACCELERATOR - Performance Booster" },
     { id: "risparmio-compulsivo", name: "RISPARMIO COMPULSIVO - Savings App" },
     { id: "autoexel", name: "AUTOEXEL - Smart Excel" },
   ]

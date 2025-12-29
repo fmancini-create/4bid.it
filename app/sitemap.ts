@@ -53,8 +53,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  // Progetti
-  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel"].map((slug) => ({
+  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
     changeFrequency: "monthly" as const,

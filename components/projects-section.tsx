@@ -33,7 +33,7 @@ export default function ProjectsSection() {
       logo: "/santaddeo-logo.png",
       icon: TrendingUp,
       color: "from-teal-500 to-cyan-600",
-      progress: "50%",
+      progress: "75%",
       href: "/progetti/santaddeo",
     },
     {
@@ -45,8 +45,20 @@ export default function ProjectsSection() {
       logo: "/manubot-logo.jpg",
       icon: Rocket,
       color: "from-orange-500 to-amber-600",
-      progress: "75%",
+      progress: "90%",
       href: "/progetti/manubot",
+    },
+    {
+      id: "hotel-accelerator",
+      name: "HOTEL ACCELERATOR",
+      tagline: "Il software gestionale completo per hotel",
+      description:
+        "CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione. Aumenta le prenotazioni dirette fino al 35% e riduci le commissioni OTA.",
+      logo: "/hotel-accelerator-logo.jpg",
+      icon: TrendingUp,
+      color: "from-blue-500 to-indigo-600",
+      progress: "70%",
+      href: "/progetti/hotel-accelerator",
     },
     {
       id: "risparmio-compulsivo",
