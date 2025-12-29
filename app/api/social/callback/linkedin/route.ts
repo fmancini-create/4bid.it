@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+const LINKEDIN_ORGANIZATION_ID = "110665381"
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get("code")
@@ -41,34 +43,18 @@ export async function GET(request: NextRequest) {
     const accessToken = tokenData.access_token
     const expiresIn = tokenData.expires_in // in secondi
 
-    console.log("[v0] LinkedIn OAuth: got access token, fetching profile")
-
-    // Ottieni info profilo
-    const profileResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    })
-
-    if (!profileResponse.ok) {
-      const errorText = await profileResponse.text()
-      console.error("[v0] LinkedIn profile error:", errorText)
-      throw new Error("Failed to get profile")
-    }
-
-    const profile = await profileResponse.json()
-    console.log("[v0] LinkedIn profile:", JSON.stringify(profile))
+    console.log("[v0] LinkedIn OAuth: got access token")
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     // Rimuovi account LinkedIn esistenti
     await supabase.from("social_accounts").delete().eq("platform", "linkedin")
 
-    // Inserisci il nuovo account
     const { error: insertError } = await supabase.from("social_accounts").insert({
       platform: "linkedin",
-      account_name: profile.name || profile.email || "LinkedIn Account",
-      account_id: profile.sub,
+      account_name: "4BID (Pagina Aziendale)",
+      account_id: LINKEDIN_ORGANIZATION_ID, // Organization ID invece di person ID
+      page_id: LINKEDIN_ORGANIZATION_ID, // Salva anche come page_id per coerenza
       access_token: accessToken,
       token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
       is_active: true,
@@ -79,7 +65,7 @@ export async function GET(request: NextRequest) {
       throw insertError
     }
 
-    console.log("[v0] LinkedIn account saved successfully")
+    console.log("[v0] LinkedIn company page saved successfully with Organization ID:", LINKEDIN_ORGANIZATION_ID)
     return NextResponse.redirect(`${baseUrl}/admin/social-media?success=linkedin_connected`)
   } catch (error) {
     console.error("[v0] LinkedIn OAuth error:", error)

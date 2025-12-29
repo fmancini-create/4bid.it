@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
-import { publishToLinkedIn } from "@/lib/social/linkedin"
+import { publishToLinkedInOrganization } from "@/lib/social/linkedin"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -74,9 +74,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               errors.push("Instagram: pubblicazione in sviluppo")
             }
           } else if (platform === "linkedin") {
-            const result = await publishToLinkedIn(
+            const result = await publishToLinkedInOrganization(
               account.access_token,
-              account.account_id,
+              account.account_id, // Organization ID
               post.content,
               post.image_url,
             )
