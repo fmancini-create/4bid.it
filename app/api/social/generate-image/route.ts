@@ -9,16 +9,20 @@ fal.config({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Generate image API called")
+
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] Generate image: user not authenticated")
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 
     const { topic, style } = await request.json()
+    console.log("[v0] Generate image request:", { topic, style })
 
     if (!topic) {
       return NextResponse.json({ error: "Topic richiesto" }, { status: 400 })
@@ -36,6 +40,8 @@ export async function POST(request: NextRequest) {
 
     const prompt = `${topic}, ${styleModifier}, high quality, social media post image, 4K, detailed, no text overlay, suitable for business social media`
 
+    console.log("[v0] Generating image with prompt:", prompt)
+
     // Generate image using fal schnell model
     const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
@@ -46,6 +52,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log("[v0] Fal AI result:", JSON.stringify(result))
+
     // Extract the image URL from the result
     const imageUrl = (result as { images?: { url: string }[] }).images?.[0]?.url
 
@@ -53,6 +61,7 @@ export async function POST(request: NextRequest) {
       throw new Error("Nessuna immagine generata")
     }
 
+    console.log("[v0] Generated image URL:", imageUrl)
     return NextResponse.json({ imageUrl })
   } catch (error) {
     console.error("[v0] Error generating image:", error)
