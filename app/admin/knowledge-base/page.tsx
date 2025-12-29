@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { BookOpen, Database, ExternalLink, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import KnowledgeBaseActions from "@/components/knowledge-base-actions"
+import ExternalSiteCard from "@/components/external-site-card"
+import KnowledgeItemActions from "@/components/knowledge-item-actions"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -146,39 +148,7 @@ export default async function KnowledgeBasePage() {
           <CardContent>
             <div className="space-y-3">
               {(externalSites || []).map((site: any) => (
-                <div
-                  key={site.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold">{site.name}</h3>
-                      {site.is_active ? (
-                        <Badge className="bg-green-500">Attivo</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inattivo</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{site.base_url}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                      <span>Frequenza: {site.crawl_frequency}</span>
-                      {site.last_crawled_at && (
-                        <span>
-                          Ultimo crawl:{" "}
-                          {new Date(site.last_crawled_at).toLocaleDateString("it-IT", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
-                      )}
-                      <span>{site.pages_crawled} pagine</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" disabled>
-                    Crawl Ora
-                  </Button>
-                </div>
+                <ExternalSiteCard key={site.id} site={site} />
               ))}
             </div>
           </CardContent>
@@ -224,14 +194,7 @@ export default async function KnowledgeBasePage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" disabled>
-                      Modifica
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled>
-                      {item.is_active ? "Disattiva" : "Attiva"}
-                    </Button>
-                  </div>
+                  <KnowledgeItemActions item={item} />
                 </div>
               ))}
             </div>

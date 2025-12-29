@@ -13,7 +13,7 @@ Il cron job è già implementato in `/api/cron/save-daily-snapshot/route.ts` ma 
 
 **Aggiungi al file `vercel.json` nella root del progetto:**
 
-```json
+\`\`\`json
 {
   "crons": [
     {
@@ -22,16 +22,16 @@ Il cron job è già implementato in `/api/cron/save-daily-snapshot/route.ts` ma 
     }
   ]
 }
-```
+\`\`\`
 
 Questo eseguirà il cron job ogni giorno a mezzanotte (00:00 UTC).
 
 ### 3. Aggiungi la variabile d'ambiente CRON_SECRET
 Il cron job richiede autenticazione. Aggiungi questa variabile nelle impostazioni Vercel:
 
-```
+\`\`\`
 CRON_SECRET=<genera-un-token-sicuro-random>
-```
+\`\`\`
 
 ### 4. Verifica che funzioni
 Dopo il deploy, il cron job verrà eseguito automaticamente ogni mezzanotte e salverà lo snapshot delle visite del giorno precedente.
@@ -39,10 +39,10 @@ Dopo il deploy, il cron job verrà eseguito automaticamente ogni mezzanotte e sa
 ## Test Manuale
 Puoi testare il cron job chiamando manualmente l'endpoint:
 
-```bash
+\`\`\`bash
 curl -X POST https://4bid.it/api/cron/save-daily-snapshot \
   -H "Authorization: Bearer <CRON_SECRET>"
-```
+\`\`\`
 
 ## Come Funziona
 Il cron job:

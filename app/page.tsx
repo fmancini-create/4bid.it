@@ -8,8 +8,8 @@ import AppsSection from "@/components/apps-section"
 import About from "@/components/about"
 import Contact from "@/components/contact"
 import { Footer } from "@/components/footer"
-import Script from "next/script"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
   title: "4BID.IT - Innovazione e Tecnologia per il Tuo Business | Revenue Management & Software",
@@ -24,6 +24,20 @@ export const metadata: Metadata = {
     url: "https://4bid.it",
     locale: "it_IT",
     siteName: "4BID.IT",
+    images: [
+      {
+        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "4BID.IT - Innovazione e Tecnologia",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "4BID.IT - Innovazione e Tecnologia per il Tuo Business",
+    description: "Consulenza revenue management, software e soluzioni tecnologiche innovative",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
   },
   alternates: {
     canonical: "https://4bid.it",
@@ -33,17 +47,14 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="min-h-screen">
-      <LandingPageTracker slug="home" />
+      <StructuredData
+        type="Organization"
+        title="4BID.IT - Innovazione e Tecnologia"
+        description="4BID offre consulenza revenue management, software innovativi e soluzioni tecnologiche per hotel e aziende"
+        url="https://4bid.it"
+      />
 
-      <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-S6YEEXE4C3');
-        `}
-      </Script>
+      <LandingPageTracker slug="home" />
 
       <Header />
       <Hero />

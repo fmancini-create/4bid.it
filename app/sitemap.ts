@@ -44,6 +44,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "webmarketing-hotel-prenotazioni",
     "come-aumentare-ricavi-hotel",
     "ottimizzazione-revpar-hotel",
+    "cose-il-revenue-management",
+    "revenue-management-agriturismi",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
     lastModified,
@@ -51,13 +53,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  // Progetti
-  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel"].map((slug) => ({
+  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
 
-  return [homepage, ...landingPages, ...progetti]
+  const otherPages = [
+    {
+      url: `${baseUrl}/proponi-idea`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    },
+  ]
+
+  return [homepage, ...landingPages, ...progetti, ...otherPages]
 }

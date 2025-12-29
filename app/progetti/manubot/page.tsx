@@ -6,10 +6,64 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "MANUBOT - Sistema Smart di Gestione Manutenzioni | 4BID.IT",
+  description:
+    "MANUBOT: il sistema universale di gestione manutenzioni che usa WhatsApp e Telegram. Dashboard completa, zero app da installare, perfetto per hotel e strutture ricettive.",
+  keywords:
+    "manubot, gestione manutenzioni hotel, sistema manutenzione, whatsapp business, telegram bot, facility management, gestione interventi",
+  openGraph: {
+    title: "MANUBOT - Sistema Smart di Gestione Manutenzioni",
+    description: "Il sistema di gestione manutenzioni che parla la lingua di tutti: WhatsApp e Telegram",
+    type: "website",
+    url: "https://4bid.it/progetti/manubot",
+    locale: "it_IT",
+    siteName: "4BID.IT",
+    images: [
+      {
+        url: "https://4bid.it/manubot-logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MANUBOT Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MANUBOT - Sistema Smart di Gestione Manutenzioni",
+    description: "Gestione manutenzioni via WhatsApp e Telegram con dashboard completa",
+    images: ["https://4bid.it/manubot-logo.jpg"],
+  },
+  alternates: {
+    canonical: "https://4bid.it/progetti/manubot",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+}
 
 export default function ManubotPage() {
   return (
     <div className="min-h-screen bg-white">
+      <StructuredData
+        type="Service"
+        title="MANUBOT - Sistema Gestione Manutenzioni"
+        description="Sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram per hotel e strutture ricettive"
+        url="https://4bid.it/progetti/manubot"
+        image="https://4bid.it/manubot-logo.jpg"
+      />
+
       <LandingPageTracker slug="progetti/manubot" />
 
       <Header />
@@ -48,10 +102,10 @@ export default function ManubotPage() {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Avanzamento</span>
-                    <span className="text-sm font-bold text-orange-600">75%</span>
+                    <span className="text-sm font-bold text-orange-600">90%</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-orange-500 to-amber-600 w-3/4" />
+                    <div className="h-full bg-gradient-to-r from-orange-500 to-amber-600 w-[90%]" />
                   </div>
                 </div>
                 <div className="pt-4 space-y-2">
@@ -68,8 +122,12 @@ export default function ManubotPage() {
                     <span className="text-gray-700">Sistema ticket completo</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-orange-600" />
+                    <span className="text-gray-700">Dashboard reportistica avanzata</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
-                    <span className="text-gray-500">Dashboard reportistica avanzata</span>
+                    <span className="text-gray-500">Testing finale e ottimizzazioni</span>
                   </div>
                 </div>
               </div>
@@ -95,7 +153,7 @@ export default function ManubotPage() {
               <Rocket className="h-12 w-12 text-orange-600 mb-4" />
               <h3 className="text-2xl font-bold text-gray-900 mb-4">La Soluzione</h3>
               <p className="text-gray-700 leading-relaxed">
-                Un sistema ibrido e intelligente: gli operativi usano solo WhatsApp/Telegram (semplice e familiare),
+                Un sistema ibrido e intelligente: gli operativi usano solo WhatsApp o Telegram (semplice e familiare),
                 mentre i manager hanno una dashboard completa con statistiche, storico interventi e performance del
                 team.
               </p>

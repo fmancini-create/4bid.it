@@ -44,12 +44,15 @@ export const metadata: Metadata = {
     canonical: "https://4bid.it",
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/apple-icon.png",
-    shortcut: "/favicon.ico",
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "4BID.IT",
   },
   generator: "v0.app",
 }

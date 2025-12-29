@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Home, MessageSquare, FolderKanban, Users, TrendingUp, Menu, X, BookOpen } from "lucide-react"
+import { Home, MessageSquare, FolderKanban, Users, TrendingUp, Menu, X, BookOpen, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AdminNavigationProps {
@@ -78,6 +78,14 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
           >
             <BookOpen className="h-5 w-5 text-primary" />
             <span className="font-medium">Knowledge Base</span>
+          </a>
+
+          <a
+            href="/admin/social-media"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-left"
+          >
+            <Share2 className="h-5 w-5 text-primary" />
+            <span className="font-medium">Social Media</span>
           </a>
         </nav>
 
