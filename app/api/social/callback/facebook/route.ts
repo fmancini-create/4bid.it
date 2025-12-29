@@ -72,73 +72,84 @@ export async function GET(request: NextRequest) {
     )
 
     const pagesData = await pagesResponse.json()
-    console.log("[v0] Pages found:", pagesData.data?.length || 0)
+    console.log(
+      "[v0] Pages found:",
+      pagesData.data?.length || 0,
+      pagesData.data?.map((p: any) => p.name),
+    )
 
     if (!pagesData.data || pagesData.data.length === 0) {
       redirectUrl.searchParams.set("error", "Nessuna pagina Facebook trovata. Assicurati di gestire almeno una pagina.")
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Prendi la prima pagina
-    const page = pagesData.data[0]
-    console.log("[v0] Saving page:", page.name, page.id)
-
     await supabase.from("social_accounts").delete().eq("platform", "facebook")
 
-    const { data: insertData, error: dbError } = await supabase
-      .from("social_accounts")
-      .insert({
-        platform: "facebook",
-        account_name: page.name,
-        account_id: page.id,
-        page_id: page.id,
-        access_token: page.access_token,
-        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select()
+    const pagesToInsert = pagesData.data.map((page: any) => ({
+      platform: "facebook",
+      account_name: page.name,
+      account_id: page.id,
+      page_id: page.id,
+      access_token: page.access_token,
+      token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
 
-    console.log("[v0] DB insert result:", dbError ? dbError.message : "success", insertData)
+    console.log(
+      "[v0] Saving all pages:",
+      pagesToInsert.map((p: any) => p.account_name),
+    )
+
+    const { data: insertData, error: dbError } = await supabase.from("social_accounts").insert(pagesToInsert).select()
+
+    console.log("[v0] DB insert result:", dbError ? dbError.message : `${insertData?.length} pages saved`)
 
     if (dbError) throw dbError
 
-    // Controlla se la pagina ha Instagram collegato
-    console.log("[v0] Checking for Instagram...")
-    const igResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`,
-      { method: "GET" },
-    )
+    console.log("[v0] Checking for Instagram on all pages...")
+    let instagramFound = false
 
-    const igData = await igResponse.json()
-    console.log("[v0] Instagram linked:", !!igData.instagram_business_account)
+    for (const page of pagesData.data) {
+      if (instagramFound) break
 
-    if (igData.instagram_business_account) {
-      const igAccountResponse = await fetch(
-        `https://graph.facebook.com/v18.0/${igData.instagram_business_account.id}?fields=username&access_token=${page.access_token}`,
+      const igResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`,
         { method: "GET" },
       )
 
-      const igAccountData = await igAccountResponse.json()
+      const igData = await igResponse.json()
 
-      // Delete existing Instagram account first
-      await supabase.from("social_accounts").delete().eq("platform", "instagram")
+      if (igData.instagram_business_account) {
+        console.log("[v0] Instagram found linked to page:", page.name)
+        instagramFound = true
 
-      await supabase.from("social_accounts").insert({
-        platform: "instagram",
-        account_name: igAccountData.username || "Instagram Business",
-        account_id: igData.instagram_business_account.id,
-        access_token: page.access_token,
-        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+        const igAccountResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${igData.instagram_business_account.id}?fields=username&access_token=${page.access_token}`,
+          { method: "GET" },
+        )
+
+        const igAccountData = await igAccountResponse.json()
+
+        // Delete existing Instagram account first
+        await supabase.from("social_accounts").delete().eq("platform", "instagram")
+
+        await supabase.from("social_accounts").insert({
+          platform: "instagram",
+          account_name: igAccountData.username || "Instagram Business",
+          account_id: igData.instagram_business_account.id,
+          access_token: page.access_token,
+          token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      }
     }
 
-    console.log("[v0] Facebook OAuth completed successfully!")
-    redirectUrl.searchParams.set("success", "Facebook collegato con successo!")
+    console.log("[v0] Facebook OAuth completed successfully! Pages saved:", pagesData.data.length)
+    redirectUrl.searchParams.set("success", `Facebook collegato con successo! ${pagesData.data.length} pagine trovate.`)
     return NextResponse.redirect(redirectUrl)
   } catch (error) {
     console.error("[v0] Facebook OAuth error:", error)
