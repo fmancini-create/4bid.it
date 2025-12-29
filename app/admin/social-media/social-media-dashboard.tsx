@@ -737,16 +737,15 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-              <p className="text-sm text-yellow-600">
-                <strong>Nota:</strong> Per collegare gli account social è necessario configurare le API di ogni
-                piattaforma. Contatta l'amministratore per la configurazione.
-              </p>
-            </div>
-
             {["facebook", "instagram", "linkedin"].map((platform) => {
               const Icon = platformIcons[platform as keyof typeof platformIcons]
               const account = accounts.find((a) => a.platform === platform)
+
+              const connectUrls: Record<string, string> = {
+                facebook: "/api/social/connect/facebook",
+                instagram: "/api/social/connect/facebook", // Instagram usa Facebook OAuth
+                linkedin: "/api/social/connect/linkedin",
+              }
 
               return (
                 <div key={platform} className="flex items-center justify-between p-4 border rounded-lg">
@@ -763,12 +762,20 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                       </p>
                     </div>
                   </div>
-                  <Button variant={account?.is_active ? "outline" : "default"} size="sm" disabled>
+                  <Button
+                    variant={account?.is_active ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => (window.location.href = connectUrls[platform])}
+                  >
                     {account?.is_active ? "Riconnetti" : "Collega"}
                   </Button>
                 </div>
               )
             })}
+
+            <p className="text-xs text-muted-foreground">
+              Nota: Instagram richiede un account business collegato a una pagina Facebook.
+            </p>
           </div>
 
           <DialogFooter>
