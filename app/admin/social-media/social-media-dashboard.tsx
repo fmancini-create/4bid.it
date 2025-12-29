@@ -590,7 +590,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
       {/* New Post Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Crea Nuovo Post</DialogTitle>
             <DialogDescription>Scrivi manualmente o genera con AI</DialogDescription>
