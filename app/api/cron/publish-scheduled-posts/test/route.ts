@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { publishToFacebook } from "@/lib/social/facebook"
+import { publishToFacebookPage } from "@/lib/social/facebook"
 import { publishToLinkedIn, publishToLinkedInOrganization } from "@/lib/social/linkedin"
 
 export async function GET() {
@@ -46,18 +46,13 @@ export async function GET() {
       const facebookAccounts = accounts?.filter((a) => a.platform === "facebook") || []
       for (const account of facebookAccounts) {
         try {
-          const result = await publishToFacebook(
+          const result = await publishToFacebookPage(
             account.page_id,
             account.access_token,
             post.content,
-            null,
             post.image_url,
           )
-          if (result.success && result.postId) {
-            platformPostIds[`facebook_${account.page_id}`] = result.postId
-          } else if (result.error) {
-            errors.push(`Facebook ${account.account_name}: ${result.error}`)
-          }
+          platformPostIds[`facebook_${account.page_id}`] = result.id
         } catch (err: any) {
           errors.push(`Facebook ${account.account_name}: ${err.message}`)
         }

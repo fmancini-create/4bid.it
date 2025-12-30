@@ -62,3 +62,61 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Errore nel recupero" }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id, content, platforms, scheduled_for, image_url, target_accounts, status } = body
+
+    if (!id) {
+      return NextResponse.json({ error: "ID post mancante" }, { status: 400 })
+    }
+
+    // Check if post exists and is editable (draft or scheduled)
+    const { data: existingPost, error: fetchError } = await supabase
+      .from("social_posts")
+      .select("status")
+      .eq("id", id)
+      .single()
+
+    if (fetchError || !existingPost) {
+      return NextResponse.json({ error: "Post non trovato" }, { status: 404 })
+    }
+
+    if (!["draft", "scheduled", "pending_approval", "approved"].includes(existingPost.status)) {
+      return NextResponse.json({ error: "Post non modificabile" }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from("social_posts")
+      .update({
+        content,
+        platforms,
+        scheduled_for: scheduled_for || null,
+        image_url: image_url || null,
+        target_accounts: target_accounts && target_accounts.length > 0 ? target_accounts : null,
+        status: status || existingPost.status,
+        hashtags: content.match(/#\w+/g) || [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("[v0] Error updating post:", error)
+    return NextResponse.json({ error: "Errore nell'aggiornamento" }, { status: 500 })
+  }
+}

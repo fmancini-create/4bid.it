@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   ImageIcon,
   Menu,
+  Loader2,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,7 +69,7 @@ interface SocialPost {
   hashtags: string[] | null
   scheduled_for: string | null
   published_at: string | null
-  status: string
+  status: "draft" | "pending_approval" | "approved" | "scheduled" | "published" | "failed"
   is_ai_generated: boolean
   ai_topic: string | null
   platforms: string[]
@@ -75,6 +77,7 @@ interface SocialPost {
   requires_approval: boolean
   error_message: string | null
   created_at: string
+  target_accounts?: string[] // Added target_accounts
 }
 
 interface SocialSettings {
@@ -89,10 +92,10 @@ interface SocialSettings {
 }
 
 interface Props {
-  initialAccounts: SocialAccount[]
-  initialPosts: SocialPost[]
-  initialSettings: SocialSettings | null
-  userEmail: string
+  initialAccounts?: SocialAccount[]
+  initialPosts?: SocialPost[]
+  initialSettings?: SocialSettings | null
+  userEmail?: string
 }
 
 const platformIcons = {
@@ -116,7 +119,12 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   failed: { label: "Errore", color: "bg-red-500", icon: AlertCircle },
 }
 
-export default function SocialMediaDashboard({ initialAccounts, initialPosts, initialSettings, userEmail }: Props) {
+export default function SocialMediaDashboard({
+  initialAccounts = [],
+  initialPosts = [],
+  initialSettings,
+  userEmail,
+}: Props) {
   const router = useRouter()
   const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts)
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts)
@@ -126,6 +134,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
   const [manualPageId, setManualPageId] = useState("")
@@ -267,6 +276,40 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
+  const updatePost = async () => {
+    if (!editingPost) return
+
+    try {
+      setIsGenerating(true)
+      const response = await fetch("/api/social/posts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingPost.id,
+          content: editingPost.content,
+          platforms: editingPost.platforms,
+          scheduled_for: editingPost.scheduled_for,
+          image_url: editingPost.image_url,
+          target_accounts: editingPost.target_accounts,
+          status: editingPost.status,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore nell'aggiornamento")
+
+      const updatedPost = await response.json()
+      setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)))
+      setShowEditDialog(false)
+      setEditingPost(null)
+      toast.success("Post aggiornato!")
+      router.refresh()
+    } catch (error) {
+      toast.error("Errore nell'aggiornamento del post")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const approvePost = async (postId: string) => {
     try {
       const response = await fetch(`/api/social/posts/${postId}/approve`, {
@@ -379,6 +422,11 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     } finally {
       setIsSavingManual(false)
     }
+  }
+
+  const openEditDialog = (post: SocialPost) => {
+    setEditingPost({ ...post })
+    setShowEditDialog(true)
   }
 
   const pendingApproval = posts.filter((p) => p.status === "pending_approval")
@@ -614,6 +662,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                   onApprove={() => approvePost(post.id)}
                   onReject={() => rejectPost(post.id)}
                   onPublish={() => publishNow(post.id)}
+                  onEdit={() => openEditDialog(post)} // Added onEdit
                 />
               ))
             )}
@@ -634,6 +683,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                   post={post}
                   onPublish={() => publishNow(post.id)}
                   onReject={() => rejectPost(post.id)}
+                  onEdit={() => openEditDialog(post)} // Added onEdit
                 />
               ))
             )}
@@ -648,7 +698,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 </CardContent>
               </Card>
             ) : (
-              published.map((post) => <PostCard key={post.id} post={post} />)
+              published.map((post) => <PostCard key={post.id} post={post} onEdit={() => openEditDialog(post)} />)
             )}
           </TabsContent>
 
@@ -660,6 +710,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 onApprove={post.status === "pending_approval" ? () => approvePost(post.id) : undefined}
                 onReject={() => rejectPost(post.id)}
                 onPublish={["approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined}
+                onEdit={() => openEditDialog(post)} // Added onEdit
               />
             ))}
           </TabsContent>
@@ -1123,6 +1174,144 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Modifica Post</DialogTitle>
+            <DialogDescription>Modifica il contenuto, l'immagine o la programmazione del post</DialogDescription>
+          </DialogHeader>
+
+          {editingPost && (
+            <div className="space-y-4">
+              {/* Content */}
+              <div className="space-y-2">
+                <Label>Contenuto</Label>
+                <Textarea
+                  value={editingPost.content}
+                  onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                  rows={6}
+                  className="resize-none"
+                />
+              </div>
+
+              {/* Image */}
+              <div className="space-y-2">
+                <Label>Immagine</Label>
+                {editingPost.image_url ? (
+                  <div className="relative">
+                    <img
+                      src={editingPost.image_url || "/placeholder.svg"}
+                      alt="Post image"
+                      className="w-full max-h-48 object-cover rounded-lg"
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2"
+                      onClick={() => setEditingPost({ ...editingPost, image_url: null })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center text-muted-foreground">
+                    Nessuna immagine
+                  </div>
+                )}
+              </div>
+
+              {/* Platforms */}
+              <div className="space-y-2">
+                <Label>Piattaforme</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["facebook", "instagram", "linkedin"].map((platform) => {
+                    const Icon = platformIcons[platform as keyof typeof platformIcons]
+                    const isSelected = editingPost.platforms.includes(platform)
+                    const account = accounts.find((a) => a.platform === platform && a.is_active)
+                    if (!account) return null
+                    return (
+                      <button
+                        key={platform}
+                        type="button"
+                        onClick={() => {
+                          const newPlatforms = isSelected
+                            ? editingPost.platforms.filter((p) => p !== platform)
+                            : [...editingPost.platforms, platform]
+                          setEditingPost({ ...editingPost, platforms: newPlatforms })
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                          isSelected
+                            ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                            : "border-border hover:border-primary"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="capitalize text-sm">{platform}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Schedule */}
+              <div className="space-y-2">
+                <Label>Programmazione</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="datetime-local"
+                    value={editingPost.scheduled_for ? editingPost.scheduled_for.slice(0, 16) : ""}
+                    onChange={(e) =>
+                      setEditingPost({
+                        ...editingPost,
+                        scheduled_for: e.target.value ? new Date(e.target.value).toISOString() : null,
+                        status: e.target.value ? "scheduled" : "draft",
+                      })
+                    }
+                    className="flex-1"
+                  />
+                  {editingPost.scheduled_for && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingPost({ ...editingPost, scheduled_for: null, status: "draft" })}
+                    >
+                      Rimuovi programmazione
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editingPost.scheduled_for
+                    ? `Programmato per: ${new Date(editingPost.scheduled_for).toLocaleString("it-IT")}`
+                    : "Nessuna programmazione - il post rimarrà in bozza"}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
+                  Annulla
+                </Button>
+                <Button onClick={updatePost} disabled={isGenerating} className="flex-1 sm:flex-none">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvataggio...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Salva modifiche
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ... existing settings dialog and manual connect dialog ... */}
     </div>
   )
 }
@@ -1132,14 +1321,17 @@ function PostCard({
   onApprove,
   onReject,
   onPublish,
+  onEdit,
 }: {
   post: SocialPost
   onApprove?: () => void
   onReject?: () => void
   onPublish?: () => void
+  onEdit?: () => void
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
+  const canEdit = ["draft", "scheduled", "pending_approval", "approved"].includes(post.status)
 
   return (
     <Card>
@@ -1189,17 +1381,17 @@ function PostCard({
 
             {/* Meta - Stacked on mobile */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
-              <span>{new Date(post.created_at).toLocaleDateString("it-IT")}</span>
+              <span>Creato: {new Date(post.created_at).toLocaleString("it-IT")}</span>
               {post.scheduled_for && (
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-blue-600">
                   <Calendar className="h-3 w-3" />
-                  {new Date(post.scheduled_for).toLocaleDateString("it-IT")}
+                  Programmato: {new Date(post.scheduled_for).toLocaleString("it-IT")}
                 </span>
               )}
               {post.published_at && (
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-3 w-3" />
-                  {new Date(post.published_at).toLocaleDateString("it-IT")}
+                  Pubblicato: {new Date(post.published_at).toLocaleString("it-IT")}
                 </span>
               )}
             </div>
@@ -1213,6 +1405,17 @@ function PostCard({
           </div>
 
           <div className="flex sm:flex-col gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4 border-border">
+            {canEdit && onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-blue-600 border-blue-600 bg-transparent flex-1 sm:flex-none h-9"
+                onClick={onEdit}
+              >
+                <Pencil className="h-4 w-4 sm:mr-0" />
+                <span className="sm:hidden ml-2">Modifica</span>
+              </Button>
+            )}
             {onApprove && (
               <Button
                 size="sm"

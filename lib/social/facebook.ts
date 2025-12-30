@@ -74,3 +74,5 @@ export async function verifyFacebookToken(accessToken: string): Promise<boolean>
     return false
   }
 }
+
+export const publishToFacebookPage = publishToFacebook
