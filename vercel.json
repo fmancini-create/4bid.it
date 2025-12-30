@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/save-daily-snapshot",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/publish-scheduled-posts",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
