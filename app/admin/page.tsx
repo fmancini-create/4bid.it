@@ -7,6 +7,7 @@ import AdminInvestorInquiries from "@/components/admin-investor-inquiries"
 import AdminNavigation from "@/components/admin-navigation"
 import { Button } from "@/components/ui/button"
 import TriggerSnapshotButton from "@/components/trigger-snapshot-button"
+import { RefreshCw } from "lucide-react"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -88,19 +89,20 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background border-b border-border px-8 py-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Pannello Amministrativo</h1>
-            <p className="text-sm text-muted-foreground">
-              Connesso come: <span className="font-semibold">{user.email}</span>
+      <div className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background border-b border-border px-4 sm:px-8 py-3 sm:py-4">
+        <div className="flex justify-between items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">Pannello Amministrativo</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+              <span className="hidden sm:inline">Connesso come: </span>
+              <span className="font-semibold">{user.email}</span>
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <form action="/admin" method="get">
-              <Button type="submit" variant="outline" size="sm">
+              <Button type="submit" variant="outline" size="sm" className="h-8 sm:h-9 px-2 sm:px-3 bg-transparent">
                 <span className="hidden sm:inline mr-2">Aggiorna</span>
-                <span className="sm:hidden">⟳</span>
+                <RefreshCw className="h-4 w-4 sm:hidden" />
               </Button>
             </form>
             <form
@@ -111,9 +113,9 @@ export default async function AdminPage() {
                 redirect("/admin/login")
               }}
             >
-              <Button type="submit" variant="destructive" size="sm">
+              <Button type="submit" variant="destructive" size="sm" className="h-8 sm:h-9 px-2 sm:px-3">
                 <span className="hidden sm:inline">Esci</span>
-                <span className="sm:hidden">ESC</span>
+                <span className="sm:hidden">X</span>
               </Button>
             </form>
           </div>
@@ -122,24 +124,24 @@ export default async function AdminPage() {
 
       <AdminNavigation userEmail={user.email || ""} />
 
-      <div className="lg:ml-64 pt-24 container mx-auto p-8 space-y-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Visite Ieri ({yesterdayStr})</h3>
-            <p className="text-2xl font-bold text-foreground">{totalYesterdayViews}</p>
+      <div className="lg:ml-64 pt-20 sm:pt-24 container mx-auto p-4 sm:p-8 space-y-8 sm:space-y-16">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Visite Ieri ({yesterdayStr})</h3>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{totalYesterdayViews}</p>
             {totalYesterdayViews === 0 && (
               <p className="text-xs text-amber-500 mt-1">Nessun dato - snapshot mancante?</p>
             )}
           </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Ultimo Snapshot</h3>
-            <p className="text-2xl font-bold text-foreground">{lastSnapshotDate}</p>
+          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Ultimo Snapshot</h3>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{lastSnapshotDate}</p>
             {lastSnapshotDate !== yesterdayStr && lastSnapshotDate !== "Mai" && (
               <p className="text-xs text-amber-500 mt-1">Non aggiornato</p>
             )}
           </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Azioni</h3>
+          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Azioni</h3>
             <TriggerSnapshotButton />
           </div>
         </div>

@@ -1,24 +1,78 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { TrendingUp, Calendar, Target, Users, CheckCircle2, BarChart3, Zap, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
   description:
     "Yield management professionale per hotel: gestione capacità, pricing dinamico, restrizioni LOS intelligenti, overbooking controllato. Massimizza RevPAR con strategie avanzate.",
   keywords:
     "yield management hotel, gestione capacità hotel, ottimizzazione occupazione alberghiera, yield optimization, capacity management hotel, gestione inventario camere strategica",
+  alternates: {
+    canonical: "https://4bid.it/yield-management-hotel",
+  },
+  openGraph: {
+    title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
+    description:
+      "Yield management professionale per hotel: gestione capacità, pricing dinamico, restrizioni LOS intelligenti.",
+    url: "https://4bid.it/yield-management-hotel",
+    siteName: "4BID.IT",
+    locale: "it_IT",
+    type: "website",
+    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Yield Management" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35%",
+    description: "Yield management professionale per hotel con strategie avanzate.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-video-preview": -1, "max-image-preview": "large", "max-snippet": -1 },
+  },
 }
 
 export default function YieldManagementHotelPage() {
+  const faqs = [
+    {
+      question: "Cos'è il yield management per hotel?",
+      answer:
+        "Il yield management è una strategia di ottimizzazione dei ricavi che gestisce l'inventario delle camere in base alla domanda prevista, vendendo la camera giusta al cliente giusto al momento e prezzo giusto.",
+    },
+    {
+      question: "Qual è la differenza tra yield management e revenue management?",
+      answer:
+        "Il yield management si concentra principalmente sull'ottimizzazione del prezzo per unità venduta, mentre il revenue management ha un approccio più ampio che include anche la gestione dei canali e la segmentazione del mercato.",
+    },
+    {
+      question: "Quali sono i KPI principali del yield management?",
+      answer:
+        "I KPI fondamentali sono RevPAR (Revenue Per Available Room), ADR (Average Daily Rate), tasso di occupazione e Yield Percentage.",
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Yield Management Hotel"
+        description="Servizio professionale di yield management per hotel: ottimizzazione capacità, pricing dinamico e strategie avanzate per massimizzare RevPAR."
+        url="https://4bid.it/yield-management-hotel"
+        faqs={faqs}
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Yield Management Hotel", url: "https://4bid.it/yield-management-hotel" },
+        ]}
+      />
       <LandingPageTracker slug="yield-management-hotel" />
-
       <Header />
 
       {/* Hero Section */}

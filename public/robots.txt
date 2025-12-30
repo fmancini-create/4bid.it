@@ -1,0 +1,34 @@
+# 4BID.IT Robots.txt
+# https://4bid.it
+
+User-agent: *
+Allow: /
+
+# Blocca le pagine admin
+Disallow: /admin/
+Disallow: /api/
+
+# Permetti i crawler AI
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+# Sitemap
+Sitemap: https://4bid.it/sitemap.xml

@@ -12,16 +12,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 1.0,
   }
 
-  // Landing Pages Revenue Management
+  // Landing Pages Revenue Management - tutte le pagine pubbliche
   const landingPages = [
     "consulenza-revenue-management-hotel",
     "software-revenue-management-santaddeo",
     "ottimizzazione-prezzi-hotel-toscana",
     "revenue-management-bed-breakfast",
+    "revenue-management-bed-and-breakfast",
     "revenue-management-agriturismo",
+    "revenue-management-agriturismi",
     "dynamic-pricing-hotel",
     "gestione-canali-distribuzione-hotel",
     "yield-management-hotel",
+    "yield-management-camere-hotel",
     "analisi-competitiva-hotel-firenze",
     "strategie-prenotazioni-dirette-hotel",
     "strategie-vendita-diretta-hotel",
@@ -45,7 +48,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "come-aumentare-ricavi-hotel",
     "ottimizzazione-revpar-hotel",
     "cose-il-revenue-management",
-    "revenue-management-agriturismi",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
     lastModified,
@@ -53,6 +55,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
+  // Progetti
   const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
@@ -60,12 +63,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
+  // Altre pagine
   const otherPages = [
     {
       url: `${baseUrl}/proponi-idea`,
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
     },
   ]
 

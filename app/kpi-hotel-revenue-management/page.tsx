@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "KPI Hotel Revenue Management: Monitora Performance e Massimizza Ricavi | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Scopri i KPI essenziali del Revenue Management hotel: RevPAR, ADR, RGI, Pickup. Dashboard real-time, alert automatici e decisioni data-driven per ottimizzare i ricavi.",
   keywords:
     "KPI revenue management, KPI hotel, RevPAR, RGI, pickup rate, ADR optimization, metriche revenue management, dashboard hotel, performance hotel",
+  openGraph: {
+    title: "KPI Hotel Revenue Management: Monitora Performance | 4BID.IT",
+    description: "I 7 KPI essenziali che ogni revenue manager deve monitorare per ottimizzare i ricavi.",
+    url: "https://www.4bid.it/kpi-hotel-revenue-management",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/kpi-hotel-revenue-management",
+  },
 }
+
+const faqData = [
+  {
+    question: "Cos'è il RGI (Revenue Generation Index)?",
+    answer:
+      "Il RGI è l'indice che misura la performance del tuo hotel rispetto al mercato. Si calcola: (Tuo RevPAR / CompSet RevPAR) × 100. Un RGI di 100 significa pari al mercato, 120 significa +20% rispetto ai competitor.",
+  },
+  {
+    question: "Quali sono i KPI più importanti per un revenue manager?",
+    answer:
+      "I 7 KPI fondamentali sono: RevPAR Index (RGI), Pickup Rate, Booking Window, Segment Mix, Conversion Rate, Net RevPAR e le metriche di forecast vs actual.",
+  },
+  {
+    question: "Con quale frequenza si devono monitorare i KPI hotel?",
+    answer:
+      "I KPI primari (RevPAR, ADR, occupazione) vanno monitorati quotidianamente. I KPI secondari settimanalmente. TRevPAR e GOP mensilmente. Il pickup va controllato in tempo reale nei periodi critici.",
+  },
+]
 
 export default function KPIHotelRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="KPI Hotel Revenue Management: Monitora Performance"
+        description="I KPI essenziali del Revenue Management per monitorare e ottimizzare le performance hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="kpi-hotel-revenue-management" />
 
       <Header />
@@ -242,7 +276,7 @@ export default function KPIHotelRevenueManagementPage() {
                     <li>• Monitoraggio KPI manuale su Excel</li>
                     <li>• Dati aggiornati con 2-3 giorni di ritardo</li>
                     <li>• RGI non tracciato (no dati competitivi)</li>
-                    <li>• Decisioni pricing basate su "sensazione"</li>
+                    <li>• Decisioni pricing basate su 'sensazione'</li>
                     <li>• Net RevPAR sconosciuto</li>
                   </ul>
                 </div>

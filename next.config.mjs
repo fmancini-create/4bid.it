@@ -4,8 +4,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
   },
+  compress: true,
+  poweredByHeader: false,
   async headers() {
     return [
       {
@@ -41,17 +50,33 @@ const nextConfig = {
           },
         ],
       },
-    ];
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/:path*.svg",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ]
   },
   async redirects() {
     return [
-      // Redirect index.html to homepage
       {
         source: '/index.html',
         destination: '/',
         permanent: true,
       },
-      // Redirect WordPress page_id parameter to homepage
       {
         source: '/',
         has: [
@@ -63,7 +88,6 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
-      // Redirect WordPress RSS feed to homepage
       {
         source: '/',
         has: [
@@ -75,8 +99,8 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

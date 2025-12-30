@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Consulenza Personalizzata Hotel | Revenue Management su Misura | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Consulenza revenue management personalizzata per hotel, B&B e strutture ricettive. Analisi su misura, piano operativo dedicato e supporto continuativo per massimizzare ricavi.",
   keywords:
     "consulenza hotel, revenue management personalizzato, consulenza ricettività, ottimizzazione hotel, strategia revenue",
+  openGraph: {
+    title: "Consulenza Personalizzata Hotel | Revenue Management su Misura | 4BID.IT",
+    description: "Analisi su misura e piano operativo dedicato per massimizzare i ricavi della tua struttura.",
+    url: "https://www.4bid.it/consulenza-personalizzata-hotel",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/consulenza-personalizzata-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Cosa include una consulenza revenue management personalizzata?",
+    answer:
+      "Include: analisi completa della struttura (audit 360°), sviluppo strategia personalizzata, implementazione guidata con formazione del team, ottimizzazione continuativa con supporto mensile, dashboard KPI e reporting personalizzato.",
+  },
+  {
+    question: "Quanto dura il processo di consulenza?",
+    answer:
+      "Il processo si sviluppa in 4 fasi: Analisi Completa (settimana 1-2), Strategia Personalizzata (settimana 3), Implementazione Guidata (mese 2-3), Ottimizzazione Continuativa (ongoing con call mensili e supporto via email/telefono).",
+  },
+  {
+    question: "La prima consulenza è gratuita?",
+    answer:
+      "Sì, la prima consulenza e l'analisi iniziale sono completamente gratuite e senza impegno. Questo permette di valutare le opportunità concrete per la tua struttura prima di iniziare la collaborazione.",
+  },
+]
 
 export default function ConsulenzaPersonalizzataHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Consulenza Personalizzata Hotel"
+        description="Consulenza revenue management personalizzata per hotel e strutture ricettive"
+        faq={faqData}
+      />
       <LandingPageTracker slug="consulenza-personalizzata-hotel" />
 
       <Header />

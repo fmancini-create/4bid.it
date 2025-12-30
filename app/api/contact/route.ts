@@ -1,27 +1,42 @@
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { NextResponse } from "next/server"
+import { sanitizeHtml, sanitizeInput, isValidEmail, isValidPhone } from "@/lib/security"
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { name, email, phone, message } = body
 
-    // Validate required fields
     if (!name || !email || !message) {
       return NextResponse.json({ error: "Nome, email e messaggio sono obbligatori" }, { status: 400 })
     }
 
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Formato email non valido" }, { status: 400 })
+    }
+
+    // Validate phone if provided
+    if (phone && !isValidPhone(phone)) {
+      return NextResponse.json({ error: "Formato telefono non valido" }, { status: 400 })
+    }
+
+    const sanitizedName = sanitizeInput(name, 100)
+    const sanitizedEmail = sanitizeInput(email, 255)
+    const sanitizedPhone = phone ? sanitizeInput(phone, 20) : null
+    const sanitizedMessage = sanitizeInput(message, 5000)
+
     const supabase = createAdminClient()
 
-    // Save to database
+    // Save to database with sanitized data
     const { data, error } = await supabase
       .from("contacts")
       .insert([
         {
-          name,
-          email,
-          phone: phone || null,
-          message,
+          name: sanitizedName,
+          email: sanitizedEmail,
+          phone: sanitizedPhone,
+          message: sanitizedMessage,
         },
       ])
       .select()
@@ -32,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio" }, { status: 500 })
     }
 
-    // Send email notification
+    // Send email notification with sanitized HTML
     try {
       if (process.env.RESEND_API_KEY) {
         const emailResponse = await fetch("https://api.resend.com/emails", {
@@ -44,14 +59,14 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             from: "delivered@resend.dev",
             to: "filippo@hotelbid.org",
-            subject: `Nuovo contatto da ${name}`,
+            subject: `Nuovo contatto da ${sanitizeHtml(sanitizedName)}`,
             html: `
               <h2>Nuovo messaggio di contatto</h2>
-              <p><strong>Nome:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Telefono:</strong> ${phone || "Non fornito"}</p>
+              <p><strong>Nome:</strong> ${sanitizeHtml(sanitizedName)}</p>
+              <p><strong>Email:</strong> ${sanitizeHtml(sanitizedEmail)}</p>
+              <p><strong>Telefono:</strong> ${sanitizedPhone ? sanitizeHtml(sanitizedPhone) : "Non fornito"}</p>
               <p><strong>Messaggio:</strong></p>
-              <p>${message}</p>
+              <p>${sanitizeHtml(sanitizedMessage)}</p>
             `,
           }),
         })
@@ -63,7 +78,6 @@ export async function POST(request: Request) {
       }
     } catch (emailError) {
       console.error("Email error:", emailError)
-      // Don't fail the request if email fails
     }
 
     return NextResponse.json({

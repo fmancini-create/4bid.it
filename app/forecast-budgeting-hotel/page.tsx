@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Servizi professionali di forecast e budgeting per hotel. Previsioni accurate di occupazione, ADR e revenue con analisi predittiva avanzata per massimizzare i risultati.",
   keywords:
     "forecast hotel, budgeting alberghiero, previsioni revenue, budget hotel, pianificazione finanziaria hotel, forecasting occupazione",
+  openGraph: {
+    title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
+    description: "Previsioni accurate e pianificazione finanziaria strategica per il tuo hotel.",
+    url: "https://www.4bid.it/forecast-budgeting-hotel",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/forecast-budgeting-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Cos'è il forecast nel revenue management alberghiero?",
+    answer:
+      "Il forecast è la previsione della domanda futura basata su dati storici, trend di mercato, eventi e altri fattori. Permette di anticipare occupazione, ADR e RevPAR per prendere decisioni strategiche su pricing, staffing e inventory.",
+  },
+  {
+    question: "Qual è l'accuratezza delle previsioni di forecast?",
+    answer:
+      "I nostri forecast hanno un'accuratezza media del 92% rispetto ai risultati effettivi, con uno scostamento budget vs actual di ±3%. L'orizzonte previsionale copre 12 mesi.",
+  },
+  {
+    question: "Quali KPI vengono previsti nel forecast hotel?",
+    answer:
+      "I principali KPI previsti sono: Occupancy Rate, ADR (Average Daily Rate), RevPAR, Booking Pace, Revenue Totale per periodo e segmento, Pickup Analysis e GOP (Gross Operating Profit).",
+  },
+]
 
 export default function ForecastBudgetingHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Forecast e Budgeting Hotel"
+        description="Previsioni accurate e pianificazione finanziaria per hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="forecast-budgeting-hotel" />
 
       <Header />
@@ -29,7 +63,7 @@ export default function ForecastBudgetingHotelPage() {
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Previsioni accurate e pianificazione finanziaria strategica per il tuo hotel. Anticipa la domanda,
-              ottimizza le risorse e massimizza i risultati con analisi predittive avanzate.
+              ottimizza le risorse e massimizza i risultati con analisi predittiva avanzata.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">

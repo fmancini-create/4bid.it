@@ -22,6 +22,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ImageIcon,
+  Menu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,6 +41,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu, // Added DropdownMenu
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 
 interface SocialAccount {
@@ -49,6 +56,7 @@ interface SocialAccount {
   account_id: string | null
   is_active: boolean
   created_at: string
+  page_id?: string | null // Added page_id
 }
 
 interface SocialPost {
@@ -132,7 +140,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     auto_publish: false,
     scheduled_for: "",
     ai_topic: "",
-    target_accounts: [] as string[],
+    target_accounts: [] as string[], // Changed to string[] for account IDs
     image_url: "",
     image_topic: "",
     image_style: "professional" as string,
@@ -195,11 +203,31 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
-  const savePost = async (status: "draft" | "pending_approval" | "scheduled") => {
+  const savePost = async () => {
+    // Simplified savePost to align with the update's DialogFooter
     try {
       if (newPost.platforms.length === 0) {
         toast.error("Seleziona almeno una piattaforma")
         return
+      }
+
+      // Determine status based on auto_publish and scheduled_for
+      let status: "draft" | "pending_approval" | "scheduled" = "draft"
+      if (newPost.auto_publish && newPost.scheduled_for) {
+        status = "scheduled"
+      } else if (newPost.auto_publish && !newPost.scheduled_for) {
+        // If auto_publish is true and no date is set, it should be scheduled for immediate publish or considered draft
+        // For simplicity, let's treat it as draft and rely on backend to handle immediate publish if needed
+        status = "draft" // Or handle as 'scheduled' for immediate publish
+      } else if (!newPost.auto_publish && newPost.scheduled_for) {
+        status = "scheduled"
+      } else if (!newPost.auto_publish && !newPost.scheduled_for) {
+        status = "pending_approval" // Default to pending if not auto-publishing and not scheduled
+      }
+
+      // If content is empty, set to draft
+      if (!newPost.content) {
+        status = "draft"
       }
 
       const response = await fetch("/api/social/posts", {
@@ -208,9 +236,10 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
         body: JSON.stringify({
           ...newPost,
           status,
-          is_ai_generated: newPost.content.includes("#") && newPost.ai_topic !== "",
+          is_ai_generated: newPost.content.includes("#") && newPost.ai_topic !== "", // Simplified AI check
           ai_topic: newPost.ai_topic,
           image_url: newPost.image_url || null,
+          target_accounts: newPost.target_accounts || [], // Ensure target_accounts is an array
         }),
       })
 
@@ -233,6 +262,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
       toast.success("Post salvato!")
       router.refresh()
     } catch (error) {
+      console.error("Save post error:", error)
       toast.error("Errore nel salvataggio")
     }
   }
@@ -357,22 +387,24 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
+      <header className="border-b border-border bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <Button variant="ghost" size="icon" asChild className="shrink-0">
                 <a href="/admin">
                   <ArrowLeft className="h-5 w-5" />
                 </a>
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Gestione Social Media</h1>
-                <p className="text-sm text-muted-foreground">Genera e pubblica contenuti con AI</p>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold truncate">Gestione Social Media</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  Genera e pubblica contenuti con AI
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex items-center gap-2">
               <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Impostazioni
@@ -382,65 +414,87 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 Nuovo Post
               </Button>
             </div>
+            {/* Mobile dropdown menu */}
+            <div className="flex sm:hidden items-center gap-2">
+              <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Impostazioni
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowConnectDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Collega Account
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Da Approvare</p>
-                  <p className="text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Da Approvare</p>
+                  <p className="text-xl sm:text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Programmati</p>
-                  <p className="text-3xl font-bold text-blue-500">{scheduled.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Programmati</p>
+                  <p className="text-xl sm:text-3xl font-bold text-blue-500">{scheduled.length}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-blue-500" />
+                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pubblicati</p>
-                  <p className="text-3xl font-bold text-emerald-500">{published.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Pubblicati</p>
+                  <p className="text-xl sm:text-3xl font-bold text-emerald-500">{published.length}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Account Connessi</p>
-                  <p className="text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Account</p>
+                  <p className="text-xl sm:text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
                 </div>
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-1 sm:-space-x-2">
                   {["facebook", "instagram", "linkedin"].map((platform) => {
                     const Icon = platformIcons[platform as keyof typeof platformIcons]
                     const isConnected = accounts.some((a) => a.platform === platform && a.is_active)
                     return (
                       <div
                         key={platform}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                           isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-300"
                         }`}
                       >
-                        <Icon className="h-4 w-4 text-white" />
+                        <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-white" />
                       </div>
                     )
                   })}
@@ -450,53 +504,73 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </Card>
         </div>
 
-        {/* Connected Accounts */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <CardTitle>Account Social Collegati</CardTitle>
-                <CardDescription>Collega i tuoi account per pubblicare automaticamente</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Account Social Collegati</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Collega i tuoi account per pubblicare</CardDescription>
               </div>
-              <Button variant="outline" onClick={() => setShowConnectDialog(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowConnectDialog(true)}
+                className="w-full sm:w-auto"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Collega Account
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="flex flex-col sm:grid sm:grid-cols-3 gap-3 sm:gap-4">
               {["facebook", "instagram", "linkedin"].map((platform) => {
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
-                const account = accounts.find((a) => a.platform === platform)
-
-                const connectUrls: Record<string, string> = {
-                  facebook: "/api/social/connect/facebook",
-                  instagram: "/api/social/connect/facebook", // Instagram usa Facebook OAuth
-                  linkedin: "/api/social/connect/linkedin",
-                }
+                const platformAccounts = accounts.filter((a) => a.platform === platform)
+                const isConnected = platformAccounts.some((a) => a.is_active)
+                const displayName =
+                  platform === "linkedin" && isConnected
+                    ? `${platformAccounts[0]?.account_name || platform} (Pagina Aziendale)`
+                    : platformAccounts[0]?.account_name || platform
 
                 return (
-                  <div key={platform} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
+                  <div
+                    key={platform}
+                    className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border ${
+                      isConnected ? "border-primary bg-primary/5" : "border-dashed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                       <div
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-200"
+                        }`}
                       >
-                        <Icon className="h-5 w-5 text-white" />
+                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
                       </div>
-                      <div>
-                        <p className="font-medium capitalize">{platform}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {account?.is_active ? account.account_name : "Non collegato"}
+                      <div className="min-w-0">
+                        <p className="font-medium capitalize text-sm sm:text-base">{platform}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[120px] sm:max-w-none">
+                          {isConnected ? displayName : "Non collegato"}
                         </p>
                       </div>
                     </div>
                     <Button
-                      variant={account?.is_active ? "outline" : "default"}
+                      variant={isConnected ? "outline" : "default"}
                       size="sm"
-                      onClick={() => (window.location.href = connectUrls[platform])}
+                      onClick={() => {
+                        if (platform === "facebook") {
+                          window.location.href = "/api/social/connect/facebook"
+                        } else if (platform === "linkedin") {
+                          window.location.href = "/api/social/connect/linkedin"
+                        } else {
+                          // For Instagram, direct to connect dialog, as it uses Facebook OAuth
+                          setShowConnectDialog(true)
+                        }
+                      }}
+                      className="shrink-0 text-xs sm:text-sm"
                     >
-                      {account?.is_active ? "Riconnetti" : "Collega"}
+                      {isConnected ? "Riconnetti" : "Collega"}
                     </Button>
                   </div>
                 )
@@ -505,20 +579,23 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </CardContent>
         </Card>
 
-        {/* Posts Tabs */}
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="relative">
-              Da Approvare
-              {pendingApproval.length > 0 && (
-                <span className="ml-2 bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {pendingApproval.length}
-                </span>
-              )}
+          <TabsList className="w-full grid grid-cols-4 h-auto">
+            <TabsTrigger value="pending" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
+              <span className="hidden sm:inline">Da Approvare</span>
+              <span className="sm:hidden">Approvare</span>
             </TabsTrigger>
-            <TabsTrigger value="scheduled">Programmati</TabsTrigger>
-            <TabsTrigger value="published">Pubblicati</TabsTrigger>
-            <TabsTrigger value="all">Tutti</TabsTrigger>
+            <TabsTrigger value="scheduled" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
+              <span className="hidden sm:inline">Programmati</span>
+              <span className="sm:hidden">Program.</span>
+            </TabsTrigger>
+            <TabsTrigger value="published" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
+              <span className="hidden sm:inline">Pubblicati</span>
+              <span className="sm:hidden">Pubbl.</span>
+            </TabsTrigger>
+            <TabsTrigger value="all" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
+              Tutti
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4 mt-4">
@@ -589,107 +666,102 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
         </Tabs>
       </main>
 
-      {/* New Post Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Crea Nuovo Post</DialogTitle>
-            <DialogDescription>Scrivi manualmente o genera con AI</DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Crea Nuovo Post</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">Scrivi manualmente o genera con AI</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* AI Generation */}
-            <div className="p-4 bg-muted rounded-lg space-y-3">
+            {/* AI Generation - Mobile optimized */}
+            <div className="p-3 sm:p-4 bg-muted rounded-lg space-y-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <span className="font-medium">Genera con AI</span>
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <span className="font-medium text-sm sm:text-base">Genera con AI</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Argomento (es: revenue management, Hotel Accelerator...)"
+                  placeholder="Argomento..."
                   value={newPost.ai_topic}
                   onChange={(e) => setNewPost((prev) => ({ ...prev, ai_topic: e.target.value }))}
+                  className="text-sm"
                 />
-                <Button onClick={() => generateAIPost()} disabled={isGenerating}>
+                <Button onClick={() => generateAIPost()} disabled={isGenerating} className="shrink-0">
                   {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="sm:hidden ml-2">Genera</span>
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {["Revenue Management", "Hotel Accelerator", "Manubot", "Hospitality Trends", "Tips Hotel"].map(
-                  (topic) => (
-                    <Button
-                      key={topic}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => generateAIPost(topic)}
-                      disabled={isGenerating}
-                    >
-                      {topic}
-                    </Button>
-                  ),
-                )}
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {["Revenue", "Hotel Accelerator", "Manubot", "Hospitality"].map((topic) => (
+                  <Button
+                    key={topic}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateAIPost(topic)}
+                    disabled={isGenerating}
+                    className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
+                  >
+                    {topic}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            {/* AI Image Generation Section */}
-            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
+            {/* AI Image Generation - Mobile optimized */}
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
               <div className="flex items-center gap-2">
-                <ImageIcon className="h-5 w-5 text-purple-600" />
-                <span className="font-medium">Genera Immagine AI</span>
+                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                <span className="font-medium text-sm sm:text-base">Genera Immagine AI</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="flex flex-col gap-2">
                 <Input
-                  placeholder="Descrivi l'immagine (es: hotel di lusso con piscina)"
+                  placeholder="Descrivi l'immagine..."
                   value={newPost.image_topic}
                   onChange={(e) => setNewPost((prev) => ({ ...prev, image_topic: e.target.value }))}
-                  className="md:col-span-2"
+                  className="text-sm"
                 />
-                <Select
-                  value={newPost.image_style}
-                  onValueChange={(value) => setNewPost((prev) => ({ ...prev, image_style: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Stile" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professionale</SelectItem>
-                    <SelectItem value="creative">Creativo</SelectItem>
-                    <SelectItem value="minimal">Minimale</SelectItem>
-                    <SelectItem value="luxury">Lusso</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={newPost.image_style}
+                    onValueChange={(value) => setNewPost((prev) => ({ ...prev, image_style: value }))}
+                  >
+                    <SelectTrigger className="flex-1 text-sm">
+                      <SelectValue placeholder="Stile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionale</SelectItem>
+                      <SelectItem value="creative">Creativo</SelectItem>
+                      <SelectItem value="minimal">Minimale</SelectItem>
+                      <SelectItem value="luxury">Lusso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={generateAIImage}
+                    disabled={isGeneratingImage}
+                    variant="outline"
+                    className="shrink-0 border-purple-300 hover:bg-purple-100 dark:border-purple-700 dark:hover:bg-purple-900/50 bg-transparent"
+                  >
+                    {isGeneratingImage ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-              <Button
-                onClick={generateAIImage}
-                disabled={isGeneratingImage}
-                variant="outline"
-                className="w-full border-purple-300 hover:bg-purple-100 dark:border-purple-700 dark:hover:bg-purple-900/50 bg-transparent"
-              >
-                {isGeneratingImage ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Generazione in corso...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Genera Immagine
-                  </>
-                )}
-              </Button>
 
-              {/* Anteprima immagine generata */}
               {newPost.image_url && (
                 <div className="relative mt-2">
                   <img
                     src={newPost.image_url || "/placeholder.svg"}
                     alt="Immagine generata"
-                    className="w-full h-48 object-cover rounded-lg border"
+                    className="w-full h-32 sm:h-48 object-cover rounded-lg border"
                   />
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="absolute top-2 right-2"
+                    className="absolute top-2 right-2 h-6 w-6 p-0"
                     onClick={() => setNewPost((prev) => ({ ...prev, image_url: "" }))}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -698,43 +770,50 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
               )}
             </div>
 
-            {/* Content */}
+            {/* Content textarea */}
             <div className="space-y-2">
-              <Label>Contenuto</Label>
+              <Label className="text-sm">Contenuto</Label>
               <Textarea
-                placeholder="Scrivi il tuo post..."
+                placeholder="Scrivi il contenuto del post..."
                 value={newPost.content}
                 onChange={(e) => setNewPost((prev) => ({ ...prev, content: e.target.value }))}
-                rows={6}
+                rows={4}
+                className="text-sm resize-none"
               />
-              <p className="text-xs text-muted-foreground text-right">{newPost.content.length} caratteri</p>
+              <p className="text-xs text-muted-foreground text-right">{newPost.content.length} / 2000 caratteri</p>
             </div>
 
-            {/* Platforms */}
+            {/* Platform selection - Mobile optimized */}
             <div className="space-y-2">
-              <Label>Piattaforme</Label>
-              <div className="flex gap-4">
+              <Label className="text-sm">Piattaforme</Label>
+              <div className="flex flex-wrap gap-2">
                 {["facebook", "instagram", "linkedin"].map((platform) => {
                   const Icon = platformIcons[platform as keyof typeof platformIcons]
                   const isSelected = newPost.platforms.includes(platform)
+                  const isAvailable = accounts.some((a) => a.platform === platform && a.is_active)
 
                   return (
                     <button
                       key={platform}
                       onClick={() => {
+                        if (!isAvailable) return
                         setNewPost((prev) => ({
                           ...prev,
                           platforms: isSelected
                             ? prev.platforms.filter((p) => p !== platform)
                             : [...prev.platforms, platform],
-                          target_accounts: platform === "facebook" && isSelected ? [] : prev.target_accounts,
                         }))
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                        isSelected ? "border-primary bg-primary/10" : "border-muted hover:border-muted-foreground/50"
+                      disabled={!isAvailable}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                        isSelected
+                          ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                          : isAvailable
+                            ? "border-border hover:border-primary"
+                            : "border-border opacity-50 cursor-not-allowed"
                       }`}
                     >
-                      <Icon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       <span className="capitalize">{platform}</span>
                     </button>
                   )
@@ -742,86 +821,82 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
               </div>
             </div>
 
-            {newPost.platforms.includes("facebook") &&
-              accounts.filter((a) => a.platform === "facebook" && a.is_active).length > 0 && (
-                <div className="space-y-2">
-                  <Label>Pagine Facebook</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Seleziona su quali pagine pubblicare (se nessuna è selezionata, pubblica su tutte)
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {accounts
-                      .filter((a) => a.platform === "facebook" && a.is_active)
-                      .map((account) => {
-                        const isSelected = newPost.target_accounts.includes(account.id)
-                        return (
-                          <button
-                            key={account.id}
-                            onClick={() => {
-                              setNewPost((prev) => ({
-                                ...prev,
-                                target_accounts: isSelected
-                                  ? prev.target_accounts.filter((id) => id !== account.id)
-                                  : [...prev.target_accounts, account.id],
-                              }))
-                            }}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all ${
-                              isSelected
-                                ? "border-blue-500 bg-blue-500/10 text-blue-600"
-                                : "border-muted hover:border-blue-300"
-                            }`}
-                          >
-                            <Facebook className={`h-4 w-4 ${isSelected ? "text-blue-500" : "text-muted-foreground"}`} />
-                            <span>{account.account_name}</span>
-                            {isSelected && <Check className="h-3 w-3 text-blue-500" />}
-                          </button>
-                        )
-                      })}
-                  </div>
+            {/* Target accounts selection for Facebook */}
+            {newPost.platforms.includes("facebook") && (
+              <div className="space-y-2">
+                <Label className="text-sm">Pagine Facebook</Label>
+                <p className="text-xs text-muted-foreground">Seleziona su quali pagine pubblicare</p>
+                <div className="flex flex-wrap gap-2">
+                  {accounts
+                    .filter((a) => a.platform === "facebook" && a.is_active)
+                    .map((account) => {
+                      const isSelected = newPost.target_accounts?.includes(account.page_id || account.account_id || "")
+                      return (
+                        <button
+                          key={account.id}
+                          onClick={() => {
+                            const accountId = account.page_id || account.account_id || ""
+                            setNewPost((prev) => ({
+                              ...prev,
+                              target_accounts: isSelected
+                                ? (prev.target_accounts || []).filter((id) => id !== accountId)
+                                : [...(prev.target_accounts || []), accountId],
+                            }))
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 text-white border-transparent"
+                              : "border-border hover:border-primary"
+                          }`}
+                        >
+                          <Facebook className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[100px] sm:max-w-none">{account.account_name}</span>
+                        </button>
+                      )
+                    })}
                 </div>
-              )}
+              </div>
+            )}
 
-            {/* Schedule */}
-            <div className="space-y-2">
-              <Label>Programma pubblicazione (opzionale)</Label>
+            {/* Schedule toggle */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <Label className="text-sm">Programma pubblicazione</Label>
+                <p className="text-xs text-muted-foreground">Scegli data e ora</p>
+              </div>
+              <Switch
+                checked={!!newPost.scheduled_for}
+                onCheckedChange={(checked) =>
+                  setNewPost((prev) => ({
+                    ...prev,
+                    scheduled_for: checked ? new Date().toISOString().slice(0, 16) : "",
+                  }))
+                }
+              />
+            </div>
+
+            {newPost.scheduled_for && (
               <Input
                 type="datetime-local"
                 value={newPost.scheduled_for}
                 onChange={(e) => setNewPost((prev) => ({ ...prev, scheduled_for: e.target.value }))}
+                className="text-sm"
               />
-            </div>
-
-            {/* Auto-publish toggle */}
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div>
-                <p className="font-medium">Pubblicazione automatica</p>
-                <p className="text-sm text-muted-foreground">Pubblica senza approvazione manuale</p>
-              </div>
-              <Switch
-                checked={newPost.auto_publish}
-                onCheckedChange={(checked) => setNewPost((prev) => ({ ...prev, auto_publish: checked }))}
-              />
-            </div>
+            )}
           </div>
 
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="w-full sm:w-auto">
               Annulla
             </Button>
-            <Button variant="secondary" onClick={() => savePost("draft")} disabled={!newPost.content}>
-              Salva Bozza
+            <Button
+              onClick={savePost}
+              disabled={!newPost.content || newPost.platforms.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {newPost.scheduled_for ? "Programma" : "Salva Bozza"}
             </Button>
-            {newPost.auto_publish ? (
-              <Button onClick={() => savePost("scheduled")} disabled={!newPost.content}>
-                <Send className="h-4 w-4 mr-2" />
-                Programma
-              </Button>
-            ) : (
-              <Button onClick={() => savePost("pending_approval")} disabled={!newPost.content}>
-                <Clock className="h-4 w-4 mr-2" />
-                Invia per Approvazione
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -970,7 +1045,18 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                     <Button
                       variant={account?.is_active ? "outline" : "default"}
                       size="sm"
-                      onClick={() => (window.location.href = connectUrls[platform])}
+                      onClick={() => {
+                        if (platform === "facebook") {
+                          window.location.href = connectUrls.facebook
+                        } else if (platform === "linkedin") {
+                          window.location.href = connectUrls.linkedin
+                        } else {
+                          // For Instagram, direct to connect dialog as it uses Facebook OAuth
+                          // Alternatively, you could redirect to Facebook OAuth if that's how it's handled
+                          // For now, let's assume manual connection or a similar flow is desired if OAuth fails/isn't available
+                          setShowManualConnect("instagram")
+                        }
+                      }}
                     >
                       {account?.is_active ? "Riconnetti" : "OAuth"}
                     </Button>
@@ -1041,7 +1127,6 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
   )
 }
 
-// Post Card Component
 function PostCard({
   post,
   onApprove,
@@ -1058,19 +1143,19 @@ function PostCard({
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex gap-4">
-          <div className="flex-1 space-y-3">
+      <CardContent className="p-3 sm:p-6 sm:pt-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="flex-1 space-y-2 sm:space-y-3">
             {/* Status & Platforms */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge className={`${status.color} text-white`}>
+              <Badge className={`${status.color} text-white text-xs`}>
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {status.label}
               </Badge>
               {post.is_ai_generated && (
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500">
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500 text-xs">
                   <Sparkles className="h-3 w-3 mr-1" />
-                  AI Generated
+                  AI
                 </Badge>
               )}
               <div className="flex gap-1 ml-auto">
@@ -1079,9 +1164,9 @@ function PostCard({
                   return (
                     <div
                       key={platform}
-                      className={`w-6 h-6 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
                     >
-                      <Icon className="h-3 w-3 text-white" />
+                      <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                     </div>
                   )
                 })}
@@ -1089,65 +1174,71 @@ function PostCard({
             </div>
 
             {/* Content */}
-            <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+            <p className="text-xs sm:text-sm whitespace-pre-wrap line-clamp-4 sm:line-clamp-none">{post.content}</p>
 
             {/* Image */}
             {post.image_url && (
-              <div className="mt-4">
-                <img src={post.image_url || "/placeholder.svg"} alt="Generated Image" className="w-full rounded-lg" />
+              <div className="mt-2 sm:mt-4">
+                <img
+                  src={post.image_url || "/placeholder.svg"}
+                  alt="Generated Image"
+                  className="w-full max-h-48 sm:max-h-none object-cover rounded-lg"
+                />
               </div>
             )}
 
-            {/* Meta */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Creato: {new Date(post.created_at).toLocaleString("it-IT")}</span>
+            {/* Meta - Stacked on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
+              <span>{new Date(post.created_at).toLocaleDateString("it-IT")}</span>
               {post.scheduled_for && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Programmato: {new Date(post.scheduled_for).toLocaleString("it-IT")}
+                  {new Date(post.scheduled_for).toLocaleDateString("it-IT")}
                 </span>
               )}
               {post.published_at && (
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-3 w-3" />
-                  Pubblicato: {new Date(post.published_at).toLocaleString("it-IT")}
+                  {new Date(post.published_at).toLocaleDateString("it-IT")}
                 </span>
               )}
             </div>
 
             {/* Error */}
             {post.error_message && (
-              <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-sm text-red-600">
+              <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-600">
                 {post.error_message}
               </div>
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
+          <div className="flex sm:flex-col gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4 border-border">
             {onApprove && (
               <Button
                 size="sm"
                 variant="outline"
-                className="text-green-600 border-green-600 bg-transparent"
+                className="text-green-600 border-green-600 bg-transparent flex-1 sm:flex-none h-9"
                 onClick={onApprove}
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-4 w-4 sm:mr-0" />
+                <span className="sm:hidden ml-2">Approva</span>
               </Button>
             )}
             {onPublish && (
-              <Button size="sm" onClick={onPublish}>
-                <Send className="h-4 w-4" />
+              <Button size="sm" onClick={onPublish} className="flex-1 sm:flex-none h-9">
+                <Send className="h-4 w-4 sm:mr-0" />
+                <span className="sm:hidden ml-2">Pubblica</span>
               </Button>
             )}
             {onReject && (
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 border-red-600 bg-transparent"
+                className="text-red-600 border-red-600 bg-transparent flex-1 sm:flex-none h-9"
                 onClick={onReject}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 sm:mr-0" />
+                <span className="sm:hidden ml-2">Elimina</span>
               </Button>
             )}
           </div>

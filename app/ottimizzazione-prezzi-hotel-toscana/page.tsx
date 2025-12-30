@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Ottimizzazione Prezzi Hotel Toscana: Revenue Management Locale | 4BID.IT",
@@ -12,11 +13,44 @@ export const metadata = {
     "Revenue management per hotel in Toscana: esperti locali conoscono mercato Firenze, Siena, Chianti. Pricing dinamico eventi toscani, analisi competitiva locale. +35% RevPAR medio.",
   keywords:
     "ottimizzazione prezzi hotel toscana, revenue management firenze, consulenza revenue siena, pricing dinamico toscana, revenue manager hotel firenze chianti, ottimizzazione tariffe hotel toscani",
+  openGraph: {
+    title: "Ottimizzazione Prezzi Hotel Toscana | Revenue Management Locale | 4BID.IT",
+    description: "Esperti locali di Revenue Management per hotel toscani. +35% RevPAR medio.",
+    url: "https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana",
+  },
 }
+
+const faqData = [
+  {
+    question: "Perché scegliere un esperto locale per il revenue management in Toscana?",
+    answer:
+      "Un esperto locale conosce eventi, stagionalità e dinamiche specifiche del mercato turistico toscano. Ha un network consolidato con oltre 30 strutture e monitora costantemente i competitor diretti nella regione.",
+  },
+  {
+    question: "Quali sono le sfide specifiche del mercato alberghiero toscano?",
+    answer:
+      "Le sfide principali sono: alta stagionalità (primavera/autunno ad alta domanda), eventi e fiere (Pitti Uomo, Biennale), competizione intensa (centinaia di strutture) e segmenti diversificati (coppie, gruppi, business, enogastronomico).",
+  },
+  {
+    question: "Quali risultati si ottengono con l'ottimizzazione prezzi in Toscana?",
+    answer:
+      "I risultati tipici sono: +35-42% RevPAR, +25-38% ADR, +55% prenotazioni dirette. Un boutique hotel 4* a Firenze può aumentare il RevPAR del 35%, un agriturismo in Chianti del 42%.",
+  },
+]
 
 export default function OttimizzazionePrezziToscanaPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Ottimizzazione Prezzi Hotel Toscana"
+        description="Revenue management per hotel in Toscana con esperti locali"
+        faq={faqData}
+      />
       <LandingPageTracker slug="ottimizzazione-prezzi-hotel-toscana" />
       <Header />
 

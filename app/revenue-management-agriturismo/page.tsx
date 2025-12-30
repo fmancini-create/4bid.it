@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { CheckCircle2, TrendingUp, Users, Calendar, PieChart, Target } from "lucide-react"
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
   title: "Revenue Management per Agriturismi | Ottimizza Prezzi e Occupazione | 4BID.IT",
@@ -13,11 +14,71 @@ export const metadata: Metadata = {
     "Servizi specializzati di revenue management per agriturismi. Aumenta occupazione e ricavi con strategie personalizzate per il turismo rurale ed enogastronomico.",
   keywords:
     "revenue management agriturismi, prezzi agriturismi, occupazione agriturismo, gestione ricavi turismo rurale, ottimizzazione tariffe agriturismo",
+  alternates: {
+    canonical: "https://4bid.it/revenue-management-agriturismo",
+  },
+  openGraph: {
+    title: "Revenue Management per Agriturismi | 4BID.IT",
+    description:
+      "Servizi specializzati di revenue management per agriturismi. Aumenta occupazione e ricavi con strategie personalizzate.",
+    url: "https://4bid.it/revenue-management-agriturismo",
+    siteName: "4BID.IT",
+    locale: "it_IT",
+    type: "website",
+    images: [
+      {
+        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "4BID Revenue Management Agriturismi",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Revenue Management per Agriturismi | 4BID.IT",
+    description: "Servizi specializzati di revenue management per agriturismi.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-video-preview": -1, "max-image-preview": "large", "max-snippet": -1 },
+  },
 }
 
 export default function RevenueMangementAgriturismPage() {
+  const faqs = [
+    {
+      question: "Il revenue management funziona anche per gli agriturismi?",
+      answer:
+        "Sì, il revenue management è particolarmente efficace per gli agriturismi perché aiuta a gestire la forte stagionalità e a ottimizzare il revenue mix tra camere, ristorazione e attività.",
+    },
+    {
+      question: "Come si affronta la stagionalità negli agriturismi?",
+      answer:
+        "Attraverso strategie anti-stagionalità come offerte infrasettimanali, pacchetti lunghi soggiorni, promozioni last minute intelligenti e sviluppo di esperienze per attrarre ospiti anche in bassa stagione.",
+    },
+    {
+      question: "Quanto costa il revenue management per un agriturismo?",
+      answer:
+        "I piani partono da €299/mese per strutture fino a 8 camere. Offriamo anche un modello performance-based dove paghi solo una percentuale sull'incremento di revenue ottenuto.",
+    },
+  ]
+
   return (
     <>
+      <StructuredData
+        type="Service"
+        title="Revenue Management per Agriturismi"
+        description="Servizi specializzati di revenue management per agriturismi: strategie personalizzate per il turismo rurale, ottimizzazione prezzi e gestione stagionalità."
+        url="https://4bid.it/revenue-management-agriturismo"
+        faqs={faqs}
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Revenue Management Agriturismi", url: "https://4bid.it/revenue-management-agriturismo" },
+        ]}
+      />
       <LandingPageTracker slug="revenue-management-agriturismo" />
       <Header />
       <main className="min-h-screen">

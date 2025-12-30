@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Analisi Competitiva Hotel Firenze | Revenue Management | 4BID.IT",
@@ -11,11 +12,45 @@ export const metadata = {
     "Analisi competitiva strategica per hotel a Firenze. Monitora la concorrenza, ottimizza prezzi e posizionamento per massimizzare i ricavi del tuo hotel nel mercato fiorentino.",
   keywords:
     "analisi competitiva hotel, hotel firenze, competitive set firenze, rate shopping firenze, pricing hotel firenze, mercato alberghiero firenze, revenue management firenze",
+  openGraph: {
+    title: "Analisi Competitiva Hotel Firenze | Revenue Management | 4BID.IT",
+    description:
+      "Analisi strategica del competitive set per hotel a Firenze. Monitora la concorrenza e ottimizza il posizionamento.",
+    url: "https://www.4bid.it/analisi-competitiva-hotel-firenze",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/analisi-competitiva-hotel-firenze",
+  },
 }
+
+const faqData = [
+  {
+    question: "Cos'è l'analisi competitiva per hotel?",
+    answer:
+      "L'analisi competitiva è lo studio sistematico dei competitor diretti per identificare opportunità di pricing, posizionamento e differenziazione. Include il monitoraggio delle tariffe, delle strategie promozionali e delle performance relative al mercato.",
+  },
+  {
+    question: "Come si identifica il competitive set di un hotel a Firenze?",
+    answer:
+      "Il competitive set si identifica analizzando hotel con caratteristiche simili: stessa categoria (stelle), zona (Centro Storico, Oltrarno, etc.), target di clientela e fascia di prezzo. Tipicamente si selezionano 10-15 competitor diretti.",
+  },
+  {
+    question: "Quali eventi influenzano i prezzi degli hotel a Firenze?",
+    answer:
+      "I principali eventi che influenzano i prezzi sono: Pitti Immagine Uomo/Donna, Firenze Fashion Week, le fiere alla Fortezza da Basso, il Maggio Musicale Fiorentino, Firenze Rocks e gli eventi al Mandela Forum.",
+  },
+]
 
 export default function AnalisiCompetitivaHotelFirenzePage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Analisi Competitiva Hotel Firenze"
+        description="Analisi strategica del competitive set per hotel a Firenze"
+        faq={faqData}
+      />
       <LandingPageTracker slug="analisi-competitiva-hotel-firenze" />
 
       <Header />

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Ottimizzazione OTA Hotel | Riduci Commissioni e Aumenta Visibilità | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Servizio di ottimizzazione OTA per hotel. Riduci le commissioni fino al 40%, aumenta la visibilità su Booking, Expedia e altri portali. Strategia channel management efficace.",
   keywords:
     "ottimizzazione OTA hotel, gestione booking.com, ridurre commissioni OTA, channel management hotel, visibilità portali turistici, strategia OTA",
+  openGraph: {
+    title: "Ottimizzazione OTA Hotel | Riduci Commissioni | 4BID.IT",
+    description: "Riduci le commissioni OTA fino al 40% e aumenta la visibilità su Booking, Expedia e altri portali.",
+    url: "https://www.4bid.it/ottimizzazione-ota-hotel",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/ottimizzazione-ota-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Quanto costano le commissioni OTA per un hotel?",
+    answer:
+      "Le commissioni OTA variano dal 15% al 25% del valore della prenotazione. La media è del 18-22%. Per un hotel da 30 camere questo può significare €45.000+ di commissioni all'anno.",
+  },
+  {
+    question: "Come ridurre le commissioni di Booking.com?",
+    answer:
+      "Si possono ridurre attraverso: negoziazione diretta (da 19% a 14%), partecipazione al Genius Program, accesso al Preferred Partner, ottimizzazione del ranking per aumentare conversioni e diversificazione verso altri canali.",
+  },
+  {
+    question: "Qual è il channel mix ideale per un hotel?",
+    answer:
+      "Il channel mix ideale prevede almeno 40-45% di prenotazioni dirette, 30-35% da OTA principali (Booking, Expedia) e 20-25% da altri canali (metasearch, GDS, agenzie). Questo bilancia visibilità e profittabilità.",
+  },
+]
 
 export default function OttimizzazioneOTAPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Ottimizzazione OTA Hotel"
+        description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
+        faq={faqData}
+      />
       <LandingPageTracker slug="ottimizzazione-ota-hotel" />
 
       <Header />

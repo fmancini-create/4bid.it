@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Guida completa ai KPI e metriche essenziali per hotel: RevPAR, ADR, occupazione, TRevPAR. Scopri come monitorare e migliorare le performance della tua struttura ricettiva.",
   keywords:
     "KPI hotel, metriche hotel, RevPAR, ADR, occupazione hotel, TRevPAR, performance hotel, indicatori revenue management, analytics hotel",
+  openGraph: {
+    title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
+    description: "Guida completa ai KPI essenziali per hotel: RevPAR, ADR, occupazione, TRevPAR.",
+    url: "https://www.4bid.it/kpi-metriche-hotel",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/kpi-metriche-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Come si calcola il RevPAR di un hotel?",
+    answer:
+      "Il RevPAR (Revenue Per Available Room) si calcola: Ricavi Camere ÷ Camere Disponibili. Oppure: ADR × Occupazione. È il KPI più importante perché combina tariffa e occupazione in un'unica metrica.",
+  },
+  {
+    question: "Qual è la differenza tra RevPAR e TRevPAR?",
+    answer:
+      "Il RevPAR considera solo i ricavi camere, mentre il TRevPAR (Total RevPAR) include tutti i ricavi: camere, F&B, spa, servizi ancillari. Il TRevPAR è più completo per valutare la redditività totale.",
+  },
+  {
+    question: "Come si calcola l'ADR (Average Daily Rate)?",
+    answer:
+      "L'ADR si calcola: Ricavi Totali Camere ÷ Numero Camere Vendute. Indica il prezzo medio delle camere vendute ed è fondamentale per le strategie di pricing.",
+  },
+]
 
 export default function KPIMetricheHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="KPI e Metriche Hotel: Monitora le Performance"
+        description="Guida completa ai KPI e metriche essenziali per hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="kpi-metriche-hotel" />
 
       <Header />

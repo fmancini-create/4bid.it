@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Ottimizzazione ADR Hotel | Come Aumentare Tariffa Media | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Strategie avanzate per ottimizzare l'ADR (Average Daily Rate) del tuo hotel. Aumenta la tariffa media fino al +35% senza perdere occupazione con pricing strategico.",
   keywords:
     "ADR hotel, average daily rate, aumentare tariffa media hotel, ottimizzazione prezzi hotel, pricing strategico, revenue management ADR",
+  openGraph: {
+    title: "Ottimizzazione ADR Hotel | Come Aumentare Tariffa Media | 4BID.IT",
+    description: "Aumenta l'ADR fino al +35% senza perdere occupazione con strategie di pricing strategico.",
+    url: "https://www.4bid.it/ottimizzazione-adr-hotel",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/ottimizzazione-adr-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Come si calcola l'ADR di un hotel?",
+    answer:
+      "L'ADR (Average Daily Rate) si calcola dividendo il revenue totale delle camere per il numero di camere vendute. Esempio: €12.000 ricavi / 100 camere vendute = €120 ADR.",
+  },
+  {
+    question: "Quali sono le 10 strategie per aumentare l'ADR?",
+    answer:
+      "Le strategie principali sono: segmentazione avanzata, dynamic pricing, upselling strategico, minimum stay restriction, packages & bundles, rate fences, ottimizzazione OTA, direct booking incentive, length of stay pricing e value communication.",
+  },
+  {
+    question: "Quanto si può aumentare l'ADR con le giuste strategie?",
+    answer:
+      "Con le strategie corrette si può aumentare l'ADR del 35-40% in 12 mesi mantenendo l'occupazione stabile. Un hotel 4* può passare da €115 a €158 di ADR medio.",
+  },
+]
 
 export default function OttimizzazioneADRHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Ottimizzazione ADR Hotel"
+        description="Strategie avanzate per ottimizzare l'ADR del tuo hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="ottimizzazione-adr-hotel" />
 
       <Header />
