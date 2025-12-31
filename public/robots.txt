@@ -1,5 +1,7 @@
 # 4BID.IT Robots.txt
-# https://www.4bid.it
+# Canonical: https://www.4bid.it
+
+Host: https://www.4bid.it
 
 User-agent: *
 Allow: /
