@@ -85,15 +85,15 @@ export default function ConsulenzaRevenueManagementPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Consulenza revenue management con modello performance-based (paghi sui risultati)</span>
+                  <span>Consulenza revenue per aumentare ricavi e margini in modo misurabile</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Strategie di pricing dinamico, gestione OTA e ottimizzazione tariffe personalizzate</span>
+                  <span>Ottimizzazione tariffe, canali, restrizioni e calendario domanda</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Software proprietario SANTADDEO con AI trasparente per decisioni data-driven</span>
+                  <span>Possibile modello a fee fissa o legato a performance</span>
                 </li>
               </ul>
             </div>

@@ -44,15 +44,15 @@ export default function PreventiviProgettiPersonalizzatiHotelPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Preventivo gratuito in 24h con fattibilità, costi e timeline dettagliata</span>
+                  <span>Preventivi su misura per progetti digitali e revenue in hotel</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Due modelli: costo fisso (budget certo) o revenue share (zero costo iniziale)</span>
+                  <span>Opzioni: prodotto standard o sviluppo custom integrato</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Software custom: RMS, app mobile, gestione manutenzioni, booking engine</span>
+                  <span>Processo chiaro: analisi, proposta, roadmap, consegna</span>
                 </li>
               </ul>
             </div>

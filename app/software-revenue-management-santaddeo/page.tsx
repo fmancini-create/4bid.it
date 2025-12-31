@@ -57,15 +57,15 @@ export default function SoftwareRevenueManagementPage() {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="text-primary-blue mt-0.5">•</span>
-                    <span>AI trasparente: ogni decisione di pricing viene spiegata in modo chiaro</span>
+                    <span>RMS con logiche spiegabili: variabili, pesi e motivazioni delle scelte</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary-blue mt-0.5">•</span>
-                    <span>Personalizzazione totale dei pesi delle variabili per ogni struttura</span>
+                    <span>Personalizzabile per stagione, giorno e tipo struttura</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary-blue mt-0.5">•</span>
-                    <span>Modello performance-based disponibile: zero rischio, paghi sui risultati</span>
+                    <span>Integrazione con dati e canali per supportare il dynamic pricing</span>
                   </li>
                 </ul>
               </div>

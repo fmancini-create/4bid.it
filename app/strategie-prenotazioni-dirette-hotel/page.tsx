@@ -43,15 +43,15 @@ export default function StrategiePrenotazioniDiretteHotelPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Strategie per ridurre le commissioni OTA (15-25%) e aumentare i margini</span>
+                  <span>Strategie per aumentare prenotazioni dirette e ridurre dipendenza OTA</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Best rate guarantee, metasearch marketing, email remarketing e loyalty program</span>
+                  <span>Leve: sito, metasearch, offerte, remarketing, loyalty</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Database clienti proprietario per comunicazione diretta e fidelizzazione</span>
+                  <span>Costruzione database clienti e comunicazioni proprietarie</span>
                 </li>
               </ul>
             </div>

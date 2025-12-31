@@ -50,21 +50,21 @@ export default function SoftwareRevenueManagementHotelPage() {
               Sistemi RMS intelligenti che ottimizzano automaticamente le tariffe del tuo hotel, aumentano il RevPAR e
               massimizzano i ricavi attraverso AI avanzata e analytics predittivi.
             </p>
-            {/* In sintesi section */}
+            {/* Updated In Sintesi section */}
             <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
               <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Software RMS con dynamic pricing automatico e integrazione multi-canale</span>
+                  <span>Automazione pricing e controllo coerenza tra canali di vendita</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Forecasting accurato al 90%+ per pianificazione strategica e staffing</span>
+                  <span>Forecast e scenari per supportare decisioni operative quotidiane</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>SANTADDEO: il nostro RMS con AI trasparente, made in Italy</span>
+                  <span>RMS progettato per strutture italiane, con configurazione semplice</span>
                 </li>
               </ul>
             </div>

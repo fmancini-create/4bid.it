@@ -43,15 +43,15 @@ export default function OttimizzazioneRevparHotelPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>RevPAR = Occupazione × ADR: il KPI che bilancia tariffe e occupazione</span>
+                  <span>RevPAR come metrica per collegare prezzo e occupazione</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>7 leve strategiche: dynamic pricing, forecast, channel mix, segmentazione e upselling</span>
+                  <span>Leve: mix canali, restrizioni, upsell, conversione, segmentazione</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>RGI (RevPAR Index) per monitorare il posizionamento vs competitive set</span>
+                  <span>Benchmark competitivo con indicatori di posizionamento</span>
                 </li>
               </ul>
             </div>

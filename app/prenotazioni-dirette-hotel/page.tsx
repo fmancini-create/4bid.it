@@ -43,15 +43,15 @@ export default function PrenotazioniDiretteHotelPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Zero commissioni sulle prenotazioni dirette vs 15-25% delle OTA</span>
+                  <span>Incrementare vendite dirette per ridurre costi di intermediazione</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>5 azioni immediate: best rate guarantee, Google Hotel Ads, remarketing, mobile UX</span>
+                  <span>Azioni pratiche: UX, offerte, fiducia, pagamenti, follow-up</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Database clienti proprietario per loyalty program e comunicazione diretta</span>
+                  <span>Retention: email e CRM per riacquisto e referral</span>
                 </li>
               </ul>
             </div>

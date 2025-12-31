@@ -52,15 +52,15 @@ export default function StrategiePricingHotelPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>BAR Strategy, dynamic pricing, LOS restrictions e price fencing spiegate</span>
+                  <span>Metodi pricing: BAR, dynamic, LOS, fencing e restrizioni</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Dal pricing statico stagionale a quello dinamico automatizzato</span>
+                  <span>Passaggio dal pricing statico a regole e aggiornamenti continui</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>SANTADDEO: automazione pricing con aggiornamento tariffe ogni 4 ore</span>
+                  <span>Supporto con RMS e linee guida operative</span>
                 </li>
               </ul>
             </div>

@@ -94,15 +94,15 @@ export default function CoseIlRevenueManagementPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Il revenue management ottimizza prezzi e disponibilità per massimizzare i ricavi</span>
+                  <span>Disciplina che ottimizza prezzo e disponibilità per massimizzare ricavi</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Essenziale per attività con prodotti "deperibili" come camere d'hotel e biglietti</span>
+                  <span>Utile quando l'inventario è limitato e deperibile (camere, posti)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-blue mt-0.5">•</span>
-                  <span>Si applica a hotel, B&B, resort, agriturismi, trasporti ed eventi</span>
+                  <span>Applicabile a hotel e ad altri settori con domanda variabile</span>
                 </li>
               </ul>
             </div>
