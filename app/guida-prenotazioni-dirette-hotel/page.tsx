@@ -1,40 +1,15 @@
 import Link from "next/link"
 import type { Metadata } from "next"
-import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react"
+import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink, Lightbulb } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { ContactButton } from "@/components/contact-button"
+import { GuideLastUpdated } from "@/components/guide-last-updated"
 
-function getUpdateDate(): string {
-  const months = [
-    "gennaio",
-    "febbraio",
-    "marzo",
-    "aprile",
-    "maggio",
-    "giugno",
-    "luglio",
-    "agosto",
-    "settembre",
-    "ottobre",
-    "novembre",
-    "dicembre",
-  ]
-
-  // Try to get commit date from Vercel environment
-  const commitDate = process.env.VERCEL_GIT_COMMIT_DATE
-
-  if (commitDate) {
-    const date = new Date(commitDate)
-    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
-  }
-
-  // Fallback to current date (deploy time for SSR)
-  const now = new Date()
-  return `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
-}
+export const runtime = "nodejs"
+export const dynamic = "force-static"
 
 export const metadata: Metadata = {
   title: "Guida alle Prenotazioni Dirette Hotel | 4BID.IT",
@@ -61,9 +36,6 @@ export const metadata: Metadata = {
 }
 
 export default function GuidaPrenotazioniDirettePage() {
-  const updateDate = getUpdateDate()
-  const isDeployDate = !process.env.VERCEL_GIT_COMMIT_DATE
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -89,9 +61,7 @@ export default function GuidaPrenotazioniDirettePage() {
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Guida alle Prenotazioni Dirette per Hotel
             </h1>
-            <p className="text-sm text-muted-foreground mb-6">
-              Aggiornato{isDeployDate ? " (deploy)" : ""}: {updateDate}
-            </p>
+            <GuideLastUpdated filePath="app/guida-prenotazioni-dirette-hotel/page.tsx" />
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Come aumentare le prenotazioni dirette e ridurre la dipendenza dalle OTA: strategie concrete, strumenti e
               best practice per ogni tipo di struttura.
@@ -122,6 +92,52 @@ export default function GuidaPrenotazioniDirettePage() {
                   </span>
                 </li>
               </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-primary-blue/5">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-card rounded-xl p-6 border border-primary-blue/20">
+              <div className="flex items-center gap-2 text-primary-blue mb-4">
+                <Lightbulb className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Esempio Pratico</h2>
+              </div>
+              <div className="prose prose-sm max-w-none text-muted-foreground space-y-4">
+                <p>
+                  <strong>Situazione:</strong> Una struttura con un'elevata quota di prenotazioni provenienti da OTA e
+                  un sito web con conversione debole nonostante un discreto traffico.
+                </p>
+                <p>
+                  <strong>Azioni operative:</strong>
+                </p>
+                <ul className="space-y-1">
+                  <li>
+                    Creare una proposta di valore "solo sito" con benefit non monetari (upgrade, late check-out, welcome
+                    drink)
+                  </li>
+                  <li>
+                    Migliorare la UX del booking engine: ridurre i passaggi, velocizzare il caricamento, ottimizzare per
+                    mobile
+                  </li>
+                  <li>Rendere chiari messaggi su policy di cancellazione, pagamento e garanzia miglior prezzo</li>
+                  <li>
+                    Implementare un sistema di recupero contatti (exit intent, email per preventivi non completati)
+                  </li>
+                  <li>Inviare email post-soggiorno con invito a prenotare direttamente per il prossimo soggiorno</li>
+                  <li>
+                    Creare contenuti utili sul sito (guide locali, esperienze) che attraggano traffico qualificato
+                  </li>
+                  <li>Mantenere coerenza di prezzi e condizioni tra sito e OTA</li>
+                </ul>
+                <p>
+                  <strong>Cosa misurare qualitativamente:</strong> facilità percepita del processo di prenotazione
+                  (feedback ospiti), qualità dei contatti raccolti, engagement sulle email, trend della quota di
+                  prenotazioni dirette rispetto ai periodi precedenti.
+                </p>
+              </div>
             </div>
           </div>
         </div>

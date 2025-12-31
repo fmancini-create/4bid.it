@@ -1,40 +1,15 @@
 import Link from "next/link"
 import type { Metadata } from "next"
-import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react"
+import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink, Lightbulb } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { ContactButton } from "@/components/contact-button"
+import { GuideLastUpdated } from "@/components/guide-last-updated"
 
-function getUpdateDate(): string {
-  const months = [
-    "gennaio",
-    "febbraio",
-    "marzo",
-    "aprile",
-    "maggio",
-    "giugno",
-    "luglio",
-    "agosto",
-    "settembre",
-    "ottobre",
-    "novembre",
-    "dicembre",
-  ]
-
-  // Try to get commit date from Vercel environment
-  const commitDate = process.env.VERCEL_GIT_COMMIT_DATE
-
-  if (commitDate) {
-    const date = new Date(commitDate)
-    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
-  }
-
-  // Fallback to current date (deploy time for SSR)
-  const now = new Date()
-  return `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
-}
+export const runtime = "nodejs"
+export const dynamic = "force-static"
 
 export const metadata: Metadata = {
   title: "Guida Completa al Revenue Management Hotel | 4BID.IT",
@@ -61,9 +36,6 @@ export const metadata: Metadata = {
 }
 
 export default function GuidaRevenueManagementPage() {
-  const updateDate = getUpdateDate()
-  const isDeployDate = !process.env.VERCEL_GIT_COMMIT_DATE
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -89,9 +61,7 @@ export default function GuidaRevenueManagementPage() {
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Guida al Revenue Management per Hotel
             </h1>
-            <p className="text-sm text-muted-foreground mb-6">
-              Aggiornato{isDeployDate ? " (deploy)" : ""}: {updateDate}
-            </p>
+            <GuideLastUpdated filePath="app/guida-revenue-management-hotel/page.tsx" />
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Tutto quello che devi sapere sul Revenue Management alberghiero: dalla teoria alla pratica, con checklist
               operative e glossario completo.
@@ -121,6 +91,44 @@ export default function GuidaRevenueManagementPage() {
                   </span>
                 </li>
               </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-primary-blue/5">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-card rounded-xl p-6 border border-primary-blue/20">
+              <div className="flex items-center gap-2 text-primary-blue mb-4">
+                <Lightbulb className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Esempio Pratico</h2>
+              </div>
+              <div className="prose prose-sm max-w-none text-muted-foreground space-y-4">
+                <p>
+                  <strong>Situazione:</strong> Una struttura indipendente nota una domanda molto variabile tra giorni
+                  feriali e weekend, riceve prenotazioni da canali diversi e nella zona si tengono periodicamente eventi
+                  locali che influenzano l'occupazione.
+                </p>
+                <p>
+                  <strong>Azioni operative:</strong>
+                </p>
+                <ul className="space-y-1">
+                  <li>Osservare l'andamento del pick-up per le date future e confrontarlo con lo storico</li>
+                  <li>Segmentare la clientela in base a provenienza, motivo del soggiorno e canale di prenotazione</li>
+                  <li>Applicare regole di disponibilità differenziate per periodo e tipologia camera</li>
+                  <li>Valutare chiusure selettive su canali ad alta commissione quando la domanda è forte</li>
+                  <li>Creare pacchetti per periodi di bassa domanda</li>
+                  <li>Controllare la parità tariffaria tra i canali</li>
+                  <li>Monitorare le cancellazioni e il loro impatto sulle date</li>
+                  <li>Aggiornare il calendario decisionale in base agli eventi locali</li>
+                </ul>
+                <p>
+                  <strong>Cosa controllare ogni settimana:</strong> andamento del pick-up rispetto allo stesso periodo
+                  dell'anno precedente, variazioni nelle cancellazioni, posizionamento rispetto ai competitor diretti,
+                  eventi in arrivo nella zona.
+                </p>
+              </div>
             </div>
           </div>
         </div>

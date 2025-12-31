@@ -1,40 +1,15 @@
 import Link from "next/link"
 import type { Metadata } from "next"
-import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react"
+import { BookOpen, CheckCircle2, AlertTriangle, ExternalLink, Lightbulb } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { ContactButton } from "@/components/contact-button"
+import { GuideLastUpdated } from "@/components/guide-last-updated"
 
-function getUpdateDate(): string {
-  const months = [
-    "gennaio",
-    "febbraio",
-    "marzo",
-    "aprile",
-    "maggio",
-    "giugno",
-    "luglio",
-    "agosto",
-    "settembre",
-    "ottobre",
-    "novembre",
-    "dicembre",
-  ]
-
-  // Try to get commit date from Vercel environment
-  const commitDate = process.env.VERCEL_GIT_COMMIT_DATE
-
-  if (commitDate) {
-    const date = new Date(commitDate)
-    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
-  }
-
-  // Fallback to current date (deploy time for SSR)
-  const now = new Date()
-  return `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
-}
+export const runtime = "nodejs"
+export const dynamic = "force-static"
 
 export const metadata: Metadata = {
   title: "Guida Completa al Pricing Hotel | 4BID.IT",
@@ -60,9 +35,6 @@ export const metadata: Metadata = {
 }
 
 export default function GuidaPricingHotelPage() {
-  const updateDate = getUpdateDate()
-  const isDeployDate = !process.env.VERCEL_GIT_COMMIT_DATE
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -88,9 +60,7 @@ export default function GuidaPricingHotelPage() {
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Guida alle Strategie di Pricing per Hotel
             </h1>
-            <p className="text-sm text-muted-foreground mb-6">
-              Aggiornato{isDeployDate ? " (deploy)" : ""}: {updateDate}
-            </p>
+            <GuideLastUpdated filePath="app/guida-pricing-hotel/page.tsx" />
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Come definire, gestire e ottimizzare le tariffe del tuo hotel: dalla tariffa base al pricing dinamico,
               passando per segmentazione e restrizioni.
@@ -119,6 +89,44 @@ export default function GuidaPricingHotelPage() {
                   </span>
                 </li>
               </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-primary-blue/5">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-card rounded-xl p-6 border border-primary-blue/20">
+              <div className="flex items-center gap-2 text-primary-blue mb-4">
+                <Lightbulb className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Esempio Pratico</h2>
+              </div>
+              <div className="prose prose-sm max-w-none text-muted-foreground space-y-4">
+                <p>
+                  <strong>Situazione:</strong> Una struttura con marcata stagionalità, concorrenza locale agguerrita e
+                  differenze significative tra le tipologie di camera disponibili.
+                </p>
+                <p>
+                  <strong>Azioni operative:</strong>
+                </p>
+                <ul className="space-y-1">
+                  <li>Definire la BAR (Best Available Rate) come tariffa pubblica di riferimento</li>
+                  <li>
+                    Creare recinti tariffari "soft" (advance purchase, non rimborsabile) per differenziare i prezzi
+                  </li>
+                  <li>Applicare regole di minimo soggiorno solo quando ha senso strategico, non come default</li>
+                  <li>Proteggere le date di alta richiesta con tariffe adeguate e disponibilità controllata</li>
+                  <li>Differenziare le tariffe per segmento (corporate, leisure, gruppi) in modo coerente</li>
+                  <li>Evitare sconti "a caso" che erodono il valore percepito senza generare volume incrementale</li>
+                </ul>
+                <p>
+                  <strong>Come verificare se il pricing sta funzionando:</strong> confrontare l'andamento del RevPAR
+                  rispetto allo stesso periodo precedente, osservare se le chiusure di vendita avvengono con anticipo
+                  sufficiente, controllare che i canali meno profittevoli non stiano cannibalizzando quelli più
+                  redditizi.
+                </p>
+              </div>
             </div>
           </div>
         </div>
