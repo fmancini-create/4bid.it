@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Database, ExternalLink, Clock, AlertCircle } from "lucide-react"
+import { BookOpen, Database, ExternalLink, Clock, AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import KnowledgeBaseActions from "@/components/knowledge-base-actions"
 import ExternalSiteCard from "@/components/external-site-card"
@@ -36,9 +36,26 @@ export default async function KnowledgeBasePage() {
 
   if (isCacheRefreshing) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-3xl mx-auto">
-          <Card className="border-orange-500">
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card sticky top-0 z-50">
+          <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" asChild className="shrink-0">
+                <Link href="/admin">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold truncate">Knowledge Base AI</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  Gestisci le informazioni utilizzate dall'assistente AI
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          <Card className="border-orange-500 max-w-3xl mx-auto">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-6 w-6 text-orange-500" />
@@ -73,7 +90,7 @@ export default async function KnowledgeBasePage() {
               </p>
             </CardContent>
           </Card>
-        </div>
+        </main>
       </div>
     )
   }
@@ -86,66 +103,87 @@ export default async function KnowledgeBasePage() {
   }, {})
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Knowledge Base AI</h1>
-            <p className="text-muted-foreground">Gestisci le informazioni utilizzate dall'assistente AI</p>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <Button variant="ghost" size="icon" asChild className="shrink-0">
+                <Link href="/admin">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold truncate">Knowledge Base AI</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  Gestisci le informazioni utilizzate dall'assistente AI
+                </p>
+              </div>
+            </div>
+            <KnowledgeBaseActions />
           </div>
-          <KnowledgeBaseActions />
         </div>
+      </header>
 
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Totale Informazioni</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{allItems.length}</div>
-              <p className="text-xs text-muted-foreground">{activeItems.length} attive</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Totale</p>
+                  <p className="text-xl sm:text-3xl font-bold">{allItems.length}</p>
+                  <p className="text-xs text-muted-foreground">{activeItems.length} attive</p>
+                </div>
+                <Database className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Da Sito Web</CardTitle>
-              <BookOpen className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{bySource["website"] || 0}</div>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Da Sito</p>
+                  <p className="text-xl sm:text-3xl font-bold">{bySource["website"] || 0}</p>
+                </div>
+                <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Da Siti Esterni</CardTitle>
-              <ExternalLink className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{bySource["external"] || 0}</div>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Esterni</p>
+                  <p className="text-xl sm:text-3xl font-bold">{bySource["external"] || 0}</p>
+                </div>
+                <ExternalLink className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Da Chat</CardTitle>
-              <Clock className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{bySource["chat"] || 0}</div>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Da Chat</p>
+                  <p className="text-xl sm:text-3xl font-bold">{bySource["chat"] || 0}</p>
+                </div>
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* External Sites Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Siti Esterni da Crawlare</CardTitle>
+        <Card>
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-lg">Siti Esterni da Crawlare</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <div className="space-y-3">
               {(externalSites || []).map((site: any) => (
                 <ExternalSiteCard key={site.id} site={site} />
@@ -156,33 +194,39 @@ export default async function KnowledgeBasePage() {
 
         {/* Knowledge Items List */}
         <Card>
-          <CardHeader>
-            <CardTitle>Tutte le Informazioni</CardTitle>
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-lg">Tutte le Informazioni</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <div className="space-y-3">
               {allItems.map((item: any) => (
                 <div
                   key={item.id}
-                  className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-start justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold">{item.title}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-sm sm:text-base">{item.title}</h3>
                       {item.is_active ? (
-                        <Badge className="bg-green-500">Attiva</Badge>
+                        <Badge className="bg-green-500 text-xs">Attiva</Badge>
                       ) : (
-                        <Badge variant="secondary">Disattivata</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Disattivata
+                        </Badge>
                       )}
-                      <Badge variant="outline">{item.category}</Badge>
-                      <Badge variant="outline">{item.source}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {item.category}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {item.source}
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.content}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">{item.content}</p>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                       <span>Priorità: {item.priority}</span>
                       {item.source_url && (
                         <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                          Sorgente →
+                          Sorgente
                         </a>
                       )}
                       <span>
@@ -200,13 +244,7 @@ export default async function KnowledgeBasePage() {
             </div>
           </CardContent>
         </Card>
-
-        <div className="mt-6">
-          <Link href="/admin">
-            <Button variant="outline">← Torna alla Dashboard</Button>
-          </Link>
-        </div>
-      </div>
+      </main>
     </div>
   )
 }
