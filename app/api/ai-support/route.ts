@@ -108,17 +108,29 @@ function getLeadCollectionPrompt(state: LeadCollectionState): string {
 }
 
 // Function to build dynamic knowledge base from database
-async function buildDynamicKnowledgeBase(supabase: any): Promise<string> {
-  // Fetch active knowledge from database
-  const { data: knowledgeItems } = await supabase
-    .from("knowledge_base")
-    .select("*")
-    .eq("is_active", true)
-    .order("priority", { ascending: false })
-    .limit(50)
+async function buildDynamicKnowledgeBase(
+  supabase: any,
+  userQuery?: string,
+): Promise<{ knowledgeBase: string; sources: string[] }> {
+  // Use smart retrieval if query provided
+  const { items: knowledgeItems, sources } = userQuery
+    ? await smartRetrieveKnowledge(supabase, userQuery)
+    : { items: [], sources: [] }
 
-  if (!knowledgeItems || knowledgeItems.length === 0) {
-    return `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative e Revenue Management per hotel.
+  // Fallback to old behavior if no query
+  if (!userQuery || knowledgeItems.length === 0) {
+    const { data } = await supabase
+      .from("knowledge_base")
+      .select("*")
+      .eq("is_active", true)
+      .order("priority", { ascending: false })
+      .limit(50)
+
+    const defaultSources = (data || []).map((d: any) => d.source_url).filter(Boolean)
+
+    if (!data || data.length === 0) {
+      return {
+        knowledgeBase: `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative e Revenue Management per hotel.
 
 SERVIZI PRINCIPALI:
 - Consulenza Revenue Management per Hotel
@@ -133,38 +145,229 @@ CONTATTI:
 REGOLE IMPORTANTI:
 - Rispondi SEMPRE in italiano
 - Se l'utente chiede consulenza, preventivo, demo, contatto, o vuole essere richiamato → NON rimandare al form, ma raccogli i dati direttamente in chat
-- Se non sai rispondere a una domanda specifica → raccogli i dati per creare un ticket`
-  }
+- Se non sai rispondere a una domanda specifica → raccogli i dati per creare un ticket`,
+        sources: [],
+      }
+    }
 
-  // Group knowledge by category
-  const byCategory = knowledgeItems.reduce((acc: any, item: any) => {
-    if (!acc[item.category]) acc[item.category] = []
-    acc[item.category].push(item)
-    return acc
-  }, {})
+    // Old concatenation logic
+    const byCategory = data.reduce((acc: any, item: any) => {
+      if (!acc[item.category]) acc[item.category] = []
+      acc[item.category].push(item)
+      return acc
+    }, {})
 
-  let knowledgeBase = `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative.
+    let kb = `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in soluzioni tecnologiche innovative.
 
 INFORMAZIONI DALLA KNOWLEDGE BASE:\n\n`
 
-  for (const [category, items] of Object.entries(byCategory)) {
-    knowledgeBase += `\n=== ${category.toUpperCase()} ===\n`
-    for (const item of items as any[]) {
-      knowledgeBase += `\n${item.title}:\n${item.content}\n`
-      if (item.source_url) {
-        knowledgeBase += `Link: ${item.source_url}\n`
+    for (const [category, items] of Object.entries(byCategory)) {
+      kb += `\n=== ${category.toUpperCase()} ===\n`
+      for (const item of items as any[]) {
+        kb += `\n${item.title}:\n${item.content}\n`
+        if (item.source_url) {
+          kb += `Link: ${item.source_url}\n`
+        }
       }
     }
-  }
 
-  knowledgeBase += `\n\nREGOLE IMPORTANTI:
+    kb += `\n\nREGOLE IMPORTANTI:
 - Rispondi SEMPRE in italiano in modo cortese e professionale
 - Usa le informazioni della knowledge base sopra
 - Se l'utente chiede consulenza, preventivo, demo, contatto, o vuole essere richiamato → NON rimandare al form, ma rispondi che raccoglierai i dati in chat
 - Se non conosci la risposta → rispondi che non hai le informazioni e che creerai un ticket
 - NON dire mai "compila il form" o "contatta via email" - raccogli sempre i dati in chat`
 
-  return knowledgeBase
+    return { knowledgeBase: kb, sources: defaultSources }
+  }
+
+  let knowledgeBase = `Sei un assistente AI per 4BID.IT, azienda italiana specializzata in Revenue Management per hotel.
+
+CONTESTO DALLA KNOWLEDGE BASE (usa SOLO queste informazioni per rispondere):
+
+`
+
+  for (const item of knowledgeItems) {
+    knowledgeBase += `---
+[TITOLO] ${item.title}
+[URL] ${item.source_url || "N/A"}
+[CONTENUTO]
+${item.content}
+---
+
+`
+  }
+
+  knowledgeBase += `
+REGOLE IMPORTANTI:
+- Rispondi SEMPRE in italiano in modo cortese e professionale
+- Usa SOLO le informazioni del contesto sopra. Se non trovi la risposta, dì chiaramente che non hai informazioni a riguardo.
+- Alla fine della risposta, se hai usato informazioni specifiche, aggiungi una sezione "Fonti:" con gli URL delle pagine consultate.
+- Se l'utente chiede consulenza, preventivo, demo, contatto → rispondi che raccoglierai i dati in chat
+- NON inventare informazioni non presenti nel contesto`
+
+  return { knowledgeBase, sources }
+}
+
+async function smartRetrieveKnowledge(supabase: any, query: string): Promise<{ items: any[]; sources: string[] }> {
+  // Extract search terms from query (remove common Italian words)
+  const stopWords = [
+    "il",
+    "lo",
+    "la",
+    "i",
+    "gli",
+    "le",
+    "un",
+    "uno",
+    "una",
+    "di",
+    "a",
+    "da",
+    "in",
+    "con",
+    "su",
+    "per",
+    "tra",
+    "fra",
+    "come",
+    "cosa",
+    "che",
+    "chi",
+    "quale",
+    "quanto",
+    "quando",
+    "dove",
+    "perché",
+    "perche",
+    "è",
+    "e",
+    "sono",
+    "ho",
+    "ha",
+    "hai",
+    "hanno",
+    "mi",
+    "ti",
+    "ci",
+    "vi",
+    "si",
+    "me",
+    "te",
+    "ce",
+    "ve",
+    "se",
+    "ne",
+    "lo",
+    "la",
+    "li",
+    "le",
+    "gli",
+    "questo",
+    "questa",
+    "questi",
+    "queste",
+    "quello",
+    "quella",
+    "quelli",
+    "quelle",
+    "mio",
+    "mia",
+    "miei",
+    "mie",
+    "tuo",
+    "tua",
+    "tuoi",
+    "tue",
+    "suo",
+    "sua",
+    "suoi",
+    "sue",
+    "nostro",
+    "nostra",
+    "nostri",
+    "nostre",
+    "vostro",
+    "vostra",
+    "vostri",
+    "vostre",
+    "loro",
+  ]
+
+  const terms = query
+    .toLowerCase()
+    .replace(/[.,!?;:'"()[\]{}]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !stopWords.includes(t))
+    .slice(0, 5) // Max 5 search terms
+
+  console.log("[AI-Support] Search terms extracted:", terms)
+
+  if (terms.length === 0) {
+    // Fallback: get top priority items
+    const { data } = await supabase
+      .from("knowledge_base")
+      .select("*")
+      .eq("is_active", true)
+      .order("priority", { ascending: false })
+      .limit(8)
+
+    return {
+      items: data || [],
+      sources: (data || []).map((d: any) => d.source_url).filter(Boolean),
+    }
+  }
+
+  // Build ILIKE conditions for each term
+  // Search in title and content
+  const searchConditions = terms.map((term) => `title.ilike.%${term}%,content.ilike.%${term}%`).join(",")
+
+  // First try: search with all terms (OR logic)
+  const { data: matchedItems, error } = await supabase
+    .from("knowledge_base")
+    .select("*")
+    .eq("is_active", true)
+    .or(searchConditions)
+    .order("priority", { ascending: false })
+    .order("last_scraped_at", { ascending: false })
+    .limit(12)
+
+  if (error) {
+    console.error("[AI-Support] Search error:", error)
+    // Fallback to simple query
+    const { data } = await supabase
+      .from("knowledge_base")
+      .select("*")
+      .eq("is_active", true)
+      .order("priority", { ascending: false })
+      .limit(8)
+    return {
+      items: data || [],
+      sources: (data || []).map((d: any) => d.source_url).filter(Boolean),
+    }
+  }
+
+  if (matchedItems && matchedItems.length > 0) {
+    console.log("[AI-Support] Found", matchedItems.length, "matching items")
+    return {
+      items: matchedItems,
+      sources: matchedItems.map((d: any) => d.source_url).filter(Boolean),
+    }
+  }
+
+  // Fallback: get top priority items if no matches
+  console.log("[AI-Support] No matches, using fallback")
+  const { data: fallbackItems } = await supabase
+    .from("knowledge_base")
+    .select("*")
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(8)
+
+  return {
+    items: fallbackItems || [],
+    sources: (fallbackItems || []).map((d: any) => d.source_url).filter(Boolean),
+  }
 }
 
 export async function POST(request: Request) {
@@ -443,7 +646,7 @@ export async function POST(request: Request) {
       .map((msg) => `${msg.role}: ${msg.content}`)
       .join("\n")
 
-    const knowledgeBase = await buildDynamicKnowledgeBase(supabase)
+    const { knowledgeBase, sources } = await buildDynamicKnowledgeBase(supabase, message)
 
     // Generate AI response
     const { text: aiResponse } = await generateText({
@@ -451,7 +654,7 @@ export async function POST(request: Request) {
       temperature: 0.3,
       maxTokens: 500,
       system: knowledgeBase,
-      prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile.`,
+      prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile. Se usi informazioni specifiche dalla knowledge base, includi le fonti alla fine.`,
     })
 
     const leadTrigger = shouldCollectLead(message, aiResponse)
