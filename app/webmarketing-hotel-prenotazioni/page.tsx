@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function WebMarketingHotelPrenotazioniPage() {
-  const faqData = [
-    {
-      question: "Quali servizi di web marketing sono più efficaci per un hotel?",
-      answer:
-        "I servizi più efficaci sono: SEO per posizionamento organico, Google Ads per ricerche ad alta intenzione, Meta Ads per awareness e retargeting, email marketing per fidelizzazione, e ottimizzazione del booking engine.",
-    },
-    {
-      question: "Quanto costa il web marketing per un hotel?",
-      answer:
-        "Il budget web marketing varia da €1.500 a €10.000/mese in base agli obiettivi. L'importante è misurare il ROI: un hotel ben gestito ottiene 400-600% di ritorno sull'investimento in marketing digitale.",
-    },
-    {
-      question: "Come misurare il ROI del web marketing alberghiero?",
-      answer:
-        "Il ROI si misura con: costo per acquisizione prenotazione, revenue attribuito a ogni canale, conversion rate del sito, e confronto con costo commissioni OTA. Google Analytics 4 e tracking conversioni sono essenziali.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function WebMarketingHotelPrenotazioniPage() {
         title="Web Marketing Hotel"
         description="Servizi di web marketing specializzati per hotel: SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette."
         url="https://www.4bid.it/webmarketing-hotel-prenotazioni"
-        faq={faqData}
       />
       <LandingPageTracker slug="webmarketing-hotel-prenotazioni" />
 

@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function RevenueManagementResortLussoPage() {
-  const faqData = [
-    {
-      question: "Quali sono le sfide specifiche del Revenue Management per resort di lusso?",
-      answer:
-        "Le sfide includono: gestione tariffe premium senza svalutare il brand, revenue mix complesso (camere, spa, ristoranti, esperienze), clientela VIP internazionale, eventi esclusivi, e bilanciamento tra occupazione ed esclusività.",
-    },
-    {
-      question: "Come si ottimizza il Total Revenue in un resort 5 stelle?",
-      answer:
-        "L'ottimizzazione del Total Revenue include: pricing psicologico per clientela high-net-worth, pacchetti esperienziali esclusivi, gestione selettiva canali luxury (consortia, DMC premium), e ottimizzazione servizi ancillari (spa, ristorante, esperienze).",
-    },
-    {
-      question: "Quali risultati aspettarsi dal Revenue Management luxury?",
-      answer:
-        "I resort luxury ottengono mediamente: +45% total revenue, +38% ADR, +52% ancillary revenue, mantenendo guest satisfaction superiore al 90%.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function RevenueManagementResortLussoPage() {
         title="Revenue Management Resort di Lusso"
         description="Consulenza Revenue Management specializzata per resort di lusso, hotel 5 stelle e strutture premium. Strategie esclusive per massimizzare i ricavi delle strutture luxury."
         url="https://www.4bid.it/revenue-management-resort-lusso"
-        faq={faqData}
       />
       <LandingPageTracker slug="revenue-management-resort-lusso" />
 

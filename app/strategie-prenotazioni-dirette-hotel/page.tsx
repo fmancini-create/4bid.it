@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function StrategiePrenotazioniDiretteHotelPage() {
-  const faqData = [
-    {
-      question: "Quanto costano le commissioni OTA per un hotel medio?",
-      answer:
-        "Le commissioni OTA vanno dal 15% al 25% per prenotazione. Per un hotel di 30 camere con 70% di occupancy, il costo medio annuo in commissioni supera i €50.000.",
-    },
-    {
-      question: "Quali strategie funzionano meglio per aumentare le prenotazioni dirette?",
-      answer:
-        "Le strategie più efficaci sono: Best Rate Guarantee con vantaggi esclusivi, Google Hotel Ads, email remarketing per carrelli abbandonati, booking engine mobile-first, e campagne mirate ai clienti passati.",
-    },
-    {
-      question: "Quanto tempo serve per vedere risultati nelle prenotazioni dirette?",
-      answer:
-        "I primi risultati si vedono in 2-3 mesi. In 12 mesi è possibile passare dal 20% al 65% di prenotazioni dirette, risparmiando fino al 64% in commissioni OTA.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function StrategiePrenotazioniDiretteHotelPage() {
         title="Strategie Prenotazioni Dirette Hotel"
         description="Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%. Strategie di direct booking e disintermediazione."
         url="https://www.4bid.it/strategie-prenotazioni-dirette-hotel"
-        faq={faqData}
       />
       <LandingPageTracker slug="strategie-prenotazioni-dirette-hotel" />
 

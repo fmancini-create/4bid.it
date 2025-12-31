@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function StrategieVenditaDirettaHotelPage() {
-  const faqData = [
-    {
-      question: "Perché investire sulla vendita diretta per hotel?",
-      answer:
-        "La vendita diretta elimina commissioni OTA del 18-25%, permette di costruire un database clienti proprietario, e dà controllo totale sulla comunicazione e upselling. Il ROI è positivo già dal primo anno.",
-    },
-    {
-      question: "Quali sono le 8 strategie fondamentali per la vendita diretta?",
-      answer:
-        "Le strategie chiave sono: booking engine ottimizzato, best rate guarantee, Google Hotel Ads, SEO e content marketing, email automation, loyalty program, social advertising, e convenzioni corporate B2B.",
-    },
-    {
-      question: "Quanto si può risparmiare passando alla vendita diretta?",
-      answer:
-        "Un hotel boutique può passare dal 15% al 72% di vendite dirette in 18 mesi, risparmiando oltre €30.000/anno in commissioni con un ROI superiore al 350%.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function StrategieVenditaDirettaHotelPage() {
         title="Strategie Vendita Diretta Hotel"
         description="Aumenta le vendite dirette del tuo hotel riducendo la dipendenza da OTA. Strategie, strumenti e tecniche di disintermediazione."
         url="https://www.4bid.it/strategie-vendita-diretta-hotel"
-        faq={faqData}
       />
       <LandingPageTracker slug="strategie-vendita-diretta-hotel" />
 

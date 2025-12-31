@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function OttimizzazioneRevparHotelPage() {
-  const faqData = [
-    {
-      question: "Cos'è il RevPAR e come si calcola?",
-      answer:
-        "Il RevPAR (Revenue Per Available Room) è il KPI più importante nel revenue management. Si calcola: Occupazione% × ADR oppure Ricavi Totali / Camere Disponibili. Misura la performance complessiva dell'hotel.",
-    },
-    {
-      question: "Come si può aumentare il RevPAR di un hotel?",
-      answer:
-        "Il RevPAR si aumenta ottimizzando entrambi i componenti: occupazione (con pricing dinamico e channel mix) e ADR (con segmentazione, upselling e competitive positioning). Le 7 leve principali includono dynamic pricing, forecast, channel mix e LOS management.",
-    },
-    {
-      question: "Cos'è il RevPAR Index (RGI)?",
-      answer:
-        "Il RGI (Revenue Generation Index) confronta il tuo RevPAR con quello del competitive set. RGI=100 significa performance allineata al mercato; RGI>100 indica che stai sovraperformando i concorrenti.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function OttimizzazioneRevparHotelPage() {
         title="Ottimizzazione RevPAR Hotel"
         description="Guida completa all'ottimizzazione del RevPAR: strategie, formule di calcolo e best practice per massimizzare il Revenue per Available Room."
         url="https://www.4bid.it/ottimizzazione-revpar-hotel"
-        faq={faqData}
       />
       <LandingPageTracker slug="ottimizzazione-revpar-hotel" />
 
@@ -260,7 +241,7 @@ export default function OttimizzazioneRevparHotelPage() {
             </div>
 
             <div className="bg-yellow/10 border-2 border-yellow rounded-xl p-8">
-              <h4 className="font-bold text-foreground mb-4">Obiettivo: RGI {">"} 105</h4>
+              <h4 className="font-bold text-foreground">Obiettivo: RGI {">"} 105</h4>
               <p className="text-muted-foreground mb-4">
                 Un RGI superiore a 105 significa che stai catturando market share dai tuoi concorrenti. È il segno di
                 una strategia di Revenue Management efficace.

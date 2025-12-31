@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function PreventiviProgettiPersonalizzatiHotelPage() {
-  const faqData = [
-    {
-      question: "Che tipo di progetti personalizzati realizzate per hotel?",
-      answer:
-        "Realizziamo software revenue management custom, app mobile per ospiti, sistemi gestione manutenzioni, booking engine proprietari, portali web, integrazioni PMS e qualsiasi soluzione tecnologica su misura per strutture ricettive.",
-    },
-    {
-      question: "Quanto costa sviluppare un software personalizzato per hotel?",
-      answer:
-        "I costi variano in base alla complessità: da €5.000 per integrazioni semplici a €50.000+ per piattaforme complete. Offriamo anche modelli revenue share per progetti innovativi con investimento iniziale ridotto.",
-    },
-    {
-      question: "Quanto tempo serve per sviluppare un progetto personalizzato?",
-      answer:
-        "I tempi dipendono dalla complessità: 4-8 settimane per progetti semplici, 3-6 mesi per piattaforme complete. Forniamo timeline dettagliata nel preventivo con milestone settimanali.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function PreventiviProgettiPersonalizzatiHotelPage() {
         title="Preventivi Progetti Personalizzati Hotel"
         description="Richiedi preventivo per progetti software personalizzati hotel: revenue management, app mobile, gestione manutenzioni. Risposta in 24h."
         url="https://www.4bid.it/preventivi-progetti-personalizzati-hotel"
-        faq={faqData}
       />
       <LandingPageTracker slug="preventivi-progetti-personalizzati-hotel" />
 

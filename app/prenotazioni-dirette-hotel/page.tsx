@@ -15,24 +15,6 @@ export const metadata = {
 }
 
 export default function PrenotazioniDiretteHotelPage() {
-  const faqData = [
-    {
-      question: "Perché le prenotazioni dirette sono importanti per un hotel?",
-      answer:
-        "Le prenotazioni dirette eliminano le commissioni OTA (15-25%), permettono di costruire un database clienti proprietario, e danno controllo totale su prezzi, condizioni e comunicazione pre/post soggiorno.",
-    },
-    {
-      question: "Qual è la percentuale ideale di prenotazioni dirette?",
-      answer:
-        "L'obiettivo ottimale è 40-60% di prenotazioni dirette. Sotto il 30% si dipende troppo dalle OTA; sopra il 70% si rischia di perdere visibilità e nuovi clienti.",
-    },
-    {
-      question: "Come incentivare i clienti a prenotare direttamente?",
-      answer:
-        "Gli incentivi più efficaci sono: miglior tariffa garantita, vantaggi esclusivi (colazione, upgrade, late check-out), programma fedeltà, e comunicazione chiara del risparmio rispetto alle OTA.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -40,7 +22,6 @@ export default function PrenotazioniDiretteHotelPage() {
         title="Prenotazioni Dirette Hotel"
         description="Guida completa per aumentare le prenotazioni dirette del tuo hotel e ridurre le commissioni OTA. Strategie, best practice e case study."
         url="https://www.4bid.it/prenotazioni-dirette-hotel"
-        faq={faqData}
       />
       <LandingPageTracker slug="prenotazioni-dirette-hotel" />
 
