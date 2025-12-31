@@ -12,6 +12,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 1.0,
   }
 
+  const guidePages = ["guida-revenue-management-hotel", "guida-pricing-hotel", "guida-prenotazioni-dirette-hotel"].map(
+    (slug) => ({
+      url: `${baseUrl}/${slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    }),
+  )
+
   // Landing Pages Revenue Management - tutte le pagine pubbliche
   const landingPages = [
     "consulenza-revenue-management-hotel",
@@ -82,5 +91,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  return [homepage, ...landingPages, ...progetti, ...otherPages]
+  return [homepage, ...guidePages, ...landingPages, ...progetti, ...otherPages]
 }
