@@ -7,6 +7,35 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { ContactButton } from "@/components/contact-button"
 
+function getUpdateDate(): string {
+  const months = [
+    "gennaio",
+    "febbraio",
+    "marzo",
+    "aprile",
+    "maggio",
+    "giugno",
+    "luglio",
+    "agosto",
+    "settembre",
+    "ottobre",
+    "novembre",
+    "dicembre",
+  ]
+
+  // Try to get commit date from Vercel environment
+  const commitDate = process.env.VERCEL_GIT_COMMIT_DATE
+
+  if (commitDate) {
+    const date = new Date(commitDate)
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
+  }
+
+  // Fallback to current date (deploy time for SSR)
+  const now = new Date()
+  return `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
+}
+
 export const metadata: Metadata = {
   title: "Guida Completa al Pricing Hotel | 4BID.IT",
   description:
@@ -31,6 +60,9 @@ export const metadata: Metadata = {
 }
 
 export default function GuidaPricingHotelPage() {
+  const updateDate = getUpdateDate()
+  const isDeployDate = !process.env.VERCEL_GIT_COMMIT_DATE
+
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -56,6 +88,9 @@ export default function GuidaPricingHotelPage() {
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Guida alle Strategie di Pricing per Hotel
             </h1>
+            <p className="text-sm text-muted-foreground mb-6">
+              Aggiornato{isDeployDate ? " (deploy)" : ""}: {updateDate}
+            </p>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Come definire, gestire e ottimizzare le tariffe del tuo hotel: dalla tariffa base al pricing dinamico,
               passando per segmentazione e restrizioni.
