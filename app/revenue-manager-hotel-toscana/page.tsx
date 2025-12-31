@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Manager Hotel Toscana | Consulenza Firenze, Siena, Pisa | 4BID.IT",
@@ -14,8 +15,33 @@ export const metadata = {
 }
 
 export default function RevenueManagerHotelToscanaPage() {
+  const faqData = [
+    {
+      question: "Perché scegliere un Revenue Manager locale per hotel in Toscana?",
+      answer:
+        "Un Revenue Manager locale conosce i flussi turistici stagionali, gli eventi che impattano la domanda (Pitti, Palio, festival), i segmenti di clientela prevalenti per zona, e ha network consolidato con associazioni di categoria toscane.",
+    },
+    {
+      question: "Quali zone della Toscana coprite con i servizi di Revenue Management?",
+      answer:
+        "Copriamo tutta la Toscana: Firenze, Siena, Pisa, Chianti, Val d'Orcia, Versilia, Lucca, Arezzo, San Gimignano. Ogni zona ha specificità di mercato che richiedono strategie personalizzate.",
+    },
+    {
+      question: "Come gestite la stagionalità tipica del turismo toscano?",
+      answer:
+        "Gestiamo la stagionalità con: event-based pricing per fiere e manifestazioni, strategie specifiche per shoulder season, minimum stay optimization, e campagne mirate per aumentare occupazione in bassa stagione.",
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Manager Hotel Toscana"
+        description="Revenue Manager specializzato in hotel in Toscana. Consulenza Revenue Management a Firenze, Siena, Pisa e tutta la Toscana."
+        url="https://www.4bid.it/revenue-manager-hotel-toscana"
+        faq={faqData}
+      />
       <LandingPageTracker slug="revenue-manager-hotel-toscana" />
 
       <Header />

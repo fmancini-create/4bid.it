@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Ottimizzazione RevPAR Hotel - Strategie per Massimizzare il Revenue per Available Room | 4BID.IT",
@@ -14,8 +15,33 @@ export const metadata = {
 }
 
 export default function OttimizzazioneRevparHotelPage() {
+  const faqData = [
+    {
+      question: "Cos'è il RevPAR e come si calcola?",
+      answer:
+        "Il RevPAR (Revenue Per Available Room) è il KPI più importante nel revenue management. Si calcola: Occupazione% × ADR oppure Ricavi Totali / Camere Disponibili. Misura la performance complessiva dell'hotel.",
+    },
+    {
+      question: "Come si può aumentare il RevPAR di un hotel?",
+      answer:
+        "Il RevPAR si aumenta ottimizzando entrambi i componenti: occupazione (con pricing dinamico e channel mix) e ADR (con segmentazione, upselling e competitive positioning). Le 7 leve principali includono dynamic pricing, forecast, channel mix e LOS management.",
+    },
+    {
+      question: "Cos'è il RevPAR Index (RGI)?",
+      answer:
+        "Il RGI (Revenue Generation Index) confronta il tuo RevPAR con quello del competitive set. RGI=100 significa performance allineata al mercato; RGI>100 indica che stai sovraperformando i concorrenti.",
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Ottimizzazione RevPAR Hotel"
+        description="Guida completa all'ottimizzazione del RevPAR: strategie, formule di calcolo e best practice per massimizzare il Revenue per Available Room."
+        url="https://www.4bid.it/ottimizzazione-revpar-hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="ottimizzazione-revpar-hotel" />
 
       <Header />
