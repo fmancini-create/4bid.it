@@ -70,12 +70,14 @@ const nextConfig = {
       },
     ]
   },
+  // Removed page.tsx files that used redirect() which returns 307 (temporary)
   async redirects() {
     return [
+      // Legacy/cleanup redirects
       {
         source: '/index.html',
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
       {
         source: '/',
@@ -86,7 +88,7 @@ const nextConfig = {
           },
         ],
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
       {
         source: '/',
@@ -97,20 +99,23 @@ const nextConfig = {
           },
         ],
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
-      // /revenue-management-agriturismi already redirects via page.tsx to /revenue-management-agriturismo
-      // /revenue-management-bed-and-breakfast already redirects via page.tsx to /revenue-management-bed-breakfast
-      // These are backup redirects in case the page.tsx redirect fails
+      // SEO canonical redirects - duplicate content consolidation
       {
         source: '/revenue-management-agriturismi',
         destination: '/revenue-management-agriturismo',
-        permanent: true,
+        permanent: true, // 301
       },
       {
         source: '/revenue-management-bed-and-breakfast',
         destination: '/revenue-management-bed-breakfast',
-        permanent: true,
+        permanent: true, // 301
+      },
+      {
+        source: '/yield-management-camere-hotel',
+        destination: '/yield-management-hotel',
+        permanent: true, // 301
       },
     ]
   },
