@@ -4,15 +4,29 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ArrowLeft } from "lucide-react"
 import Script from "next/script"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | 4 Bid SRL",
-  description: "Informativa sulla privacy e trattamento dei dati personali di 4 Bid SRL",
+  title: "Privacy Policy | 4BID SRL",
+  description: "Informativa sulla privacy e trattamento dei dati personali di 4BID SRL",
+  alternates: {
+    canonical: "https://4bid.it/privacy",
+  },
 }
 
 export default function PrivacyPage() {
   return (
     <>
+      <StructuredData
+        type="WebPage"
+        title="Privacy Policy"
+        description="Informativa sulla privacy e trattamento dei dati personali di 4BID SRL"
+        url="https://4bid.it/privacy"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Privacy Policy", url: "https://4bid.it/privacy" },
+        ]}
+      />
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
       <Script id="google-analytics" strategy="afterInteractive">
         {`

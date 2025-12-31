@@ -99,6 +99,19 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      // /revenue-management-agriturismi already redirects via page.tsx to /revenue-management-agriturismo
+      // /revenue-management-bed-and-breakfast already redirects via page.tsx to /revenue-management-bed-breakfast
+      // These are backup redirects in case the page.tsx redirect fails
+      {
+        source: '/revenue-management-agriturismi',
+        destination: '/revenue-management-agriturismo',
+        permanent: true,
+      },
+      {
+        source: '/revenue-management-bed-and-breakfast',
+        destination: '/revenue-management-bed-breakfast',
+        permanent: true,
+      },
     ]
   },
 }

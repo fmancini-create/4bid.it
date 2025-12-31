@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Management per Catene Alberghiere | Gestione Multi-Property | 4BID.IT",
@@ -11,11 +12,24 @@ export const metadata = {
     "Soluzioni di Revenue Management per catene hotel e gruppi alberghieri. Centralizzazione strategie, ottimizzazione multi-property, economia di scala e performance superiori.",
   keywords:
     "revenue management catene hotel, gestione multi property, cluster management hotel, revenue strategy gruppi alberghieri, centralizzazione pricing hotel",
+  alternates: {
+    canonical: "https://4bid.it/revenue-management-catene-hotel",
+  },
 }
 
 export default function RevenueManagementCateneHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Management per Catene Alberghiere"
+        description="Soluzioni di Revenue Management per catene hotel e gruppi alberghieri. Centralizzazione strategie, ottimizzazione multi-property, economia di scala."
+        url="https://4bid.it/revenue-management-catene-hotel"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Revenue Management Catene Hotel", url: "https://4bid.it/revenue-management-catene-hotel" },
+        ]}
+      />
       <LandingPageTracker slug="revenue-management-catene-hotel" />
 
       <Header />

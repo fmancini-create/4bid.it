@@ -6,6 +6,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "SANTADDEO: Software Revenue Management Hotel AI Trasparente | 4BID.IT",
@@ -13,11 +14,26 @@ export const metadata = {
     "SANTADDEO: unico software revenue management hotel con AI spiegabile. Personalizza fattori di pricing per struttura/giorno. Dynamic pricing intelligente 24/7. Demo gratuita.",
   keywords:
     "software revenue management hotel, RMS hotel AI, sistema revenue management automatico, SANTADDEO RMS, pricing dinamico software, gestionale revenue hotel avanzato",
+  alternates: {
+    canonical: "https://4bid.it/software-revenue-management-santaddeo",
+  },
 }
 
 export default function SoftwareRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="SoftwareApplication"
+        title="SANTADDEO - Software Revenue Management Hotel"
+        description="SANTADDEO: unico software revenue management hotel con AI spiegabile. Personalizza fattori di pricing per struttura/giorno."
+        url="https://4bid.it/software-revenue-management-santaddeo"
+        softwareCategory="BusinessApplication"
+        operatingSystem="Web"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "SANTADDEO Software", url: "https://4bid.it/software-revenue-management-santaddeo" },
+        ]}
+      />
       <LandingPageTracker slug="software-revenue-management-santaddeo" />
 
       <Header />

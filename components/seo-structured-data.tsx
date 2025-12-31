@@ -11,7 +11,15 @@ interface BreadcrumbItem {
 }
 
 interface StructuredDataProps {
-  type?: "Article" | "Service" | "Organization" | "LocalBusiness" | "Product" | "FAQPage" | "WebPage"
+  type?:
+    | "Article"
+    | "Service"
+    | "Organization"
+    | "LocalBusiness"
+    | "Product"
+    | "FAQPage"
+    | "WebPage"
+    | "SoftwareApplication"
   title: string
   description: string
   url: string
@@ -23,9 +31,10 @@ interface StructuredDataProps {
   faqs?: FAQItem[]
   breadcrumbs?: BreadcrumbItem[]
   keywords?: string[]
+  softwareCategory?: string
+  operatingSystem?: string
 }
 
-// Dati aziendali centralizzati
 const companyData = {
   name: "4BID SRL",
   legalName: "4BID SRL",
@@ -33,8 +42,7 @@ const companyData = {
   logo: "https://4bid.it/logo.png",
   image: "https://4bid.it/4bid-colorful-logo.jpg",
   email: "info@4bid.it",
-  telephone: "+39 055 0000000", // Da aggiornare con numero reale
-  vatID: "IT00000000000", // Da aggiornare con P.IVA reale
+  vatID: "IT06241710489",
   foundingDate: "2020",
   address: {
     "@type": "PostalAddress",
@@ -43,11 +51,6 @@ const companyData = {
     addressRegion: "FI",
     postalCode: "50026",
     addressCountry: "IT",
-  },
-  geo: {
-    "@type": "GeoCoordinates",
-    latitude: "43.6567",
-    longitude: "11.1847",
   },
   sameAs: ["https://www.linkedin.com/company/4bid-srl", "https://www.facebook.com/4bidIT"],
   areaServed: {
@@ -69,6 +72,8 @@ export function StructuredData({
   faqs,
   breadcrumbs,
   keywords,
+  softwareCategory,
+  operatingSystem = "Web",
 }: StructuredDataProps) {
   const now = new Date().toISOString()
 
@@ -80,14 +85,13 @@ export function StructuredData({
     description,
     url,
     image,
-    datePublished: datePublished || now,
-    dateModified: dateModified || now,
     inLanguage: "it-IT",
-    isAccessibleForFree: true,
-    provider: {
-      "@type": "Organization",
-      ...companyData,
-    },
+  }
+
+  // Aggiungi date solo se fornite o per tipi che le richiedono
+  if (type === "Article" || type === "WebPage") {
+    mainSchema.datePublished = datePublished || now
+    mainSchema.dateModified = dateModified || now
   }
 
   // Aggiungi proprietà specifiche per tipo
@@ -96,15 +100,48 @@ export function StructuredData({
     mainSchema.areaServed = companyData.areaServed
     mainSchema.provider = {
       "@type": "Organization",
-      ...companyData,
+      name: companyData.name,
+      url: companyData.url,
+      logo: companyData.logo,
+      email: companyData.email,
+      vatID: companyData.vatID,
+      address: companyData.address,
+      sameAs: companyData.sameAs,
+    }
+  }
+
+  if (type === "SoftwareApplication") {
+    mainSchema.applicationCategory = softwareCategory || "BusinessApplication"
+    mainSchema.operatingSystem = operatingSystem
+    mainSchema.offers = {
+      "@type": "Offer",
+      price: price || "0",
+      priceCurrency: currency,
+      availability: "https://schema.org/InStock",
+    }
+    mainSchema.author = {
+      "@type": "Organization",
+      name: companyData.name,
+      url: companyData.url,
     }
   }
 
   if (type === "Organization" || type === "LocalBusiness") {
-    Object.assign(mainSchema, companyData)
+    Object.assign(mainSchema, {
+      name: companyData.name,
+      legalName: companyData.legalName,
+      url: companyData.url,
+      logo: companyData.logo,
+      email: companyData.email,
+      vatID: companyData.vatID,
+      foundingDate: companyData.foundingDate,
+      address: companyData.address,
+      sameAs: companyData.sameAs,
+      areaServed: companyData.areaServed,
+    })
     mainSchema.contactPoint = {
       "@type": "ContactPoint",
-      telephone: companyData.telephone,
+      email: companyData.email,
       contactType: "customer service",
       areaServed: "IT",
       availableLanguage: ["Italian", "English"],
@@ -127,7 +164,8 @@ export function StructuredData({
     }
     mainSchema.author = {
       "@type": "Organization",
-      ...companyData,
+      name: companyData.name,
+      url: companyData.url,
     }
     mainSchema.publisher = {
       "@type": "Organization",
@@ -187,14 +225,22 @@ export function StructuredData({
       name: companyData.name,
       logo: companyData.logo,
     },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: "https://4bid.it/?search={search_term_string}",
-      },
-      "query-input": "required name=search_term_string",
-    },
+  }
+
+  // Schema Organization sempre incluso
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: companyData.name,
+    legalName: companyData.legalName,
+    url: companyData.url,
+    logo: companyData.logo,
+    email: companyData.email,
+    vatID: companyData.vatID,
+    foundingDate: companyData.foundingDate,
+    address: companyData.address,
+    sameAs: companyData.sameAs,
+    areaServed: companyData.areaServed,
   }
 
   return (
@@ -222,6 +268,11 @@ export function StructuredData({
         id="structured-data-website"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
+      />
+      <Script
+        id="structured-data-organization"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
     </>
   )

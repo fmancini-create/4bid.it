@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2025 | 4BID.IT",
@@ -11,11 +12,25 @@ export const metadata = {
     "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente. Aumenta RevPAR +37%. Guida completa.",
   keywords:
     "strategie pricing hotel, BAR strategy hotel, dynamic pricing strategico, price fencing alberghiero, length of stay restrictions, strategie tariffe hotel avanzate, pricing optimization",
+  alternates: {
+    canonical: "https://4bid.it/strategie-pricing-hotel",
+  },
 }
 
 export default function StrategiePricingHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS"
+        description="Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente."
+        url="https://4bid.it/strategie-pricing-hotel"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Strategie Pricing Hotel", url: "https://4bid.it/strategie-pricing-hotel" },
+        ]}
+        keywords={["strategie pricing hotel", "BAR strategy", "dynamic pricing", "LOS restrictions", "price fencing"]}
+      />
       <LandingPageTracker slug="strategie-pricing-hotel" />
 
       <Header />

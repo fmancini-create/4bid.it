@@ -3,16 +3,33 @@ import Link from "next/link"
 import { ArrowLeft, CheckCircle, TrendingUp, BarChart3, FileSpreadsheet, Zap, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
   description:
     "Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti usando comandi in linguaggio naturale — senza formule.",
+  alternates: {
+    canonical: "https://4bid.it/progetti/autoexel",
+  },
 }
 
 export default function AutoExelPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <StructuredData
+        type="SoftwareApplication"
+        title="AutoExel - Il primo Excel per chi non sa usare Excel"
+        description="Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti usando comandi in linguaggio naturale."
+        url="https://4bid.it/progetti/autoexel"
+        softwareCategory="BusinessApplication"
+        operatingSystem="Web"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Progetti", url: "https://4bid.it/#projects" },
+          { name: "AutoExel", url: "https://4bid.it/progetti/autoexel" },
+        ]}
+      />
       <LandingPageTracker slug="progetti/autoexel" />
 
       {/* Hero Section */}

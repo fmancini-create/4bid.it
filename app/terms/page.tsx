@@ -4,15 +4,29 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ArrowLeft } from "lucide-react"
 import Script from "next/script"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
-  title: "Termini e Condizioni | 4 Bid SRL",
-  description: "Termini e condizioni di utilizzo dei servizi di 4 Bid SRL",
+  title: "Termini e Condizioni | 4BID SRL",
+  description: "Termini e condizioni di utilizzo dei servizi di 4BID SRL",
+  alternates: {
+    canonical: "https://4bid.it/terms",
+  },
 }
 
 export default function TermsPage() {
   return (
     <>
+      <StructuredData
+        type="WebPage"
+        title="Termini e Condizioni"
+        description="Termini e condizioni di utilizzo dei servizi di 4BID SRL"
+        url="https://4bid.it/terms"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Termini e Condizioni", url: "https://4bid.it/terms" },
+        ]}
+      />
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
       <Script id="google-analytics" strategy="afterInteractive">
         {`
@@ -44,11 +58,11 @@ export default function TermsPage() {
               <p>
                 Il presente sito web è gestito da:
                 <br />
-                <strong>4 Bid SRL</strong>
+                <strong>4BID SRL</strong>
                 <br />
                 Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)
                 <br />
-                P.IVA: [Inserire P.IVA]
+                P.IVA: 06241710489
                 <br />
                 Email: info@4bid.it
               </p>
@@ -59,7 +73,7 @@ export default function TermsPage() {
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Servizi Offerti</h2>
-              <p>4 Bid SRL offre i seguenti servizi:</p>
+              <p>4 BID SRL offre i seguenti servizi:</p>
               <ul className="list-disc pl-6 mt-4 space-y-2">
                 <li>Consulenza in Revenue Management per strutture ricettive</li>
                 <li>Analisi e ottimizzazione delle tariffe alberghiere</li>
@@ -72,7 +86,7 @@ export default function TermsPage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. Proprietà Intellettuale</h2>
               <p>
                 Tutti i contenuti presenti sul sito (testi, immagini, loghi, grafica, software, database) sono di
-                proprietà esclusiva di 4 Bid SRL o dei rispettivi titolari e sono protetti dalle leggi italiane e
+                proprietà esclusiva di 4 BID SRL o dei rispettivi titolari e sono protetti dalle leggi italiane e
                 internazionali sul diritto d'autore e sulla proprietà intellettuale.
               </p>
               <p className="mt-4">
@@ -94,7 +108,7 @@ export default function TermsPage() {
 
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Esclusione di Garanzie</h2>
-              <p>4 Bid SRL si impegna a mantenere il sito aggiornato e funzionante, ma non garantisce:</p>
+              <p>4 BID SRL si impegna a mantenere il sito aggiornato e funzionante, ma non garantisce:</p>
               <ul className="list-disc pl-6 mt-4 space-y-2">
                 <li>La disponibilità continua e ininterrotta del servizio</li>
                 <li>L'assenza di errori o virus</li>
@@ -109,7 +123,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Limitazione di Responsabilità</h2>
               <p>
-                4 Bid SRL non sarà responsabile per danni diretti, indiretti, incidentali o consequenziali derivanti
+                4 BID SRL non sarà responsabile per danni diretti, indiretti, incidentali o consequenziali derivanti
                 dall'utilizzo o dall'impossibilità di utilizzare il sito web, inclusi ma non limitati a: perdita di
                 dati, interruzione dell'attività, perdita di profitti.
               </p>
@@ -118,7 +132,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Link a Siti Esterni</h2>
               <p>
-                Il sito potrebbe contenere link a siti web di terze parti. 4 Bid SRL non ha alcun controllo su tali siti
+                Il sito potrebbe contenere link a siti web di terze parti. 4 BID SRL non ha alcun controllo su tali siti
                 e non è responsabile dei loro contenuti, delle loro politiche sulla privacy o delle loro pratiche.
               </p>
             </section>
@@ -144,7 +158,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Modifiche ai Termini</h2>
               <p>
-                4 Bid SRL si riserva il diritto di modificare i presenti Termini e Condizioni in qualsiasi momento. Le
+                4 BID SRL si riserva il diritto di modificare i presenti Termini e Condizioni in qualsiasi momento. Le
                 modifiche saranno efficaci dalla data di pubblicazione sul sito. L'uso continuato del sito dopo la
                 pubblicazione delle modifiche costituisce accettazione delle stesse.
               </p>
@@ -164,7 +178,7 @@ export default function TermsPage() {
               <p>
                 Per qualsiasi domanda relativa ai presenti Termini e Condizioni, contattare:
                 <br />
-                <strong>4 Bid SRL</strong>
+                <strong>4 BID SRL</strong>
                 <br />
                 Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)
                 <br />
