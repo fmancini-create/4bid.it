@@ -38,6 +38,23 @@ export default function OttimizzazioneRevparHotelPage() {
               Aumenta il RevPAR del tuo hotel del 25-40% con strategie avanzate che ottimizzano sia occupazione che
               tariffe medie. Il KPI che conta davvero.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>RevPAR = Occupazione × ADR: il KPI che bilancia tariffe e occupazione</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>7 leve strategiche: dynamic pricing, forecast, channel mix, segmentazione e upselling</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>RGI (RevPAR Index) per monitorare il posizionamento vs competitive set</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

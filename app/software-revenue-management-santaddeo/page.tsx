@@ -48,10 +48,27 @@ export default function SoftwareRevenueManagementPage() {
                 <h1 className="text-5xl font-bold text-foreground">SANTADDEO</h1>
               </div>
               <p className="text-2xl text-muted-foreground mb-4">The Human Revenue Manager</p>
-              <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
+              <p className="text-xl text-muted-foreground leading-relaxed mb-6 text-pretty">
                 Il primo software di Revenue Management con AI trasparente che spiega ogni decisione di pricing.
                 Personalizza i pesi delle variabili e comprendi ogni scelta strategica.
               </p>
+              <div className="bg-card/50 backdrop-blur-sm rounded-xl p-5 mb-6 border border-border/50">
+                <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>AI trasparente: ogni decisione di pricing viene spiegata in modo chiaro</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>Personalizzazione totale dei pesi delle variabili per ogni struttura</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>Modello performance-based disponibile: zero rischio, paghi sui risultati</span>
+                  </li>
+                </ul>
+              </div>
               <div className="flex gap-4 flex-wrap">
                 <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
                   Richiedi Demo

@@ -38,6 +38,23 @@ export default function StrategiePrenotazioniDiretteHotelPage() {
               Strategie comprovate di disintermediazione per hotel e strutture ricettive. Trasforma le OTA da canale
               principale a canale accessorio, aumentando margini e controllo sul cliente.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Strategie per ridurre le commissioni OTA (15-25%) e aumentare i margini</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Best rate guarantee, metasearch marketing, email remarketing e loyalty program</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Database clienti proprietario per comunicazione diretta e fidelizzazione</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

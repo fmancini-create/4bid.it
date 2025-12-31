@@ -47,6 +47,23 @@ export default function StrategiePricingHotelPage() {
               Dal pricing statico al dynamic pricing intelligente: le strategie comprovate per massimizzare RevPAR senza
               perdere competitività.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>BAR Strategy, dynamic pricing, LOS restrictions e price fencing spiegate</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Dal pricing statico stagionale a quello dinamico automatizzato</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>SANTADDEO: automazione pricing con aggiornamento tariffe ogni 4 ore</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

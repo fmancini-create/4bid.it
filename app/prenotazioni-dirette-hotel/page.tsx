@@ -38,6 +38,23 @@ export default function PrenotazioniDiretteHotelPage() {
               Piano operativo per incrementare il direct booking, ridurre la dipendenza dalle OTA e aumentare la
               redditività della tua struttura ricettiva.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Zero commissioni sulle prenotazioni dirette vs 15-25% delle OTA</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>5 azioni immediate: best rate guarantee, Google Hotel Ads, remarketing, mobile UX</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Database clienti proprietario per loyalty program e comunicazione diretta</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

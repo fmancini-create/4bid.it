@@ -89,6 +89,23 @@ export default function CoseIlRevenueManagementPage() {
               Una guida semplice e completa per capire cos'è il Revenue Management Hotel, dove si applica e perché è
               fondamentale per hotel, B&B, resort e agriturismi.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Il revenue management ottimizza prezzi e disponibilità per massimizzare i ricavi</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Essenziale per attività con prodotti "deperibili" come camere d'hotel e biglietti</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Si applica a hotel, B&B, resort, agriturismi, trasporti ed eventi</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
