@@ -1,5 +1,5 @@
 # 4BID.IT Robots.txt
-# https://4bid.it
+# https://www.4bid.it
 
 User-agent: *
 Allow: /
@@ -31,4 +31,7 @@ User-agent: Bytespider
 Allow: /
 
 # Sitemap
-Sitemap: https://4bid.it/sitemap.xml
+Sitemap: https://www.4bid.it/sitemap.xml
+
+# AI map
+Allow: /llms.txt

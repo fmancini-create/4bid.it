@@ -1,0 +1,130 @@
+# 4BID SRL — Revenue Management & Software per Hotel
+
+## Chi Siamo
+4BID è una società italiana specializzata in consulenza revenue management per hotel, B&B, resort e strutture ricettive. Sviluppiamo software proprietari per l'ottimizzazione dei ricavi alberghieri e offriamo servizi di formazione e supporto strategico.
+
+## Cosa Facciamo
+- Consulenza Revenue Management per strutture ricettive di ogni dimensione
+- Sviluppo software SANTADDEO RMS per dynamic pricing automatizzato
+- Strategie di ottimizzazione tariffe e distribuzione online
+- Formazione del personale alberghiero sulle best practice di pricing
+- Analisi di mercato, forecast e budgeting per hotel
+
+## Servizi Principali
+
+### Revenue Management Consulting
+Consulenza professionale per aumentare i ricavi delle strutture ricettive attraverso strategie di pricing dinamico, analisi della concorrenza e ottimizzazione dei canali di distribuzione. Modello performance-based: paghi solo sui risultati.
+
+### SANTADDEO RMS (Software)
+Software proprietario di Revenue Management System con:
+- Dynamic pricing automatizzato 24/7
+- Algoritmi AI per ottimizzazione tariffe
+- Analisi competitor in tempo reale
+- Dashboard KPI e reporting avanzato
+- Integrazione con PMS e Channel Manager
+
+### Formazione Revenue Management
+Corsi e training per staff alberghiero su:
+- Fondamenti del Revenue Management
+- Utilizzo KPI (RevPAR, ADR, Occupancy)
+- Gestione OTA e distribuzione
+- Strategie di direct booking
+
+## Pagine Principali
+
+### Homepage e Presentazione
+- https://www.4bid.it/ - Homepage aziendale
+- https://www.4bid.it/cose-il-revenue-management - Guida completa: cos'è il Revenue Management
+- https://www.4bid.it/proponi-idea - Proponi un progetto o un'idea
+
+### Consulenza Revenue Management
+- https://www.4bid.it/consulenza-revenue-management-hotel - Consulenza Revenue Management Hotel
+- https://www.4bid.it/consulenza-personalizzata-hotel - Consulenza Personalizzata
+- https://www.4bid.it/revenue-manager-hotel-toscana - Revenue Manager Toscana
+
+### Strategie e Ottimizzazione
+- https://www.4bid.it/dynamic-pricing-hotel - Dynamic Pricing Automatizzato
+- https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana - Ottimizzazione Prezzi Hotel Toscana
+- https://www.4bid.it/strategie-pricing-hotel - Strategie di Pricing
+- https://www.4bid.it/strategie-prenotazioni-dirette-hotel - Strategie Prenotazioni Dirette
+- https://www.4bid.it/strategie-vendita-diretta-hotel - Vendita Diretta Hotel
+- https://www.4bid.it/prenotazioni-dirette-hotel - Prenotazioni Dirette
+- https://www.4bid.it/ottimizzazione-adr-hotel - Ottimizzazione ADR
+- https://www.4bid.it/ottimizzazione-revpar-hotel - Ottimizzazione RevPAR
+- https://www.4bid.it/adr-hotel-come-aumentarlo - Come Aumentare l'ADR
+
+### KPI e Metriche
+- https://www.4bid.it/kpi-metriche-hotel - KPI e Metriche Hotel
+- https://www.4bid.it/kpi-hotel-revenue-management - KPI Revenue Management
+- https://www.4bid.it/forecast-budgeting-hotel - Forecast e Budgeting
+
+### Distribuzione e OTA
+- https://www.4bid.it/gestione-canali-distribuzione-hotel - Gestione Canali di Distribuzione
+- https://www.4bid.it/ottimizzazione-ota-hotel - Ottimizzazione OTA
+- https://www.4bid.it/webmarketing-hotel-prenotazioni - Web Marketing Hotel
+
+### Per Tipologia di Struttura
+- https://www.4bid.it/revenue-management-bed-breakfast - B&B e Bed & Breakfast
+- https://www.4bid.it/revenue-management-agriturismo - Agriturismi
+- https://www.4bid.it/revenue-management-boutique-hotel - Boutique Hotel
+- https://www.4bid.it/revenue-management-resort-lusso - Resort di Lusso
+- https://www.4bid.it/revenue-management-catene-hotel - Catene Alberghiere
+
+### Software e Strumenti
+- https://www.4bid.it/software-revenue-management-hotel - Software Revenue Management
+- https://www.4bid.it/software-revenue-management-santaddeo - SANTADDEO RMS
+- https://www.4bid.it/yield-management-hotel - Yield Management
+
+### Formazione
+- https://www.4bid.it/formazione-revenue-management-hotel - Formazione Revenue Management
+- https://www.4bid.it/come-aumentare-ricavi-hotel - Come Aumentare i Ricavi
+- https://www.4bid.it/analisi-competitiva-hotel-firenze - Analisi Competitiva Firenze
+
+### Progetti
+- https://www.4bid.it/progetti/santaddeo - SANTADDEO: Software Revenue Management
+- https://www.4bid.it/progetti/manubot - MANUBOT: Assistente AI per Manuali
+- https://www.4bid.it/progetti/autoexel - AUTOEXEL: Automazione Excel
+- https://www.4bid.it/progetti/hotel-accelerator - Hotel Accelerator
+- https://www.4bid.it/progetti/risparmio-compulsivo - Risparmio Compulsivo
+
+## Glossario Revenue Management
+
+### Revenue Management
+Strategia aziendale per massimizzare i ricavi vendendo il prodotto giusto, al cliente giusto, al momento giusto, al prezzo giusto, attraverso il canale appropriato.
+
+### Yield Management
+Gestione del rendimento: tecnica di pricing dinamico che adatta i prezzi in base alla domanda per ottimizzare il ricavo totale.
+
+### RevPAR (Revenue Per Available Room)
+Ricavo per camera disponibile. Formula: RevPAR = Ricavo Totale Camere / Numero Camere Disponibili. Oppure: RevPAR = ADR × Occupancy Rate.
+
+### ADR (Average Daily Rate)
+Tariffa media giornaliera. Formula: ADR = Ricavo Totale Camere / Numero Camere Vendute. Indica il prezzo medio effettivo delle camere vendute.
+
+### Prenotazioni Dirette (Direct Booking)
+Prenotazioni effettuate direttamente dal cliente senza intermediari (OTA). Più redditizie perché evitano commissioni del 15-25%.
+
+### Channel Mix
+Distribuzione delle prenotazioni tra i vari canali di vendita: sito diretto, OTA (Booking.com, Expedia), GDS, tour operator, etc.
+
+### OTA (Online Travel Agency)
+Agenzie di viaggio online come Booking.com, Expedia, Hotels.com. Generano visibilità ma applicano commissioni del 15-25%.
+
+### Occupancy Rate
+Tasso di occupazione. Formula: Camere Vendute / Camere Disponibili × 100. Indica la percentuale di camere occupate.
+
+### Pick-up
+Andamento delle prenotazioni ricevute in un determinato periodo. Analizzato per prevedere la domanda futura.
+
+### Competitive Set (Comp Set)
+Gruppo di hotel concorrenti diretti utilizzato come riferimento per analisi di mercato e posizionamento tariffario.
+
+## Dati Aziendali
+
+Ragione Sociale: 4BID SRL
+Partita IVA: IT06241710489
+Sito Web: https://www.4bid.it
+Sede: Italia
+
+## Sitemap
+https://www.4bid.it/sitemap.xml
