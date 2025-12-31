@@ -4,6 +4,21 @@ import { fetchSitemapUrls, filterGuideUrls } from "@/lib/knowledge/sitemap"
 import { extractMainContent, extractTitle } from "@/lib/knowledge/html-to-text"
 import { chunkText } from "@/lib/knowledge/chunk"
 
+/**
+ * CRON: Crawl Internal Guide Pages
+ *
+ * Indicizza le pagine /guida-* del sito 4bid.it nella knowledge_base
+ *
+ * SICUREZZA: Solo POST con header x-cron-secret o Authorization: Bearer
+ *
+ * COME TESTARE:
+ * curl -i -X POST "https://www.4bid.it/api/cron/crawl-internal-guides" ^
+ *   -H "x-cron-secret: IL_TUO_CRON_SECRET"
+ *
+ * GET non è supportato -> 405 Method Not Allowed
+ * POST senza header -> 401 Unauthorized
+ */
+
 const SITEMAP_URL = "https://www.4bid.it/sitemap.xml"
 
 // Keywords for guide pages
@@ -27,7 +42,6 @@ function getKeywordsForUrl(url: string): string[] {
 
 export async function POST(request: Request) {
   try {
-    // Verify cron secret
     const cronSecret =
       request.headers.get("x-cron-secret") || request.headers.get("authorization")?.replace("Bearer ", "")
 
@@ -189,26 +203,20 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error("[CrawlGuides] Fatal error:", error)
-    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        scanned: 0,
+        indexed: 0,
+        skipped: 0,
+        errors: 1,
+        details: [error.message || "Internal error"],
+      },
+      { status: 500 },
+    )
   }
 }
 
-// Also support GET for manual testing via browser (requires secret in query)
-export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const secret = url.searchParams.get("secret")
-
-  if (!secret || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // Create a fake request with the secret header
-  const fakeRequest = new Request(request.url, {
-    method: "POST",
-    headers: {
-      "x-cron-secret": secret,
-    },
-  })
-
-  return POST(fakeRequest)
+export async function GET() {
+  return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 })
 }
