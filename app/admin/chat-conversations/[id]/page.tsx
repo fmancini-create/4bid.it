@@ -7,8 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import AdminReplyForm from "@/components/admin-reply-form"
-
-const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
+import { formatDateIT } from "@/lib/date-utils"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -22,7 +21,7 @@ export default async function ConversationDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || user.email !== SUPER_ADMIN_EMAIL) {
+  if (!user || user.email !== "f.mancini@4bid.it") {
     redirect("/admin/login")
   }
 
@@ -92,25 +91,13 @@ export default async function ConversationDetailPage({ params }: PageProps) {
               <div>
                 <span className="text-muted-foreground">Iniziata:</span>
                 <p className="font-medium">
-                  {new Date(conversation.started_at).toLocaleString("it-IT", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateIT(conversation.started_at, { dateStyle: "long", timeStyle: "short" })}
                 </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Ultimo messaggio:</span>
                 <p className="font-medium">
-                  {new Date(conversation.last_message_at).toLocaleString("it-IT", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateIT(conversation.last_message_at, { dateStyle: "long", timeStyle: "short" })}
                 </p>
               </div>
             </div>
@@ -155,12 +142,7 @@ export default async function ConversationDetailPage({ params }: PageProps) {
                                   : "🤖 AI Assistant"}
                           </span>
                           <span className="text-xs opacity-70">
-                            {new Date(message.created_at).toLocaleString("it-IT", {
-                              day: "2-digit",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatDateIT(message.created_at, { dateStyle: "short", timeStyle: "short" })}
                           </span>
                         </div>
                         <p className="whitespace-pre-wrap text-sm">{message.content}</p>

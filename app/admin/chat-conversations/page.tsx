@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MessageSquare, TrendingUp, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { formatDateOnlyIT } from "@/lib/date-utils"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -152,12 +153,7 @@ export default async function ChatConversationsPage() {
                         <div className="flex items-center gap-2 text-[10px] sm:text-sm text-muted-foreground">
                           <span>{conversation.message_count} msg</span>
                           <span className="hidden sm:inline">•</span>
-                          <span>
-                            {new Date(conversation.last_message_at).toLocaleDateString("it-IT", {
-                              day: "2-digit",
-                              month: "short",
-                            })}
-                          </span>
+                          <span>{formatDateOnlyIT(conversation.last_message_at)}</span>
                         </div>
                       </div>
                       <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />

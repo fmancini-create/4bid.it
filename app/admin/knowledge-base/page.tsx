@@ -8,6 +8,7 @@ import Link from "next/link"
 import KnowledgeBaseActions from "@/components/knowledge-base-actions"
 import ExternalSiteCard from "@/components/external-site-card"
 import KnowledgeItemActions from "@/components/knowledge-item-actions"
+import { formatDateOnlyIT } from "@/lib/date-utils"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -229,13 +230,7 @@ export default async function KnowledgeBasePage() {
                           Sorgente
                         </a>
                       )}
-                      <span>
-                        Aggiornato:{" "}
-                        {new Date(item.updated_at).toLocaleDateString("it-IT", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
-                      </span>
+                      <span>Aggiornato: {formatDateOnlyIT(item.updated_at)}</span>
                     </div>
                   </div>
                   <KnowledgeItemActions item={item} />

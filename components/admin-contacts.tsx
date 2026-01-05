@@ -9,6 +9,7 @@ import { Mail, Phone, Calendar, User, Reply, ChevronDown, ChevronUp } from "luci
 import { createClient } from "@/lib/supabase/client"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { formatDateOnlyIT, formatDateTimeIT } from "@/lib/date-utils"
 
 type Contact = {
   id: string
@@ -125,7 +126,7 @@ export default function AdminContacts({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground hidden sm:inline">
-                        {new Date(contact.created_at).toLocaleDateString("it-IT")}
+                        {formatDateOnlyIT(contact.created_at)}
                       </span>
                       {expandedId === contact.id ? (
                         <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -157,10 +158,7 @@ export default function AdminContacts({
                         )}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          {new Date(contact.created_at).toLocaleString("it-IT", {
-                            dateStyle: "long",
-                            timeStyle: "short",
-                          })}
+                          {formatDateTimeIT(contact.created_at)}
                         </div>
                       </div>
 

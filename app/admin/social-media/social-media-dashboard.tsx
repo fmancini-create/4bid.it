@@ -24,6 +24,10 @@ import {
   ImageIcon,
   Loader2,
   Pencil,
+  FileText,
+  ExternalLink,
+  Eye,
+  Link2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,6 +47,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  formatDateOnlyIT,
+  formatDateTimeIT,
+  localDatetimeToUTC,
+  utcToLocalDatetime,
+  nowAsLocalDatetime,
+} from "@/lib/date-utils"
 
 interface SocialAccount {
   id: string
@@ -62,7 +74,7 @@ interface SocialPost {
   hashtags: string[] | null
   scheduled_for: string | null
   published_at: string | null
-  status: "draft" | "pending_approval" | "approved" | "scheduled" | "published" | "failed"
+  status: "draft" | "pending_approval" | "approved" | "scheduled" | "published" | "failed" | "pending_review"
   is_ai_generated: boolean
   ai_topic: string | null
   platforms: string[]
@@ -71,6 +83,7 @@ interface SocialPost {
   error_message: string | null
   created_at: string
   target_accounts?: string[] // Added target_accounts
+  link_url?: string | null // Added link_url
 }
 
 interface SocialSettings {
@@ -110,6 +123,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   scheduled: { label: "Programmato", color: "bg-blue-500", icon: Calendar },
   published: { label: "Pubblicato", color: "bg-emerald-500", icon: CheckCircle2 },
   failed: { label: "Errore", color: "bg-red-500", icon: AlertCircle },
+  pending_review: { label: "In revisione", color: "bg-orange-500", icon: FileText },
 }
 
 export default function SocialMediaDashboard({
@@ -128,6 +142,7 @@ export default function SocialMediaDashboard({
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // Added loading state
 
   const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
   const [manualPageId, setManualPageId] = useState("")
@@ -146,6 +161,7 @@ export default function SocialMediaDashboard({
     image_url: "",
     image_topic: "",
     image_style: "professional" as string,
+    link_url: "", // Added link_url
   })
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
@@ -207,42 +223,39 @@ export default function SocialMediaDashboard({
 
   const savePost = async () => {
     // Simplified savePost to align with the update's DialogFooter
+    if (!newPost.content || newPost.platforms.length === 0) return
+
+    setIsLoading(true)
     try {
-      if (newPost.platforms.length === 0) {
-        toast.error("Seleziona almeno una piattaforma")
-        return
-      }
+      const scheduledForUTC = newPost.scheduled_for ? localDatetimeToUTC(newPost.scheduled_for) : null
 
       // Determine status based on auto_publish and scheduled_for
-      let status: "draft" | "pending_approval" | "scheduled" = "draft"
-      if (newPost.auto_publish && newPost.scheduled_for) {
+      let status = "draft"
+      if (newPost.auto_publish && scheduledForUTC) {
         status = "scheduled"
-      } else if (newPost.auto_publish && !newPost.scheduled_for) {
-        // If auto_publish is true and no date is set, it should be scheduled for immediate publish or considered draft
-        // For simplicity, let's treat it as draft and rely on backend to handle immediate publish if needed
-        status = "draft" // Or handle as 'scheduled' for immediate publish
-      } else if (!newPost.auto_publish && newPost.scheduled_for) {
+      } else if (newPost.auto_publish && !scheduledForUTC) {
+        status = "pending_review"
+      } else if (!newPost.auto_publish && scheduledForUTC) {
         status = "scheduled"
-      } else if (!newPost.auto_publish && !newPost.scheduled_for) {
-        status = "pending_approval" // Default to pending if not auto-publishing and not scheduled
+      } else if (!newPost.auto_publish && !scheduledForUTC) {
+        status = "draft"
       }
 
-      // If content is empty, set to draft
-      if (!newPost.content) {
-        status = "draft"
+      const postData = {
+        content: newPost.content,
+        platforms: newPost.platforms,
+        status,
+        scheduled_for: scheduledForUTC,
+        auto_publish: newPost.auto_publish,
+        link_url: newPost.link_url || null,
+        image_url: newPost.image_url || null,
+        target_accounts: newPost.target_accounts.length > 0 ? newPost.target_accounts : null,
       }
 
       const response = await fetch("/api/social/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newPost,
-          status,
-          is_ai_generated: newPost.content.includes("#") && newPost.ai_topic !== "", // Simplified AI check
-          ai_topic: newPost.ai_topic,
-          image_url: newPost.image_url || null,
-          target_accounts: newPost.target_accounts || [], // Ensure target_accounts is an array
-        }),
+        body: JSON.stringify(postData),
       })
 
       if (!response.ok) throw new Error("Errore nel salvataggio")
@@ -260,12 +273,15 @@ export default function SocialMediaDashboard({
         image_url: "",
         image_topic: "",
         image_style: "professional",
+        link_url: "", // Reset link_url
       })
       toast.success("Post salvato!")
       router.refresh()
     } catch (error) {
       console.error("Save post error:", error)
       toast.error("Errore nel salvataggio")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -274,6 +290,8 @@ export default function SocialMediaDashboard({
 
     try {
       setIsGenerating(true)
+      const scheduledForUTC = editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
+
       const response = await fetch("/api/social/posts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -281,10 +299,11 @@ export default function SocialMediaDashboard({
           id: editingPost.id,
           content: editingPost.content,
           platforms: editingPost.platforms,
-          scheduled_for: editingPost.scheduled_for,
+          scheduled_for: scheduledForUTC,
           image_url: editingPost.image_url,
           target_accounts: editingPost.target_accounts,
           status: editingPost.status,
+          link_url: editingPost.link_url,
         }),
       })
 
@@ -423,8 +442,9 @@ export default function SocialMediaDashboard({
   }
 
   const pendingApproval = posts.filter((p) => p.status === "pending_approval")
-  const scheduled = posts.filter((p) => p.status === "scheduled" || p.status === "approved")
+  const scheduled = posts.filter((p) => p.status === "scheduled")
   const published = posts.filter((p) => p.status === "published")
+  const allPosts = posts
 
   return (
     <div className="min-h-screen bg-background">
@@ -682,7 +702,7 @@ export default function SocialMediaDashboard({
           </TabsContent>
 
           <TabsContent value="all" className="space-y-4 mt-4">
-            {posts.map((post) => (
+            {allPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -813,6 +833,17 @@ export default function SocialMediaDashboard({
               <p className="text-xs text-muted-foreground text-right">{newPost.content.length} / 2000 caratteri</p>
             </div>
 
+            {/* Link URL input */}
+            <div className="space-y-2">
+              <Label className="text-sm">Link (Opzionale)</Label>
+              <Input
+                placeholder="https://example.com"
+                value={newPost.link_url}
+                onChange={(e) => setNewPost((prev) => ({ ...prev, link_url: e.target.value }))}
+                className="text-sm"
+              />
+            </div>
+
             {/* Platform selection - Mobile optimized */}
             <div className="space-y-2">
               <Label className="text-sm">Piattaforme</Label>
@@ -899,7 +930,7 @@ export default function SocialMediaDashboard({
                 onCheckedChange={(checked) =>
                   setNewPost((prev) => ({
                     ...prev,
-                    scheduled_for: checked ? new Date().toISOString().slice(0, 16) : "",
+                    scheduled_for: checked ? nowAsLocalDatetime() : "",
                   }))
                 }
               />
@@ -921,11 +952,20 @@ export default function SocialMediaDashboard({
             </Button>
             <Button
               onClick={savePost}
-              disabled={!newPost.content || newPost.platforms.length === 0}
+              disabled={!newPost.content || newPost.platforms.length === 0 || isLoading}
               className="w-full sm:w-auto"
             >
-              <Send className="h-4 w-4 mr-2" />
-              {newPost.scheduled_for ? "Programma" : "Salva Bozza"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  {newPost.scheduled_for ? "Programma" : "Salva Bozza"}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -940,90 +980,92 @@ export default function SocialMediaDashboard({
           </DialogHeader>
 
           {settings && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Generazione automatica AI</p>
-                  <p className="text-sm text-muted-foreground">
-                    L'AI genera post ogni {settings.posting_frequency_days} giorni
-                  </p>
+            <ScrollArea className="h-[60vh] pr-4">
+              <div className="space-y-4 pr-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Generazione automatica AI</p>
+                    <p className="text-sm text-muted-foreground">
+                      L'AI genera post ogni {settings.posting_frequency_days} giorni
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.auto_generate_enabled}
+                    onCheckedChange={(checked) =>
+                      setSettings((prev) => (prev ? { ...prev, auto_generate_enabled: checked } : null))
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={settings.auto_generate_enabled}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => (prev ? { ...prev, auto_generate_enabled: checked } : null))
-                  }
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label>Frequenza pubblicazione</Label>
-                <Select
-                  value={String(settings.posting_frequency_days)}
-                  onValueChange={(value) =>
-                    setSettings((prev) => (prev ? { ...prev, posting_frequency_days: Number.parseInt(value) } : null))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Ogni giorno</SelectItem>
-                    <SelectItem value="2">Ogni 2 giorni</SelectItem>
-                    <SelectItem value="3">Ogni 3 giorni</SelectItem>
-                    <SelectItem value="7">Settimanale</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tono dei post</Label>
-                <Select
-                  value={settings.tone}
-                  onValueChange={(value) => setSettings((prev) => (prev ? { ...prev, tone: value } : null))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professionale</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                    <SelectItem value="inspirational">Inspirational</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Includi hashtag</p>
-                  <p className="text-sm text-muted-foreground">Aggiungi hashtag automaticamente</p>
+                <div className="space-y-2">
+                  <Label>Frequenza pubblicazione</Label>
+                  <Select
+                    value={String(settings.posting_frequency_days)}
+                    onValueChange={(value) =>
+                      setSettings((prev) => (prev ? { ...prev, posting_frequency_days: Number.parseInt(value) } : null))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Ogni giorno</SelectItem>
+                      <SelectItem value="2">Ogni 2 giorni</SelectItem>
+                      <SelectItem value="3">Ogni 3 giorni</SelectItem>
+                      <SelectItem value="7">Settimanale</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Switch
-                  checked={settings.include_hashtags}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => (prev ? { ...prev, include_hashtags: checked } : null))
-                  }
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label>Hashtag di default</Label>
-                <Input
-                  placeholder="#4BID #RevenueManagement"
-                  value={settings.default_hashtags.join(" ")}
-                  onChange={(e) =>
-                    setSettings((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            default_hashtags: e.target.value.split(" ").filter((h) => h.startsWith("#")),
-                          }
-                        : null,
-                    )
-                  }
-                />
+                <div className="space-y-2">
+                  <Label>Tono dei post</Label>
+                  <Select
+                    value={settings.tone}
+                    onValueChange={(value) => setSettings((prev) => (prev ? { ...prev, tone: value } : null))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionale</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                      <SelectItem value="inspirational">Inspirational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Includi hashtag</p>
+                    <p className="text-sm text-muted-foreground">Aggiungi hashtag automaticamente</p>
+                  </div>
+                  <Switch
+                    checked={settings.include_hashtags}
+                    onCheckedChange={(checked) =>
+                      setSettings((prev) => (prev ? { ...prev, include_hashtags: checked } : null))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hashtag di default</Label>
+                  <Input
+                    placeholder="#4BID #RevenueManagement"
+                    value={settings.default_hashtags.join(" ")}
+                    onChange={(e) =>
+                      setSettings((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              default_hashtags: e.target.value.split(" ").filter((h) => h.startsWith("#")),
+                            }
+                          : null,
+                      )
+                    }
+                  />
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
 
           <DialogFooter>
@@ -1081,9 +1123,6 @@ export default function SocialMediaDashboard({
                         } else if (platform === "linkedin") {
                           window.location.href = connectUrls.linkedin
                         } else {
-                          // For Instagram, direct to connect dialog as it uses Facebook OAuth
-                          // Alternatively, you could redirect to Facebook OAuth if that's how it's handled
-                          // For now, let's assume manual connection or a similar flow is desired if OAuth fails/isn't available
                           setShowManualConnect("instagram")
                         }
                       }}
@@ -1162,130 +1201,144 @@ export default function SocialMediaDashboard({
           </DialogHeader>
 
           {editingPost && (
-            <div className="space-y-4">
-              {/* Content */}
-              <div className="space-y-2">
-                <Label>Contenuto</Label>
-                <Textarea
-                  value={editingPost.content}
-                  onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
-                  rows={6}
-                  className="resize-none"
-                />
-              </div>
-
-              {/* Image */}
-              <div className="space-y-2">
-                <Label>Immagine</Label>
-                {editingPost.image_url ? (
-                  <div className="relative">
-                    <img
-                      src={editingPost.image_url || "/placeholder.svg"}
-                      alt="Post image"
-                      className="w-full max-h-48 object-cover rounded-lg"
-                    />
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="absolute top-2 right-2"
-                      onClick={() => setEditingPost({ ...editingPost, image_url: null })}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center text-muted-foreground">
-                    Nessuna immagine
-                  </div>
-                )}
-              </div>
-
-              {/* Platforms */}
-              <div className="space-y-2">
-                <Label>Piattaforme</Label>
-                <div className="flex flex-wrap gap-2">
-                  {["facebook", "instagram", "linkedin"].map((platform) => {
-                    const Icon = platformIcons[platform as keyof typeof platformIcons]
-                    const isSelected = editingPost.platforms.includes(platform)
-                    const account = accounts.find((a) => a.platform === platform && a.is_active)
-                    if (!account) return null
-                    return (
-                      <button
-                        key={platform}
-                        type="button"
-                        onClick={() => {
-                          const newPlatforms = isSelected
-                            ? editingPost.platforms.filter((p) => p !== platform)
-                            : [...editingPost.platforms, platform]
-                          setEditingPost({ ...editingPost, platforms: newPlatforms })
-                        }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                          isSelected
-                            ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
-                            : "border-border hover:border-primary"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="capitalize text-sm">{platform}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Schedule */}
-              <div className="space-y-2">
-                <Label>Programmazione</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    type="datetime-local"
-                    value={editingPost.scheduled_for ? editingPost.scheduled_for.slice(0, 16) : ""}
-                    onChange={(e) =>
-                      setEditingPost({
-                        ...editingPost,
-                        scheduled_for: e.target.value ? new Date(e.target.value).toISOString() : null,
-                        status: e.target.value ? "scheduled" : "draft",
-                      })
-                    }
-                    className="flex-1"
+            <ScrollArea className="h-[75vh] pr-4">
+              <div className="space-y-4 pr-4">
+                {/* Content */}
+                <div className="space-y-2">
+                  <Label>Contenuto</Label>
+                  <Textarea
+                    value={editingPost.content}
+                    onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                    rows={6}
+                    className="resize-none"
                   />
-                  {editingPost.scheduled_for && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setEditingPost({ ...editingPost, scheduled_for: null, status: "draft" })}
-                    >
-                      Rimuovi programmazione
-                    </Button>
+                </div>
+
+                {/* Image */}
+                <div className="space-y-2">
+                  <Label>Immagine</Label>
+                  {editingPost.image_url ? (
+                    <div className="relative">
+                      <img
+                        src={editingPost.image_url || "/placeholder.svg"}
+                        alt="Post image"
+                        className="w-full max-h-48 object-cover rounded-lg"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={() => setEditingPost({ ...editingPost, image_url: null })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center text-muted-foreground">
+                      Nessuna immagine
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {editingPost.scheduled_for
-                    ? `Programmato per: ${new Date(editingPost.scheduled_for).toLocaleString("it-IT")}`
-                    : "Nessuna programmazione - il post rimarrà in bozza"}
-                </p>
-              </div>
 
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
-                  Annulla
-                </Button>
-                <Button onClick={updatePost} disabled={isGenerating} className="flex-1 sm:flex-none">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvataggio...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Salva modifiche
-                    </>
+                {/* Link URL */}
+                <div className="space-y-2">
+                  <Label>Link</Label>
+                  <Input
+                    placeholder="https://example.com"
+                    value={editingPost.link_url || ""}
+                    onChange={(e) => setEditingPost({ ...editingPost, link_url: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+
+                {/* Platforms */}
+                <div className="space-y-2">
+                  <Label>Piattaforme</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["facebook", "instagram", "linkedin"].map((platform) => {
+                      const Icon = platformIcons[platform as keyof typeof platformIcons]
+                      const isSelected = editingPost.platforms.includes(platform)
+                      const account = accounts.find((a) => a.platform === platform && a.is_active)
+                      if (!account) return null
+                      return (
+                        <button
+                          key={platform}
+                          type="button"
+                          onClick={() => {
+                            const newPlatforms = isSelected
+                              ? editingPost.platforms.filter((p) => p !== platform)
+                              : [...editingPost.platforms, platform]
+                            setEditingPost({ ...editingPost, platforms: newPlatforms })
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                            isSelected
+                              ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                              : "border-border hover:border-primary"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="capitalize text-sm">{platform}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Schedule */}
+                <div className="space-y-2">
+                  <Label>Programmazione</Label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={editingPost.scheduled_for ? utcToLocalDatetime(editingPost.scheduled_for) : ""}
+                      onChange={(e) =>
+                        setEditingPost({
+                          ...editingPost,
+                          scheduled_for: e.target.value ? localDatetimeToUTC(e.target.value) : null,
+                        })
+                      }
+                      className="flex-1"
+                    />
+                    {editingPost.scheduled_for && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingPost({ ...editingPost, scheduled_for: null })}
+                      >
+                        Rimuovi programmazione
+                      </Button>
+                    )}
+                  </div>
+                  {editingPost.scheduled_for && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {editingPost.scheduled_for
+                        ? `Programmato per: ${formatDateTimeIT(editingPost.scheduled_for)}`
+                        : "Non programmato"}
+                    </p>
                   )}
-                </Button>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
+                    Annulla
+                  </Button>
+                  <Button onClick={updatePost} disabled={isGenerating} className="flex-1 sm:flex-none">
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Salvataggio...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Salva modifiche
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
@@ -1310,7 +1363,7 @@ function PostCard({
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
-  const canEdit = ["draft", "scheduled", "pending_approval", "approved"].includes(post.status)
+  const canEdit = ["draft", "pending_review", "scheduled", "pending_approval", "approved"].includes(post.status)
 
   return (
     <Card>
@@ -1360,13 +1413,27 @@ function PostCard({
             />
           )}
 
+          {/* Link */}
+          {post.link_url && (
+            <a
+              href={post.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              {post.link_url.replace(/https?:\/\//, "").split("/")[0]}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+
           {/* Meta - stacked on mobile */}
           <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5 sm:space-y-0 sm:flex sm:gap-4">
-            <span>{new Date(post.created_at).toLocaleDateString("it-IT")}</span>
+            <span>{formatDateOnlyIT(post.created_at)}</span>
             {post.scheduled_for && (
-              <span className="text-blue-500 font-medium">
-                Progr:{" "}
-                {new Date(post.scheduled_for).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}
+              <span className="flex items-center gap-1 text-amber-600">
+                <Clock className="h-3 w-3" />
+                {formatDateTimeIT(post.scheduled_for)}
               </span>
             )}
           </div>
@@ -1409,6 +1476,16 @@ function PostCard({
                 className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+            {post.status === "failed" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => alert(`Errore: ${post.error_message}`)}
+                className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <Eye className="h-3 w-3" />
               </Button>
             )}
           </div>
