@@ -16,7 +16,6 @@ import {
   Send,
   Settings,
   RefreshCw,
-  Edit2,
   Trash2,
   ArrowLeft,
   AlertCircle,
@@ -117,7 +116,7 @@ const platformColors = {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  draft: { label: "Bozza", color: "bg-gray-500", icon: Edit2 },
+  draft: { label: "Bozza", color: "bg-gray-500", icon: FileText }, // Changed icon to FileText for drafts
   pending_approval: { label: "Da approvare", color: "bg-yellow-500", icon: Clock },
   approved: { label: "Approvato", color: "bg-green-500", icon: Check },
   scheduled: { label: "Programmato", color: "bg-blue-500", icon: Calendar },
@@ -445,6 +444,7 @@ export default function SocialMediaDashboard({
   const scheduled = posts.filter((p) => p.status === "scheduled")
   const published = posts.filter((p) => p.status === "published")
   const allPosts = posts
+  const drafts = posts.filter((p) => p.status === "draft") // New filter for drafts
 
   return (
     <div className="min-h-screen bg-background">
@@ -629,8 +629,17 @@ export default function SocialMediaDashboard({
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
+        <Tabs defaultValue="drafts" className="w-full">
+          {" "}
+          {/* Changed defaultValue to "drafts" */}
+          <TabsList className="w-full grid grid-cols-5 h-9 sm:h-10">
+            {" "}
+            {/* Changed grid-cols-4 to grid-cols-5 */}
+            <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
+              {" "}
+              {/* New tab for drafts */}
+              Bozze
+            </TabsTrigger>
             <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 px-1">
               Approv.
             </TabsTrigger>
@@ -644,7 +653,26 @@ export default function SocialMediaDashboard({
               Tutti
             </TabsTrigger>
           </TabsList>
-
+          <TabsContent value="drafts" className="space-y-4 mt-4">
+            {drafts.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /> {/* Use FileText icon for drafts */}
+                  <p>Nessuna bozza</p>
+                </CardContent>
+              </Card>
+            ) : (
+              drafts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onPublish={() => publishNow(post.id)} // Publish button available for drafts
+                  onReject={() => rejectPost(post.id)}
+                  onEdit={() => openEditDialog(post)}
+                />
+              ))
+            )}
+          </TabsContent>
           <TabsContent value="pending" className="space-y-4 mt-4">
             {pendingApproval.length === 0 ? (
               <Card>
@@ -666,7 +694,6 @@ export default function SocialMediaDashboard({
               ))
             )}
           </TabsContent>
-
           <TabsContent value="scheduled" className="space-y-4 mt-4">
             {scheduled.length === 0 ? (
               <Card>
@@ -687,7 +714,6 @@ export default function SocialMediaDashboard({
               ))
             )}
           </TabsContent>
-
           <TabsContent value="published" className="space-y-4 mt-4">
             {published.length === 0 ? (
               <Card>
@@ -700,7 +726,6 @@ export default function SocialMediaDashboard({
               published.map((post) => <PostCard key={post.id} post={post} onEdit={() => openEditDialog(post)} />)
             )}
           </TabsContent>
-
           <TabsContent value="all" className="space-y-4 mt-4">
             {allPosts.map((post) => (
               <PostCard
@@ -708,7 +733,9 @@ export default function SocialMediaDashboard({
                 post={post}
                 onApprove={post.status === "pending_approval" ? () => approvePost(post.id) : undefined}
                 onReject={() => rejectPost(post.id)}
-                onPublish={["approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined}
+                onPublish={
+                  ["draft", "approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined
+                } // Updated to include "draft"
                 onEdit={() => openEditDialog(post)} // Added onEdit
               />
             ))}
