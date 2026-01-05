@@ -1,5 +1,5 @@
 // LinkedIn API helper functions
-// Aggiornato alle nuove Community Management API (v2 REST)
+// Usa le API v2 per profilo personale (w_member_social)
 
 interface LinkedInPostResult {
   success: boolean
@@ -7,9 +7,7 @@ interface LinkedInPostResult {
   error?: string
 }
 
-const LINKEDIN_API_VERSION = "202401"
-
-// Pubblica su profilo personale usando le nuove API
+// Le nuove REST API richiedono scope w_organization_social non ancora approvato
 export async function publishToLinkedIn(
   accessToken: string,
   personUrn: string,
@@ -17,27 +15,32 @@ export async function publishToLinkedIn(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
+    // Usa le API UGC v2 che funzionano con w_member_social
     const postBody = {
       author: `urn:li:person:${personUrn}`,
-      commentary: content,
-      visibility: "PUBLIC",
-      distribution: {
-        feedDistribution: "MAIN_FEED",
-        targetEntities: [],
-        thirdPartyDistributionChannels: [],
-      },
       lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content,
+          },
+          shareMediaCategory: "NONE",
+        },
+      },
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+      },
     }
 
-    console.log("[v0] LinkedIn: Publishing post to personal profile with body:", JSON.stringify(postBody, null, 2))
+    console.log("[v0] LinkedIn: Publishing post to personal profile")
+    console.log("[v0] LinkedIn: Person URN:", personUrn)
 
-    const response = await fetch("https://api.linkedin.com/rest/posts", {
+    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0",
-        "LinkedIn-Version": LINKEDIN_API_VERSION, // Header versione obbligatorio
       },
       body: JSON.stringify(postBody),
     })
@@ -50,7 +53,7 @@ export async function publishToLinkedIn(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`
       try {
         const errorData = JSON.parse(responseText)
-        errorMessage = errorData.message || errorData.error || errorMessage
+        errorMessage = errorData.message || errorData.error || JSON.stringify(errorData)
       } catch {}
       return {
         success: false,
@@ -58,11 +61,15 @@ export async function publishToLinkedIn(
       }
     }
 
-    const postId = response.headers.get("x-restli-id") || (responseText ? JSON.parse(responseText).id : null)
+    let postId = "published"
+    try {
+      const data = JSON.parse(responseText)
+      postId = data.id || postId
+    } catch {}
 
     return {
       success: true,
-      postId: postId || "published",
+      postId,
     }
   } catch (error) {
     console.error("[v0] LinkedIn publish error:", error)
@@ -74,6 +81,7 @@ export async function publishToLinkedIn(
 }
 
 // Pubblica su una pagina aziendale LinkedIn (Organization)
+// NOTA: Richiede scope w_organization_social (Community Management API)
 export async function publishToLinkedInOrganization(
   accessToken: string,
   organizationId: string,
@@ -81,27 +89,31 @@ export async function publishToLinkedInOrganization(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
+    // Usa le API UGC v2 anche per organization
     const postBody = {
       author: `urn:li:organization:${organizationId}`,
-      commentary: content,
-      visibility: "PUBLIC",
-      distribution: {
-        feedDistribution: "MAIN_FEED",
-        targetEntities: [],
-        thirdPartyDistributionChannels: [],
-      },
       lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content,
+          },
+          shareMediaCategory: "NONE",
+        },
+      },
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+      },
     }
 
     console.log("[v0] LinkedIn: Publishing to organization:", organizationId)
 
-    const response = await fetch("https://api.linkedin.com/rest/posts", {
+    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0",
-        "LinkedIn-Version": LINKEDIN_API_VERSION,
       },
       body: JSON.stringify(postBody),
     })
@@ -114,7 +126,7 @@ export async function publishToLinkedInOrganization(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`
       try {
         const errorData = JSON.parse(responseText)
-        errorMessage = errorData.message || errorData.error || errorMessage
+        errorMessage = errorData.message || errorData.error || JSON.stringify(errorData)
       } catch {}
       console.error("[v0] LinkedIn Organization API error:", errorMessage)
       return {
@@ -123,11 +135,15 @@ export async function publishToLinkedInOrganization(
       }
     }
 
-    const postId = response.headers.get("x-restli-id") || (responseText ? JSON.parse(responseText).id : null)
+    let postId = "published"
+    try {
+      const data = JSON.parse(responseText)
+      postId = data.id || postId
+    } catch {}
 
     return {
       success: true,
-      postId: postId || "published",
+      postId,
     }
   } catch (error) {
     console.error("[v0] LinkedIn Organization publish error:", error)
@@ -145,34 +161,17 @@ export async function publishToLinkedInWithFallback(
   content: string,
   imageUrl?: string,
 ): Promise<LinkedInPostResult & { publishedAs?: "organization" | "personal" }> {
-  // Prima prova con la pagina aziendale
-  console.log("[v0] LinkedIn: Attempting to publish to organization:", organizationId)
-  const orgResult = await publishToLinkedInOrganization(accessToken, organizationId, content, imageUrl)
+  // Finché non abbiamo w_organization_social, non provare nemmeno con organization
+  console.log("[v0] LinkedIn: Publishing to personal profile (organization requires w_organization_social scope)")
+  console.log("[v0] LinkedIn: Person URN:", personUrn)
 
-  if (orgResult.success) {
-    console.log("[v0] LinkedIn: Successfully published to organization")
-    return { ...orgResult, publishedAs: "organization" }
-  }
-
-  // Se errore 403 (ACCESS_DENIED) o 401 o 400, prova con il profilo personale
-  if (
-    orgResult.error?.includes("403") ||
-    orgResult.error?.includes("401") ||
-    orgResult.error?.includes("ACCESS_DENIED") ||
-    orgResult.error?.includes("Not enough permissions")
-  ) {
-    console.log("[v0] LinkedIn: Organization access denied, falling back to personal profile. Person URN:", personUrn)
-
-    if (!personUrn) {
-      return {
-        success: false,
-        error: "Impossibile pubblicare: nessun permesso sulla pagina aziendale e nessun profilo personale configurato",
-      }
+  if (!personUrn) {
+    return {
+      success: false,
+      error: "Nessun profilo personale configurato. Riconnetti l'account LinkedIn.",
     }
-
-    const personalResult = await publishToLinkedIn(accessToken, personUrn, content, imageUrl)
-    return { ...personalResult, publishedAs: "personal" }
   }
 
-  return orgResult
+  const personalResult = await publishToLinkedIn(accessToken, personUrn, content, imageUrl)
+  return { ...personalResult, publishedAs: "personal" }
 }
