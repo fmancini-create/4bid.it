@@ -89,20 +89,27 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background border-b border-border px-4 sm:px-8 py-3 sm:py-4">
+      <div
+        className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background border-b border-border px-3 sm:px-8 py-2 sm:py-4"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
+      >
         <div className="flex justify-between items-center gap-2">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">Pannello Amministrativo</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-              <span className="hidden sm:inline">Connesso come: </span>
-              <span className="font-semibold">{user.email}</span>
+          <div className="min-w-0 ml-12 lg:ml-0">
+            <h1 className="text-sm sm:text-xl font-bold text-foreground truncate">Pannello Admin</h1>
+            <p className="text-xs text-muted-foreground truncate">
+              <span className="font-semibold">{user.email?.split("@")[0]}</span>
             </p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-1 sm:gap-2 shrink-0">
             <form action="/admin" method="get">
-              <Button type="submit" variant="outline" size="sm" className="h-8 sm:h-9 px-2 sm:px-3 bg-transparent">
-                <span className="hidden sm:inline mr-2">Aggiorna</span>
-                <RefreshCw className="h-4 w-4 sm:hidden" />
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 sm:w-auto px-0 sm:px-3 bg-transparent"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Aggiorna</span>
               </Button>
             </form>
             <form
@@ -113,9 +120,9 @@ export default async function AdminPage() {
                 redirect("/admin/login")
               }}
             >
-              <Button type="submit" variant="destructive" size="sm" className="h-8 sm:h-9 px-2 sm:px-3">
+              <Button type="submit" variant="destructive" size="sm" className="h-8 w-8 sm:w-auto px-0 sm:px-3">
                 <span className="hidden sm:inline">Esci</span>
-                <span className="sm:hidden">X</span>
+                <span className="sm:hidden text-xs">X</span>
               </Button>
             </form>
           </div>
@@ -124,24 +131,22 @@ export default async function AdminPage() {
 
       <AdminNavigation userEmail={user.email || ""} />
 
-      <div className="lg:ml-64 pt-20 sm:pt-24 container mx-auto p-4 sm:p-8 space-y-8 sm:space-y-16">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
-            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Visite Ieri ({yesterdayStr})</h3>
-            <p className="text-xl sm:text-2xl font-bold text-foreground">{totalYesterdayViews}</p>
-            {totalYesterdayViews === 0 && (
-              <p className="text-xs text-amber-500 mt-1">Nessun dato - snapshot mancante?</p>
-            )}
+      <div
+        className="lg:ml-64 pt-14 sm:pt-24 container mx-auto p-3 sm:p-8 space-y-6 sm:space-y-16"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 1rem)" }}
+      >
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+          <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+            <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">Visite Ieri</h3>
+            <p className="text-base sm:text-2xl font-bold text-foreground">{totalYesterdayViews}</p>
+            {totalYesterdayViews === 0 && <p className="text-[10px] text-amber-500 truncate">Nessun dato</p>}
           </div>
-          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
-            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Ultimo Snapshot</h3>
-            <p className="text-xl sm:text-2xl font-bold text-foreground">{lastSnapshotDate}</p>
-            {lastSnapshotDate !== yesterdayStr && lastSnapshotDate !== "Mai" && (
-              <p className="text-xs text-amber-500 mt-1">Non aggiornato</p>
-            )}
+          <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+            <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">Snapshot</h3>
+            <p className="text-base sm:text-2xl font-bold text-foreground truncate">{lastSnapshotDate}</p>
           </div>
-          <div className="bg-card border border-border rounded-lg p-3 sm:p-4">
-            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Azioni</h3>
+          <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
+            <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5">Azioni</h3>
             <TriggerSnapshotButton />
           </div>
         </div>

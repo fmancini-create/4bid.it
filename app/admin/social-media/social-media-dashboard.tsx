@@ -22,7 +22,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ImageIcon,
-  Menu,
   Loader2,
   Pencil,
 } from "lucide-react"
@@ -43,12 +42,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu, // Added DropdownMenu
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 
 interface SocialAccount {
@@ -435,114 +428,102 @@ export default function SocialMediaDashboard({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+      <header
+        className="sticky top-0 z-50 bg-background border-b border-border"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
+        <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              <Button variant="ghost" size="icon" asChild className="shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="icon" asChild className="shrink-0 h-9 w-9">
                 <a href="/admin">
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </a>
               </Button>
               <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold truncate">Gestione Social Media</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                  Genera e pubblica contenuti con AI
+                <h1 className="text-base sm:text-2xl font-bold truncate">Social Media</h1>
+                <p className="text-[10px] sm:text-sm text-muted-foreground truncate hidden sm:block">
+                  Gestisci e programma i tuoi post
                 </p>
               </div>
             </div>
-            {/* Desktop buttons */}
-            <div className="hidden sm:flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Impostazioni
+            <div className="flex gap-1.5 sm:gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettingsDialog(true)}
+                className="h-8 w-8 sm:w-auto px-0 sm:px-3 bg-transparent"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Impostazioni</span>
               </Button>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuovo Post
-              </Button>
-            </div>
-            {/* Mobile dropdown menu */}
-            <div className="flex sm:hidden items-center gap-2">
-              <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-8 px-2 sm:px-4">
                 <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Nuovo Post</span>
+                <span className="sm:hidden ml-1 text-xs">Post</span>
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Impostazioni
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowConnectDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Collega Account
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+      <main
+        className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Da Approvare</p>
-                  <p className="text-xl sm:text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Da Approvare</p>
+                  <p className="text-lg sm:text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
                 </div>
-                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />
+                <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Programmati</p>
-                  <p className="text-xl sm:text-3xl font-bold text-blue-500">{scheduled.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Programmati</p>
+                  <p className="text-lg sm:text-3xl font-bold text-blue-500">{scheduled.length}</p>
                 </div>
-                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+                <Calendar className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Pubblicati</p>
-                  <p className="text-xl sm:text-3xl font-bold text-emerald-500">{published.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Pubblicati</p>
+                  <p className="text-lg sm:text-3xl font-bold text-emerald-500">{published.length}</p>
                 </div>
-                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-500" />
+                <CheckCircle2 className="h-5 w-5 sm:h-8 sm:w-8 text-emerald-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Account</p>
-                  <p className="text-xl sm:text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Account</p>
+                  <p className="text-lg sm:text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
                 </div>
-                <div className="flex -space-x-1 sm:-space-x-2">
+                <div className="flex -space-x-1">
                   {["facebook", "instagram", "linkedin"].map((platform) => {
                     const Icon = platformIcons[platform as keyof typeof platformIcons]
                     const isConnected = accounts.some((a) => a.platform === platform && a.is_active)
                     return (
                       <div
                         key={platform}
-                        className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
+                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${
                           isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-300"
                         }`}
                       >
-                        <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-white" />
+                        <Icon className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
                       </div>
                     )
                   })}
@@ -556,49 +537,51 @@ export default function SocialMediaDashboard({
           <CardHeader className="p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-base sm:text-lg">Account Social Collegati</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Collega i tuoi account per pubblicare</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Account Collegati</CardTitle>
+                <CardDescription className="text-xs sm:text-sm hidden sm:block">
+                  Collega i tuoi account per pubblicare
+                </CardDescription>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowConnectDialog(true)}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto h-8 text-xs sm:text-sm"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Collega Account
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                Collega
               </Button>
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="flex flex-col sm:grid sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
               {["facebook", "instagram", "linkedin"].map((platform) => {
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
                 const platformAccounts = accounts.filter((a) => a.platform === platform)
                 const isConnected = platformAccounts.some((a) => a.is_active)
                 const displayName =
                   platform === "linkedin" && isConnected
-                    ? `${platformAccounts[0]?.account_name || platform} (Pagina Aziendale)`
+                    ? `${platformAccounts[0]?.account_name || platform} (Pagina)`
                     : platformAccounts[0]?.account_name || platform
 
                 return (
                   <div
                     key={platform}
-                    className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border ${
+                    className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border ${
                       isConnected ? "border-primary bg-primary/5" : "border-dashed"
                     }`}
                   >
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div
-                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
+                        className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
                           isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-200"
                         }`}
                       >
-                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
+                        <Icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium capitalize text-sm sm:text-base">{platform}</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[120px] sm:max-w-none">
+                        <p className="font-medium capitalize text-xs sm:text-base">{platform}</p>
+                        <p className="text-[10px] sm:text-sm text-muted-foreground truncate max-w-[100px] sm:max-w-none">
                           {isConnected ? displayName : "Non collegato"}
                         </p>
                       </div>
@@ -612,13 +595,12 @@ export default function SocialMediaDashboard({
                         } else if (platform === "linkedin") {
                           window.location.href = "/api/social/connect/linkedin"
                         } else {
-                          // For Instagram, direct to connect dialog, as it uses Facebook OAuth
                           setShowConnectDialog(true)
                         }
                       }}
-                      className="shrink-0 text-xs sm:text-sm"
+                      className="shrink-0 text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-3"
                     >
-                      {isConnected ? "Riconnetti" : "Collega"}
+                      {isConnected ? "Riconn." : "Collega"}
                     </Button>
                   </div>
                 )
@@ -628,20 +610,17 @@ export default function SocialMediaDashboard({
         </Card>
 
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-auto">
-            <TabsTrigger value="pending" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
-              <span className="hidden sm:inline">Da Approvare</span>
-              <span className="sm:hidden">Approvare</span>
+          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
+            <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Approv.
             </TabsTrigger>
-            <TabsTrigger value="scheduled" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
-              <span className="hidden sm:inline">Programmati</span>
-              <span className="sm:hidden">Program.</span>
+            <TabsTrigger value="scheduled" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Progr.
             </TabsTrigger>
-            <TabsTrigger value="published" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
-              <span className="hidden sm:inline">Pubblicati</span>
-              <span className="sm:hidden">Pubbl.</span>
+            <TabsTrigger value="published" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Pubbl.
             </TabsTrigger>
-            <TabsTrigger value="all" className="text-xs sm:text-sm py-2 px-1 sm:px-4">
+            <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 px-1">
               Tutti
             </TabsTrigger>
           </TabsList>
@@ -1335,113 +1314,101 @@ function PostCard({
 
   return (
     <Card>
-      <CardContent className="p-3 sm:p-6 sm:pt-6">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <div className="flex-1 space-y-2 sm:space-y-3">
-            {/* Status & Platforms */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className={`${status.color} text-white text-xs`}>
-                <StatusIcon className="h-3 w-3 mr-1" />
+      <CardContent className="p-2.5 sm:p-6 sm:pt-6">
+        <div className="space-y-2 sm:space-y-3">
+          {/* Status & Platforms - compact on mobile */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge className={`${status.color} text-white text-[10px] sm:text-xs py-0 h-5`}>
+                <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                 {status.label}
               </Badge>
               {post.is_ai_generated && (
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500 text-xs">
-                  <Sparkles className="h-3 w-3 mr-1" />
+                <Badge
+                  variant="outline"
+                  className="bg-purple-500/10 text-purple-600 border-purple-500 text-[10px] sm:text-xs py-0 h-5"
+                >
+                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />
                   AI
                 </Badge>
               )}
-              <div className="flex gap-1 ml-auto">
-                {post.platforms.map((platform) => {
-                  const Icon = platformIcons[platform as keyof typeof platformIcons]
-                  return (
-                    <div
-                      key={platform}
-                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
-                    >
-                      <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
-                    </div>
-                  )
-                })}
-              </div>
             </div>
-
-            {/* Content */}
-            <p className="text-xs sm:text-sm whitespace-pre-wrap line-clamp-4 sm:line-clamp-none">{post.content}</p>
-
-            {/* Image */}
-            {post.image_url && (
-              <div className="mt-2 sm:mt-4">
-                <img
-                  src={post.image_url || "/placeholder.svg"}
-                  alt="Generated Image"
-                  className="w-full max-h-48 sm:max-h-none object-cover rounded-lg"
-                />
-              </div>
-            )}
-
-            {/* Meta - Stacked on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
-              <span>Creato: {new Date(post.created_at).toLocaleString("it-IT")}</span>
-              {post.scheduled_for && (
-                <span className="flex items-center gap-1 text-blue-600">
-                  <Calendar className="h-3 w-3" />
-                  Programmato: {new Date(post.scheduled_for).toLocaleString("it-IT")}
-                </span>
-              )}
-              {post.published_at && (
-                <span className="flex items-center gap-1 text-green-600">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Pubblicato: {new Date(post.published_at).toLocaleString("it-IT")}
-                </span>
-              )}
+            <div className="flex gap-0.5">
+              {post.platforms.map((platform) => {
+                const Icon = platformIcons[platform as keyof typeof platformIcons]
+                return (
+                  <div
+                    key={platform}
+                    className={`w-5 h-5 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                  >
+                    <Icon className="h-2.5 w-2.5 text-white" />
+                  </div>
+                )
+              })}
             </div>
+          </div>
 
-            {/* Error */}
-            {post.error_message && (
-              <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-600">
-                {post.error_message}
-              </div>
+          {/* Content - truncated on mobile */}
+          <p className="text-xs sm:text-sm whitespace-pre-wrap line-clamp-3 sm:line-clamp-none">{post.content}</p>
+
+          {/* Image - smaller on mobile */}
+          {post.image_url && (
+            <img
+              src={post.image_url || "/placeholder.svg"}
+              alt="Generated Image"
+              className="w-full h-32 sm:h-48 object-cover rounded-lg"
+            />
+          )}
+
+          {/* Meta - stacked on mobile */}
+          <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5 sm:space-y-0 sm:flex sm:gap-4">
+            <span>{new Date(post.created_at).toLocaleDateString("it-IT")}</span>
+            {post.scheduled_for && (
+              <span className="text-blue-500 font-medium">
+                Progr:{" "}
+                {new Date(post.scheduled_for).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}
+              </span>
             )}
           </div>
 
-          <div className="flex sm:flex-col gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4 border-border">
+          {/* Actions - full width buttons on mobile */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {canEdit && onEdit && (
               <Button
-                size="sm"
                 variant="outline"
-                className="text-blue-600 border-blue-600 bg-transparent flex-1 sm:flex-none h-9"
+                size="sm"
                 onClick={onEdit}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs bg-transparent"
               >
-                <Pencil className="h-4 w-4 sm:mr-0" />
-                <span className="sm:hidden ml-2">Modifica</span>
+                <Pencil className="h-3 w-3 mr-1" />
+                Modifica
               </Button>
             )}
             {onApprove && (
               <Button
-                size="sm"
                 variant="outline"
-                className="text-green-600 border-green-600 bg-transparent flex-1 sm:flex-none h-9"
+                size="sm"
                 onClick={onApprove}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs text-green-600 border-green-600 hover:bg-green-50 bg-transparent"
               >
-                <Check className="h-4 w-4 sm:mr-0" />
-                <span className="sm:hidden ml-2">Approva</span>
+                <Check className="h-3 w-3 mr-1" />
+                Approva
               </Button>
             )}
             {onPublish && (
-              <Button size="sm" onClick={onPublish} className="flex-1 sm:flex-none h-9">
-                <Send className="h-4 w-4 sm:mr-0" />
-                <span className="sm:hidden ml-2">Pubblica</span>
+              <Button size="sm" onClick={onPublish} className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs">
+                <Send className="h-3 w-3 mr-1" />
+                Pubblica
               </Button>
             )}
             {onReject && (
               <Button
+                variant="ghost"
                 size="sm"
-                variant="outline"
-                className="text-red-600 border-red-600 bg-transparent flex-1 sm:flex-none h-9"
                 onClick={onReject}
+                className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4 sm:mr-0" />
-                <span className="sm:hidden ml-2">Elimina</span>
+                <Trash2 className="h-3 w-3" />
               </Button>
             )}
           </div>

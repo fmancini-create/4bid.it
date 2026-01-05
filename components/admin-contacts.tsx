@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Phone, Calendar, User, LogOut, RefreshCw, Reply } from "lucide-react"
+import { Mail, Phone, Calendar, User, Reply, ChevronDown, ChevronUp } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -32,12 +32,7 @@ export default function AdminContacts({
   const [replyingTo, setReplyingTo] = useState<Contact | null>(null)
   const [replyMessage, setReplyMessage] = useState("")
   const [sendingReply, setSendingReply] = useState(false)
-
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/admin/login")
-  }
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const handleMarkAsRead = async (id: string) => {
     const supabase = createClient()
@@ -46,10 +41,6 @@ export default function AdminContacts({
     if (!error) {
       setContacts((prev) => prev.map((contact) => (contact.id === id ? { ...contact, read: true } : contact)))
     }
-  }
-
-  const handleRefresh = () => {
-    router.refresh()
   }
 
   const handleReply = async () => {
@@ -85,153 +76,167 @@ export default function AdminContacts({
   const unreadCount = contacts.filter((c) => !c.read).length
 
   return (
-    <div className="container mx-auto">
-      <div className="fixed top-0 left-0 right-0 bg-white p-4 shadow z-50">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Pannello Amministrativo</h1>
-            <p className="text-gray-600">
-              Connesso come: <span className="font-semibold">{userEmail}</span>
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Aggiorna
-            </Button>
-            <Button onClick={handleSignOut} variant="destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              Esci
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 mt-20">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Stats row - mobile optimized */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Totale Contatti</p>
-                <p className="text-3xl font-bold text-gray-800">{contacts.length}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Non Letti</p>
-                <p className="text-3xl font-bold text-orange-600">{unreadCount}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Letti</p>
-                <p className="text-3xl font-bold text-green-600">{contacts.length - unreadCount}</p>
-              </div>
-            </div>
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Totale</p>
+            <p className="text-xl sm:text-3xl font-bold">{contacts.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Non Letti</p>
+            <p className="text-xl sm:text-3xl font-bold text-orange-600">{unreadCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Letti</p>
+            <p className="text-xl sm:text-3xl font-bold text-green-600">{contacts.length - unreadCount}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Messaggi Ricevuti</h2>
+      {/* Contacts list */}
+      <Card>
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+          <CardTitle className="text-base sm:text-lg">Messaggi Ricevuti</CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 sm:px-6 py-0 pb-3 sm:pb-6">
+          {contacts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Nessun contatto ricevuto ancora.</div>
+          ) : (
+            <div className="space-y-3">
+              {contacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className={`border rounded-lg overflow-hidden ${!contact.read ? "border-l-4 border-l-blue-600" : ""}`}
+                >
+                  <button
+                    onClick={() => setExpandedId(expandedId === contact.id ? null : contact.id)}
+                    className="w-full p-3 sm:p-4 flex items-center justify-between text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="font-semibold text-sm sm:text-base truncate">{contact.name}</span>
+                      {!contact.read && <Badge className="shrink-0 text-xs">Nuovo</Badge>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        {new Date(contact.created_at).toLocaleDateString("it-IT")}
+                      </span>
+                      {expandedId === contact.id ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
 
-        {contacts.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-gray-500">Nessun contatto ricevuto ancora.</CardContent>
-          </Card>
-        ) : (
-          contacts.map((contact) => (
-            <Card key={contact.id} className={contact.read ? "opacity-75" : "border-l-4 border-l-blue-600"}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    {contact.name}
-                    {!contact.read && (
-                      <Badge variant="default" className="ml-2">
-                        Nuovo
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setReplyingTo(contact)}
-                      size="sm"
-                      variant="default"
-                      className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
-                    >
-                      <Reply className="w-4 h-4 mr-2" />
-                      Rispondi
-                    </Button>
-                    {!contact.read && (
-                      <Button onClick={() => handleMarkAsRead(contact.id)} size="sm" variant="outline">
-                        Segna come letto
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
-                      {contact.email}
-                    </a>
-                  </div>
-                  {contact.phone && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Phone className="w-4 h-4" />
-                      <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
-                        {contact.phone}
-                      </a>
+                  {expandedId === contact.id && (
+                    <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-3 border-t">
+                      {/* Contact info */}
+                      <div className="pt-3 space-y-2">
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                        >
+                          <Mail className="h-4 w-4" />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                        {contact.phone && (
+                          <a
+                            href={`tel:${contact.phone}`}
+                            className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {contact.phone}
+                          </a>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(contact.created_at).toLocaleString("it-IT", {
+                            dateStyle: "long",
+                            timeStyle: "short",
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Message */}
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Messaggio:</p>
+                        <p className="text-sm whitespace-pre-wrap">{contact.message}</p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button onClick={() => setReplyingTo(contact)} size="sm" className="flex-1 sm:flex-none">
+                          <Reply className="h-4 w-4 mr-2" />
+                          Rispondi
+                        </Button>
+                        {!contact.read && (
+                          <Button
+                            onClick={() => handleMarkAsRead(contact.id)}
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 sm:flex-none bg-transparent"
+                          >
+                            Segna letto
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(contact.created_at).toLocaleString("it-IT", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })}
-                </div>
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Messaggio:</p>
-                  <p className="text-gray-800 whitespace-pre-wrap">{contact.message}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      {/* Reply Dialog */}
       <Dialog open={!!replyingTo} onOpenChange={() => setReplyingTo(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Rispondi a {replyingTo?.name}</DialogTitle>
-            <DialogDescription>Invia una risposta via email a {replyingTo?.email}</DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Rispondi a {replyingTo?.name}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm truncate">
+              Invia una risposta via email a {replyingTo?.email}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm font-medium text-gray-700 mb-2">Messaggio originale:</p>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{replyingTo?.message}</p>
+            <div className="bg-muted/50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm font-medium mb-2">Messaggio originale:</p>
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {replyingTo?.message}
+              </p>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">La tua risposta:</label>
+              <label className="text-xs sm:text-sm font-medium mb-2 block">La tua risposta:</label>
               <Textarea
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
                 placeholder="Scrivi qui la tua risposta..."
-                rows={8}
+                rows={6}
+                className="text-base" // 16px font to prevent iOS zoom
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setReplyingTo(null)}>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setReplyingTo(null)}
+                className="flex-1 sm:flex-none bg-transparent"
+              >
                 Annulla
               </Button>
               <Button
                 onClick={handleReply}
                 disabled={sendingReply || !replyMessage.trim()}
-                className="bg-[#5B9BD5] hover:bg-[#4A90D9]"
+                className="flex-1 sm:flex-none"
               >
-                <Reply className="w-4 h-4 mr-2" />
-                {sendingReply ? "Invio..." : "Invia Risposta"}
+                <Reply className="h-4 w-4 mr-2" />
+                {sendingReply ? "Invio..." : "Invia"}
               </Button>
             </div>
           </div>
