@@ -459,25 +459,26 @@ export default function SocialMediaDashboard({
   }
 
   const pendingApproval = posts.filter((p) => p.status === "pending_approval")
-  const scheduled = posts.filter((p) => p.status === "scheduled")
-  const published = posts.filter((p) => p.status === "published")
+  // const scheduled = posts.filter((p) => p.status === "scheduled") // Removed to use allPosts below
+  // const published = posts.filter((p) => p.status === "published") // Removed to use allPosts below
   const allPosts = posts
   const drafts = posts.filter((p) => p.status === "draft") // New filter for drafts
 
+  const approved = allPosts.filter((p) => p.status === "approved")
+  const scheduled = allPosts.filter((p) => p.status === "scheduled")
+  const published = allPosts.filter((p) => p.status === "published" || p.status === "failed")
+
   const repostPost = async (postToRepost: SocialPost) => {
-    // Logic to prepare a new post based on the reposted one
-    // For now, we'll just open the edit dialog with the content pre-filled
-    // A more sophisticated approach would create a new draft with original content and scheduling
     setEditingPost({
       ...postToRepost,
       id: "", // New post ID
       status: "draft", // Reset status to draft
-      scheduled_for: null, // Clear schedule
+      scheduled_for: postToRepost.scheduled_for, // Keep original schedule
       published_at: null, // Clear published date
       created_at: new Date().toISOString(), // Reset creation date
     })
     setShowEditDialog(true)
-    toast.info("Preparazione del post per la ripubblicazione. Modifica e salva.")
+    toast.info("Modifica il post e salva. Puoi mantenere o cambiare la data di programmazione.")
   }
 
   return (
@@ -666,15 +667,20 @@ export default function SocialMediaDashboard({
         <Tabs defaultValue="drafts" className="w-full">
           {" "}
           {/* Changed defaultValue to "drafts" */}
-          <TabsList className="w-full grid grid-cols-5 h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-6 h-9 sm:h-10">
             {" "}
-            {/* Changed grid-cols-4 to grid-cols-5 */}
+            {/* Update Tabs to 6 columns */} {/* Changed grid-cols-4 to grid-cols-6 */}
             <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
               {" "}
               {/* New tab for drafts */}
               Bozze
             </TabsTrigger>
             <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Da Appr. {/* Changed label to Da Appr. */}
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="text-[10px] sm:text-sm py-1.5 px-1">
+              {" "}
+              {/* New Approvati tab */}
               Approv.
             </TabsTrigger>
             <TabsTrigger value="scheduled" className="text-[10px] sm:text-sm py-1.5 px-1">
@@ -724,7 +730,27 @@ export default function SocialMediaDashboard({
                   onApprove={() => approvePost(post.id)}
                   onReject={() => rejectPost(post.id)}
                   onPublish={() => publishNow(post.id)}
-                  onEdit={() => openEditDialog(post)} // Added onEdit
+                  onEdit={() => openEditDialog(post)}
+                />
+              ))
+            )}
+          </TabsContent>
+          <TabsContent value="approved" className="space-y-4 mt-4">
+            {approved.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Check className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nessun post approvato in attesa di programmazione</p>
+                </CardContent>
+              </Card>
+            ) : (
+              approved.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onPublish={() => publishNow(post.id)}
+                  onEdit={() => openEditDialog(post)}
+                  onReject={() => rejectPost(post.id)}
                 />
               ))
             )}
