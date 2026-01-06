@@ -14,6 +14,12 @@ const RATE_LIMITS: Record<string, { requests: number; windowMs: number }> = {
   "/api/social/generate-post": { requests: 10, windowMs: 60000 }, // 10 requests per minute
 }
 
+const ADMIN_API_ROUTES = ["/api/contacts/", "/api/admin/", "/api/social/posts", "/api/knowledge/"]
+
+function isAdminApiRoute(pathname: string): boolean {
+  return ADMIN_API_ROUTES.some((route) => pathname.startsWith(route))
+}
+
 function getClientIP(request: NextRequest): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
 }
@@ -54,28 +60,39 @@ export async function proxy(request: NextRequest) {
 
   // Rate limiting for API routes
   if (pathname.startsWith("/api/")) {
-    const ip = getClientIP(request)
+    if (!isAdminApiRoute(pathname)) {
+      const ip = getClientIP(request)
 
-    // Find matching rate limit config
-    const matchingEndpoint = Object.keys(RATE_LIMITS).find((ep) => pathname.startsWith(ep))
+      // Find matching rate limit config
+      const matchingEndpoint = Object.keys(RATE_LIMITS).find((ep) => pathname.startsWith(ep))
 
-    if (matchingEndpoint) {
-      const { allowed, remaining, resetTime } = checkRateLimit(ip, matchingEndpoint)
+      if (matchingEndpoint) {
+        const { allowed, remaining, resetTime } = checkRateLimit(ip, matchingEndpoint)
 
-      if (!allowed) {
-        return NextResponse.json(
-          { error: "Troppe richieste. Riprova tra poco." },
-          {
-            status: 429,
-            headers: {
-              "X-RateLimit-Limit": String(RATE_LIMITS[matchingEndpoint].requests),
-              "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": String(Math.ceil(resetTime / 1000)),
-              "Retry-After": String(Math.ceil((resetTime - Date.now()) / 1000)),
+        if (!allowed) {
+          return NextResponse.json(
+            { error: "Troppe richieste. Riprova tra poco." },
+            {
+              status: 429,
+              headers: {
+                "X-RateLimit-Limit": String(RATE_LIMITS[matchingEndpoint].requests),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": String(Math.ceil(resetTime / 1000)),
+                "Retry-After": String(Math.ceil((resetTime - Date.now()) / 1000)),
+              },
             },
-          },
-        )
+          )
+        }
       }
+    }
+
+    const method = request.method
+    if (
+      (method === "PATCH" || method === "PUT" || method === "DELETE") &&
+      request.headers.get("cookie")?.includes("sb-")
+    ) {
+      // Skip rate limiting for authenticated admin operations
+      return NextResponse.next()
     }
   }
 
