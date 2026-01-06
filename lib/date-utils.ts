@@ -57,12 +57,31 @@ export function formatTimeIT(isoString: string | null | undefined): string {
 export function localDatetimeToUTC(localDatetime: string): string {
   if (!localDatetime) return ""
 
-  // Crea una data interpretando l'input come ora locale del browser
-  // Il browser dell'utente italiano interpreterà questo come Europe/Rome
-  const date = new Date(localDatetime)
+  // L'input è in formato "YYYY-MM-DDTHH:mm" e rappresenta l'ora italiana
+  const [datePart, timePart] = localDatetime.split("T")
+  const [year, month, day] = datePart.split("-").map(Number)
+  const [hour, minute] = timePart.split(":").map(Number)
 
-  // Restituisce la stringa ISO in UTC
-  return date.toISOString()
+  // Crea una data in UTC, poi calcola l'offset per Europe/Rome
+  // In inverno (CET) l'offset è UTC+1, in estate (CEST) è UTC+2
+  const tempDate = new Date(Date.UTC(year, month - 1, day, hour, minute))
+
+  // Ottieni l'offset di Europe/Rome per questa data specifica
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE,
+    timeZoneName: "shortOffset",
+  })
+  const parts = formatter.formatToParts(tempDate)
+  const offsetPart = parts.find((p) => p.type === "timeZoneName")?.value || "+01"
+
+  // Parse l'offset (es: "GMT+1" o "GMT+2")
+  const offsetMatch = offsetPart.match(/([+-])(\d{1,2})/)
+  const offsetHours = offsetMatch ? Number.parseInt(offsetMatch[2]) * (offsetMatch[1] === "+" ? 1 : -1) : 1
+
+  // Sottrai l'offset per ottenere UTC
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour - offsetHours, minute))
+
+  return utcDate.toISOString()
 }
 
 /**

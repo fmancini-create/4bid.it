@@ -390,20 +390,25 @@ export default function SocialMediaDashboard({
   }
 
   const publishNow = async (postId: string) => {
+    console.log("[v0] publishNow called with postId:", postId)
     try {
       const response = await fetch(`/api/social/posts/${postId}/publish`, {
         method: "POST",
       })
 
-      if (!response.ok) throw new Error("Errore nella pubblicazione")
-
+      console.log("[v0] publish response status:", response.status)
       const result = await response.json()
+      console.log("[v0] publish result:", result)
+
+      if (!response.ok) throw new Error(result.error || "Errore nella pubblicazione")
+
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, status: "published", published_at: new Date().toISOString() } : p)),
       )
       toast.success("Post pubblicato!")
       router.refresh()
     } catch (error) {
+      console.error("[v0] publish error:", error)
       toast.error("Errore nella pubblicazione")
     }
   }
