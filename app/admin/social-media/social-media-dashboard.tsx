@@ -119,12 +119,10 @@ const platformColors = {
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   draft: { label: "Bozza", color: "bg-gray-500", icon: FileText }, // Changed icon to FileText for drafts
-  pending_approval: { label: "Da approvare", color: "bg-yellow-500", icon: Clock },
-  approved: { label: "Approvato", color: "bg-green-500", icon: Check },
   scheduled: { label: "Programmato", color: "bg-blue-500", icon: Calendar },
   published: { label: "Pubblicato", color: "bg-emerald-500", icon: CheckCircle2 },
   failed: { label: "Errore", color: "bg-red-500", icon: AlertCircle },
-  pending_review: { label: "In revisione", color: "bg-orange-500", icon: FileText },
+  pending_approval: { label: "In attesa approvazione", color: "bg-yellow-500", icon: Clock }, // Added pending_approval status
 }
 
 export default function SocialMediaDashboard({
@@ -231,17 +229,7 @@ export default function SocialMediaDashboard({
     try {
       const scheduledForUTC = newPost.scheduled_for ? localDatetimeToUTC(newPost.scheduled_for) : null
 
-      // Determine status based on auto_publish and scheduled_for
-      let status = "draft"
-      if (newPost.auto_publish && scheduledForUTC) {
-        status = "scheduled"
-      } else if (newPost.auto_publish && !scheduledForUTC) {
-        status = "pending_review"
-      } else if (!newPost.auto_publish && scheduledForUTC) {
-        status = "scheduled"
-      } else if (!newPost.auto_publish && !scheduledForUTC) {
-        status = "draft"
-      }
+      const status = scheduledForUTC ? "scheduled" : "draft"
 
       const postData = {
         content: newPost.content,
@@ -290,52 +278,82 @@ export default function SocialMediaDashboard({
   }
 
   const updatePost = async () => {
-    if (!editingPost) return
+    if (!editingPost || !editingPost.content || editingPost.platforms.length === 0) return
 
+    setIsLoading(true)
     try {
-      setIsGenerating(true)
       const scheduledForUTC = editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
 
-      const isNewPost = !editingPost.id || editingPost.id === ""
-
-      const response = await fetch("/api/social/posts", {
-        method: isNewPost ? "POST" : "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isNewPost ? {} : { id: editingPost.id }),
-          content: editingPost.content,
-          platforms: editingPost.platforms,
-          scheduled_for: scheduledForUTC,
-          image_url: editingPost.image_url,
-          target_accounts: editingPost.target_accounts,
-          status: isNewPost ? "draft" : editingPost.status,
-          link_url: editingPost.link_url,
-          media_priority: editingPost.media_priority, // Added media_priority
-          auto_publish: false,
-        }),
-      })
-
-      if (!response.ok) throw new Error(isNewPost ? "Errore nella creazione" : "Errore nell'aggiornamento")
-
-      const savedPost = await response.json()
-
-      if (isNewPost) {
-        // Add new post to the list
-        setPosts((prev) => [savedPost, ...prev])
-        toast.success("Nuova bozza creata! Ora puoi pubblicarla.")
-      } else {
-        // Update existing post
-        setPosts((prev) => prev.map((p) => (p.id === savedPost.id ? savedPost : p)))
-        toast.success("Post aggiornato!")
+      // Determine status: if has scheduled_for -> scheduled, otherwise keep as draft
+      let newStatus = editingPost.status
+      if (scheduledForUTC && editingPost.status === "draft") {
+        newStatus = "scheduled"
+      } else if (!scheduledForUTC && editingPost.status === "scheduled") {
+        newStatus = "draft"
       }
 
+      // If this is a repost (id is empty), create a new post
+      if (!editingPost.id) {
+        const postData = {
+          content: editingPost.content,
+          platforms: editingPost.platforms,
+          status: scheduledForUTC ? "scheduled" : "draft",
+          scheduled_for: scheduledForUTC,
+          auto_publish: editingPost.auto_publish,
+          link_url: editingPost.link_url || null,
+          image_url: editingPost.image_url || null,
+          target_accounts:
+            editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
+          media_priority: editingPost.media_priority || "image",
+        }
+
+        const response = await fetch("/api/social/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(postData),
+        })
+
+        if (!response.ok) throw new Error("Errore nel salvataggio")
+
+        const savedPost = await response.json()
+        setPosts((prev) => [savedPost, ...prev])
+        setShowEditDialog(false)
+        setEditingPost(null)
+        toast.success(scheduledForUTC ? "Post programmato!" : "Bozza salvata!")
+        return
+      }
+
+      const postData = {
+        id: editingPost.id,
+        content: editingPost.content,
+        platforms: editingPost.platforms,
+        status: newStatus,
+        scheduled_for: scheduledForUTC,
+        auto_publish: editingPost.auto_publish,
+        link_url: editingPost.link_url || null,
+        image_url: editingPost.image_url || null,
+        target_accounts:
+          editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
+        media_priority: editingPost.media_priority || "image",
+      }
+
+      const response = await fetch("/api/social/posts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(postData),
+      })
+
+      if (!response.ok) throw new Error("Errore nel salvataggio")
+
+      const updatedPost = await response.json()
+      setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)))
       setShowEditDialog(false)
       setEditingPost(null)
-      router.refresh()
+      toast.success(scheduledForUTC ? "Post programmato!" : "Bozza aggiornata!")
     } catch (error) {
       toast.error("Errore nel salvataggio del post")
     } finally {
-      setIsGenerating(false)
+      setIsLoading(false)
     }
   }
 
@@ -458,15 +476,11 @@ export default function SocialMediaDashboard({
     setShowEditDialog(true)
   }
 
-  const pendingApproval = posts.filter((p) => p.status === "pending_approval")
-  // const scheduled = posts.filter((p) => p.status === "scheduled") // Removed to use allPosts below
-  // const published = posts.filter((p) => p.status === "published") // Removed to use allPosts below
+  const drafts = posts.filter((p) => p.status === "draft")
+  const pendingApproval = posts.filter((p) => p.status === "pending_approval") // Added pendingApproval filter
+  const scheduled = posts.filter((p) => p.status === "scheduled")
+  const published = posts.filter((p) => p.status === "published" || p.status === "failed")
   const allPosts = posts
-  const drafts = posts.filter((p) => p.status === "draft") // New filter for drafts
-
-  const approved = allPosts.filter((p) => p.status === "approved")
-  const scheduled = allPosts.filter((p) => p.status === "scheduled")
-  const published = allPosts.filter((p) => p.status === "published" || p.status === "failed")
 
   const repostPost = async (postToRepost: SocialPost) => {
     setEditingPost({
@@ -667,27 +681,15 @@ export default function SocialMediaDashboard({
         <Tabs defaultValue="drafts" className="w-full">
           {" "}
           {/* Changed defaultValue to "drafts" */}
-          <TabsList className="w-full grid grid-cols-6 h-9 sm:h-10">
-            {" "}
-            {/* Update Tabs to 6 columns */} {/* Changed grid-cols-4 to grid-cols-6 */}
+          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
             <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
-              {" "}
-              {/* New tab for drafts */}
               Bozze
             </TabsTrigger>
-            <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 px-1">
-              Da Appr. {/* Changed label to Da Appr. */}
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="text-[10px] sm:text-sm py-1.5 px-1">
-              {" "}
-              {/* New Approvati tab */}
-              Approv.
-            </TabsTrigger>
             <TabsTrigger value="scheduled" className="text-[10px] sm:text-sm py-1.5 px-1">
-              Progr.
+              Programmati
             </TabsTrigger>
             <TabsTrigger value="published" className="text-[10px] sm:text-sm py-1.5 px-1">
-              Pubbl.
+              Pubblicati
             </TabsTrigger>
             <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 px-1">
               Tutti
@@ -706,51 +708,8 @@ export default function SocialMediaDashboard({
                 <PostCard
                   key={post.id}
                   post={post}
-                  onApprove={() => approvePost(post.id)}
-                  onPublish={() => publishNow(post.id)}
-                  onReject={() => rejectPost(post.id)}
-                  onEdit={() => openEditDialog(post)}
-                />
-              ))
-            )}
-          </TabsContent>
-          <TabsContent value="pending" className="space-y-4 mt-4">
-            {pendingApproval.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun post in attesa di approvazione</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingApproval.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onApprove={() => approvePost(post.id)}
-                  onReject={() => rejectPost(post.id)}
                   onPublish={() => publishNow(post.id)}
                   onEdit={() => openEditDialog(post)}
-                />
-              ))
-            )}
-          </TabsContent>
-          <TabsContent value="approved" className="space-y-4 mt-4">
-            {approved.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Check className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun post approvato in attesa di programmazione</p>
-                </CardContent>
-              </Card>
-            ) : (
-              approved.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onPublish={() => publishNow(post.id)}
-                  onEdit={() => openEditDialog(post)}
-                  onReject={() => rejectPost(post.id)}
                 />
               ))
             )}
@@ -769,8 +728,7 @@ export default function SocialMediaDashboard({
                   key={post.id}
                   post={post}
                   onPublish={() => publishNow(post.id)}
-                  onReject={() => rejectPost(post.id)}
-                  onEdit={() => openEditDialog(post)} // Added onEdit
+                  onEdit={() => openEditDialog(post)}
                 />
               ))
             )}
@@ -789,7 +747,7 @@ export default function SocialMediaDashboard({
                   key={post.id}
                   post={post}
                   onEdit={() => openEditDialog(post)}
-                  onRepost={() => repostPost(post)} // Added onRepost prop
+                  onRepost={() => repostPost(post)}
                 />
               ))
             )}
@@ -799,13 +757,9 @@ export default function SocialMediaDashboard({
               <PostCard
                 key={post.id}
                 post={post}
-                onApprove={post.status === "pending_approval" ? () => approvePost(post.id) : undefined}
-                onReject={() => rejectPost(post.id)}
-                onPublish={
-                  ["draft", "approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined
-                } // Updated to include "draft"
-                onEdit={() => openEditDialog(post)} // Added onEdit
-                onRepost={() => repostPost(post)} // Added onRepost prop
+                onPublish={["draft", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined}
+                onEdit={() => openEditDialog(post)}
+                onRepost={post.status === "published" || post.status === "failed" ? () => repostPost(post) : undefined}
               />
             ))}
           </TabsContent>
@@ -1486,8 +1440,8 @@ export default function SocialMediaDashboard({
                   <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
                     Annulla
                   </Button>
-                  <Button onClick={updatePost} disabled={isGenerating} className="flex-1 sm:flex-none">
-                    {isGenerating ? (
+                  <Button onClick={updatePost} disabled={isLoading} className="flex-1 sm:flex-none">
+                    {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Salvataggio...
@@ -1528,7 +1482,7 @@ function PostCard({
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
-  const canEdit = ["draft", "pending_review", "scheduled", "pending_approval", "approved"].includes(post.status)
+  const canEdit = ["draft", "scheduled"].includes(post.status) // Simplified canEdit condition
   const canRepost = post.status === "published" || post.status === "failed"
 
   return (
