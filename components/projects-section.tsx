@@ -120,7 +120,7 @@ export default function ProjectsSection() {
                 {/* Card Content */}
                 <div className="p-8">
                   {/* Logo */}
-                  <div className="flex items-center justify-center mb-6 h-32 relative">
+                  <div className="flex items-center justify-center mb-6 h-32 relative bg-gray-50 rounded-xl p-4">
                     <Image
                       src={project.logo || "/placeholder.svg"}
                       alt={`${project.name} Logo`}
