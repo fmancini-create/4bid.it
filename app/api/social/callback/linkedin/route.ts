@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    let personUrn = ""
+    let userName = "4BID"
     if (profileResponse.ok) {
       const profileData = await profileResponse.json()
-      personUrn = profileData.sub || "" // sub contains the person ID
-      console.log("[v0] LinkedIn person URN:", personUrn)
+      userName = profileData.name || profileData.given_name || "4BID"
+      console.log("[v0] LinkedIn user:", userName)
     }
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       platform: "linkedin",
       account_name: "4BID (Pagina Aziendale)",
       account_id: LINKEDIN_ORGANIZATION_ID, // Organization ID per pagina aziendale
-      page_id: personUrn, // Person URN per fallback su profilo personale
+      page_id: LINKEDIN_ORGANIZATION_ID, // Usa organization ID per pubblicazione
       access_token: accessToken,
       token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
       is_active: true,
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       throw insertError
     }
 
-    console.log("[v0] LinkedIn saved - Organization ID:", LINKEDIN_ORGANIZATION_ID, "Person URN:", personUrn)
+    console.log("[v0] LinkedIn saved - Organization ID:", LINKEDIN_ORGANIZATION_ID)
     return NextResponse.redirect(`${baseUrl}/admin/social-media?success=linkedin_connected`)
   } catch (error) {
     console.error("[v0] LinkedIn OAuth error:", error)
