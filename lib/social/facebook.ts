@@ -16,6 +16,21 @@ export async function publishToFacebook(
   imageUrl?: string | null,
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
+    console.log("[v0] Facebook: Starting publish")
+    console.log("[v0] Facebook: Page ID:", pageId)
+    console.log("[v0] Facebook: Token length:", accessToken?.length || 0)
+    console.log("[v0] Facebook: Content length:", content?.length || 0)
+    console.log("[v0] Facebook: Link URL:", linkUrl || "none")
+    console.log("[v0] Facebook: Image URL:", imageUrl || "none")
+
+    if (!pageId) {
+      return { success: false, error: "Page ID mancante" }
+    }
+
+    if (!accessToken) {
+      return { success: false, error: "Access token mancante" }
+    }
+
     const appSecretProof = generateAppSecretProof(accessToken)
 
     let endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`
@@ -36,8 +51,8 @@ export async function publishToFacebook(
       body.url = imageUrl
     }
 
-    console.log("[v0] Publishing to Facebook:", { pageId, endpoint, hasImage: !!imageUrl, hasLink: !!linkUrl })
-    console.log("[v0] Facebook request body keys:", Object.keys(body))
+    console.log("[v0] Facebook: Endpoint:", endpoint)
+    console.log("[v0] Facebook: Request body keys:", Object.keys(body))
 
     const response = await fetch(endpoint, {
       method: "POST",
@@ -57,6 +72,7 @@ export async function publishToFacebook(
       return { success: false, error: data.error.message || JSON.stringify(data.error) }
     }
 
+    console.log("[v0] Facebook: Successfully published! Post ID:", data.id || data.post_id)
     return { success: true, postId: data.id || data.post_id }
   } catch (error) {
     console.error("[v0] Facebook publish error:", error)

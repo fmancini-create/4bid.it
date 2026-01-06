@@ -1,5 +1,5 @@
 // LinkedIn API helper functions
-// Usa Posts API v2 per profilo personale (w_member_social)
+// Usa UGC Posts API v2
 
 interface LinkedInPostResult {
   success: boolean
@@ -7,7 +7,7 @@ interface LinkedInPostResult {
   error?: string
 }
 
-// Pubblica su profilo personale usando Posts API v2
+// Pubblica su profilo personale usando UGC Posts API v2
 export async function publishToLinkedIn(
   accessToken: string,
   personUrn: string,
@@ -15,7 +15,6 @@ export async function publishToLinkedIn(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    // Il personUrn da /v2/userinfo è già l'ID senza prefisso
     const authorUrn = personUrn.startsWith("urn:li:person:") ? personUrn : `urn:li:person:${personUrn}`
 
     const postBody = {
@@ -82,8 +81,6 @@ export async function publishToLinkedIn(
   }
 }
 
-// Pubblica su una pagina aziendale LinkedIn (Organization)
-// NOTA: Richiede scope w_organization_social (Community Management API)
 export async function publishToLinkedInOrganization(
   accessToken: string,
   organizationId: string,
@@ -91,7 +88,9 @@ export async function publishToLinkedInOrganization(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    const authorUrn = `urn:li:organization:${organizationId}`
+    const authorUrn = organizationId.startsWith("urn:li:organization:")
+      ? organizationId
+      : `urn:li:organization:${organizationId}`
 
     const postBody = {
       author: authorUrn,
@@ -110,6 +109,7 @@ export async function publishToLinkedInOrganization(
     }
 
     console.log("[v0] LinkedIn: Publishing to organization:", organizationId)
+    console.log("[v0] LinkedIn: Author URN:", authorUrn)
 
     const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
@@ -163,9 +163,21 @@ export async function publishToLinkedInWithFallback(
   content: string,
   imageUrl?: string,
 ): Promise<LinkedInPostResult & { publishedAs?: "organization" | "personal" }> {
-  console.log("[v0] LinkedIn: Publishing to personal profile")
-  console.log("[v0] LinkedIn: Person URN from DB:", personUrn)
+  // PRIMA: Tenta di pubblicare sulla pagina aziendale
+  if (organizationId) {
+    console.log("[v0] LinkedIn: Attempting to publish to organization:", organizationId)
+    const orgResult = await publishToLinkedInOrganization(accessToken, organizationId, content, imageUrl)
 
+    if (orgResult.success) {
+      console.log("[v0] LinkedIn: Successfully published to organization")
+      return { ...orgResult, publishedAs: "organization" }
+    }
+
+    console.log("[v0] LinkedIn: Organization publish failed:", orgResult.error)
+    console.log("[v0] LinkedIn: Falling back to personal profile")
+  }
+
+  // FALLBACK: Pubblica sul profilo personale
   if (!personUrn) {
     return {
       success: false,
@@ -173,6 +185,7 @@ export async function publishToLinkedInWithFallback(
     }
   }
 
+  console.log("[v0] LinkedIn: Publishing to personal profile, URN:", personUrn)
   const personalResult = await publishToLinkedIn(accessToken, personUrn, content, imageUrl)
   return { ...personalResult, publishedAs: "personal" }
 }
