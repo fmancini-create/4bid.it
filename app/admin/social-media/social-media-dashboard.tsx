@@ -694,7 +694,8 @@ export default function SocialMediaDashboard({
                 <PostCard
                   key={post.id}
                   post={post}
-                  onPublish={() => publishNow(post.id)} // Publish button available for drafts
+                  onApprove={() => approvePost(post.id)}
+                  onPublish={() => publishNow(post.id)}
                   onReject={() => rejectPost(post.id)}
                   onEdit={() => openEditDialog(post)}
                 />
