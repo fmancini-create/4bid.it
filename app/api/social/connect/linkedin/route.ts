@@ -8,7 +8,8 @@ export async function GET() {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/admin/social-media?error=linkedin_not_configured`)
   }
 
-  const scope = "openid profile email w_member_social w_organization_social"
+  // For now, publish to personal profile only with w_member_social
+  const scope = "openid profile email w_member_social"
 
   const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization")
   authUrl.searchParams.set("response_type", "code")

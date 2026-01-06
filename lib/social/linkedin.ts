@@ -156,6 +156,7 @@ export async function publishToLinkedInOrganization(
   }
 }
 
+// Lo scope w_organization_social non è ancora approvato
 export async function publishToLinkedInWithFallback(
   accessToken: string,
   organizationId: string,
@@ -163,21 +164,8 @@ export async function publishToLinkedInWithFallback(
   content: string,
   imageUrl?: string,
 ): Promise<LinkedInPostResult & { publishedAs?: "organization" | "personal" }> {
-  // PRIMA: Tenta di pubblicare sulla pagina aziendale
-  if (organizationId) {
-    console.log("[v0] LinkedIn: Attempting to publish to organization:", organizationId)
-    const orgResult = await publishToLinkedInOrganization(accessToken, organizationId, content, imageUrl)
-
-    if (orgResult.success) {
-      console.log("[v0] LinkedIn: Successfully published to organization")
-      return { ...orgResult, publishedAs: "organization" }
-    }
-
-    console.log("[v0] LinkedIn: Organization publish failed:", orgResult.error)
-    console.log("[v0] LinkedIn: Falling back to personal profile")
-  }
-
-  // FALLBACK: Pubblica sul profilo personale
+  // Pubblica direttamente sul profilo personale
+  // (w_organization_social non è ancora approvato per questa app)
   if (!personUrn) {
     return {
       success: false,
