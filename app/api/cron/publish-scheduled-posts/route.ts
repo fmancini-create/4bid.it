@@ -17,23 +17,52 @@ export async function GET(request: NextRequest) {
     // Usa service role per bypassare RLS
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    // Trova i post programmati che devono essere pubblicati
     const now = new Date().toISOString()
+    console.log(`[v0] Cron running at ${now}`)
+
+    // Trova i post programmati che devono essere pubblicati
     const { data: posts, error: fetchError } = await supabase
       .from("social_posts")
       .select("*")
       .eq("status", "scheduled")
       .lte("scheduled_for", now)
       .order("scheduled_for", { ascending: true })
-      .limit(10) // Limita a 10 per esecuzione
+      .limit(10)
 
     if (fetchError) {
       console.error("[v0] Error fetching scheduled posts:", fetchError)
       return NextResponse.json({ error: "Errore nel recupero dei post" }, { status: 500 })
     }
 
+    const { data: allScheduled } = await supabase
+      .from("social_posts")
+      .select("id, status, scheduled_for, content")
+      .eq("status", "scheduled")
+
+    console.log(
+      `[v0] All scheduled posts:`,
+      allScheduled?.map((p) => ({
+        id: p.id,
+        status: p.status,
+        scheduled_for: p.scheduled_for,
+        content: p.content?.substring(0, 30) + "...",
+      })),
+    )
+    console.log(`[v0] Posts to publish (scheduled_for <= ${now}):`, posts?.length || 0)
+
     if (!posts || posts.length === 0) {
-      return NextResponse.json({ message: "Nessun post da pubblicare", count: 0 })
+      return NextResponse.json({
+        message: "Nessun post da pubblicare",
+        count: 0,
+        debug: {
+          now,
+          allScheduledCount: allScheduled?.length || 0,
+          allScheduled: allScheduled?.map((p) => ({
+            id: p.id,
+            scheduled_for: p.scheduled_for,
+          })),
+        },
+      })
     }
 
     console.log(`[v0] Found ${posts.length} scheduled posts to publish`)
