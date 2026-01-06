@@ -102,7 +102,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               account.account_id, // Organization ID (110665381)
               account.page_id, // Person URN (salvato come page_id per LinkedIn)
               post.content,
-              post.image_url,
+              post.link_url, // Changed from post.image_url to post.link_url
             )
 
             console.log(`[v0] LinkedIn result:`, result)
