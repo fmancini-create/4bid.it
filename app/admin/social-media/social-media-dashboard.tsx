@@ -291,31 +291,43 @@ export default function SocialMediaDashboard({
       setIsGenerating(true)
       const scheduledForUTC = editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
 
+      const isNewPost = !editingPost.id || editingPost.id === ""
+
       const response = await fetch("/api/social/posts", {
-        method: "PUT",
+        method: isNewPost ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: editingPost.id,
+          ...(isNewPost ? {} : { id: editingPost.id }),
           content: editingPost.content,
           platforms: editingPost.platforms,
           scheduled_for: scheduledForUTC,
           image_url: editingPost.image_url,
           target_accounts: editingPost.target_accounts,
-          status: editingPost.status,
+          status: isNewPost ? "draft" : editingPost.status,
           link_url: editingPost.link_url,
+          auto_publish: false,
         }),
       })
 
-      if (!response.ok) throw new Error("Errore nell'aggiornamento")
+      if (!response.ok) throw new Error(isNewPost ? "Errore nella creazione" : "Errore nell'aggiornamento")
 
-      const updatedPost = await response.json()
-      setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)))
+      const savedPost = await response.json()
+
+      if (isNewPost) {
+        // Add new post to the list
+        setPosts((prev) => [savedPost, ...prev])
+        toast.success("Nuova bozza creata! Ora puoi pubblicarla.")
+      } else {
+        // Update existing post
+        setPosts((prev) => prev.map((p) => (p.id === savedPost.id ? savedPost : p)))
+        toast.success("Post aggiornato!")
+      }
+
       setShowEditDialog(false)
       setEditingPost(null)
-      toast.success("Post aggiornato!")
       router.refresh()
     } catch (error) {
-      toast.error("Errore nell'aggiornamento del post")
+      toast.error("Errore nel salvataggio del post")
     } finally {
       setIsGenerating(false)
     }
