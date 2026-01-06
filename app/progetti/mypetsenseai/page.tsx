@@ -92,18 +92,18 @@ export default function MypetSenseAIPage() {
       {/* Stats Section */}
       <section className="py-12 bg-white border-b">
         <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 max-w-3xl mx-auto text-center">
-            <div>
-              <p className="text-4xl font-bold text-purple-600">10,000+</p>
-              <p className="text-gray-600">Analisi completate</p>
+          <div className="grid grid-cols-3 gap-4 md:gap-8 max-w-3xl mx-auto text-center">
+            <div className="min-w-0">
+              <p className="text-2xl md:text-4xl font-bold text-purple-600">10,000+</p>
+              <p className="text-xs md:text-base text-gray-600 text-balance">Analisi completate</p>
             </div>
-            <div>
-              <p className="text-4xl font-bold text-purple-600">4.9/5</p>
-              <p className="text-gray-600">Valutazione utenti</p>
+            <div className="min-w-0">
+              <p className="text-2xl md:text-4xl font-bold text-purple-600">4.9/5</p>
+              <p className="text-xs md:text-base text-gray-600 text-balance">Valutazione utenti</p>
             </div>
-            <div className="col-span-2 md:col-span-1">
-              <p className="text-4xl font-bold text-purple-600">2,500+</p>
-              <p className="text-gray-600">Utenti attivi</p>
+            <div className="min-w-0">
+              <p className="text-2xl md:text-4xl font-bold text-purple-600">2,500+</p>
+              <p className="text-xs md:text-base text-gray-600 text-balance">Utenti attivi</p>
             </div>
           </div>
         </div>
