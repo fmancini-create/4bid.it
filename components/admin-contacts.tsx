@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Mail, Phone, Calendar, User, Reply, ChevronDown, ChevronUp } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatDateOnlyIT, formatDateTimeIT } from "@/lib/date-utils"
@@ -36,11 +35,23 @@ export default function AdminContacts({
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const handleMarkAsRead = async (id: string) => {
-    const supabase = createClient()
-    const { error } = await supabase.from("contacts").update({ read: true }).eq("id", id)
+    try {
+      const response = await fetch(`/api/contacts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true }),
+      })
 
-    if (!error) {
-      setContacts((prev) => prev.map((contact) => (contact.id === id ? { ...contact, read: true } : contact)))
+      if (response.ok) {
+        setContacts((prev) => prev.map((contact) => (contact.id === id ? { ...contact, read: true } : contact)))
+      } else {
+        const result = await response.json()
+        console.error("[v0] Error marking as read:", result.error)
+        alert("Errore nel cambiare lo stato: " + result.error)
+      }
+    } catch (error) {
+      console.error("[v0] Error marking as read:", error)
+      alert("Errore nel cambiare lo stato")
     }
   }
 
@@ -217,7 +228,7 @@ export default function AdminContacts({
                 onChange={(e) => setReplyMessage(e.target.value)}
                 placeholder="Scrivi qui la tua risposta..."
                 rows={6}
-                className="text-base" // 16px font to prevent iOS zoom
+                className="text-base"
               />
             </div>
             <div className="flex gap-2">

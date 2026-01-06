@@ -7,17 +7,22 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, email, phone, message } = body
 
+    console.log("[v0] Contact form submission:", { name, email, phone: phone ? "provided" : "not provided" })
+
     if (!name || !email || !message) {
+      console.log("[v0] Missing required fields")
       return NextResponse.json({ error: "Nome, email e messaggio sono obbligatori" }, { status: 400 })
     }
 
     // Validate email format
     if (!isValidEmail(email)) {
+      console.log("[v0] Invalid email format:", email)
       return NextResponse.json({ error: "Formato email non valido" }, { status: 400 })
     }
 
     // Validate phone if provided
     if (phone && !isValidPhone(phone)) {
+      console.log("[v0] Invalid phone format:", phone)
       return NextResponse.json({ error: "Formato telefono non valido" }, { status: 400 })
     }
 
@@ -28,6 +33,8 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
+    console.log("[v0] Attempting to save contact to database...")
+
     // Save to database with sanitized data
     const { data, error } = await supabase
       .from("contacts")
@@ -37,19 +44,23 @@ export async function POST(request: Request) {
           email: sanitizedEmail,
           phone: sanitizedPhone,
           message: sanitizedMessage,
+          read: false,
         },
       ])
       .select()
       .single()
 
     if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Errore nel salvare il messaggio" }, { status: 500 })
+      console.error("[v0] Database error saving contact:", error)
+      return NextResponse.json({ error: "Errore nel salvare il messaggio: " + error.message }, { status: 500 })
     }
+
+    console.log("[v0] Contact saved successfully:", data?.id)
 
     // Send email notification with sanitized HTML
     try {
       if (process.env.RESEND_API_KEY) {
+        console.log("[v0] Sending email notification...")
         const emailResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -73,11 +84,15 @@ export async function POST(request: Request) {
 
         if (!emailResponse.ok) {
           const errorText = await emailResponse.text()
-          console.error("Email send failed:", errorText)
+          console.error("[v0] Email send failed:", errorText)
+        } else {
+          console.log("[v0] Email notification sent successfully")
         }
+      } else {
+        console.log("[v0] RESEND_API_KEY not configured, skipping email")
       }
     } catch (emailError) {
-      console.error("Email error:", emailError)
+      console.error("[v0] Email error:", emailError)
     }
 
     return NextResponse.json({
@@ -86,7 +101,7 @@ export async function POST(request: Request) {
       data,
     })
   } catch (error) {
-    console.error("API error:", error)
+    console.error("[v0] API error:", error)
     return NextResponse.json({ error: "Errore nel processare la richiesta" }, { status: 500 })
   }
 }
