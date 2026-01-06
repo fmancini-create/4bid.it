@@ -19,17 +19,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { data: post, error: fetchError } = await supabase.from("social_posts").select("*").eq("id", id).single()
 
     if (fetchError || !post) {
+      console.error("[v0] Post not found:", fetchError)
       return NextResponse.json({ error: "Post non trovato" }, { status: 404 })
     }
 
+    console.log("[v0] Publishing post:", { id, content: post.content?.substring(0, 50), platforms: post.platforms })
+
     // Recupera gli account attivi
-    const { data: accounts } = await supabase.from("social_accounts").select("*").eq("is_active", true)
+    const { data: accounts, error: accountsError } = await supabase
+      .from("social_accounts")
+      .select("*")
+      .eq("is_active", true)
+
+    if (accountsError) {
+      console.error("[v0] Error fetching accounts:", accountsError)
+    }
+
+    console.log(
+      "[v0] Active accounts:",
+      accounts?.map((a) => ({ platform: a.platform, name: a.account_name, page_id: a.page_id })),
+    )
 
     let platformsToPublish = post.platforms || []
     if (!platformsToPublish || platformsToPublish.length === 0) {
       const uniquePlatforms = [...new Set(accounts?.map((a) => a.platform) || [])]
       platformsToPublish = uniquePlatforms
     }
+
+    console.log("[v0] Platforms to publish:", platformsToPublish)
 
     if (platformsToPublish.length === 0) {
       return NextResponse.json({ error: "Nessuna piattaforma configurata" }, { status: 400 })
@@ -46,6 +63,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         platformAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
       }
 
+      console.log(`[v0] Publishing to ${platform}, accounts:`, platformAccounts.length)
+
       if (platformAccounts.length === 0) {
         errors.push(`Account ${platform} non configurato`)
         continue
@@ -53,6 +72,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       for (const account of platformAccounts) {
         try {
+          console.log(`[v0] Publishing to ${platform} account:`, account.account_name)
+
           if (platform === "facebook") {
             const result = await publishToFacebook(
               account.page_id,
@@ -61,6 +82,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               post.link_url,
               post.image_url,
             )
+
+            console.log(`[v0] Facebook result:`, result)
 
             if (result.success && result.postId) {
               platformPostIds[`facebook_${account.account_name}`] = result.postId
@@ -82,6 +105,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               post.image_url,
             )
 
+            console.log(`[v0] LinkedIn result:`, result)
+
             if (result.success && result.postId) {
               const suffix = result.publishedAs === "personal" ? " (profilo personale)" : ""
               platformPostIds[`linkedin_${account.account_name}${suffix}`] = result.postId
@@ -90,6 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             }
           }
         } catch (err) {
+          console.error(`[v0] Error publishing to ${platform}:`, err)
           errors.push(`Errore pubblicazione ${platform} (${account.account_name}): ${err}`)
         }
       }
@@ -97,6 +123,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Aggiorna lo stato del post
     const hasPublished = Object.keys(platformPostIds).length > 0
+    console.log("[v0] Publish result:", { hasPublished, platformPostIds, errors })
+
     const { data, error } = await supabase
       .from("social_posts")
       .update({

@@ -1,6 +1,5 @@
 // LinkedIn API helper functions
-// Usa le Shares API v2 per profilo personale (w_member_social)
-// Le UGC API sono deprecate dal 2024
+// Usa Posts API v2 per profilo personale (w_member_social)
 
 interface LinkedInPostResult {
   success: boolean
@@ -8,7 +7,7 @@ interface LinkedInPostResult {
   error?: string
 }
 
-// Pubblica su profilo personale usando Shares API (non deprecata)
+// Pubblica su profilo personale usando Posts API v2
 export async function publishToLinkedIn(
   accessToken: string,
   personUrn: string,
@@ -16,22 +15,29 @@ export async function publishToLinkedIn(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    // Usa le Shares API v2 che funzionano con w_member_social
+    // Il personUrn da /v2/userinfo è già l'ID senza prefisso
+    const authorUrn = personUrn.startsWith("urn:li:person:") ? personUrn : `urn:li:person:${personUrn}`
+
     const postBody = {
-      owner: `urn:li:person:${personUrn}`,
-      text: {
-        text: content,
+      author: authorUrn,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content,
+          },
+          shareMediaCategory: "NONE",
+        },
       },
-      distribution: {
-        linkedInDistributionTarget: {},
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
       },
     }
 
-    console.log("[v0] LinkedIn: Publishing post to personal profile using Shares API")
-    console.log("[v0] LinkedIn: Person URN:", personUrn)
-    console.log("[v0] LinkedIn: Request body:", JSON.stringify(postBody, null, 2))
+    console.log("[v0] LinkedIn: Publishing post to personal profile")
+    console.log("[v0] LinkedIn: Author URN:", authorUrn)
 
-    const response = await fetch("https://api.linkedin.com/v2/shares", {
+    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -42,8 +48,8 @@ export async function publishToLinkedIn(
     })
 
     const responseText = await response.text()
-    console.log("[v0] LinkedIn Shares API response status:", response.status)
-    console.log("[v0] LinkedIn Shares API response:", responseText)
+    console.log("[v0] LinkedIn UGC API response status:", response.status)
+    console.log("[v0] LinkedIn UGC API response:", responseText)
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`
@@ -60,7 +66,7 @@ export async function publishToLinkedIn(
     let postId = "published"
     try {
       const data = JSON.parse(responseText)
-      postId = data.id || data.activity || postId
+      postId = data.id || postId
     } catch {}
 
     return {
@@ -85,20 +91,27 @@ export async function publishToLinkedInOrganization(
   imageUrl?: string,
 ): Promise<LinkedInPostResult> {
   try {
-    // Usa le Shares API anche per organization
+    const authorUrn = `urn:li:organization:${organizationId}`
+
     const postBody = {
-      owner: `urn:li:organization:${organizationId}`,
-      text: {
-        text: content,
+      author: authorUrn,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content,
+          },
+          shareMediaCategory: "NONE",
+        },
       },
-      distribution: {
-        linkedInDistributionTarget: {},
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
       },
     }
 
     console.log("[v0] LinkedIn: Publishing to organization:", organizationId)
 
-    const response = await fetch("https://api.linkedin.com/v2/shares", {
+    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -109,8 +122,8 @@ export async function publishToLinkedInOrganization(
     })
 
     const responseText = await response.text()
-    console.log("[v0] LinkedIn Organization Shares API response status:", response.status)
-    console.log("[v0] LinkedIn Organization Shares API response:", responseText)
+    console.log("[v0] LinkedIn Organization UGC API response status:", response.status)
+    console.log("[v0] LinkedIn Organization UGC API response:", responseText)
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`
@@ -118,7 +131,6 @@ export async function publishToLinkedInOrganization(
         const errorData = JSON.parse(responseText)
         errorMessage = errorData.message || errorData.error_description || errorData.error || JSON.stringify(errorData)
       } catch {}
-      console.error("[v0] LinkedIn Organization Shares API error:", errorMessage)
       return {
         success: false,
         error: errorMessage,
@@ -128,7 +140,7 @@ export async function publishToLinkedInOrganization(
     let postId = "published"
     try {
       const data = JSON.parse(responseText)
-      postId = data.id || data.activity || postId
+      postId = data.id || postId
     } catch {}
 
     return {
@@ -151,9 +163,8 @@ export async function publishToLinkedInWithFallback(
   content: string,
   imageUrl?: string,
 ): Promise<LinkedInPostResult & { publishedAs?: "organization" | "personal" }> {
-  // Finché non abbiamo w_organization_social, non provare nemmeno con organization
-  console.log("[v0] LinkedIn: Publishing to personal profile (organization requires w_organization_social scope)")
-  console.log("[v0] LinkedIn: Person URN:", personUrn)
+  console.log("[v0] LinkedIn: Publishing to personal profile")
+  console.log("[v0] LinkedIn: Person URN from DB:", personUrn)
 
   if (!personUrn) {
     return {

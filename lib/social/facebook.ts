@@ -37,6 +37,7 @@ export async function publishToFacebook(
     }
 
     console.log("[v0] Publishing to Facebook:", { pageId, endpoint, hasImage: !!imageUrl, hasLink: !!linkUrl })
+    console.log("[v0] Facebook request body keys:", Object.keys(body))
 
     const response = await fetch(endpoint, {
       method: "POST",
@@ -48,10 +49,12 @@ export async function publishToFacebook(
 
     const data = await response.json()
 
-    console.log("[v0] Facebook API response:", data)
+    console.log("[v0] Facebook API response status:", response.status)
+    console.log("[v0] Facebook API response:", JSON.stringify(data))
 
     if (data.error) {
-      return { success: false, error: data.error.message }
+      console.error("[v0] Facebook API error:", data.error)
+      return { success: false, error: data.error.message || JSON.stringify(data.error) }
     }
 
     return { success: true, postId: data.id || data.post_id }
@@ -69,8 +72,10 @@ export async function verifyFacebookToken(accessToken: string): Promise<boolean>
       `https://graph.facebook.com/v18.0/me?access_token=${accessToken}&appsecret_proof=${appSecretProof}`,
     )
     const data = await response.json()
+    console.log("[v0] Facebook token verify response:", data)
     return !data.error
-  } catch {
+  } catch (err) {
+    console.error("[v0] Facebook token verify error:", err)
     return false
   }
 }
