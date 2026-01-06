@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle } from "lucide-react"
+import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import InvestorInquiryModal from "@/components/investor-inquiry-modal"
@@ -22,6 +22,19 @@ export default function ProjectsSection() {
       color: "from-green-500 to-emerald-600",
       progress: "On line",
       href: "/progetti/autoexel",
+      isLive: true,
+    },
+    {
+      id: "mypetsenseai",
+      name: "MYPETSENSEAI",
+      tagline: "Your dog's health, always under control",
+      description:
+        "Analizza foto, monitora la salute quotidiana e ricevi consigli personalizzati dall'intelligenza artificiale per il benessere del tuo amico a quattro zampe.",
+      logo: "/mypetsenseai-logo.png",
+      icon: Heart,
+      color: "from-purple-500 to-pink-600",
+      progress: "On line",
+      href: "/progetti/mypetsenseai",
       isLive: true,
     },
     {
