@@ -23,7 +23,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Post non trovato" }, { status: 404 })
     }
 
-    console.log("[v0] Publishing post:", { id, content: post.content?.substring(0, 50), platforms: post.platforms })
+    console.log("[v0] Publishing post:", {
+      id,
+      content: post.content?.substring(0, 50),
+      platforms: post.platforms,
+      media_priority: post.media_priority,
+    })
 
     // Recupera gli account attivi
     const { data: accounts, error: accountsError } = await supabase
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               post.content,
               post.link_url,
               post.image_url,
+              post.media_priority || "image", // Default to "image" if not set
             )
 
             console.log(`[v0] Facebook result:`, result)
@@ -109,7 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               account.account_id, // Organization ID (110665381)
               account.page_id, // Person URN (salvato come page_id per LinkedIn)
               post.content,
-              post.link_url, // Changed from post.image_url to post.link_url
+              post.link_url,
             )
 
             console.log(`[v0] LinkedIn result:`, result)

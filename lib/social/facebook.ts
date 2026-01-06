@@ -14,6 +14,7 @@ export async function publishToFacebook(
   content: string,
   linkUrl?: string | null,
   imageUrl?: string | null,
+  mediaPriority: "image" | "link" = "image",
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
     console.log("[v0] Facebook: Starting publish")
@@ -22,6 +23,7 @@ export async function publishToFacebook(
     console.log("[v0] Facebook: Content length:", content?.length || 0)
     console.log("[v0] Facebook: Link URL:", linkUrl || "none")
     console.log("[v0] Facebook: Image URL:", imageUrl || "none")
+    console.log("[v0] Facebook: Media Priority:", mediaPriority)
 
     if (!pageId) {
       return { success: false, error: "Page ID mancante" }
@@ -34,21 +36,40 @@ export async function publishToFacebook(
     const appSecretProof = generateAppSecretProof(accessToken)
 
     let endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`
+    let message = content
+
+    // If mediaPriority is "image" and we have an image, publish as photo with link in text
+    // If mediaPriority is "link" or no image, use link preview
     const body: Record<string, string> = {
-      message: content,
       access_token: accessToken,
       appsecret_proof: appSecretProof,
     }
 
-    // Se c'è un link, lo aggiungiamo
-    if (linkUrl) {
-      body.link = linkUrl
-    }
-
-    // Se c'è un'immagine, usiamo l'endpoint photos invece
-    if (imageUrl && !linkUrl) {
+    if (imageUrl && mediaPriority === "image") {
+      // Priorità immagine: pubblica come foto, aggiungi link nel testo
       endpoint = `https://graph.facebook.com/v18.0/${pageId}/photos`
       body.url = imageUrl
+      // Aggiungi il link nel messaggio se presente
+      if (linkUrl) {
+        message = `${content}\n\n🔗 ${linkUrl}`
+      }
+      body.message = message
+      console.log("[v0] Facebook: Publishing as PHOTO with link in text")
+    } else if (linkUrl) {
+      // Priorità link o nessuna immagine: usa anteprima link
+      body.message = content
+      body.link = linkUrl
+      console.log("[v0] Facebook: Publishing as LINK POST with preview")
+    } else if (imageUrl) {
+      // Solo immagine, nessun link
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/photos`
+      body.url = imageUrl
+      body.message = content
+      console.log("[v0] Facebook: Publishing as PHOTO only")
+    } else {
+      // Solo testo
+      body.message = content
+      console.log("[v0] Facebook: Publishing as TEXT only")
     }
 
     console.log("[v0] Facebook: Endpoint:", endpoint)

@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Eye,
   Link2,
+  LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -83,6 +84,7 @@ interface SocialPost {
   created_at: string
   target_accounts?: string[] // Added target_accounts
   link_url?: string | null // Added link_url
+  media_priority: "image" | "link" // Added media_priority
 }
 
 interface SocialSettings {
@@ -161,6 +163,7 @@ export default function SocialMediaDashboard({
     image_topic: "",
     image_style: "professional" as string,
     link_url: "", // Added link_url
+    media_priority: "image" as "image" | "link", // "image" = usa immagine caricata, "link" = usa anteprima link
   })
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
@@ -249,6 +252,7 @@ export default function SocialMediaDashboard({
         link_url: newPost.link_url || null,
         image_url: newPost.image_url || null,
         target_accounts: newPost.target_accounts.length > 0 ? newPost.target_accounts : null,
+        media_priority: newPost.media_priority,
       }
 
       const response = await fetch("/api/social/posts", {
@@ -273,6 +277,7 @@ export default function SocialMediaDashboard({
         image_topic: "",
         image_style: "professional",
         link_url: "", // Reset link_url
+        media_priority: "image",
       })
       toast.success("Post salvato!")
       router.refresh()
@@ -305,6 +310,7 @@ export default function SocialMediaDashboard({
           target_accounts: editingPost.target_accounts,
           status: isNewPost ? "draft" : editingPost.status,
           link_url: editingPost.link_url,
+          media_priority: editingPost.media_priority, // Added media_priority
           auto_publish: false,
         }),
       })
@@ -908,6 +914,42 @@ export default function SocialMediaDashboard({
               />
             </div>
 
+            {newPost.image_url && newPost.link_url && (
+              <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <Label className="text-sm font-medium">Priorità Media</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Hai inserito sia un'immagine che un link. Cosa vuoi mostrare nel post?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={newPost.media_priority === "image" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPost((prev) => ({ ...prev, media_priority: "image" }))}
+                    className="flex-1"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Usa mia immagine
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newPost.media_priority === "link" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPost((prev) => ({ ...prev, media_priority: "link" }))}
+                    className="flex-1"
+                  >
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    Anteprima link
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {newPost.media_priority === "image"
+                    ? "Il link verrà aggiunto nel testo del post"
+                    : "Facebook mostrerà l'anteprima del sito linkato"}
+                </p>
+              </div>
+            )}
+
             {/* Platform selection - Mobile optimized */}
             <div className="space-y-2">
               <Label className="text-sm">Piattaforme</Label>
@@ -1314,6 +1356,37 @@ export default function SocialMediaDashboard({
                     className="text-sm"
                   />
                 </div>
+
+                {editingPost.image_url && editingPost.link_url && (
+                  <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <Label className="text-sm font-medium">Priorità Media</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Hai inserito sia un'immagine che un link. Cosa vuoi mostrare nel post?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={editingPost.media_priority === "image" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditingPost({ ...editingPost, media_priority: "image" })}
+                        className="flex-1"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Usa mia immagine
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={editingPost.media_priority === "link" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditingPost({ ...editingPost, media_priority: "link" })}
+                        className="flex-1"
+                      >
+                        <LinkIcon className="h-4 w-4 mr-2" />
+                        Anteprima link
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Platforms */}
                 <div className="space-y-2">

@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
         target_accounts: body.target_accounts && body.target_accounts.length > 0 ? body.target_accounts : null,
         image_url: body.image_url || null,
         link_url: body.link_url || null, // Added link_url to insert
+        media_priority: body.media_priority || "image", // Added media_priority to insert
       })
       .select()
       .single()
@@ -109,6 +110,7 @@ export async function PUT(request: NextRequest) {
           target_accounts: target_accounts && target_accounts.length > 0 ? target_accounts : null,
           image_url: image_url || null,
           link_url: link_url || null,
+          media_priority: body.media_priority || "image", // Added media_priority to insert
         })
         .select()
         .single()
@@ -137,6 +139,7 @@ export async function PUT(request: NextRequest) {
         status: status || existingPost.status,
         hashtags: content.match(/#\w+/g) || [],
         updated_at: new Date().toISOString(),
+        media_priority: body.media_priority || existingPost.media_priority || "image",
       })
       .eq("id", id)
       .select()
