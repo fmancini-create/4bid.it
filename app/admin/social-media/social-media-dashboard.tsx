@@ -446,6 +446,22 @@ export default function SocialMediaDashboard({
   const allPosts = posts
   const drafts = posts.filter((p) => p.status === "draft") // New filter for drafts
 
+  const repostPost = async (postToRepost: SocialPost) => {
+    // Logic to prepare a new post based on the reposted one
+    // For now, we'll just open the edit dialog with the content pre-filled
+    // A more sophisticated approach would create a new draft with original content and scheduling
+    setEditingPost({
+      ...postToRepost,
+      id: "", // New post ID
+      status: "draft", // Reset status to draft
+      scheduled_for: null, // Clear schedule
+      published_at: null, // Clear published date
+      created_at: new Date().toISOString(), // Reset creation date
+    })
+    setShowEditDialog(true)
+    toast.info("Preparazione del post per la ripubblicazione. Modifica e salva.")
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header
@@ -723,7 +739,14 @@ export default function SocialMediaDashboard({
                 </CardContent>
               </Card>
             ) : (
-              published.map((post) => <PostCard key={post.id} post={post} onEdit={() => openEditDialog(post)} />)
+              published.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onEdit={() => openEditDialog(post)}
+                  onRepost={() => repostPost(post)} // Added onRepost prop
+                />
+              ))
             )}
           </TabsContent>
           <TabsContent value="all" className="space-y-4 mt-4">
@@ -737,6 +760,7 @@ export default function SocialMediaDashboard({
                   ["draft", "approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined
                 } // Updated to include "draft"
                 onEdit={() => openEditDialog(post)} // Added onEdit
+                onRepost={() => repostPost(post)} // Added onRepost prop
               />
             ))}
           </TabsContent>
@@ -1381,16 +1405,19 @@ function PostCard({
   onReject,
   onPublish,
   onEdit,
+  onRepost, // Added onRepost prop
 }: {
   post: SocialPost
   onApprove?: () => void
   onReject?: () => void
   onPublish?: () => void
   onEdit?: () => void
+  onRepost?: () => void // Added onRepost prop type
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
   const canEdit = ["draft", "pending_review", "scheduled", "pending_approval", "approved"].includes(post.status)
+  const canRepost = post.status === "published" || post.status === "failed"
 
   return (
     <Card>
@@ -1463,6 +1490,12 @@ function PostCard({
                 {formatDateTimeIT(post.scheduled_for)}
               </span>
             )}
+            {post.status === "published" && post.published_at && (
+              <span className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Pubblicato: {formatDateTimeIT(post.published_at)}
+              </span>
+            )}
           </div>
 
           {/* Actions - full width buttons on mobile */}
@@ -1476,6 +1509,17 @@ function PostCard({
               >
                 <Pencil className="h-3 w-3 mr-1" />
                 Modifica
+              </Button>
+            )}
+            {canRepost && onRepost && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRepost}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs text-blue-600 border-blue-600 hover:bg-blue-50 bg-transparent"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Modifica e Ripubblica
               </Button>
             )}
             {onApprove && (
