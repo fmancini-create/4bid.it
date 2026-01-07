@@ -4,16 +4,13 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica autorizzazione cron
     const authHeader = request.headers.get("authorization")
-    const cronSecret = request.headers.get("x-vercel-cron-secret")
+    const isVercelCron =
+      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+    const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
+    const isDev = process.env.NODE_ENV === "development"
 
-    const isAuthorized =
-      authHeader === `Bearer ${process.env.CRON_SECRET}` ||
-      cronSecret === process.env.CRON_SECRET ||
-      process.env.NODE_ENV === "development"
-
-    if (!isAuthorized) {
+    if (!isDev && !isVercelCron && !isManuallyAuthorized) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 

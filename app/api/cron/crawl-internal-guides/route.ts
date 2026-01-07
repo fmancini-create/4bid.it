@@ -44,8 +44,12 @@ export async function POST(request: Request) {
   try {
     const cronSecret =
       request.headers.get("x-cron-secret") || request.headers.get("authorization")?.replace("Bearer ", "")
+    const isVercelCron =
+      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+    const isManuallyAuthorized = cronSecret === process.env.CRON_SECRET
+    const isDev = process.env.NODE_ENV === "development"
 
-    if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
+    if (!isDev && !isVercelCron && !isManuallyAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

@@ -1,31 +1,26 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server-admin"
 
 export async function GET(request: Request) {
   try {
-    // Supportiamo sia Authorization Bearer che x-vercel-cron-secret
+    // Verifichiamo solo se NON è in produzione o se l'header corrisponde
     const authHeader = request.headers.get("authorization")
-    const vercelCronHeader = request.headers.get("x-vercel-cron-secret")
 
-    const isAuthorized =
-      authHeader === `Bearer ${process.env.CRON_SECRET}` ||
-      vercelCronHeader === process.env.CRON_SECRET ||
-      // Vercel invia anche CRON_SECRET come env var durante l'esecuzione
-      request.headers.get("x-vercel-signature") !== null
+    // In produzione Vercel, i cron sono automaticamente autorizzati
+    // L'header x-vercel-cron-signature viene aggiunto automaticamente da Vercel
+    const isVercelCron =
+      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
 
-    // In development o se CRON_SECRET non è configurato, permetti l'accesso
+    const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
+
     const isDev = process.env.NODE_ENV === "development"
-    const hasCronSecret = !!process.env.CRON_SECRET
 
-    if (!isDev && hasCronSecret && !isAuthorized) {
-      console.error("[v0] Cron unauthorized - headers:", {
-        auth: authHeader ? "present" : "missing",
-        vercelCron: vercelCronHeader ? "present" : "missing",
-      })
+    if (!isDev && !isVercelCron && !isManuallyAuthorized) {
+      console.error("[v0] Cron unauthorized")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Chiama la funzione PostgreSQL per salvare lo snapshot
     const { error } = await supabase.rpc("save_daily_snapshot")

@@ -8,9 +8,14 @@ import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica autorizzazione cron
     const authHeader = request.headers.get("authorization")
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const isVercelCron =
+      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+    const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
+    const isDev = process.env.NODE_ENV === "development"
+
+    if (!isDev && !isVercelCron && !isManuallyAuthorized) {
+      console.error("[v0] Cron unauthorized")
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 
