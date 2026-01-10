@@ -890,141 +890,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             <TabsTrigger value="overview">Generale</TabsTrigger>
             <TabsTrigger value="financials">Parametri</TabsTrigger>
             <TabsTrigger value="projections">Proiezioni</TabsTrigger>
-            <TabsContent value="content" className="space-y-6">
-              {[
-                { key: "executive_summary", title: "Executive Summary" }, // Aggiunto Executive Summary
-                { key: "market_analysis", title: "Analisi di Mercato" },
-                { key: "business_model", title: "Business Model" },
-                { key: "marketing_strategy", title: "Strategia Marketing" },
-                { key: "management_team", title: "Team di Gestione" },
-                { key: "risk_analysis", title: "Analisi dei Rischi" },
-              ].map((section) => (
-                <Card key={section.key}>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>{section.title}</CardTitle>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => generateContent(section.key)}
-                        disabled={generatingSection === section.key}
-                      >
-                        {generatingSection === section.key ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Generazione...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Genera con AI
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={(selectedPlan as any)[section.key] || ""}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, [section.key]: e.target.value })}
-                      rows={8}
-                      placeholder={`Scrivi qui ${section.title.toLowerCase()} o genera con AI...`}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-
-            {/* Dialog Condivisione */}
-            <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Condividi Business Plan</DialogTitle>
-                </DialogHeader>
-
-                {shareStep === "form" ? (
-                  <>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Email destinatario</Label>
-                        <Input
-                          type="email"
-                          value={shareEmail}
-                          onChange={(e) => setShareEmail(e.target.value)}
-                          placeholder="email@esempio.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Password di accesso (generata automaticamente)</Label>
-                        <div className="flex gap-2">
-                          <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setGeneratedPassword(generatePassword())}
-                            title="Genera nuova password"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowShareDialog(false)}>
-                        Annulla
-                      </Button>
-                      <Button onClick={sharePlan} disabled={!shareEmail}>
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Genera Link
-                      </Button>
-                    </DialogFooter>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-4">
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                        <p className="text-green-800 font-medium">Link generato con successo!</p>
-                        <p className="text-sm text-green-600 mt-1">Condividi questi dati con {shareEmail}</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Link di accesso</Label>
-                        <div className="flex gap-2">
-                          <Input type="text" value={shareLink} readOnly className="font-mono text-xs bg-muted" />
-                          <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, "Link")}>
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Password</Label>
-                        <div className="flex gap-2">
-                          <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => copyToClipboard(generatedPassword, "Password")}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-sm text-amber-800">
-                          <strong>Nota:</strong> Invia link e password al destinatario. Potrà visualizzare, commentare e
-                          scaricare il PDF del business plan.
-                        </p>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={() => setShowShareDialog(false)}>Chiudi</Button>
-                    </DialogFooter>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
+            <TabsTrigger value="content">Contenuto</TabsTrigger>
           </TabsList>
 
           {/* Tab Generale */}
@@ -2133,7 +1999,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                                   {formatCurrency(pl.ebt)}
                                 </td>
                                 <td className="text-right py-2 px-2">
-                                  {formatPercent((pl.ebt / pl.totalRevenue) * 100)}
+                                  {formatPercent((pl.ebit / pl.totalRevenue) * 100)}
                                 </td>
                               </React.Fragment>
                             )
@@ -2263,98 +2129,98 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </Card>
             ))}
           </TabsContent>
+
+          {/* Dialog Condivisione */}
+          <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Condividi Business Plan</DialogTitle>
+              </DialogHeader>
+
+              {shareStep === "form" ? (
+                <>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Email destinatario</Label>
+                      <Input
+                        type="email"
+                        value={shareEmail}
+                        onChange={(e) => setShareEmail(e.target.value)}
+                        placeholder="email@esempio.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password di accesso (generata automaticamente)</Label>
+                      <div className="flex gap-2">
+                        <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setGeneratedPassword(generatePassword())}
+                          title="Genera nuova password"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+                      Annulla
+                    </Button>
+                    <Button onClick={sharePlan} disabled={!shareEmail}>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Genera Link
+                    </Button>
+                  </DialogFooter>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                      <p className="text-green-800 font-medium">Link generato con successo!</p>
+                      <p className="text-sm text-green-600 mt-1">Condividi questi dati con {shareEmail}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Link di accesso</Label>
+                      <div className="flex gap-2">
+                        <Input type="text" value={shareLink} readOnly className="font-mono text-xs bg-muted" />
+                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, "Link")}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <div className="flex gap-2">
+                        <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyToClipboard(generatedPassword, "Password")}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800">
+                        <strong>Nota:</strong> Invia link e password al destinatario. Potrà visualizzare, commentare e
+                        scaricare il PDF del business plan.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={() => setShowShareDialog(false)}>Chiudi</Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </Tabs>
-
-        {/* Dialog Condivisione */}
-        <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Condividi Business Plan</DialogTitle>
-            </DialogHeader>
-
-            {shareStep === "form" ? (
-              <>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Email destinatario</Label>
-                    <Input
-                      type="email"
-                      value={shareEmail}
-                      onChange={(e) => setShareEmail(e.target.value)}
-                      placeholder="email@esempio.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password di accesso (generata automaticamente)</Label>
-                    <div className="flex gap-2">
-                      <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setGeneratedPassword(generatePassword())}
-                        title="Genera nuova password"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowShareDialog(false)}>
-                    Annulla
-                  </Button>
-                  <Button onClick={sharePlan} disabled={!shareEmail}>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Genera Link
-                  </Button>
-                </DialogFooter>
-              </>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                    <p className="text-green-800 font-medium">Link generato con successo!</p>
-                    <p className="text-sm text-green-600 mt-1">Condividi questi dati con {shareEmail}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Link di accesso</Label>
-                    <div className="flex gap-2">
-                      <Input type="text" value={shareLink} readOnly className="font-mono text-xs bg-muted" />
-                      <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, "Link")}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <div className="flex gap-2">
-                      <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(generatedPassword, "Password")}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                      <strong>Nota:</strong> Invia link e password al destinatario. Potrà visualizzare, commentare e
-                      scaricare il PDF del business plan.
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={() => setShowShareDialog(false)}>Chiudi</Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </TooltipProvider>
   )
