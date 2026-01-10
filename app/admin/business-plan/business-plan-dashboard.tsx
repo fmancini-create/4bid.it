@@ -95,12 +95,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [sharePassword, setSharePassword] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
 
+  const safeValue = (val: string | number | null | undefined, fallback: string | number = ""): string | number => {
+    if (val === null || val === undefined) return fallback
+    return val
+  }
+
   // Carica i dati finanziari quando si seleziona un piano
   useEffect(() => {
     if (selectedPlan) {
       loadFinancials(selectedPlan.id)
     }
-  }, [selectedPlan?.id]) // The dependency array now correctly includes selectedPlan?.id
+  }, [selectedPlan]) // Changed dependency to selectedPlan
 
   const loadFinancials = async (planId: string) => {
     setIsLoading(true)
@@ -436,6 +441,91 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           <TabsTrigger value="overview">Generale</TabsTrigger>
           <TabsTrigger value="financials">Parametri</TabsTrigger>
           <TabsTrigger value="projections">Proiezioni</TabsTrigger>
+          <TabsContent value="content" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Executive Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.executive_summary || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, executive_summary: e.target.value })}
+                  rows={6}
+                  placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Analisi di Mercato</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.market_analysis || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
+                  rows={6}
+                  placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Business Model</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.business_model || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
+                  rows={6}
+                  placeholder="Modello di business, fonti di ricavo, proposta di valore..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Strategia Marketing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.marketing_strategy || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
+                  rows={6}
+                  placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Team di Gestione</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.management_team || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
+                  rows={6}
+                  placeholder="Composizione del team, competenze chiave, organigramma..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Analisi dei Rischi</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={selectedPlan.risk_analysis || ""}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
+                  rows={6}
+                  placeholder="Principali rischi identificati e strategie di mitigazione..."
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsTrigger value="content">Contenuto</TabsTrigger>
         </TabsList>
 
@@ -449,14 +539,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               <div className="space-y-2">
                 <Label>Nome Cliente</Label>
                 <Input
-                  value={selectedPlan.client_name || ""}
+                  value={safeValue(selectedPlan.client_name, "")}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, client_name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Location</Label>
                 <Input
-                  value={selectedPlan.location || ""}
+                  value={safeValue(selectedPlan.location, "")}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, location: e.target.value })}
                 />
               </div>
@@ -464,7 +554,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Numero Camere</Label>
                 <Input
                   type="number"
-                  value={selectedPlan.num_rooms}
+                  value={safeValue(selectedPlan.num_rooms, 90)}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, num_rooms: Number.parseInt(e.target.value) || 0 })
                   }
@@ -476,7 +566,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   type="number"
                   min="1"
                   max="5"
-                  value={selectedPlan.stars}
+                  value={safeValue(selectedPlan.stars, 4)}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, stars: Number.parseInt(e.target.value) || 4 })}
                 />
               </div>
@@ -484,7 +574,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Giorni Apertura/Anno</Label>
                 <Input
                   type="number"
-                  value={selectedPlan.opening_days_year}
+                  value={safeValue(selectedPlan.opening_days_year, 365)}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, opening_days_year: Number.parseInt(e.target.value) || 365 })
                   }
@@ -494,7 +584,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Anno Inizio</Label>
                 <Input
                   type="number"
-                  value={selectedPlan.start_year}
+                  value={safeValue(selectedPlan.start_year, 2026)}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, start_year: Number.parseInt(e.target.value) || 2026 })
                   }
@@ -506,7 +596,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   type="number"
                   min="1"
                   max="10"
-                  value={selectedPlan.projection_years}
+                  value={safeValue(selectedPlan.projection_years, 3)}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, projection_years: Number.parseInt(e.target.value) || 3 })
                   }
@@ -515,7 +605,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               <div className="space-y-2">
                 <Label>Descrizione</Label>
                 <Textarea
-                  value={selectedPlan.description || ""}
+                  value={safeValue(selectedPlan.description, "") as string}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, description: e.target.value })}
                   rows={3}
                 />
@@ -532,7 +622,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={selectedPlan.has_spa}
+                    checked={selectedPlan.has_spa ?? true}
                     onChange={(e) => setSelectedPlan({ ...selectedPlan, has_spa: e.target.checked })}
                     className="rounded"
                   />
@@ -541,7 +631,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={selectedPlan.has_restaurant}
+                    checked={selectedPlan.has_restaurant ?? true}
                     onChange={(e) => setSelectedPlan({ ...selectedPlan, has_restaurant: e.target.checked })}
                     className="rounded"
                   />
@@ -556,7 +646,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </CardHeader>
               <CardContent>
                 <select
-                  value={selectedPlan.status}
+                  value={safeValue(selectedPlan.status, "draft") as string}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
@@ -617,7 +707,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.occupancy_rate}
+                          value={safeValue(fin.occupancy_rate, 65)}
                           onChange={(e) => {
                             const updated = { ...fin, occupancy_rate: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -630,7 +720,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.adr}
+                          value={safeValue(fin.adr, 180)}
                           onChange={(e) => {
                             const updated = { ...fin, adr: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -643,7 +733,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.fb_revenue_per_room_night}
+                          value={safeValue(fin.fb_revenue_per_room_night, 45)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -658,7 +748,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Coperti esterni/giorno</Label>
                         <Input
                           type="number"
-                          value={fin.fb_external_covers_day}
+                          value={safeValue(fin.fb_external_covers_day, 30)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_external_covers_day: Number.parseInt(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -671,7 +761,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.fb_avg_ticket_external}
+                          value={safeValue(fin.fb_avg_ticket_external, 55)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_avg_ticket_external: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -684,7 +774,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.spa_revenue_per_room_night}
+                          value={safeValue(fin.spa_revenue_per_room_night, 25)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -699,7 +789,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Clienti esterni SPA/giorno</Label>
                         <Input
                           type="number"
-                          value={fin.spa_external_clients_day}
+                          value={safeValue(fin.spa_external_clients_day, 10)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_external_clients_day: Number.parseInt(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -712,7 +802,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.spa_avg_ticket_external}
+                          value={safeValue(fin.spa_avg_ticket_external, 80)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_avg_ticket_external: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -725,7 +815,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={fin.other_revenue_per_room_night}
+                          value={safeValue(fin.other_revenue_per_room_night, 15)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -750,7 +840,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.room_cost_pct}
+                          value={safeValue(fin.room_cost_pct, 10)}
                           onChange={(e) => {
                             const updated = { ...fin, room_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -763,7 +853,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.fb_cost_pct}
+                          value={safeValue(fin.fb_cost_pct, 30)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -776,7 +866,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.spa_cost_pct}
+                          value={safeValue(fin.spa_cost_pct, 40)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -789,7 +879,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.ota_commission_pct}
+                          value={safeValue(fin.ota_commission_pct, 15)}
                           onChange={(e) => {
                             const updated = { ...fin, ota_commission_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -802,7 +892,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.ota_share_pct}
+                          value={safeValue(fin.ota_share_pct, 60)}
                           onChange={(e) => {
                             const updated = { ...fin, ota_share_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -824,7 +914,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.staff_cost_monthly}
+                          value={safeValue(fin.staff_cost_monthly, 15000)}
                           onChange={(e) => {
                             const updated = { ...fin, staff_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -837,7 +927,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.rent_cost_monthly}
+                          value={safeValue(fin.rent_cost_monthly, 8000)}
                           onChange={(e) => {
                             const updated = { ...fin, rent_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -850,7 +940,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.utilities_cost_monthly}
+                          value={safeValue(fin.utilities_cost_monthly, 3000)}
                           onChange={(e) => {
                             const updated = { ...fin, utilities_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -863,7 +953,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.maintenance_cost_monthly}
+                          value={safeValue(fin.maintenance_cost_monthly, 1500)}
                           onChange={(e) => {
                             const updated = { ...fin, maintenance_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -876,7 +966,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.insurance_cost_monthly}
+                          value={safeValue(fin.insurance_cost_monthly, 500)}
                           onChange={(e) => {
                             const updated = { ...fin, insurance_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -889,7 +979,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.marketing_cost_monthly}
+                          value={safeValue(fin.marketing_cost_monthly, 2000)}
                           onChange={(e) => {
                             const updated = { ...fin, marketing_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -902,7 +992,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.admin_cost_monthly}
+                          value={safeValue(fin.admin_cost_monthly, 1000)}
                           onChange={(e) => {
                             const updated = { ...fin, admin_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -915,7 +1005,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={fin.other_fixed_monthly}
+                          value={safeValue(fin.other_fixed_monthly, 500)}
                           onChange={(e) => {
                             const updated = { ...fin, other_fixed_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -937,7 +1027,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="10000"
-                          value={fin.initial_investment}
+                          value={safeValue(fin.initial_investment, 2000000)}
                           onChange={(e) => {
                             const updated = { ...fin, initial_investment: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -949,7 +1039,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Anni Ammortamento</Label>
                         <Input
                           type="number"
-                          value={fin.depreciation_years}
+                          value={safeValue(fin.depreciation_years, 20)}
                           onChange={(e) => {
                             const updated = { ...fin, depreciation_years: Number.parseInt(e.target.value) || 20 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -962,7 +1052,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="10000"
-                          value={fin.loan_amount}
+                          value={safeValue(fin.loan_amount, 1500000)}
                           onChange={(e) => {
                             const updated = { ...fin, loan_amount: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -975,7 +1065,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={fin.loan_interest_rate}
+                          value={safeValue(fin.loan_interest_rate, 4.5)}
                           onChange={(e) => {
                             const updated = { ...fin, loan_interest_rate: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1386,93 +1476,6 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </Card>
             </>
           )}
-        </TabsContent>
-
-        {/* Tab Contenuto Testuale */}
-        <TabsContent value="content" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Executive Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.executive_summary || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, executive_summary: e.target.value })}
-                rows={6}
-                placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Analisi di Mercato</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.market_analysis || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
-                rows={6}
-                placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.business_model || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
-                rows={6}
-                placeholder="Modello di business, fonti di ricavo, proposta di valore..."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Strategia Marketing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.marketing_strategy || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
-                rows={6}
-                placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Team di Gestione</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.management_team || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
-                rows={6}
-                placeholder="Composizione del team, competenze chiave, organigramma..."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Analisi dei Rischi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={selectedPlan.risk_analysis || ""}
-                onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
-                rows={6}
-                placeholder="Principali rischi identificati e strategie di mitigazione..."
-              />
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 
