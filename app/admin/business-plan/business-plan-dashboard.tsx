@@ -12,7 +12,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Plus, Save, Trash2, Share2, FileText, HelpCircle, Building, ChevronLeft } from "lucide-react"
+import {
+  Plus,
+  Save,
+  Trash2,
+  Share2,
+  FileText,
+  HelpCircle,
+  Building,
+  ChevronLeft,
+  Sparkles,
+  Loader2,
+} from "lucide-react"
+import { toast } from "sonner"
 
 interface BusinessPlan {
   id: string
@@ -211,6 +223,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [shareEmail, setShareEmail] = useState("")
   const [sharePassword, setSharePassword] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
+  const [generatingSection, setGeneratingSection] = useState<string | null>(null)
 
   const selectedPlanId = selectedPlan?.id
 
@@ -300,9 +313,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
         const updated = await res.json()
         setPlans(plans.map((p) => (p.id === updated.id ? updated : p)))
         setSelectedPlan(updated)
+        toast.success("Business Plan salvato con successo!")
+      } else {
+        toast.error("Errore nel salvataggio del Business Plan")
       }
     } catch (error) {
       console.error("Error saving plan:", error)
+      toast.error("Errore nel salvataggio del Business Plan")
     }
     setIsSaving(false)
   }
@@ -319,9 +336,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       if (res.ok) {
         const updated = await res.json()
         setFinancials(financials.map((f) => (f.year_number === updated.year_number ? updated : f)))
+        toast.success(`Parametri Anno ${updated.year_number} salvati con successo!`)
+      } else {
+        toast.error(`Errore nel salvataggio dei parametri dell'Anno ${yearFinancials.year_number}`)
       }
     } catch (error) {
       console.error("Error saving financials:", error)
+      toast.error(`Errore nel salvataggio dei parametri dell'Anno ${yearFinancials.year_number}`)
     }
     setIsSaving(false)
   }
@@ -335,9 +356,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
         if (selectedPlan?.id === planId) {
           setSelectedPlan(null)
         }
+        toast.success("Business Plan eliminato con successo!")
+      } else {
+        toast.error("Errore nell'eliminazione del Business Plan")
       }
     } catch (error) {
       console.error("Error deleting plan:", error)
+      toast.error("Errore nell'eliminazione del Business Plan")
     }
   }
 
@@ -351,15 +376,44 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
         body: JSON.stringify({ email: shareEmail, password: sharePassword }),
       })
       if (res.ok) {
-        alert("Business Plan condiviso con successo!")
+        toast.success("Business Plan condiviso con successo!")
         setShowShareDialog(false)
         setShareEmail("")
         setSharePassword("")
+      } else {
+        toast.error("Errore nella condivisione del Business Plan")
       }
     } catch (error) {
       console.error("Error sharing plan:", error)
+      toast.error("Errore nella condivisione del Business Plan")
     }
     setIsLoading(false)
+  }
+
+  const generateWithAI = async (section: string) => {
+    if (!selectedPlan?.id) return
+
+    setGeneratingSection(section)
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section }),
+      })
+
+      if (!res.ok) throw new Error("Errore nella generazione")
+
+      const { content } = await res.json()
+
+      // Aggiorna il campo corrispondente
+      setSelectedPlan((prev) => (prev ? { ...prev, [section]: content } : prev))
+      toast.success("Contenuto generato con successo")
+    } catch (error) {
+      console.error("Errore generazione AI:", error)
+      toast.error("Errore nella generazione del contenuto")
+    } finally {
+      setGeneratingSection(null)
+    }
   }
 
   const calculatePL = (plan: BusinessPlan, fin: BusinessPlanFinancials) => {
@@ -1476,84 +1530,162 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           {/* Tab Contenuto Testuale */}
           <TabsContent value="content" className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Executive Summary</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("description")}
+                  disabled={generatingSection === "description"}
+                >
+                  {generatingSection === "description" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.description || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, description: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Analisi di Mercato</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("market_analysis")}
+                  disabled={generatingSection === "market_analysis"}
+                >
+                  {generatingSection === "market_analysis" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.market_analysis || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Business Model</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("business_model")}
+                  disabled={generatingSection === "business_model"}
+                >
+                  {generatingSection === "business_model" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.business_model || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Modello di business, fonti di ricavo, proposta di valore..."
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Strategia Marketing</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("marketing_strategy")}
+                  disabled={generatingSection === "marketing_strategy"}
+                >
+                  {generatingSection === "marketing_strategy" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.marketing_strategy || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Team di Gestione</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("management_team")}
+                  disabled={generatingSection === "management_team"}
+                >
+                  {generatingSection === "management_team" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.management_team || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Composizione del team, competenze chiave, organigramma..."
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Analisi dei Rischi</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI("risk_analysis")}
+                  disabled={generatingSection === "risk_analysis"}
+                >
+                  {generatingSection === "risk_analysis" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Genera con AI
+                </Button>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={selectedPlan.risk_analysis || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
-                  rows={6}
+                  rows={8}
                   placeholder="Principali rischi identificati e strategie di mitigazione..."
                 />
               </CardContent>
