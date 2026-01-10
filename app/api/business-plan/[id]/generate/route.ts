@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
 import { createAdminClient } from "@/lib/supabase"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const { section } = await request.json()
 
     console.log("[v0] Generate API - id:", id, "section:", section)
