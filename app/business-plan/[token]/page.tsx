@@ -10,7 +10,7 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
   const { data: share, error: shareError } = await supabase
     .from("business_plan_shares")
     .select("*, business_plans(*)")
-    .eq("access_token", token)
+    .eq("token", token) // fixed from access_token to token
     .single()
 
   if (shareError || !share) {

@@ -249,8 +249,11 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
+  // CHANGE: Replace sharePassword state with auto-generated password and shareLink
   const [shareEmail, setShareEmail] = useState("")
-  const [sharePassword, setSharePassword] = useState("")
+  const [generatedPassword, setGeneratedPassword] = useState("")
+  const [shareLink, setShareLink] = useState("")
+  const [shareStep, setShareStep] = useState<"form" | "result">("form")
   const [generatingSection, setGeneratingSection] = useState<string | null>(null)
   const [needsInit, setNeedsInit] = useState(false)
 
@@ -500,38 +503,55 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }
 
+  // CHANGE: Generate random password function
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+    let password = ""
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
+  // CHANGE: Open share dialog with auto-generated password
+  const openShareDialog = () => {
+    setShareEmail("")
+    setGeneratedPassword(generatePassword())
+    setShareLink("")
+    setShareStep("form")
+    setShowShareDialog(true)
+  }
+
+  // CHANGE: Updated sharePlan to use generatedPassword
   const sharePlan = async () => {
-    console.log("[v0] sharePlan called", {
-      selectedPlan: selectedPlan?.id,
-      shareEmail,
-      sharePassword: sharePassword ? "***" : "empty",
-    })
-    if (!selectedPlan || !shareEmail || !sharePassword) {
-      toast.error("Compila email e password")
+    if (!selectedPlan || !shareEmail || !generatedPassword) {
+      toast.error("Compila l'email del destinatario")
       return
     }
     try {
-      console.log("[v0] Calling share API...")
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: shareEmail, password: sharePassword }),
+        body: JSON.stringify({ email: shareEmail, password: generatedPassword }),
       })
-      console.log("[v0] Share API response status:", res.status)
       const data = await res.json()
-      console.log("[v0] Share API response:", data)
       if (res.ok) {
-        toast.success(`Link di condivisione inviato a ${shareEmail}`)
-        setShowShareDialog(false)
-        setShareEmail("")
-        setSharePassword("")
+        setShareLink(data.link)
+        setShareStep("result")
+        toast.success("Link di condivisione generato!")
       } else {
         toast.error(`Errore: ${data.error || "Condivisione fallita"}`)
       }
     } catch (error) {
-      console.error("[v0] Error sharing plan:", error)
+      console.error("Error sharing plan:", error)
       toast.error("Errore nella condivisione")
     }
+  }
+
+  // CHANGE: Copy to clipboard function
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success(`${label} copiato!`)
   }
 
   const generateContent = async (section: string) => {
@@ -836,14 +856,19 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowShareDialog(true)}>
-              <Share2 className="h-4 w-4 mr-2" />
-              Condividi
-            </Button>
-            <Button onClick={savePlan} disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "Salvataggio..." : "Salva"}
-            </Button>
+            {/* CHANGE: Update header to use openShareDialog */}
+            {selectedPlan && (
+              <>
+                <Button variant="outline" onClick={openShareDialog}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Condividi
+                </Button>
+                <Button onClick={savePlan} disabled={isSaving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? "Salvataggio..." : "Salva"}
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -2096,39 +2121,92 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
         {/* Dialog Condivisione */}
         <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Condividi Business Plan</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Email destinatario</Label>
-                <Input
-                  type="email"
-                  value={shareEmail}
-                  onChange={(e) => setShareEmail(e.target.value)}
-                  placeholder="email@esempio.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Password di accesso</Label>
-                <Input
-                  type="password"
-                  value={sharePassword}
-                  onChange={(e) => setSharePassword(e.target.value)}
-                  placeholder="Inserisci una password"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowShareDialog(false)}>
-                Annulla
-              </Button>
-              <Button onClick={sharePlan}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Condividi
-              </Button>
-            </DialogFooter>
+
+            {shareStep === "form" ? (
+              <>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email destinatario</Label>
+                    <Input
+                      type="email"
+                      value={shareEmail}
+                      onChange={(e) => setShareEmail(e.target.value)}
+                      placeholder="email@esempio.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password di accesso (generata automaticamente)</Label>
+                    <div className="flex gap-2">
+                      <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setGeneratedPassword(generatePassword())}
+                        title="Genera nuova password"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+                    Annulla
+                  </Button>
+                  <Button onClick={sharePlan} disabled={!shareEmail}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Genera Link
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                    <p className="text-green-800 font-medium">Link generato con successo!</p>
+                    <p className="text-sm text-green-600 mt-1">Condividi questi dati con {shareEmail}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Link di accesso</Label>
+                    <div className="flex gap-2">
+                      <Input type="text" value={shareLink} readOnly className="font-mono text-xs bg-muted" />
+                      <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, "Link")}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <div className="flex gap-2">
+                      <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(generatedPassword, "Password")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Nota:</strong> Invia link e password al destinatario. Potrà visualizzare, commentare e
+                      scaricare il PDF del business plan.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => setShowShareDialog(false)}>Chiudi</Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>
