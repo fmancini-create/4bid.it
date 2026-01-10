@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
 import { createAdminClient } from "@/lib/supabase"
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
+    const { id } = params
     const { section } = await request.json()
 
     console.log("[v0] Generate API - id:", id, "section:", section)
@@ -46,12 +46,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     })
 
+    const projectName = plan.client_name || plan.name || "Progetto Hotel"
+
     // Definisci i prompt per ogni sezione
     const sectionPrompts: Record<string, string> = {
       executive_summary: `Scrivi un Executive Summary professionale per il seguente business plan alberghiero:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle ${plan.has_spa ? "con SPA" : ""} ${plan.has_restaurant ? "con ristorante" : ""}
 - Località: ${plan.location || "Italia"}
 - Numero camere: ${plan.num_rooms || 90}
@@ -72,7 +74,7 @@ Scrivi in italiano, tono professionale ma coinvolgente.`,
       market_analysis: `Scrivi un'analisi di mercato dettagliata per il seguente hotel:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle ${plan.has_spa ? "con centro benessere" : ""} ${plan.has_restaurant ? "con ristorante" : ""}
 - Località: ${plan.location || "Lucca, Toscana"}
 - Numero camere: ${plan.num_rooms || 90}
@@ -92,7 +94,7 @@ Scrivi in italiano, 4-5 paragrafi dettagliati con dati e insight specifici.`,
       business_model: `Descrivi il modello di business per il seguente hotel:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle
 - Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}${plan.has_congress ? "Centro Congressi, " : ""}Camere
 - Località: ${plan.location || "Italia"}
@@ -119,7 +121,7 @@ Scrivi in italiano, 4-5 paragrafi professionali.`,
       marketing_strategy: `Definisci la strategia di marketing per il seguente hotel:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle ${plan.has_spa ? "con SPA" : ""} ${plan.has_restaurant ? "con ristorante gourmet" : ""}
 - Località: ${plan.location || "Italia"}
 - Posizionamento: Upscale/Upper Upscale
@@ -141,7 +143,7 @@ Scrivi in italiano, strategia dettagliata e actionable.`,
       management_team: `Descrivi la struttura organizzativa ideale per il seguente hotel:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle
 - Numero camere: ${plan.num_rooms || 90}
 - Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}${plan.has_congress ? "Centro Congressi, " : ""}Reception, Housekeeping
@@ -159,7 +161,7 @@ Scrivi in italiano, 4-5 paragrafi dettagliati.`,
       risk_analysis: `Analizza i rischi per il seguente progetto alberghiero:
 
 DATI PROGETTO:
-- Nome: ${plan.name}
+- Nome: ${projectName}
 - Tipo: Hotel ${plan.stars || 4} stelle di nuova apertura
 - Località: ${plan.location || "Italia"}
 - Numero camere: ${plan.num_rooms || 90}

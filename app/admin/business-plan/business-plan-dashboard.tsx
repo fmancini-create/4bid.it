@@ -863,12 +863,25 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <CardTitle>Informazioni Progetto</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Nome Cliente</Label>
-                  <Input
-                    value={selectedPlan.client_name || ""}
-                    onChange={(e) => setSelectedPlan({ ...selectedPlan, client_name: e.target.value })}
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Progetto</Label>
+                    <Input
+                      id="name"
+                      value={selectedPlan.name || ""}
+                      onChange={(e) => setSelectedPlan({ ...selectedPlan, name: e.target.value })}
+                      placeholder="Es: Hotel Le Mura - Business Plan 2025"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="client_name">Nome Cliente</Label>
+                    <Input
+                      id="client_name"
+                      value={selectedPlan.client_name || ""}
+                      onChange={(e) => setSelectedPlan({ ...selectedPlan, client_name: e.target.value })}
+                      placeholder="Es: Hotel Le Mura S.r.l."
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Location</Label>
