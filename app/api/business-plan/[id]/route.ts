@@ -19,6 +19,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const supabase = createAdminClient()
   const body = await request.json()
 
+  console.log("[v0] Business Plan PUT - id:", id)
+  console.log("[v0] Business Plan PUT - body keys:", Object.keys(body))
+  console.log("[v0] Business Plan PUT - executive_summary length:", body.executive_summary?.length || 0)
+  console.log("[v0] Business Plan PUT - market_analysis length:", body.market_analysis?.length || 0)
+
   // Rimuovi campi non modificabili
   delete body.id
   delete body.created_at
@@ -27,8 +32,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data, error } = await supabase.from("business_plans").update(body).eq("id", id).select().single()
 
   if (error) {
+    console.error("[v0] Business Plan PUT error:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  console.log("[v0] Business Plan PUT - success, updated fields:", Object.keys(data || {}))
 
   return NextResponse.json(data)
 }
