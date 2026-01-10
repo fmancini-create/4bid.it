@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   Sparkles,
   Loader2,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -36,6 +37,7 @@ interface BusinessPlan {
   stars: number
   has_spa: boolean
   has_restaurant: boolean
+  has_congress: boolean // Aggiunto comparto congressuale
   location: string
   opening_days_year: number
   projection_years: number
@@ -63,16 +65,22 @@ interface BusinessPlanFinancials {
   // Ricavi extra (percentuali)
   fb_revenue_pct: number
   spa_revenue_pct: number
+  congress_revenue_pct: number // Aggiunto ricavi congressuali
   other_revenue_pct: number
 
   // Costi variabili (percentuali)
   rooms_cost_pct: number
   fb_cost_pct: number
   spa_cost_pct: number
+  congress_cost_pct: number // Aggiunto costi congressuali
   other_cost_pct: number
 
-  // Costi fissi annuali
-  staff_cost: number
+  // Costi fissi annuali - Divisi per reparto
+  staff_rooms_cost: number
+  staff_fb_cost: number
+  staff_spa_cost: number
+  staff_congress_cost: number
+  staff_admin_cost: number
   rent_cost: number
   utilities_cost: number
   marketing_cost: number
@@ -127,6 +135,10 @@ const FIELD_INFO: Record<string, { description: string; benchmark: string }> = {
     description: "Ricavi SPA come percentuale sui ricavi camere",
     benchmark: "Hotel con SPA: 8-15% | Resort benessere: 15-25%",
   },
+  congress_revenue_pct: {
+    description: "Ricavi Centro Congressi come percentuale sui ricavi camere",
+    benchmark: "Business hotel: 15-30% | Hotel congressuale: 25-45%",
+  },
   other_revenue_pct: {
     description: "Altri ricavi come percentuale sui ricavi camere (parcheggio, lavanderia, minibar, etc.)",
     benchmark: "Media: 3-8% | Business hotel: 5-10%",
@@ -144,54 +156,74 @@ const FIELD_INFO: Record<string, { description: string; benchmark: string }> = {
     description: "Costi variabili SPA (prodotti, terapisti esterni) come % ricavi SPA",
     benchmark: "SPA hotel: 35-45% | Day SPA: 40-50%",
   },
-  // Costi fissi
-  staff_cost: {
-    description: "Costo totale del personale annuo (stipendi + contributi + TFR)",
-    benchmark: "Incidenza su ricavi: 30-40% | 4* Superior 90 camere: €800k-1.2M",
+  congress_cost_pct: {
+    description: "Costi variabili congressi (allestimenti, catering, tecnologia) come % ricavi",
+    benchmark: "Centro congressi: 40-55% | Sale meeting: 30-40%",
+  },
+  // Costi fissi personale per reparto
+  staff_rooms_cost: {
+    description: "Costo personale Room Division (reception, housekeeping, portineria)",
+    benchmark: "Incidenza su ricavi camere: 18-25% | 4* 90 camere: €350k-500k",
+  },
+  staff_fb_cost: {
+    description: "Costo personale F&B (cucina, sala, bar)",
+    benchmark: "Incidenza su ricavi F&B: 35-45% | Ristorante hotel 4*: €250k-400k",
+  },
+  staff_spa_cost: {
+    description: "Costo personale SPA (terapisti, reception wellness)",
+    benchmark: "Incidenza su ricavi SPA: 40-50% | SPA medio-grande: €120k-200k",
+  },
+  staff_congress_cost: {
+    description: "Costo personale Centro Congressi (tecnici, hostess, coordinatori)",
+    benchmark: "Incidenza su ricavi congressi: 25-35% | Centro congressi: €80k-150k",
+  },
+  staff_admin_cost: {
+    description: "Costo personale amministrativo (direzione, HR, contabilità)",
+    benchmark: "Incidenza su ricavi totali: 5-8% | Hotel 4* 90 camere: €150k-250k",
   },
   rent_cost: {
-    description: "Affitto o canone leasing annuo dell'immobile",
-    benchmark: "Affitto: 8-12% ricavi | Leasing: variabile in base all'investimento",
+    description: "Affitto o leasing immobile annuo",
+    benchmark: "Variabile per location | Città d'arte: €150-300k | Periferia: €80-150k",
   },
   utilities_cost: {
-    description: "Costi annui per energia elettrica, gas, acqua, internet",
-    benchmark: "Incidenza: 4-7% ricavi | 4* con SPA: €100k-180k/anno",
+    description: "Costi utenze annue (elettricità, gas, acqua)",
+    benchmark: "€800-1.500/camera/anno | 90 camere: €70k-135k | Con SPA +30%",
   },
   marketing_cost: {
-    description: "Budget annuo marketing, pubblicità, PR, eventi",
-    benchmark: "Nuovo hotel: 5-8% ricavi | Hotel affermato: 3-5% ricavi",
+    description: "Budget marketing e comunicazione annuo",
+    benchmark: "3-6% dei ricavi totali | Hotel 4* 90 camere: €60k-150k",
   },
   maintenance_cost: {
-    description: "Manutenzione ordinaria annua (impianti, arredi, giardino)",
-    benchmark: "Standard: 3-5% ricavi | €500-800/camera/anno",
+    description: "Costi manutenzione ordinaria annua",
+    benchmark: "2-4% del valore immobile | Hotel 90 camere: €50k-100k",
   },
   insurance_cost: {
-    description: "Polizze assicurative annue (immobile, RC, personale)",
-    benchmark: "€300-500/camera/anno | 0.8-1.5% ricavi",
+    description: "Premi assicurativi annui (RC, incendio, furto, etc.)",
+    benchmark: "0.5-1% del valore immobile | Hotel 4* 90 camere: €30k-60k",
   },
   admin_cost: {
-    description: "Costi amministrativi (commercialista, consulenze, software)",
-    benchmark: "1-2% ricavi | €40k-80k/anno per hotel medio",
+    description: "Costi amministrativi generali (consulenze, software, etc.)",
+    benchmark: "1-2% dei ricavi | Hotel 90 camere: €30k-60k",
   },
   other_fixed_cost: {
-    description: "Altri costi fissi (licenze, abbonamenti, varie)",
-    benchmark: "1-2% ricavi | €20k-50k/anno",
+    description: "Altri costi fissi non classificabili",
+    benchmark: "1-2% dei ricavi | €20k-50k",
   },
   depreciation: {
-    description: "Ammortamento annuo (immobile + arredi + attrezzature)",
-    benchmark: "Immobile: 3% valore | Arredi: 10-15% valore | Attrezzature: 20%",
+    description: "Ammortamento annuo immobili e attrezzature",
+    benchmark: "3-5% del valore investimento | Investimento €8M: €240k-400k",
   },
   interest_cost: {
-    description: "Interessi passivi annui sui finanziamenti",
-    benchmark: "Dipende dal debito - tipicamente 2-5% del fatturato",
+    description: "Interessi passivi su finanziamenti",
+    benchmark: "Tasso 4-6% su mutuo | Mutuo €5M: €200k-300k/anno (primi anni)",
   },
   tax_rate: {
-    description: "Aliquota fiscale effettiva (IRES + IRAP)",
-    benchmark: "Italia: IRES 24% + IRAP ~4% = ~28% effettivo",
+    description: "Aliquota fiscale media (IRES + IRAP)",
+    benchmark: "IRES 24% + IRAP ~4% = 27-28% effettivo",
   },
 }
 
-function LabelWithTooltip({ field, children }: { field: string; children: React.ReactNode }) {
+const LabelWithTooltip = ({ field, children }: { field: string; children: React.ReactNode }) => {
   const info = FIELD_INFO[field]
   if (!info) return <Label>{children}</Label>
 
@@ -200,11 +232,9 @@ function LabelWithTooltip({ field, children }: { field: string; children: React.
       <Label>{children}</Label>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" className="text-muted-foreground hover:text-foreground">
-            <HelpCircle className="h-3.5 w-3.5" />
-          </button>
+          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
+        <TooltipContent className="max-w-sm">
           <p className="font-medium mb-1">{info.description}</p>
           <p className="text-xs text-muted-foreground">{info.benchmark}</p>
         </TooltipContent>
@@ -217,17 +247,15 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [plans, setPlans] = useState<BusinessPlan[]>(initialPlans)
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlan | null>(null)
   const [financials, setFinancials] = useState<BusinessPlanFinancials[]>([])
+  const [activeTab, setActiveTab] = useState("overview")
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareEmail, setShareEmail] = useState("")
   const [sharePassword, setSharePassword] = useState("")
-  const [activeTab, setActiveTab] = useState("overview")
   const [generatingSection, setGeneratingSection] = useState<string | null>(null)
 
   const selectedPlanId = selectedPlan?.id
-
-  // Carica i dati finanziari quando si seleziona un piano
   useEffect(() => {
     if (selectedPlanId) {
       loadFinancials(selectedPlanId)
@@ -240,12 +268,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       const res = await fetch(`/api/business-plan/${planId}/financials`)
       if (res.ok) {
         const data = await res.json()
-        // Se non ci sono dati, crea gli anni di default
-        if (data.length === 0 && selectedPlan) {
-          await createDefaultYears(planId, selectedPlan.projection_years || 3)
-        } else {
-          setFinancials(data)
-        }
+        setFinancials(data)
       }
     } catch (error) {
       console.error("Error loading financials:", error)
@@ -253,51 +276,145 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     setIsLoading(false)
   }
 
-  const createDefaultYears = async (planId: string, years: number) => {
+  const createDefaultYears = async (planId: string, numYears: number) => {
     setIsLoading(true)
     try {
-      for (let i = 1; i <= years; i++) {
+      for (let year = 1; year <= numYears; year++) {
+        const defaultData: Partial<BusinessPlanFinancials> = {
+          business_plan_id: planId,
+          year_number: year,
+          rooms_available: selectedPlan?.num_rooms || 90,
+          opening_days: selectedPlan?.opening_days_year || 365,
+          occupancy_rate: 55 + year * 5, // Crescita graduale
+          adr: 170 + year * 10,
+          fb_revenue_pct: 35,
+          spa_revenue_pct: selectedPlan?.has_spa ? 12 : 0,
+          congress_revenue_pct: selectedPlan?.has_congress ? 20 : 0,
+          other_revenue_pct: 5,
+          rooms_cost_pct: 25,
+          fb_cost_pct: 35,
+          spa_cost_pct: 40,
+          congress_cost_pct: 45,
+          other_cost_pct: 20,
+          staff_rooms_cost: 400000,
+          staff_fb_cost: selectedPlan?.has_restaurant ? 300000 : 0,
+          staff_spa_cost: selectedPlan?.has_spa ? 150000 : 0,
+          staff_congress_cost: selectedPlan?.has_congress ? 100000 : 0,
+          staff_admin_cost: 180000,
+          rent_cost: 180000,
+          utilities_cost: 120000,
+          marketing_cost: 80000,
+          maintenance_cost: 60000,
+          insurance_cost: 35000,
+          admin_cost: 45000,
+          other_fixed_cost: 30000,
+          depreciation: 150000,
+          interest_cost: 80000,
+          tax_rate: 24,
+        }
         await fetch(`/api/business-plan/${planId}/financials`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ year_number: i }),
+          body: JSON.stringify(defaultData),
         })
       }
-      // Ricarica i dati
-      const res = await fetch(`/api/business-plan/${planId}/financials`)
-      if (res.ok) {
-        const data = await res.json()
-        setFinancials(data)
-      }
+      await loadFinancials(planId)
+      toast.success("Parametri inizializzati con successo!")
     } catch (error) {
       console.error("Error creating default years:", error)
+      toast.error("Errore nell'inizializzazione dei parametri")
     }
     setIsLoading(false)
   }
 
-  const createNewPlan = async () => {
-    setIsLoading(true)
+  const copyFromPreviousYear = (currentYear: number) => {
+    const prevYear = financials.find((f) => f.year_number === currentYear - 1)
+    if (!prevYear) {
+      toast.error("Anno precedente non trovato")
+      return
+    }
+
+    const currentFin = financials.find((f) => f.year_number === currentYear)
+    if (!currentFin) return
+
+    // Copia tutti i valori dall'anno precedente
+    const updated = { ...currentFin }
+    Object.keys(prevYear).forEach((key) => {
+      if (key !== "id" && key !== "year_number" && key !== "business_plan_id") {
+        ;(updated as any)[key] = (prevYear as any)[key]
+      }
+    })
+
+    setFinancials(financials.map((f) => (f.year_number === currentYear ? updated : f)))
+    saveFinancials(updated)
+    toast.success(`Parametri copiati dall'Anno ${currentYear - 1}`)
+  }
+
+  const addNewYear = async () => {
+    if (!selectedPlan) return
+    const maxYear = Math.max(...financials.map((f) => f.year_number), 0)
+    const newYear = maxYear + 1
+    const prevYear = financials.find((f) => f.year_number === maxYear)
+
+    // Crea nuovo anno copiando dall'ultimo
+    const newData: Partial<BusinessPlanFinancials> = prevYear
+      ? {
+          ...prevYear,
+          id: undefined,
+          year_number: newYear,
+          // Incrementi automatici per nuovo anno
+          occupancy_rate: Math.min((prevYear.occupancy_rate || 65) + 3, 85),
+          adr: (prevYear.adr || 180) * 1.03,
+        }
+      : {
+          business_plan_id: selectedPlan.id,
+          year_number: newYear,
+          rooms_available: selectedPlan.num_rooms || 90,
+          opening_days: selectedPlan.opening_days_year || 365,
+          occupancy_rate: 65,
+          adr: 180,
+          fb_revenue_pct: 35,
+          spa_revenue_pct: 12,
+          congress_revenue_pct: 20,
+          other_revenue_pct: 5,
+          rooms_cost_pct: 25,
+          fb_cost_pct: 35,
+          spa_cost_pct: 40,
+          congress_cost_pct: 45,
+          other_cost_pct: 20,
+          staff_rooms_cost: 400000,
+          staff_fb_cost: 300000,
+          staff_spa_cost: 150000,
+          staff_congress_cost: 100000,
+          staff_admin_cost: 180000,
+          rent_cost: 180000,
+          utilities_cost: 120000,
+          marketing_cost: 80000,
+          maintenance_cost: 60000,
+          insurance_cost: 35000,
+          admin_cost: 45000,
+          other_fixed_cost: 30000,
+          depreciation: 150000,
+          interest_cost: 80000,
+          tax_rate: 24,
+        }
+
     try {
-      const res = await fetch("/api/business-plan", {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/financials`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Nuovo Business Plan",
-          description: "",
-          client_name: "",
-          project_type: "hotel",
-          status: "draft",
-        }),
+        body: JSON.stringify(newData),
       })
       if (res.ok) {
-        const newPlan = await res.json()
-        setPlans([newPlan, ...plans])
-        setSelectedPlan(newPlan)
+        await loadFinancials(selectedPlan.id)
+        // Aggiorna anche projection_years nel piano
+        setSelectedPlan({ ...selectedPlan, projection_years: newYear })
+        toast.success(`Anno ${newYear} aggiunto con successo!`)
       }
     } catch (error) {
-      console.error("Error creating plan:", error)
+      console.error("Error adding new year:", error)
+      toast.error("Errore nell'aggiunta del nuovo anno")
     }
-    setIsLoading(false)
   }
 
   const savePlan = async () => {
@@ -367,8 +484,10 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   }
 
   const sharePlan = async () => {
-    if (!selectedPlan || !shareEmail || !sharePassword) return
-    setIsLoading(true)
+    if (!selectedPlan || !shareEmail || !sharePassword) {
+      toast.error("Compila email e password")
+      return
+    }
     try {
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/share`, {
         method: "POST",
@@ -376,43 +495,76 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
         body: JSON.stringify({ email: shareEmail, password: sharePassword }),
       })
       if (res.ok) {
-        toast.success("Business Plan condiviso con successo!")
+        const data = await res.json()
+        toast.success(`Link di condivisione inviato a ${shareEmail}`)
         setShowShareDialog(false)
         setShareEmail("")
         setSharePassword("")
       } else {
-        toast.error("Errore nella condivisione del Business Plan")
+        toast.error("Errore nella condivisione")
       }
     } catch (error) {
       console.error("Error sharing plan:", error)
-      toast.error("Errore nella condivisione del Business Plan")
+      toast.error("Errore nella condivisione")
     }
-    setIsLoading(false)
   }
 
-  const generateWithAI = async (section: string) => {
-    if (!selectedPlan?.id) return
-
+  const generateContent = async (section: string) => {
+    if (!selectedPlan) return
     setGeneratingSection(section)
     try {
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section }),
+        body: JSON.stringify({ section, financials }),
       })
-
-      if (!res.ok) throw new Error("Errore nella generazione")
-
-      const { content } = await res.json()
-
-      // Aggiorna il campo corrispondente
-      setSelectedPlan((prev) => (prev ? { ...prev, [section]: content } : prev))
-      toast.success("Contenuto generato con successo")
+      if (res.ok) {
+        const { content } = await res.json()
+        setSelectedPlan({ ...selectedPlan, [section]: content })
+        toast.success("Contenuto generato con successo!")
+      } else {
+        toast.error("Errore nella generazione del contenuto")
+      }
     } catch (error) {
-      console.error("Errore generazione AI:", error)
+      console.error("Error generating content:", error)
       toast.error("Errore nella generazione del contenuto")
-    } finally {
-      setGeneratingSection(null)
+    }
+    setGeneratingSection(null)
+  }
+
+  const createNewPlan = async () => {
+    try {
+      const res = await fetch("/api/business-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Nuovo Business Plan",
+          description: "",
+          client_name: "",
+          project_type: "hotel",
+          num_rooms: 90,
+          stars: 4,
+          has_spa: true,
+          has_restaurant: true,
+          has_congress: false, // Default false per congress
+          location: "",
+          opening_days_year: 365,
+          projection_years: 3,
+          start_year: new Date().getFullYear() + 1,
+          status: "draft",
+        }),
+      })
+      if (res.ok) {
+        const newPlan = await res.json()
+        setPlans([newPlan, ...plans])
+        setSelectedPlan(newPlan)
+        toast.success("Nuovo Business Plan creato!")
+      } else {
+        toast.error("Errore nella creazione del Business Plan")
+      }
+    } catch (error) {
+      console.error("Error creating plan:", error)
+      toast.error("Errore nella creazione del Business Plan")
     }
   }
 
@@ -426,22 +578,30 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
     // RICAVI
     const roomRevenue = roomNights * adr
-    const fbRevenue = roomRevenue * (getFinValue(fin, "fb_revenue_pct", 35) / 100)
-    const spaRevenue = roomRevenue * (getFinValue(fin, "spa_revenue_pct", 12) / 100)
+    const fbRevenue = plan.has_restaurant ? roomRevenue * (getFinValue(fin, "fb_revenue_pct", 35) / 100) : 0
+    const spaRevenue = plan.has_spa ? roomRevenue * (getFinValue(fin, "spa_revenue_pct", 12) / 100) : 0
+    const congressRevenue = plan.has_congress ? roomRevenue * (getFinValue(fin, "congress_revenue_pct", 20) / 100) : 0
     const otherRevenue = roomRevenue * (getFinValue(fin, "other_revenue_pct", 5) / 100)
-    const totalRevenue = roomRevenue + fbRevenue + spaRevenue + otherRevenue
+    const totalRevenue = roomRevenue + fbRevenue + spaRevenue + congressRevenue + otherRevenue
 
     // COSTI VARIABILI
     const roomCosts = roomRevenue * (getFinValue(fin, "rooms_cost_pct", 25) / 100)
     const fbCosts = fbRevenue * (getFinValue(fin, "fb_cost_pct", 35) / 100)
     const spaCosts = spaRevenue * (getFinValue(fin, "spa_cost_pct", 40) / 100)
-    const totalVariableCosts = roomCosts + fbCosts + spaCosts
+    const congressCosts = congressRevenue * (getFinValue(fin, "congress_cost_pct", 45) / 100)
+    const totalVariableCosts = roomCosts + fbCosts + spaCosts + congressCosts
 
     // MARGINE DI CONTRIBUZIONE
     const contributionMargin = totalRevenue - totalVariableCosts
 
-    // COSTI FISSI
-    const staffCosts = getFinValue(fin, "staff_cost", 850000)
+    // COSTI FISSI - Personale diviso per reparto
+    const staffRoomsCost = getFinValue(fin, "staff_rooms_cost", 400000)
+    const staffFbCost = plan.has_restaurant ? getFinValue(fin, "staff_fb_cost", 300000) : 0
+    const staffSpaCost = plan.has_spa ? getFinValue(fin, "staff_spa_cost", 150000) : 0
+    const staffCongressCost = plan.has_congress ? getFinValue(fin, "staff_congress_cost", 100000) : 0
+    const staffAdminCost = getFinValue(fin, "staff_admin_cost", 180000)
+    const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffAdminCost
+
     const rentCosts = getFinValue(fin, "rent_cost", 180000)
     const utilitiesCosts = getFinValue(fin, "utilities_cost", 120000)
     const maintenanceCosts = getFinValue(fin, "maintenance_cost", 60000)
@@ -450,7 +610,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     const adminCosts = getFinValue(fin, "admin_cost", 45000)
     const otherFixedCosts = getFinValue(fin, "other_fixed_cost", 30000)
     const totalFixedCosts =
-      staffCosts +
+      totalStaffCosts +
       rentCosts +
       utilitiesCosts +
       maintenanceCosts +
@@ -469,10 +629,10 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     const ebit = ebitda - depreciation
 
     // INTERESSI
-    const interestExpense = getFinValue(fin, "interest_cost", 80000)
+    const interestCost = getFinValue(fin, "interest_cost", 80000)
 
-    // EBT (Utile ante imposte)
-    const ebt = ebit - interestExpense
+    // EBT
+    const ebt = ebit - interestCost
 
     // IMPOSTE
     const taxRate = getFinValue(fin, "tax_rate", 24) / 100
@@ -488,18 +648,24 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     const netMargin = totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0
 
     return {
-      roomNights,
       roomRevenue,
       fbRevenue,
       spaRevenue,
+      congressRevenue,
       otherRevenue,
       totalRevenue,
       roomCosts,
       fbCosts,
       spaCosts,
+      congressCosts,
       totalVariableCosts,
       contributionMargin,
-      staffCosts,
+      staffRoomsCost,
+      staffFbCost,
+      staffSpaCost,
+      staffCongressCost,
+      staffAdminCost,
+      totalStaffCosts,
       rentCosts,
       utilitiesCosts,
       maintenanceCosts,
@@ -511,7 +677,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       ebitda,
       depreciation,
       ebit,
-      interestExpense,
+      interestCost,
       ebt,
       taxes,
       netIncome,
@@ -522,28 +688,28 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }
 
-  // Vista lista piani
+  // Lista piani
   if (!selectedPlan) {
     return (
       <div className="container mx-auto p-4 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Business Plan</h1>
-            <p className="text-muted-foreground">Gestisci i tuoi business plan e proiezioni finanziarie</p>
+            <h1 className="text-2xl font-bold">Business Plan</h1>
+            <p className="text-muted-foreground">Gestisci i tuoi business plan</p>
           </div>
-          <Button onClick={createNewPlan} disabled={isLoading}>
+          <Button onClick={createNewPlan}>
             <Plus className="h-4 w-4 mr-2" />
-            Nuovo Business Plan
+            Nuovo Plan
           </Button>
         </div>
 
         {plans.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nessun Business Plan</h3>
-              <p className="text-muted-foreground text-center mb-4">Crea il tuo primo business plan per iniziare</p>
-              <Button onClick={createNewPlan} disabled={isLoading}>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="font-medium mb-2">Nessun Business Plan</h3>
+              <p className="text-muted-foreground mb-4">Crea il tuo primo business plan per iniziare</p>
+              <Button onClick={createNewPlan}>
                 <Plus className="h-4 w-4 mr-2" />
                 Crea Business Plan
               </Button>
@@ -560,34 +726,21 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    <Badge variant={plan.status === "active" ? "default" : "secondary"}>
-                      {plan.status === "active" ? "Attivo" : plan.status === "archived" ? "Archiviato" : "Bozza"}
-                    </Badge>
+                    <Badge variant={plan.status === "active" ? "default" : "secondary"}>{plan.status}</Badge>
                   </div>
                   <CardDescription>{plan.client_name || "Nessun cliente"}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>{plan.location || "Nessuna location"}</p>
-                    <p>
-                      {plan.num_rooms} camere - {plan.stars} stelle
-                    </p>
-                    <p className="text-xs">Aggiornato: {new Date(plan.created_at).toLocaleDateString("it-IT")}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Building className="h-4 w-4" />
+                    <span>
+                      {plan.num_rooms} camere • {plan.stars} stelle
+                    </span>
                   </div>
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-2 mt-3">
                     <Button
+                      variant="ghost"
                       size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedPlan(plan)
-                      }}
-                    >
-                      <Building className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
                       onClick={(e) => {
                         e.stopPropagation()
                         deletePlan(plan.id)
@@ -755,6 +908,15 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     />
                     <span>Ristorante</span>
                   </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlan.has_congress || false}
+                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_congress: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span>Centro Congressi</span>
+                  </label>
                 </CardContent>
               </Card>
 
@@ -787,7 +949,6 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   <p className="text-muted-foreground mb-4">Nessun parametro finanziario configurato</p>
                   <Button
                     onClick={async () => {
-                      // Crea i parametri per ogni anno
                       await createDefaultYears(selectedPlan.id, selectedPlan.projection_years || 3)
                     }}
                   >
@@ -796,23 +957,38 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 </CardContent>
               </Card>
             ) : (
-              <Tabs defaultValue={String(financials[0].year_number)}>
-                <TabsList>
-                  {financials.map((fin) => (
-                    <TabsTrigger key={fin.year_number} value={String(fin.year_number)}>
-                      Anno {fin.year_number}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+              <Tabs defaultValue={String(financials[0]?.year_number || 1)}>
+                <div className="flex items-center gap-2 mb-4">
+                  <TabsList>
+                    {financials.map((fin) => (
+                      <TabsTrigger key={fin.year_number} value={String(fin.year_number)}>
+                        Anno {fin.year_number}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  <Button variant="outline" size="sm" onClick={addNewYear}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Aggiungi Anno
+                  </Button>
+                </div>
 
                 {financials.map((fin) => (
                   <TabsContent key={fin.year_number} value={String(fin.year_number)} className="space-y-6">
+                    {fin.year_number > 1 && (
+                      <div className="flex justify-end">
+                        <Button variant="outline" size="sm" onClick={() => copyFromPreviousYear(fin.year_number)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copia da Anno {fin.year_number - 1}
+                        </Button>
+                      </div>
+                    )}
+
                     {/* PARAMETRI OPERATIVI */}
                     <Card>
                       <CardHeader>
                         <CardTitle>Parametri Operativi - Anno {fin.year_number}</CardTitle>
                       </CardHeader>
-                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <div className="space-y-2">
                           <LabelWithTooltip field="rooms_available">Camere Disponibili</LabelWithTooltip>
                           <Input
@@ -851,7 +1027,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="adr">ADR - Ricavo Medio Camera (€)</LabelWithTooltip>
+                          <LabelWithTooltip field="adr">ADR (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1"
@@ -866,40 +1042,59 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                       </CardContent>
                     </Card>
 
-                    {/* RICAVI EXTRA (come % sui ricavi camere) */}
+                    {/* RICAVI EXTRA */}
                     <Card>
                       <CardHeader>
                         <CardTitle>Ricavi Extra (% sui ricavi camere)</CardTitle>
                       </CardHeader>
-                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        {selectedPlan.has_restaurant && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="fb_revenue_pct">F&B (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "fb_revenue_pct", 35)}
+                              onChange={(e) => {
+                                const updated = { ...fin, fb_revenue_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_spa && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="spa_revenue_pct">SPA (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "spa_revenue_pct", 12)}
+                              onChange={(e) => {
+                                const updated = { ...fin, spa_revenue_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_congress && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="congress_revenue_pct">Congressi (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "congress_revenue_pct", 20)}
+                              onChange={(e) => {
+                                const updated = { ...fin, congress_revenue_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
                         <div className="space-y-2">
-                          <LabelWithTooltip field="fb_revenue_pct">F&B (%)</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={getFinValue(fin, "fb_revenue_pct", 35)}
-                            onChange={(e) => {
-                              const updated = { ...fin, fb_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="spa_revenue_pct">SPA (%)</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={getFinValue(fin, "spa_revenue_pct", 12)}
-                            onChange={(e) => {
-                              const updated = { ...fin, spa_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="other_revenue_pct">Altri Ricavi (%)</LabelWithTooltip>
+                          <LabelWithTooltip field="other_revenue_pct">Altri (%)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="0.1"
@@ -917,11 +1112,11 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     {/* COSTI VARIABILI */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Costi Variabili (% sui ricavi)</CardTitle>
+                        <CardTitle>Costi Variabili (% sui rispettivi ricavi)</CardTitle>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="rooms_cost_pct">Costo Camere (%)</LabelWithTooltip>
+                          <LabelWithTooltip field="rooms_cost_pct">Camere (%)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="0.1"
@@ -933,27 +1128,128 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             onBlur={() => saveFinancials(fin)}
                           />
                         </div>
+                        {selectedPlan.has_restaurant && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="fb_cost_pct">F&B (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "fb_cost_pct", 35)}
+                              onChange={(e) => {
+                                const updated = { ...fin, fb_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_spa && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="spa_cost_pct">SPA (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "spa_cost_pct", 40)}
+                              onChange={(e) => {
+                                const updated = { ...fin, spa_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_congress && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="congress_cost_pct">Congressi (%)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "congress_cost_pct", 45)}
+                              onChange={(e) => {
+                                const updated = { ...fin, congress_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Costi Personale per Reparto (€/anno)</CardTitle>
+                        <CardDescription>
+                          Inserisci i costi del personale suddivisi per i reparti attivi
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="fb_cost_pct">Food Cost F&B (%)</LabelWithTooltip>
+                          <LabelWithTooltip field="staff_rooms_cost">Room Division (€)</LabelWithTooltip>
                           <Input
                             type="number"
-                            step="0.1"
-                            value={getFinValue(fin, "fb_cost_pct", 35)}
+                            step="1000"
+                            value={getFinValue(fin, "staff_rooms_cost", 400000)}
                             onChange={(e) => {
-                              const updated = { ...fin, fb_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                              const updated = { ...fin, staff_rooms_cost: Number.parseFloat(e.target.value) || 0 }
                               setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
                             }}
                             onBlur={() => saveFinancials(fin)}
                           />
                         </div>
+                        {selectedPlan.has_restaurant && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="staff_fb_cost">F&B (€)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_fb_cost", 300000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_fb_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_spa && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="staff_spa_cost">SPA (€)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_spa_cost", 150000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_spa_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_congress && (
+                          <div className="space-y-2">
+                            <LabelWithTooltip field="staff_congress_cost">Congressi (€)</LabelWithTooltip>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_congress_cost", 100000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_congress_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
                         <div className="space-y-2">
-                          <LabelWithTooltip field="spa_cost_pct">Costo SPA (%)</LabelWithTooltip>
+                          <LabelWithTooltip field="staff_admin_cost">Amministrazione (€)</LabelWithTooltip>
                           <Input
                             type="number"
-                            step="0.1"
-                            value={getFinValue(fin, "spa_cost_pct", 40)}
+                            step="1000"
+                            value={getFinValue(fin, "staff_admin_cost", 180000)}
                             onChange={(e) => {
-                              const updated = { ...fin, spa_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                              const updated = { ...fin, staff_admin_cost: Number.parseFloat(e.target.value) || 0 }
                               setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
                             }}
                             onBlur={() => saveFinancials(fin)}
@@ -962,27 +1258,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                       </CardContent>
                     </Card>
 
-                    {/* COSTI FISSI ANNUALI */}
+                    {/* ALTRI COSTI FISSI */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Costi Fissi Annuali (€)</CardTitle>
+                        <CardTitle>Altri Costi Fissi (€/anno)</CardTitle>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="staff_cost">Personale</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="1000"
-                            value={getFinValue(fin, "staff_cost", 850000)}
-                            onChange={(e) => {
-                              const updated = { ...fin, staff_cost: Number.parseFloat(e.target.value) || 0 }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="rent_cost">Affitto/Leasing</LabelWithTooltip>
+                          <LabelWithTooltip field="rent_cost">Affitto/Leasing (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -995,7 +1278,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="utilities_cost">Utenze</LabelWithTooltip>
+                          <LabelWithTooltip field="utilities_cost">Utenze (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1008,36 +1291,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="maintenance_cost">Manutenzione</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="1000"
-                            value={getFinValue(fin, "maintenance_cost", 60000)}
-                            onChange={(e) => {
-                              const updated = {
-                                ...fin,
-                                maintenance_cost: Number.parseFloat(e.target.value) || 0,
-                              }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="insurance_cost">Assicurazioni</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="1000"
-                            value={getFinValue(fin, "insurance_cost", 35000)}
-                            onChange={(e) => {
-                              const updated = { ...fin, insurance_cost: Number.parseFloat(e.target.value) || 0 }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="marketing_cost">Marketing</LabelWithTooltip>
+                          <LabelWithTooltip field="marketing_cost">Marketing (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1050,7 +1304,33 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="admin_cost">Amministrazione</LabelWithTooltip>
+                          <LabelWithTooltip field="maintenance_cost">Manutenzione (€)</LabelWithTooltip>
+                          <Input
+                            type="number"
+                            step="1000"
+                            value={getFinValue(fin, "maintenance_cost", 60000)}
+                            onChange={(e) => {
+                              const updated = { ...fin, maintenance_cost: Number.parseFloat(e.target.value) || 0 }
+                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                            }}
+                            onBlur={() => saveFinancials(fin)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <LabelWithTooltip field="insurance_cost">Assicurazioni (€)</LabelWithTooltip>
+                          <Input
+                            type="number"
+                            step="1000"
+                            value={getFinValue(fin, "insurance_cost", 35000)}
+                            onChange={(e) => {
+                              const updated = { ...fin, insurance_cost: Number.parseFloat(e.target.value) || 0 }
+                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                            }}
+                            onBlur={() => saveFinancials(fin)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <LabelWithTooltip field="admin_cost">Amministrazione (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1063,7 +1343,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="other_fixed_cost">Altri costi fissi</LabelWithTooltip>
+                          <LabelWithTooltip field="other_fixed_cost">Altri Costi Fissi (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1081,11 +1361,11 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     {/* AMMORTAMENTI E TASSE */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Ammortamenti e Tasse</CardTitle>
+                        <CardTitle>Ammortamenti e Imposte</CardTitle>
                       </CardHeader>
-                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <CardContent className="grid gap-4 md:grid-cols-3">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="depreciation">Ammortamento Annuo (€)</LabelWithTooltip>
+                          <LabelWithTooltip field="depreciation">Ammortamenti Annui (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1131,7 +1411,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             )}
           </TabsContent>
 
-          {/* Tab Proiezioni */}
+          {/* Tab Proiezioni - Aggiunto % sui ricavi per ogni costo */}
           <TabsContent value="projections" className="space-y-6">
             {financials.length === 0 ? (
               <Card>
@@ -1153,16 +1433,29 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <tr className="border-b">
                           <th className="text-left py-2 pr-4 font-medium">Voce</th>
                           {financials.map((fin) => (
-                            <th key={fin.year_number} className="text-right py-2 px-2 font-medium">
+                            <th key={fin.year_number} className="text-right py-2 px-2 font-medium" colSpan={2}>
                               Anno {fin.year_number}
                             </th>
+                          ))}
+                        </tr>
+                        <tr className="border-b text-xs text-muted-foreground">
+                          <th></th>
+                          {financials.map((fin) => (
+                            <>
+                              <th key={`${fin.year_number}-val`} className="text-right py-1 px-2">
+                                Valore
+                              </th>
+                              <th key={`${fin.year_number}-pct`} className="text-right py-1 px-2">
+                                % Ricavi
+                              </th>
+                            </>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {/* RICAVI */}
                         <tr className="bg-muted/30">
-                          <td colSpan={financials.length + 1} className="py-2 px-2 font-semibold text-primary">
+                          <td colSpan={financials.length * 2 + 1} className="py-2 px-2 font-semibold text-primary">
                             RICAVI
                           </td>
                         </tr>
@@ -1171,42 +1464,99 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2">
-                                {formatCurrency(pl.roomRevenue)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-room-val`} className="text-right py-1 px-2">
+                                  {formatCurrency(pl.roomRevenue)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-room-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.roomRevenue / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
-                        <tr className="border-b">
-                          <td className="py-1 pl-4">Food & Beverage</td>
-                          {financials.map((fin) => {
-                            const pl = calculatePL(selectedPlan, fin)
-                            return (
-                              <td key={fin.year_number} className="text-right py-1 px-2">
-                                {formatCurrency(pl.fbRevenue)}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                        <tr className="border-b">
-                          <td className="py-1 pl-4">SPA & Wellness</td>
-                          {financials.map((fin) => {
-                            const pl = calculatePL(selectedPlan, fin)
-                            return (
-                              <td key={fin.year_number} className="text-right py-1 px-2">
-                                {formatCurrency(pl.spaRevenue)}
-                              </td>
-                            )
-                          })}
-                        </tr>
+                        {selectedPlan.has_restaurant && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">Food & Beverage</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td key={`${fin.year_number}-fb-val`} className="text-right py-1 px-2">
+                                    {formatCurrency(pl.fbRevenue)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-fb-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.fbRevenue / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
+                        {selectedPlan.has_spa && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">SPA & Wellness</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td key={`${fin.year_number}-spa-val`} className="text-right py-1 px-2">
+                                    {formatCurrency(pl.spaRevenue)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-spa-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.spaRevenue / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
+                        {selectedPlan.has_congress && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">Centro Congressi</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td key={`${fin.year_number}-cong-val`} className="text-right py-1 px-2">
+                                    {formatCurrency(pl.congressRevenue)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-cong-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.congressRevenue / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
                         <tr className="border-b">
                           <td className="py-1 pl-4">Altri Ricavi</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2">
-                                {formatCurrency(pl.otherRevenue)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-other-val`} className="text-right py-1 px-2">
+                                  {formatCurrency(pl.otherRevenue)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-other-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.otherRevenue / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1215,16 +1565,21 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-2 px-2">
-                                {formatCurrency(pl.totalRevenue)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-total-val`} className="text-right py-2 px-2">
+                                  {formatCurrency(pl.totalRevenue)}
+                                </td>
+                                <td key={`${fin.year_number}-total-pct`} className="text-right py-2 px-2">
+                                  100%
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
 
                         {/* COSTI VARIABILI */}
                         <tr className="bg-muted/30">
-                          <td colSpan={financials.length + 1} className="py-2 px-2 font-semibold text-primary">
+                          <td colSpan={financials.length * 2 + 1} className="py-2 px-2 font-semibold text-primary">
                             COSTI VARIABILI
                           </td>
                         </tr>
@@ -1233,60 +1588,125 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.roomCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-roomc-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.roomCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-roomc-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.roomCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
-                        <tr className="border-b">
-                          <td className="py-1 pl-4">Food Cost</td>
-                          {financials.map((fin) => {
-                            const pl = calculatePL(selectedPlan, fin)
-                            return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.fbCosts)}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                        <tr className="border-b">
-                          <td className="py-1 pl-4">Costi SPA</td>
-                          {financials.map((fin) => {
-                            const pl = calculatePL(selectedPlan, fin)
-                            return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.spaCosts)}
-                              </td>
-                            )
-                          })}
-                        </tr>
+                        {selectedPlan.has_restaurant && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">Food Cost</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td key={`${fin.year_number}-fbc-val`} className="text-right py-1 px-2 text-red-600">
+                                    -{formatCurrency(pl.fbCosts)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-fbc-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.fbCosts / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
+                        {selectedPlan.has_spa && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">Costi SPA</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td key={`${fin.year_number}-spac-val`} className="text-right py-1 px-2 text-red-600">
+                                    -{formatCurrency(pl.spaCosts)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-spac-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.spaCosts / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
+                        {selectedPlan.has_congress && (
+                          <tr className="border-b">
+                            <td className="py-1 pl-4">Costi Congressi</td>
+                            {financials.map((fin) => {
+                              const pl = calculatePL(selectedPlan, fin)
+                              return (
+                                <>
+                                  <td
+                                    key={`${fin.year_number}-congc-val`}
+                                    className="text-right py-1 px-2 text-red-600"
+                                  >
+                                    -{formatCurrency(pl.congressCosts)}
+                                  </td>
+                                  <td
+                                    key={`${fin.year_number}-congc-pct`}
+                                    className="text-right py-1 px-2 text-muted-foreground"
+                                  >
+                                    {formatPercent((pl.congressCosts / pl.totalRevenue) * 100)}
+                                  </td>
+                                </>
+                              )
+                            })}
+                          </tr>
+                        )}
                         <tr className="border-b bg-muted/50 font-semibold">
                           <td className="py-2">MARGINE DI CONTRIBUZIONE</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-2 px-2">
-                                {formatCurrency(pl.contributionMargin)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-margin-val`} className="text-right py-2 px-2">
+                                  {formatCurrency(pl.contributionMargin)}
+                                </td>
+                                <td key={`${fin.year_number}-margin-pct`} className="text-right py-2 px-2">
+                                  {formatPercent((pl.contributionMargin / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
 
                         {/* COSTI FISSI */}
                         <tr className="bg-muted/30">
-                          <td colSpan={financials.length + 1} className="py-2 px-2 font-semibold text-primary">
+                          <td colSpan={financials.length * 2 + 1} className="py-2 px-2 font-semibold text-primary">
                             COSTI FISSI
                           </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="py-1 pl-4">Personale</td>
+                          <td className="py-1 pl-4">Personale Totale</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.staffCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-staff-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.totalStaffCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-staff-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.totalStaffCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1295,9 +1715,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.rentCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-rent-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.rentCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-rent-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.rentCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1306,9 +1734,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.utilitiesCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-util-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.utilitiesCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-util-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.utilitiesCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1317,9 +1753,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.maintenanceCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-maint-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.maintenanceCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-maint-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.maintenanceCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1328,9 +1772,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.insuranceCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-ins-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.insuranceCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-ins-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.insuranceCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1339,9 +1791,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.marketingCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-mkt-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.marketingCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-mkt-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.marketingCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1350,9 +1810,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.adminCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-admin-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.adminCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-admin-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.adminCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1361,9 +1829,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.otherFixedCosts)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-othfix-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.otherFixedCosts)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-othfix-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.otherFixedCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1374,12 +1850,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td
-                                key={fin.year_number}
-                                className={`text-right py-2 px-2 ${pl.ebitda >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {formatCurrency(pl.ebitda)}
-                              </td>
+                              <>
+                                <td
+                                  key={`${fin.year_number}-ebitda-val`}
+                                  className={`text-right py-2 px-2 ${pl.ebitda >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {formatCurrency(pl.ebitda)}
+                                </td>
+                                <td key={`${fin.year_number}-ebitda-pct`} className="text-right py-2 px-2">
+                                  {formatPercent(pl.ebitdaMargin)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1389,9 +1870,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.depreciation)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-depr-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.depreciation)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-depr-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.depreciation / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1401,12 +1890,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td
-                                key={fin.year_number}
-                                className={`text-right py-2 px-2 ${pl.ebit >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {formatCurrency(pl.ebit)}
-                              </td>
+                              <>
+                                <td
+                                  key={`${fin.year_number}-ebit-val`}
+                                  className={`text-right py-2 px-2 ${pl.ebit >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {formatCurrency(pl.ebit)}
+                                </td>
+                                <td key={`${fin.year_number}-ebit-pct`} className="text-right py-2 px-2">
+                                  {formatPercent((pl.ebit / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1416,51 +1910,77 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.interestExpense)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-int-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.interestCost)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-int-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.interestCost / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
 
                         <tr className="border-b bg-muted/50 font-semibold">
-                          <td className="py-2">EBT (Utile ante imposte)</td>
+                          <td className="py-2">EBT (Utile Ante Imposte)</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td
-                                key={fin.year_number}
-                                className={`text-right py-2 px-2 ${pl.ebt >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {formatCurrency(pl.ebt)}
-                              </td>
+                              <>
+                                <td
+                                  key={`${fin.year_number}-ebt-val`}
+                                  className={`text-right py-2 px-2 ${pl.ebt >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {formatCurrency(pl.ebt)}
+                                </td>
+                                <td key={`${fin.year_number}-ebt-pct`} className="text-right py-2 px-2">
+                                  {formatPercent((pl.ebt / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
 
                         <tr className="border-b">
-                          <td className="py-1 pl-4">Imposte (IRES + IRAP)</td>
+                          <td className="py-1 pl-4">Imposte</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td key={fin.year_number} className="text-right py-1 px-2 text-red-600">
-                                -{formatCurrency(pl.taxes)}
-                              </td>
+                              <>
+                                <td key={`${fin.year_number}-tax-val`} className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.taxes)}
+                                </td>
+                                <td
+                                  key={`${fin.year_number}-tax-pct`}
+                                  className="text-right py-1 px-2 text-muted-foreground"
+                                >
+                                  {formatPercent((pl.taxes / pl.totalRevenue) * 100)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
 
-                        <tr className="bg-primary/10 font-bold text-lg">
+                        <tr className="bg-primary/10 font-bold">
                           <td className="py-3">UTILE NETTO</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <td
-                                key={fin.year_number}
-                                className={`text-right py-3 px-2 ${pl.netIncome >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {formatCurrency(pl.netIncome)}
-                              </td>
+                              <>
+                                <td
+                                  key={`${fin.year_number}-net-val`}
+                                  className={`text-right py-3 px-2 ${pl.netIncome >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {formatCurrency(pl.netIncome)}
+                                </td>
+                                <td key={`${fin.year_number}-net-pct`} className="text-right py-3 px-2">
+                                  {formatPercent(pl.netMargin)}
+                                </td>
+                              </>
                             )
                           })}
                         </tr>
@@ -1475,46 +1995,30 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     <CardTitle>KPI Principali</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+                    <div className="grid gap-4 md:grid-cols-4">
                       {financials.map((fin) => {
                         const pl = calculatePL(selectedPlan, fin)
                         return (
-                          <Card key={fin.year_number} className="bg-muted/30">
+                          <Card key={fin.year_number}>
                             <CardHeader className="pb-2">
                               <CardTitle className="text-base">Anno {fin.year_number}</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span>Occupancy</span>
-                                <span className="font-medium">{formatPercent(getFinValue(fin, "occupancy_rate"))}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>ADR</span>
-                                <span className="font-medium">{formatCurrency(getFinValue(fin, "adr"))}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>RevPAR</span>
+                                <span className="text-muted-foreground">RevPAR</span>
                                 <span className="font-medium">{formatCurrency(pl.revpar)}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span>GOPPAR</span>
+                                <span className="text-muted-foreground">GOPPAR</span>
                                 <span className="font-medium">{formatCurrency(pl.goppar)}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span>EBITDA %</span>
-                                <span
-                                  className={`font-medium ${pl.ebitdaMargin >= 0 ? "text-green-600" : "text-red-600"}`}
-                                >
-                                  {formatPercent(pl.ebitdaMargin)}
-                                </span>
+                                <span className="text-muted-foreground">EBITDA Margin</span>
+                                <span className="font-medium">{formatPercent(pl.ebitdaMargin)}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span>Net Margin %</span>
-                                <span
-                                  className={`font-medium ${pl.netMargin >= 0 ? "text-green-600" : "text-red-600"}`}
-                                >
-                                  {formatPercent(pl.netMargin)}
-                                </span>
+                                <span className="text-muted-foreground">Net Margin</span>
+                                <span className="font-medium">{formatPercent(pl.netMargin)}</span>
                               </div>
                             </CardContent>
                           </Card>
@@ -1527,169 +2031,49 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             )}
           </TabsContent>
 
-          {/* Tab Contenuto Testuale */}
+          {/* Tab Contenuto */}
           <TabsContent value="content" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Executive Summary</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("description")}
-                  disabled={generatingSection === "description"}
-                >
-                  {generatingSection === "description" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.description || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, description: e.target.value })}
-                  rows={8}
-                  placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Analisi di Mercato</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("market_analysis")}
-                  disabled={generatingSection === "market_analysis"}
-                >
-                  {generatingSection === "market_analysis" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.market_analysis || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
-                  rows={8}
-                  placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Business Model</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("business_model")}
-                  disabled={generatingSection === "business_model"}
-                >
-                  {generatingSection === "business_model" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.business_model || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
-                  rows={8}
-                  placeholder="Modello di business, fonti di ricavo, proposta di valore..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Strategia Marketing</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("marketing_strategy")}
-                  disabled={generatingSection === "marketing_strategy"}
-                >
-                  {generatingSection === "marketing_strategy" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.marketing_strategy || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
-                  rows={8}
-                  placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Team di Gestione</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("management_team")}
-                  disabled={generatingSection === "management_team"}
-                >
-                  {generatingSection === "management_team" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.management_team || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
-                  rows={8}
-                  placeholder="Composizione del team, competenze chiave, organigramma..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Analisi dei Rischi</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateWithAI("risk_analysis")}
-                  disabled={generatingSection === "risk_analysis"}
-                >
-                  {generatingSection === "risk_analysis" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Genera con AI
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.risk_analysis || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
-                  rows={8}
-                  placeholder="Principali rischi identificati e strategie di mitigazione..."
-                />
-              </CardContent>
-            </Card>
+            {[
+              { key: "market_analysis", title: "Analisi di Mercato" },
+              { key: "business_model", title: "Business Model" },
+              { key: "marketing_strategy", title: "Strategia Marketing" },
+              { key: "management_team", title: "Team di Gestione" },
+              { key: "risk_analysis", title: "Analisi dei Rischi" },
+            ].map((section) => (
+              <Card key={section.key}>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>{section.title}</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateContent(section.key)}
+                      disabled={generatingSection === section.key}
+                    >
+                      {generatingSection === section.key ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generazione...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Genera con AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={(selectedPlan as any)[section.key] || ""}
+                    onChange={(e) => setSelectedPlan({ ...selectedPlan, [section.key]: e.target.value })}
+                    rows={8}
+                    placeholder={`Scrivi qui ${section.title.toLowerCase()} o genera con AI...`}
+                  />
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
         </Tabs>
 
@@ -1699,7 +2083,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             <DialogHeader>
               <DialogTitle>Condividi Business Plan</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Email destinatario</Label>
                 <Input
@@ -1712,21 +2096,19 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               <div className="space-y-2">
                 <Label>Password di accesso</Label>
                 <Input
-                  type="text"
+                  type="password"
                   value={sharePassword}
                   onChange={(e) => setSharePassword(e.target.value)}
                   placeholder="Inserisci una password"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Questa password sarà inviata al destinatario per accedere al business plan
-                </p>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowShareDialog(false)}>
                 Annulla
               </Button>
-              <Button onClick={sharePlan} disabled={!shareEmail || !sharePassword || isLoading}>
+              <Button onClick={sharePlan}>
+                <Share2 className="h-4 w-4 mr-2" />
                 Condividi
               </Button>
             </DialogFooter>
