@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -44,6 +44,9 @@ interface BusinessPlan {
   start_year: number
   status: string
   created_at: string
+  initial_investment?: number
+  // Campi testuali
+  executive_summary?: string
   market_analysis?: string
   business_model?: string
   marketing_strategy?: string
@@ -220,6 +223,10 @@ const FIELD_INFO: Record<string, { description: string; benchmark: string }> = {
   tax_rate: {
     description: "Aliquota fiscale media (IRES + IRAP)",
     benchmark: "IRES 24% + IRAP ~4% = 27-28% effettivo",
+  },
+  initial_investment: {
+    description: "Investimento iniziale totale per la realizzazione del progetto",
+    benchmark: "Variabile | Hotel 4* 90 camere: €6-10M",
   },
 }
 
@@ -551,6 +558,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           opening_days_year: 365,
           projection_years: 3,
           start_year: new Date().getFullYear() + 1,
+          initial_investment: 8000000,
           status: "draft",
         }),
       })
@@ -879,6 +887,17 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     value={selectedPlan.description || ""}
                     onChange={(e) => setSelectedPlan({ ...selectedPlan, description: e.target.value })}
                     rows={3}
+                  />
+                </div>
+                {/* NUOVO CAMPO: Investimento Iniziale */}
+                <div className="space-y-2">
+                  <LabelWithTooltip field="initial_investment">Investimento Iniziale (€)</LabelWithTooltip>
+                  <Input
+                    type="number"
+                    value={selectedPlan.initial_investment || 0}
+                    onChange={(e) =>
+                      setSelectedPlan({ ...selectedPlan, initial_investment: Number.parseFloat(e.target.value) || 0 })
+                    }
                   />
                 </div>
               </CardContent>
@@ -1464,17 +1483,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-room-val`} className="text-right py-1 px-2">
-                                  {formatCurrency(pl.roomRevenue)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-room-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`room-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2">{formatCurrency(pl.roomRevenue)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.roomRevenue / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1484,17 +1498,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td key={`${fin.year_number}-fb-val`} className="text-right py-1 px-2">
-                                    {formatCurrency(pl.fbRevenue)}
-                                  </td>
-                                  <td
-                                    key={`${fin.year_number}-fb-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                <React.Fragment key={`fb-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2">{formatCurrency(pl.fbRevenue)}</td>
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.fbRevenue / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1505,17 +1514,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td key={`${fin.year_number}-spa-val`} className="text-right py-1 px-2">
-                                    {formatCurrency(pl.spaRevenue)}
-                                  </td>
-                                  <td
-                                    key={`${fin.year_number}-spa-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                <React.Fragment key={`spa-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2">{formatCurrency(pl.spaRevenue)}</td>
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.spaRevenue / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1526,17 +1530,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td key={`${fin.year_number}-cong-val`} className="text-right py-1 px-2">
-                                    {formatCurrency(pl.congressRevenue)}
-                                  </td>
-                                  <td
-                                    key={`${fin.year_number}-cong-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                <React.Fragment key={`congress-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2">{formatCurrency(pl.congressRevenue)}</td>
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.congressRevenue / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1546,17 +1545,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-other-val`} className="text-right py-1 px-2">
-                                  {formatCurrency(pl.otherRevenue)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-other-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`other-rev-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2">{formatCurrency(pl.otherRevenue)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.otherRevenue / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1565,14 +1559,10 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-total-val`} className="text-right py-2 px-2">
-                                  {formatCurrency(pl.totalRevenue)}
-                                </td>
-                                <td key={`${fin.year_number}-total-pct`} className="text-right py-2 px-2">
-                                  100%
-                                </td>
-                              </>
+                              <React.Fragment key={`total-rev-${fin.year_number}`}>
+                                <td className="text-right py-2 px-2">{formatCurrency(pl.totalRevenue)}</td>
+                                <td className="text-right py-2 px-2">100%</td>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1588,17 +1578,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-roomc-val`} className="text-right py-1 px-2 text-red-600">
-                                  -{formatCurrency(pl.roomCosts)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-roomc-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`room-cost-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.roomCosts)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.roomCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1608,17 +1593,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td key={`${fin.year_number}-fbc-val`} className="text-right py-1 px-2 text-red-600">
-                                    -{formatCurrency(pl.fbCosts)}
-                                  </td>
-                                  <td
-                                    key={`${fin.year_number}-fbc-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                <React.Fragment key={`fb-cost-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.fbCosts)}</td>
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.fbCosts / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1629,17 +1609,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td key={`${fin.year_number}-spac-val`} className="text-right py-1 px-2 text-red-600">
-                                    -{formatCurrency(pl.spaCosts)}
-                                  </td>
-                                  <td
-                                    key={`${fin.year_number}-spac-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                <React.Fragment key={`spa-cost-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.spaCosts)}</td>
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.spaCosts / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1650,20 +1625,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
-                                <>
-                                  <td
-                                    key={`${fin.year_number}-congc-val`}
-                                    className="text-right py-1 px-2 text-red-600"
-                                  >
+                                <React.Fragment key={`congress-cost-${fin.year_number}`}>
+                                  <td className="text-right py-1 px-2 text-red-600">
                                     -{formatCurrency(pl.congressCosts)}
                                   </td>
-                                  <td
-                                    key={`${fin.year_number}-congc-pct`}
-                                    className="text-right py-1 px-2 text-muted-foreground"
-                                  >
+                                  <td className="text-right py-1 px-2 text-muted-foreground">
                                     {formatPercent((pl.congressCosts / pl.totalRevenue) * 100)}
                                   </td>
-                                </>
+                                </React.Fragment>
                               )
                             })}
                           </tr>
@@ -1673,14 +1642,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-margin-val`} className="text-right py-2 px-2">
-                                  {formatCurrency(pl.contributionMargin)}
-                                </td>
-                                <td key={`${fin.year_number}-margin-pct`} className="text-right py-2 px-2">
+                              <React.Fragment key={`margin-${fin.year_number}`}>
+                                <td className="text-right py-2 px-2">{formatCurrency(pl.contributionMargin)}</td>
+                                <td className="text-right py-2 px-2">
                                   {formatPercent((pl.contributionMargin / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1696,17 +1663,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-staff-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`staff-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.totalStaffCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-staff-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.totalStaffCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1715,17 +1679,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-rent-val`} className="text-right py-1 px-2 text-red-600">
-                                  -{formatCurrency(pl.rentCosts)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-rent-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`rent-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.rentCosts)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.rentCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1734,17 +1693,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-util-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`utilities-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.utilitiesCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-util-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.utilitiesCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1753,17 +1709,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-maint-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`maintenance-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.maintenanceCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-maint-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.maintenanceCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1772,17 +1725,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-ins-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`insurance-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.insuranceCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-ins-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.insuranceCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1791,17 +1741,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-mkt-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`marketing-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.marketingCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-mkt-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.marketingCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1810,17 +1757,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-admin-val`} className="text-right py-1 px-2 text-red-600">
-                                  -{formatCurrency(pl.adminCosts)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-admin-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`admin-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.adminCosts)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.adminCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1829,17 +1771,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-othfix-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`other-fixed-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.otherFixedCosts)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-othfix-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.otherFixedCosts / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1850,17 +1789,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
+                              <React.Fragment key={`ebitda-${fin.year_number}`}>
                                 <td
-                                  key={`${fin.year_number}-ebitda-val`}
                                   className={`text-right py-2 px-2 ${pl.ebitda >= 0 ? "text-green-600" : "text-red-600"}`}
                                 >
                                   {formatCurrency(pl.ebitda)}
                                 </td>
-                                <td key={`${fin.year_number}-ebitda-pct`} className="text-right py-2 px-2">
-                                  {formatPercent(pl.ebitdaMargin)}
-                                </td>
-                              </>
+                                <td className="text-right py-2 px-2">{formatPercent(pl.ebitdaMargin)}</td>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1870,17 +1806,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-depr-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`depreciation-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.depreciation)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-depr-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.depreciation / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1890,17 +1823,16 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
+                              <React.Fragment key={`ebit-${fin.year_number}`}>
                                 <td
-                                  key={`${fin.year_number}-ebit-val`}
                                   className={`text-right py-2 px-2 ${pl.ebit >= 0 ? "text-green-600" : "text-red-600"}`}
                                 >
                                   {formatCurrency(pl.ebit)}
                                 </td>
-                                <td key={`${fin.year_number}-ebit-pct`} className="text-right py-2 px-2">
+                                <td className="text-right py-2 px-2">
                                   {formatPercent((pl.ebit / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1910,17 +1842,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-int-val`} className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`interest-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
                                   -{formatCurrency(pl.interestCost)}
                                 </td>
-                                <td
-                                  key={`${fin.year_number}-int-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.interestCost / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1930,17 +1859,16 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
+                              <React.Fragment key={`ebt-${fin.year_number}`}>
                                 <td
-                                  key={`${fin.year_number}-ebt-val`}
                                   className={`text-right py-2 px-2 ${pl.ebt >= 0 ? "text-green-600" : "text-red-600"}`}
                                 >
                                   {formatCurrency(pl.ebt)}
                                 </td>
-                                <td key={`${fin.year_number}-ebt-pct`} className="text-right py-2 px-2">
+                                <td className="text-right py-2 px-2">
                                   {formatPercent((pl.ebt / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1950,17 +1878,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
-                                <td key={`${fin.year_number}-tax-val`} className="text-right py-1 px-2 text-red-600">
-                                  -{formatCurrency(pl.taxes)}
-                                </td>
-                                <td
-                                  key={`${fin.year_number}-tax-pct`}
-                                  className="text-right py-1 px-2 text-muted-foreground"
-                                >
+                              <React.Fragment key={`taxes-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">-{formatCurrency(pl.taxes)}</td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
                                   {formatPercent((pl.taxes / pl.totalRevenue) * 100)}
                                 </td>
-                              </>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -1970,17 +1893,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <>
+                              <React.Fragment key={`net-income-${fin.year_number}`}>
                                 <td
-                                  key={`${fin.year_number}-net-val`}
                                   className={`text-right py-3 px-2 ${pl.netIncome >= 0 ? "text-green-600" : "text-red-600"}`}
                                 >
                                   {formatCurrency(pl.netIncome)}
                                 </td>
-                                <td key={`${fin.year_number}-net-pct`} className="text-right py-3 px-2">
-                                  {formatPercent(pl.netMargin)}
-                                </td>
-                              </>
+                                <td className="text-right py-3 px-2">{formatPercent(pl.netMargin)}</td>
+                              </React.Fragment>
                             )
                           })}
                         </tr>
@@ -2034,6 +1954,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           {/* Tab Contenuto */}
           <TabsContent value="content" className="space-y-6">
             {[
+              { key: "executive_summary", title: "Executive Summary" }, // Aggiunto Executive Summary
               { key: "market_analysis", title: "Analisi di Mercato" },
               { key: "business_model", title: "Business Model" },
               { key: "marketing_strategy", title: "Strategia Marketing" },
