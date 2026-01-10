@@ -84,6 +84,11 @@ const formatPercent = (value: number) => {
   return `${value.toFixed(1)}%`
 }
 
+const getFinValue = (fin: BusinessPlanFinancials, key: keyof BusinessPlanFinancials, defaultVal = 0): number => {
+  const val = fin[key]
+  return typeof val === "number" && !isNaN(val) ? val : defaultVal
+}
+
 export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [plans, setPlans] = useState<BusinessPlan[]>(initialPlans)
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlan | null>(null)
@@ -95,17 +100,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [sharePassword, setSharePassword] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
 
-  const safeValue = (val: string | number | null | undefined, fallback: string | number = ""): string | number => {
-    if (val === null || val === undefined) return fallback
-    return val
-  }
+  const selectedPlanId = selectedPlan?.id
 
   // Carica i dati finanziari quando si seleziona un piano
   useEffect(() => {
-    if (selectedPlan) {
-      loadFinancials(selectedPlan.id)
+    if (selectedPlanId) {
+      loadFinancials(selectedPlanId)
     }
-  }, [selectedPlan]) // Changed dependency to selectedPlan
+  }, [selectedPlanId])
 
   const loadFinancials = async (planId: string) => {
     setIsLoading(true)
@@ -223,38 +225,43 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
   // Calcola il conto economico per un anno
   const calculatePL = (plan: BusinessPlan, fin: BusinessPlanFinancials) => {
-    const roomNights = plan.num_rooms * plan.opening_days_year * (fin.occupancy_rate / 100)
+    const roomNights = plan.num_rooms * plan.opening_days_year * (getFinValue(fin, "occupancy_rate") / 100)
 
     // RICAVI
-    const roomRevenue = roomNights * fin.adr
-    const fbRevenueInternal = roomNights * fin.fb_revenue_per_room_night
-    const fbRevenueExternal = fin.fb_external_covers_day * plan.opening_days_year * fin.fb_avg_ticket_external
+    const roomRevenue = roomNights * getFinValue(fin, "adr")
+    const fbRevenueInternal = roomNights * getFinValue(fin, "fb_revenue_per_room_night")
+    const fbRevenueExternal =
+      getFinValue(fin, "fb_external_covers_day") * plan.opening_days_year * getFinValue(fin, "fb_avg_ticket_external")
     const fbRevenue = fbRevenueInternal + fbRevenueExternal
-    const spaRevenueInternal = roomNights * fin.spa_revenue_per_room_night
-    const spaRevenueExternal = fin.spa_external_clients_day * plan.opening_days_year * fin.spa_avg_ticket_external
+    const spaRevenueInternal = roomNights * getFinValue(fin, "spa_revenue_per_room_night")
+    const spaRevenueExternal =
+      getFinValue(fin, "spa_external_clients_day") *
+      plan.opening_days_year *
+      getFinValue(fin, "spa_avg_ticket_external")
     const spaRevenue = spaRevenueInternal + spaRevenueExternal
-    const otherRevenue = roomNights * fin.other_revenue_per_room_night
+    const otherRevenue = roomNights * getFinValue(fin, "other_revenue_per_room_night")
     const totalRevenue = roomRevenue + fbRevenue + spaRevenue + otherRevenue
 
     // COSTI VARIABILI
-    const roomCosts = roomRevenue * (fin.room_cost_pct / 100)
-    const fbCosts = fbRevenue * (fin.fb_cost_pct / 100)
-    const spaCosts = spaRevenue * (fin.spa_cost_pct / 100)
-    const otaCommissions = roomRevenue * (fin.ota_share_pct / 100) * (fin.ota_commission_pct / 100)
+    const roomCosts = roomRevenue * (getFinValue(fin, "room_cost_pct") / 100)
+    const fbCosts = fbRevenue * (getFinValue(fin, "fb_cost_pct") / 100)
+    const spaCosts = spaRevenue * (getFinValue(fin, "spa_cost_pct") / 100)
+    const otaCommissions =
+      roomRevenue * (getFinValue(fin, "ota_share_pct") / 100) * (getFinValue(fin, "ota_commission_pct") / 100)
     const totalVariableCosts = roomCosts + fbCosts + spaCosts + otaCommissions
 
     // MARGINE DI CONTRIBUZIONE
     const contributionMargin = totalRevenue - totalVariableCosts
 
     // COSTI FISSI
-    const staffCosts = fin.staff_cost_monthly * 12
-    const rentCosts = fin.rent_cost_monthly * 12
-    const utilitiesCosts = fin.utilities_cost_monthly * 12
-    const maintenanceCosts = fin.maintenance_cost_monthly * 12
-    const insuranceCosts = fin.insurance_cost_monthly * 12
-    const marketingCosts = fin.marketing_cost_monthly * 12
-    const adminCosts = fin.admin_cost_monthly * 12
-    const otherFixedCosts = fin.other_fixed_monthly * 12
+    const staffCosts = getFinValue(fin, "staff_cost_monthly") * 12
+    const rentCosts = getFinValue(fin, "rent_cost_monthly") * 12
+    const utilitiesCosts = getFinValue(fin, "utilities_cost_monthly") * 12
+    const maintenanceCosts = getFinValue(fin, "maintenance_cost_monthly") * 12
+    const insuranceCosts = getFinValue(fin, "insurance_cost_monthly") * 12
+    const marketingCosts = getFinValue(fin, "marketing_cost_monthly") * 12
+    const adminCosts = getFinValue(fin, "admin_cost_monthly") * 12
+    const otherFixedCosts = getFinValue(fin, "other_fixed_monthly") * 12
     const totalFixedCosts =
       staffCosts +
       rentCosts +
@@ -269,13 +276,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     const ebitda = contributionMargin - totalFixedCosts
 
     // AMMORTAMENTI
-    const depreciation = fin.initial_investment / fin.depreciation_years
+    const depreciation = getFinValue(fin, "initial_investment") / getFinValue(fin, "depreciation_years", 20)
 
     // EBIT
     const ebit = ebitda - depreciation
 
     // INTERESSI
-    const interestExpense = fin.loan_amount * (fin.loan_interest_rate / 100)
+    const interestExpense = getFinValue(fin, "loan_amount") * (getFinValue(fin, "loan_interest_rate") / 100)
 
     // EBT (Utile ante imposte)
     const ebt = ebit - interestExpense
@@ -315,8 +322,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       ebt,
       taxes,
       netIncome,
-      revpar: roomRevenue / (plan.num_rooms * plan.opening_days_year),
-      goppar: ebitda / (plan.num_rooms * plan.opening_days_year),
+      revpar: plan.num_rooms * plan.opening_days_year > 0 ? roomRevenue / (plan.num_rooms * plan.opening_days_year) : 0,
+      goppar: plan.num_rooms * plan.opening_days_year > 0 ? ebitda / (plan.num_rooms * plan.opening_days_year) : 0,
     }
   }
 
@@ -441,91 +448,6 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           <TabsTrigger value="overview">Generale</TabsTrigger>
           <TabsTrigger value="financials">Parametri</TabsTrigger>
           <TabsTrigger value="projections">Proiezioni</TabsTrigger>
-          <TabsContent value="content" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Executive Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.executive_summary || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, executive_summary: e.target.value })}
-                  rows={6}
-                  placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Analisi di Mercato</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.market_analysis || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
-                  rows={6}
-                  placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Model</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.business_model || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
-                  rows={6}
-                  placeholder="Modello di business, fonti di ricavo, proposta di valore..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Strategia Marketing</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.marketing_strategy || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
-                  rows={6}
-                  placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Team di Gestione</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.management_team || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
-                  rows={6}
-                  placeholder="Composizione del team, competenze chiave, organigramma..."
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Analisi dei Rischi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={selectedPlan.risk_analysis || ""}
-                  onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
-                  rows={6}
-                  placeholder="Principali rischi identificati e strategie di mitigazione..."
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
           <TabsTrigger value="content">Contenuto</TabsTrigger>
         </TabsList>
 
@@ -539,14 +461,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               <div className="space-y-2">
                 <Label>Nome Cliente</Label>
                 <Input
-                  value={safeValue(selectedPlan.client_name, "")}
+                  value={selectedPlan.client_name || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, client_name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Location</Label>
                 <Input
-                  value={safeValue(selectedPlan.location, "")}
+                  value={selectedPlan.location || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, location: e.target.value })}
                 />
               </div>
@@ -554,7 +476,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Numero Camere</Label>
                 <Input
                   type="number"
-                  value={safeValue(selectedPlan.num_rooms, 90)}
+                  value={selectedPlan.num_rooms}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, num_rooms: Number.parseInt(e.target.value) || 0 })
                   }
@@ -566,7 +488,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   type="number"
                   min="1"
                   max="5"
-                  value={safeValue(selectedPlan.stars, 4)}
+                  value={selectedPlan.stars}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, stars: Number.parseInt(e.target.value) || 4 })}
                 />
               </div>
@@ -574,7 +496,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Giorni Apertura/Anno</Label>
                 <Input
                   type="number"
-                  value={safeValue(selectedPlan.opening_days_year, 365)}
+                  value={selectedPlan.opening_days_year}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, opening_days_year: Number.parseInt(e.target.value) || 365 })
                   }
@@ -584,7 +506,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Label>Anno Inizio</Label>
                 <Input
                   type="number"
-                  value={safeValue(selectedPlan.start_year, 2026)}
+                  value={selectedPlan.start_year}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, start_year: Number.parseInt(e.target.value) || 2026 })
                   }
@@ -596,7 +518,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   type="number"
                   min="1"
                   max="10"
-                  value={safeValue(selectedPlan.projection_years, 3)}
+                  value={selectedPlan.projection_years}
                   onChange={(e) =>
                     setSelectedPlan({ ...selectedPlan, projection_years: Number.parseInt(e.target.value) || 3 })
                   }
@@ -605,7 +527,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               <div className="space-y-2">
                 <Label>Descrizione</Label>
                 <Textarea
-                  value={safeValue(selectedPlan.description, "") as string}
+                  value={selectedPlan.description || ""}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, description: e.target.value })}
                   rows={3}
                 />
@@ -622,7 +544,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={selectedPlan.has_spa ?? true}
+                    checked={selectedPlan.has_spa}
                     onChange={(e) => setSelectedPlan({ ...selectedPlan, has_spa: e.target.checked })}
                     className="rounded"
                   />
@@ -631,7 +553,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={selectedPlan.has_restaurant ?? true}
+                    checked={selectedPlan.has_restaurant}
                     onChange={(e) => setSelectedPlan({ ...selectedPlan, has_restaurant: e.target.checked })}
                     className="rounded"
                   />
@@ -646,7 +568,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </CardHeader>
               <CardContent>
                 <select
-                  value={safeValue(selectedPlan.status, "draft") as string}
+                  value={selectedPlan.status}
                   onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
@@ -707,7 +629,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.occupancy_rate, 65)}
+                          value={getFinValue(fin, "occupancy_rate", 65)}
                           onChange={(e) => {
                             const updated = { ...fin, occupancy_rate: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -720,7 +642,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.adr, 180)}
+                          value={getFinValue(fin, "adr", 180)}
                           onChange={(e) => {
                             const updated = { ...fin, adr: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -733,7 +655,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.fb_revenue_per_room_night, 45)}
+                          value={getFinValue(fin, "fb_revenue_per_room_night", 45)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -748,7 +670,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Coperti esterni/giorno</Label>
                         <Input
                           type="number"
-                          value={safeValue(fin.fb_external_covers_day, 30)}
+                          value={getFinValue(fin, "fb_external_covers_day", 30)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_external_covers_day: Number.parseInt(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -761,7 +683,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.fb_avg_ticket_external, 55)}
+                          value={getFinValue(fin, "fb_avg_ticket_external", 55)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_avg_ticket_external: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -774,7 +696,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.spa_revenue_per_room_night, 25)}
+                          value={getFinValue(fin, "spa_revenue_per_room_night", 25)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -789,7 +711,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Clienti esterni SPA/giorno</Label>
                         <Input
                           type="number"
-                          value={safeValue(fin.spa_external_clients_day, 10)}
+                          value={getFinValue(fin, "spa_external_clients_day", 10)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_external_clients_day: Number.parseInt(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -802,7 +724,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.spa_avg_ticket_external, 80)}
+                          value={getFinValue(fin, "spa_avg_ticket_external", 80)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_avg_ticket_external: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -815,7 +737,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="1"
-                          value={safeValue(fin.other_revenue_per_room_night, 15)}
+                          value={getFinValue(fin, "other_revenue_per_room_night", 10)}
                           onChange={(e) => {
                             const updated = {
                               ...fin,
@@ -840,7 +762,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.room_cost_pct, 10)}
+                          value={getFinValue(fin, "room_cost_pct", 15)}
                           onChange={(e) => {
                             const updated = { ...fin, room_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -853,7 +775,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.fb_cost_pct, 30)}
+                          value={getFinValue(fin, "fb_cost_pct", 35)}
                           onChange={(e) => {
                             const updated = { ...fin, fb_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -866,7 +788,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.spa_cost_pct, 40)}
+                          value={getFinValue(fin, "spa_cost_pct", 25)}
                           onChange={(e) => {
                             const updated = { ...fin, spa_cost_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -879,7 +801,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.ota_commission_pct, 15)}
+                          value={getFinValue(fin, "ota_commission_pct", 18)}
                           onChange={(e) => {
                             const updated = { ...fin, ota_commission_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -892,7 +814,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.ota_share_pct, 60)}
+                          value={getFinValue(fin, "ota_share_pct", 70)}
                           onChange={(e) => {
                             const updated = { ...fin, ota_share_pct: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -914,7 +836,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.staff_cost_monthly, 15000)}
+                          value={getFinValue(fin, "staff_cost_monthly", 30000)}
                           onChange={(e) => {
                             const updated = { ...fin, staff_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -927,7 +849,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.rent_cost_monthly, 8000)}
+                          value={getFinValue(fin, "rent_cost_monthly", 20000)}
                           onChange={(e) => {
                             const updated = { ...fin, rent_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -940,7 +862,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.utilities_cost_monthly, 3000)}
+                          value={getFinValue(fin, "utilities_cost_monthly", 5000)}
                           onChange={(e) => {
                             const updated = { ...fin, utilities_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -953,7 +875,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.maintenance_cost_monthly, 1500)}
+                          value={getFinValue(fin, "maintenance_cost_monthly", 3000)}
                           onChange={(e) => {
                             const updated = { ...fin, maintenance_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -966,7 +888,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.insurance_cost_monthly, 500)}
+                          value={getFinValue(fin, "insurance_cost_monthly", 1500)}
                           onChange={(e) => {
                             const updated = { ...fin, insurance_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -979,7 +901,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.marketing_cost_monthly, 2000)}
+                          value={getFinValue(fin, "marketing_cost_monthly", 2000)}
                           onChange={(e) => {
                             const updated = { ...fin, marketing_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -992,7 +914,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.admin_cost_monthly, 1000)}
+                          value={getFinValue(fin, "admin_cost_monthly", 4000)}
                           onChange={(e) => {
                             const updated = { ...fin, admin_cost_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1005,7 +927,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="100"
-                          value={safeValue(fin.other_fixed_monthly, 500)}
+                          value={getFinValue(fin, "other_fixed_monthly", 1000)}
                           onChange={(e) => {
                             const updated = { ...fin, other_fixed_monthly: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1027,7 +949,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="10000"
-                          value={safeValue(fin.initial_investment, 2000000)}
+                          value={getFinValue(fin, "initial_investment", 5000000)}
                           onChange={(e) => {
                             const updated = { ...fin, initial_investment: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1039,7 +961,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Label>Anni Ammortamento</Label>
                         <Input
                           type="number"
-                          value={safeValue(fin.depreciation_years, 20)}
+                          value={getFinValue(fin, "depreciation_years", 20)}
                           onChange={(e) => {
                             const updated = { ...fin, depreciation_years: Number.parseInt(e.target.value) || 20 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1052,7 +974,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="10000"
-                          value={safeValue(fin.loan_amount, 1500000)}
+                          value={getFinValue(fin, "loan_amount", 3000000)}
                           onChange={(e) => {
                             const updated = { ...fin, loan_amount: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1065,7 +987,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={safeValue(fin.loan_interest_rate, 4.5)}
+                          value={getFinValue(fin, "loan_interest_rate", 4.5)}
                           onChange={(e) => {
                             const updated = { ...fin, loan_interest_rate: Number.parseFloat(e.target.value) || 0 }
                             setFinancials(financials.map((f) => (f.year === fin.year ? updated : f)))
@@ -1447,11 +1369,11 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           <CardContent className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span>Occupancy</span>
-                              <span className="font-medium">{formatPercent(fin.occupancy_rate)}</span>
+                              <span className="font-medium">{formatPercent(getFinValue(fin, "occupancy_rate"))}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>ADR</span>
-                              <span className="font-medium">{formatCurrency(fin.adr)}</span>
+                              <span className="font-medium">{formatCurrency(getFinValue(fin, "adr"))}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>RevPAR</span>
@@ -1464,7 +1386,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             <div className="flex justify-between">
                               <span>EBITDA %</span>
                               <span className={`font-medium ${pl.ebitda >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                {formatPercent((pl.ebitda / pl.totalRevenue) * 100)}
+                                {pl.totalRevenue > 0 ? formatPercent((pl.ebitda / pl.totalRevenue) * 100) : "0.0%"}
                               </span>
                             </div>
                           </CardContent>
@@ -1476,6 +1398,93 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </Card>
             </>
           )}
+        </TabsContent>
+
+        {/* Tab Contenuto Testuale */}
+        <TabsContent value="content" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Executive Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.executive_summary || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, executive_summary: e.target.value })}
+                rows={6}
+                placeholder="Descrizione sintetica del progetto, obiettivi principali e punti di forza..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Analisi di Mercato</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.market_analysis || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, market_analysis: e.target.value })}
+                rows={6}
+                placeholder="Analisi del mercato di riferimento, competitor, trend di settore..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Business Model</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.business_model || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, business_model: e.target.value })}
+                rows={6}
+                placeholder="Modello di business, fonti di ricavo, proposta di valore..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Strategia Marketing</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.marketing_strategy || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, marketing_strategy: e.target.value })}
+                rows={6}
+                placeholder="Strategia di marketing, canali di acquisizione, posizionamento..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Team di Gestione</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.management_team || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, management_team: e.target.value })}
+                rows={6}
+                placeholder="Composizione del team, competenze chiave, organigramma..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Analisi dei Rischi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={selectedPlan.risk_analysis || ""}
+                onChange={(e) => setSelectedPlan({ ...selectedPlan, risk_analysis: e.target.value })}
+                rows={6}
+                placeholder="Principali rischi identificati e strategie di mitigazione..."
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
