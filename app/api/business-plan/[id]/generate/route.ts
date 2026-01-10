@@ -7,12 +7,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params
     const { section } = await request.json()
 
+    console.log("[v0] Generate API - id:", id, "section:", section)
+
     const supabase = createAdminClient()
 
     // Recupera il business plan con i dati finanziari
     const { data: plan, error: planError } = await supabase.from("business_plans").select("*").eq("id", id).single()
 
     if (planError || !plan) {
+      console.log("[v0] Generate API - plan error:", planError)
       return NextResponse.json({ error: "Business plan non trovato" }, { status: 404 })
     }
 
@@ -21,6 +24,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .select("*")
       .eq("business_plan_id", id)
       .order("year_number", { ascending: true })
+
+    console.log("[v0] Generate API - financials:", financials?.length || 0, "records")
 
     // Calcola i KPI principali per il contesto
     const kpis = (financials || []).map((fin: Record<string, number>) => {
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const revpar = roomRevenue / ((plan.num_rooms || 90) * (plan.opening_days_year || 365))
 
       return {
-        year: fin.year_number, // year_number invece di year
+        year: fin.year_number,
         occupancy: fin.occupancy_rate || 65,
         adr: fin.adr || 180,
         revpar: revpar.toFixed(2),
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Definisci i prompt per ogni sezione
     const sectionPrompts: Record<string, string> = {
-      description: `Scrivi un Executive Summary professionale per il seguente business plan alberghiero:
+      executive_summary: `Scrivi un Executive Summary professionale per il seguente business plan alberghiero:
 
 DATI PROGETTO:
 - Nome: ${plan.name}
@@ -51,6 +56,7 @@ DATI PROGETTO:
 - Località: ${plan.location || "Italia"}
 - Numero camere: ${plan.num_rooms || 90}
 - Giorni apertura: ${plan.opening_days_year || 365}
+- Investimento: €${plan.initial_investment?.toLocaleString() || "8.000.000"}
 
 PROIEZIONI FINANZIARIE:
 ${kpis.map((k) => `Anno ${k.year}: Occupancy ${k.occupancy}%, ADR €${k.adr}, RevPAR €${k.revpar}, Fatturato €${k.totalRevenue}`).join("\n")}
@@ -88,7 +94,7 @@ Scrivi in italiano, 4-5 paragrafi dettagliati con dati e insight specifici.`,
 DATI PROGETTO:
 - Nome: ${plan.name}
 - Tipo: Hotel ${plan.stars || 4} stelle
-- Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}Camere
+- Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}${plan.has_congress ? "Centro Congressi, " : ""}Camere
 - Località: ${plan.location || "Italia"}
 - Numero camere: ${plan.num_rooms || 90}
 
@@ -138,7 +144,7 @@ DATI PROGETTO:
 - Nome: ${plan.name}
 - Tipo: Hotel ${plan.stars || 4} stelle
 - Numero camere: ${plan.num_rooms || 90}
-- Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}Reception, Housekeeping
+- Servizi: ${plan.has_spa ? "Centro benessere, " : ""}${plan.has_restaurant ? "Ristorante, " : ""}${plan.has_congress ? "Centro Congressi, " : ""}Reception, Housekeeping
 
 Scrivi una descrizione del team di gestione che includa:
 1. Organigramma proposto
@@ -157,7 +163,7 @@ DATI PROGETTO:
 - Tipo: Hotel ${plan.stars || 4} stelle di nuova apertura
 - Località: ${plan.location || "Italia"}
 - Numero camere: ${plan.num_rooms || 90}
-- Investimento stimato: significativo
+- Investimento stimato: €${plan.initial_investment?.toLocaleString() || "8.000.000"}
 
 PROIEZIONI FINANZIARIE:
 ${kpis.map((k) => `Anno ${k.year}: Occupancy ${k.occupancy}%, Fatturato €${k.totalRevenue}`).join("\n")}
@@ -176,19 +182,23 @@ Scrivi in italiano, analisi professionale e dettagliata.`,
 
     const prompt = sectionPrompts[section]
     if (!prompt) {
+      console.log("[v0] Generate API - invalid section:", section)
       return NextResponse.json({ error: "Sezione non valida" }, { status: 400 })
     }
 
-    // Genera il testo con AI
+    console.log("[v0] Generate API - calling AI model...")
+
     const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: "openai/gpt-4o",
       prompt,
       maxTokens: 2000,
     })
 
+    console.log("[v0] Generate API - text generated, length:", text?.length)
+
     return NextResponse.json({ content: text })
   } catch (error) {
-    console.error("Errore generazione AI:", error)
+    console.error("[v0] Generate API - error:", error)
     return NextResponse.json({ error: "Errore nella generazione" }, { status: 500 })
   }
 }

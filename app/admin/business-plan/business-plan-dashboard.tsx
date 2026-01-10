@@ -102,18 +102,9 @@ interface Props {
   initialPlans: BusinessPlan[]
 }
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
-const formatPercent = (value: number) => {
-  return `${value.toFixed(1)}%`
-}
+const formatNumber = (n: number) => n.toLocaleString("it-IT", { maximumFractionDigits: 0 })
+const formatCurrency = (n: number) => `€ ${formatNumber(n)}`
+const formatPercent = (n: number) => `${n.toFixed(1)}%`
 
 const getFinValue = (fin: BusinessPlanFinancials, key: keyof BusinessPlanFinancials, defaultVal = 0): number => {
   const val = fin[key]
@@ -723,6 +714,36 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }
 
+  // Dentro la sezione delle proiezioni (dopo calculatePL), creo un helper per tooltip ricavi
+  const getRevenueTooltip = (
+    type: "rooms" | "fb" | "spa" | "congress" | "other",
+    fin: BusinessPlanFinancials,
+    plan: BusinessPlan,
+  ) => {
+    const roomNights =
+      (plan.num_rooms || 90) * (plan.opening_days_year || 365) * (getFinValue(fin, "occupancy_rate", 65) / 100)
+    const roomRevenue = roomNights * getFinValue(fin, "adr", 180)
+
+    switch (type) {
+      case "rooms":
+        return `${formatNumber(Math.round(roomNights))} room nights × ${formatCurrency(getFinValue(fin, "adr", 180))} ADR`
+      case "fb":
+        const fbPct = getFinValue(fin, "fb_revenue_pct", 35)
+        return `${formatCurrency(roomRevenue)} (ricavi camere) × ${fbPct}%`
+      case "spa":
+        const spaPct = getFinValue(fin, "spa_revenue_pct", 12)
+        return `${formatCurrency(roomRevenue)} (ricavi camere) × ${spaPct}%`
+      case "congress":
+        const congressPct = getFinValue(fin, "congress_revenue_pct", 20)
+        return `${formatCurrency(roomRevenue)} (ricavi camere) × ${congressPct}%`
+      case "other":
+        const otherPct = getFinValue(fin, "other_revenue_pct", 5)
+        return `${formatCurrency(roomRevenue)} (ricavi camere) × ${otherPct}%`
+      default:
+        return ""
+    }
+  }
+
   // Lista piani
   if (!selectedPlan) {
     return (
@@ -987,6 +1008,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
           {/* Tab Parametri Finanziari */}
           <TabsContent value="financials" className="space-y-6">
+            {/* Aggiungo banner IVA esclusa */}
+            {/* Banner IVA esclusa */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <strong>Nota:</strong> Tutti i valori (ricavi e costi) sono espressi al <strong>netto IVA</strong>. L'IVA
+              viene gestita separatamente nel cash flow.
+            </div>
+
             {isLoading ? (
               <div className="text-center py-12">Caricamento parametri...</div>
             ) : financials.length === 0 ? (
@@ -1507,7 +1535,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="py-1 pl-4">Room Division</td>
+                          <td className="py-1 pl-4">
+                            <Tooltip>
+                              <TooltipTrigger>Room Division</TooltipTrigger>
+                              <TooltipContent>{getRevenueTooltip("rooms", financials[0], selectedPlan)}</TooltipContent>
+                            </Tooltip>
+                          </td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
@@ -1522,7 +1555,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         </tr>
                         {selectedPlan.has_restaurant && (
                           <tr className="border-b">
-                            <td className="py-1 pl-4">Food & Beverage</td>
+                            <td className="py-1 pl-4">
+                              <Tooltip>
+                                <TooltipTrigger>Food & Beverage</TooltipTrigger>
+                                <TooltipContent>{getRevenueTooltip("fb", financials[0], selectedPlan)}</TooltipContent>
+                              </Tooltip>
+                            </td>
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
@@ -1538,7 +1576,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         )}
                         {selectedPlan.has_spa && (
                           <tr className="border-b">
-                            <td className="py-1 pl-4">SPA & Wellness</td>
+                            <td className="py-1 pl-4">
+                              <Tooltip>
+                                <TooltipTrigger>SPA & Wellness</TooltipTrigger>
+                                <TooltipContent>{getRevenueTooltip("spa", financials[0], selectedPlan)}</TooltipContent>
+                              </Tooltip>
+                            </td>
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
@@ -1554,7 +1597,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                         )}
                         {selectedPlan.has_congress && (
                           <tr className="border-b">
-                            <td className="py-1 pl-4">Centro Congressi</td>
+                            <td className="py-1 pl-4">
+                              <Tooltip>
+                                <TooltipTrigger>Centro Congressi</TooltipTrigger>
+                                <TooltipContent>
+                                  {getRevenueTooltip("congress", financials[0], selectedPlan)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </td>
                             {financials.map((fin) => {
                               const pl = calculatePL(selectedPlan, fin)
                               return (
@@ -1569,7 +1619,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           </tr>
                         )}
                         <tr className="border-b">
-                          <td className="py-1 pl-4">Altri Ricavi</td>
+                          <td className="py-1 pl-4">
+                            <Tooltip>
+                              <TooltipTrigger>Altri Ricavi</TooltipTrigger>
+                              <TooltipContent>{getRevenueTooltip("other", financials[0], selectedPlan)}</TooltipContent>
+                            </Tooltip>
+                          </td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
