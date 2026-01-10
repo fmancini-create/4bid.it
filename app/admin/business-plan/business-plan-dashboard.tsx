@@ -510,27 +510,35 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   }
 
   const sharePlan = async () => {
+    console.log("[v0] sharePlan called", {
+      selectedPlan: selectedPlan?.id,
+      shareEmail,
+      sharePassword: sharePassword ? "***" : "empty",
+    })
     if (!selectedPlan || !shareEmail || !sharePassword) {
       toast.error("Compila email e password")
       return
     }
     try {
+      console.log("[v0] Calling share API...")
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: shareEmail, password: sharePassword }),
       })
+      console.log("[v0] Share API response status:", res.status)
+      const data = await res.json()
+      console.log("[v0] Share API response:", data)
       if (res.ok) {
-        const data = await res.json()
         toast.success(`Link di condivisione inviato a ${shareEmail}`)
         setShowShareDialog(false)
         setShareEmail("")
         setSharePassword("")
       } else {
-        toast.error("Errore nella condivisione")
+        toast.error(`Errore: ${data.error || "Condivisione fallita"}`)
       }
     } catch (error) {
-      console.error("Error sharing plan:", error)
+      console.error("[v0] Error sharing plan:", error)
       toast.error("Errore nella condivisione")
     }
   }
