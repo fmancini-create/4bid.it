@@ -5,11 +5,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const { id } = params
   const supabase = createAdminClient()
 
+  console.log("[v0] Financials GET - id:", id)
+  console.log("[v0] Financials GET - SUPABASE_URL:", process.env.SUPABASE_URL ? "set" : "NOT SET")
+  console.log(
+    "[v0] Financials GET - SUPABASE_SERVICE_ROLE_KEY:",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ? "set" : "NOT SET",
+  )
+
   const { data, error } = await supabase
     .from("business_plan_years")
     .select("*")
     .eq("business_plan_id", id)
     .order("year_number", { ascending: true })
+
+  console.log("[v0] Financials GET - data:", data?.length || 0, "records")
+  console.log("[v0] Financials GET - error:", error?.message || "none")
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
