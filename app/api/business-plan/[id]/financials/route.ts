@@ -6,10 +6,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
-    .from("business_plan_financials")
+    .from("business_plan_years")
     .select("*")
     .eq("business_plan_id", id)
-    .order("year", { ascending: true })
+    .order("year_number", { ascending: true })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -24,38 +24,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json()
 
   const { data, error } = await supabase
-    .from("business_plan_financials")
+    .from("business_plan_years")
     .insert({
       business_plan_id: id,
-      year: body.year,
-      // Valori default per hotel 4 stelle
-      occupancy_rate: 65.0,
-      adr: 180.0,
-      fb_revenue_per_room_night: 45.0,
-      fb_external_covers_day: 30,
-      fb_avg_ticket_external: 55.0,
-      spa_revenue_per_room_night: 25.0,
-      spa_external_clients_day: 10,
-      spa_avg_ticket_external: 80.0,
-      other_revenue_per_room_night: 10.0,
-      room_cost_pct: 15.0,
-      fb_cost_pct: 35.0,
-      spa_cost_pct: 25.0,
-      staff_cost_monthly: 85000.0,
-      rent_cost_monthly: 25000.0,
-      utilities_cost_monthly: 18000.0,
-      maintenance_cost_monthly: 8000.0,
-      insurance_cost_monthly: 5000.0,
-      marketing_cost_monthly: 12000.0,
-      admin_cost_monthly: 6000.0,
-      ota_commission_pct: 18.0,
-      ota_share_pct: 40.0,
-      other_fixed_monthly: 5000.0,
-      initial_investment: 8000000.0,
-      depreciation_years: 20,
-      loan_amount: 5000000.0,
-      loan_interest_rate: 4.5,
-      loan_years: 15,
+      year_number: body.year_number || 1,
+      rooms_available: body.rooms_available || 90,
+      opening_days: body.opening_days || 365,
+      occupancy_rate: body.occupancy_rate || 65.0,
+      adr: body.adr || 180.0,
+      fb_revenue_pct: body.fb_revenue_pct || 35.0,
+      spa_revenue_pct: body.spa_revenue_pct || 12.0,
+      other_revenue_pct: body.other_revenue_pct || 5.0,
+      rooms_cost_pct: body.rooms_cost_pct || 25.0,
+      fb_cost_pct: body.fb_cost_pct || 35.0,
+      spa_cost_pct: body.spa_cost_pct || 40.0,
+      other_cost_pct: body.other_cost_pct || 20.0,
+      staff_cost: body.staff_cost || 850000.0,
+      rent_cost: body.rent_cost || 180000.0,
+      utilities_cost: body.utilities_cost || 120000.0,
+      marketing_cost: body.marketing_cost || 80000.0,
+      maintenance_cost: body.maintenance_cost || 60000.0,
+      insurance_cost: body.insurance_cost || 35000.0,
+      admin_cost: body.admin_cost || 45000.0,
+      other_fixed_cost: body.other_fixed_cost || 30000.0,
+      depreciation: body.depreciation || 150000.0,
+      interest_cost: body.interest_cost || 80000.0,
+      tax_rate: body.tax_rate || 24.0,
     })
     .select()
     .single()
@@ -73,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const body = await request.json()
 
   const { data, error } = await supabase
-    .from("business_plan_financials")
+    .from("business_plan_years")
     .upsert({
       ...body,
       business_plan_id: id,
