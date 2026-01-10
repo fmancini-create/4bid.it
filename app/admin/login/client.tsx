@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -28,15 +28,21 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
   const [showPassword, setShowPassword] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isDevOrPreview, setIsDevOrPreview] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  const isDevOrPreview =
-    process.env.NODE_ENV === "development" ||
-    (typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname.includes("vercel.app") ||
-        window.location.hostname.includes("v0.dev")))
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname
+      const isDev =
+        hostname === "localhost" ||
+        hostname.includes("vercel.app") ||
+        hostname.includes("v0.dev") ||
+        hostname.includes("vusercontent.net")
+      setIsDevOrPreview(isDev)
+    }
+  }, [])
 
   const handleDevLogin = async () => {
     setEmail(DEV_CREDENTIALS.email)
