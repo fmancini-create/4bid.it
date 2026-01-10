@@ -261,6 +261,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [shareEmail, setShareEmail] = useState("")
   const [sharePassword, setSharePassword] = useState("")
   const [generatingSection, setGeneratingSection] = useState<string | null>(null)
+  const [needsInit, setNeedsInit] = useState(false)
 
   const selectedPlanId = selectedPlan?.id
   useEffect(() => {
@@ -269,16 +270,34 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }, [selectedPlanId])
 
+  useEffect(() => {
+    if (needsInit && selectedPlan && financials.length === 0 && !isLoading) {
+      console.log("[v0] Auto-initializing financials for plan:", selectedPlan.id)
+      createDefaultYears(selectedPlan.id, selectedPlan.projection_years || 3)
+      setNeedsInit(false)
+    }
+  }, [needsInit, selectedPlan, financials.length, isLoading])
+
   const loadFinancials = async (planId: string) => {
     setIsLoading(true)
+    console.log("[v0] Loading financials for plan:", planId)
     try {
       const res = await fetch(`/api/business-plan/${planId}/financials`)
+      console.log("[v0] Financials response status:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Financials data received:", data.length, "records")
         setFinancials(data)
+        if (data.length === 0) {
+          console.log("[v0] No financials found, will auto-init")
+          setNeedsInit(true)
+        }
+      } else {
+        const errorText = await res.text()
+        console.error("[v0] Error loading financials:", res.status, errorText)
       }
     } catch (error) {
-      console.error("Error loading financials:", error)
+      console.error("[v0] Error loading financials:", error)
     }
     setIsLoading(false)
   }
@@ -968,7 +987,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   <p className="text-muted-foreground mb-4">Nessun parametro finanziario configurato</p>
                   <Button
                     onClick={async () => {
-                      await createDefaultYears(selectedPlan.id, selectedPlan.projection_years || 3)
+                      // Removed direct call to createDefaultYears, relying on the useEffect for auto-init
+                      setNeedsInit(true) // Manually trigger the useEffect
                     }}
                   >
                     Inizializza Parametri
