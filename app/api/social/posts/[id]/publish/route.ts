@@ -64,15 +64,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const platform of platformsToPublish) {
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-      if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
-        const filteredAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
-        // Solo se il filtro trova account validi, usa quelli; altrimenti usa tutti
-        if (filteredAccounts.length > 0) {
-          platformAccounts = filteredAccounts
-        }
+      if (post.target_accounts && post.target_accounts.length > 0) {
+        platformAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
         console.log(
-          `[v0] Facebook target_accounts filter: ${post.target_accounts.length} targets, ${filteredAccounts.length} matched, using ${platformAccounts.length} accounts`,
+          `[v0] ${platform} target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
+
+        // Se non trova account corrispondenti, salta questa piattaforma
+        if (platformAccounts.length === 0) {
+          console.log(`[v0] No matching accounts for ${platform}, skipping`)
+          continue
+        }
       }
 
       console.log(`[v0] Publishing to ${platform}, accounts:`, platformAccounts.length)

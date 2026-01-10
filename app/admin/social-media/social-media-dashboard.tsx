@@ -46,6 +46,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -165,6 +175,9 @@ export default function SocialMediaDashboard({
   })
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+
+  const [publishConfirmPost, setPublishConfirmPost] = useState<SocialPost | null>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
 
   const generateAIPost = async (topic?: string) => {
     setIsGenerating(true)
@@ -389,27 +402,14 @@ export default function SocialMediaDashboard({
     }
   }
 
+  const openPublishConfirm = (post: SocialPost) => {
+    setPublishConfirmPost(post)
+  }
+
   const publishNow = async (postId: string) => {
-    console.log("[v0] publishNow called with postId:", postId)
-    try {
-      const response = await fetch(`/api/social/posts/${postId}/publish`, {
-        method: "POST",
-      })
-
-      console.log("[v0] publish response status:", response.status)
-      const result = await response.json()
-      console.log("[v0] publish result:", result)
-
-      if (!response.ok) throw new Error(result.error || "Errore nella pubblicazione")
-
-      setPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, status: "published", published_at: new Date().toISOString() } : p)),
-      )
-      toast.success("Post pubblicato!")
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] publish error:", error)
-      toast.error("Errore nella pubblicazione")
+    const post = posts.find((p) => p.id === postId)
+    if (post) {
+      openPublishConfirm(post)
     }
   }
 
@@ -498,6 +498,47 @@ export default function SocialMediaDashboard({
     })
     setShowEditDialog(true)
     toast.info("Modifica il post e salva. Puoi mantenere o cambiare la data di programmazione.")
+  }
+
+  const getTargetAccountNames = (post: SocialPost) => {
+    if (!post.target_accounts || post.target_accounts.length === 0) {
+      // All accounts for selected platforms
+      return accounts
+        .filter((a) => post.platforms.includes(a.platform) && a.is_active)
+        .map((a) => ({ name: a.account_name, platform: a.platform }))
+    }
+    return accounts
+      .filter((a) => post.target_accounts?.includes(a.id))
+      .map((a) => ({ name: a.account_name, platform: a.platform }))
+  }
+
+  const confirmPublish = async () => {
+    if (!publishConfirmPost) return
+
+    setIsPublishing(true)
+    try {
+      const response = await fetch(`/api/social/posts/${publishConfirmPost.id}/publish`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) throw new Error(result.error || "Errore nella pubblicazione")
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === publishConfirmPost.id ? { ...p, status: "published", published_at: new Date().toISOString() } : p,
+        ),
+      )
+      toast.success("Post pubblicato!")
+      setPublishConfirmPost(null)
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] publish error:", error)
+      toast.error("Errore nella pubblicazione")
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -713,7 +754,9 @@ export default function SocialMediaDashboard({
                 <PostCard
                   key={post.id}
                   post={post}
+                  onApprove={post.scheduled_for ? () => approvePost(post.id) : undefined}
                   onPublish={() => publishNow(post.id)}
+                  onReject={() => rejectPost(post.id)}
                   onEdit={() => openEditDialog(post)}
                 />
               ))
@@ -1465,6 +1508,106 @@ export default function SocialMediaDashboard({
         </DialogContent>
       </Dialog>
 
+      {/* Publish Confirmation Dialog */}
+      <AlertDialog open={!!publishConfirmPost} onOpenChange={(open) => !open && setPublishConfirmPost(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Conferma Pubblicazione
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">Stai per pubblicare questo post. Verifica i dettagli:</p>
+
+                {publishConfirmPost && (
+                  <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+                    {/* Content preview */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Contenuto:</p>
+                      <p className="text-sm line-clamp-3">{publishConfirmPost.content}</p>
+                    </div>
+
+                    {/* Target channels */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Canali di pubblicazione:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {getTargetAccountNames(publishConfirmPost).map((account, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1">
+                            {account.platform === "facebook" && <Facebook className="h-3 w-3" />}
+                            {account.platform === "instagram" && <Instagram className="h-3 w-3" />}
+                            {account.platform === "linkedin" && <Linkedin className="h-3 w-3" />}
+                            {account.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Image */}
+                    {publishConfirmPost.image_url && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Immagine:</p>
+                        <Badge variant="outline" className="text-xs">
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          Allegata
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Link */}
+                    {publishConfirmPost.link_url && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Link:</p>
+                        <p className="text-xs text-blue-600 truncate">{publishConfirmPost.link_url}</p>
+                      </div>
+                    )}
+
+                    {/* Scheduled time if present */}
+                    {publishConfirmPost.scheduled_for && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Data programmata:</p>
+                        <Badge variant="outline" className="text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatDateTimeIT(publishConfirmPost.scheduled_for)}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Immediate publish notice */}
+                    {!publishConfirmPost.scheduled_for && (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 rounded p-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <p className="text-xs">Il post verrà pubblicato immediatamente</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={isPublishing}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPublish}
+              disabled={isPublishing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Pubblicazione...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Pubblica Ora
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ... existing settings dialog and manual connect dialog ... */}
     </div>
   )
@@ -1476,19 +1619,27 @@ function PostCard({
   onReject,
   onPublish,
   onEdit,
-  onRepost, // Added onRepost prop
+  onRepost,
 }: {
   post: SocialPost
   onApprove?: () => void
   onReject?: () => void
   onPublish?: () => void
   onEdit?: () => void
-  onRepost?: () => void // Added onRepost prop type
+  onRepost?: () => void
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
-  const canEdit = ["draft", "scheduled"].includes(post.status) // Simplified canEdit condition
+  const canEdit = ["draft", "scheduled"].includes(post.status)
   const canRepost = post.status === "published" || post.status === "failed"
+
+  const handlePublish = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onPublish) {
+      onPublish()
+    }
+  }
 
   return (
     <Card>
@@ -1605,7 +1756,12 @@ function PostCard({
               </Button>
             )}
             {onPublish && (
-              <Button size="sm" onClick={onPublish} className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs">
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                onTouchEnd={handlePublish}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs touch-manipulation"
+              >
                 <Send className="h-3 w-3 mr-1" />
                 Pubblica
               </Button>
