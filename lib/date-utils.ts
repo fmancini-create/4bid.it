@@ -123,3 +123,10 @@ export function utcToLocalDatetime(isoString: string | null | undefined): string
 export function nowAsLocalDatetime(): string {
   return utcToLocalDatetime(new Date().toISOString())
 }
+
+/**
+ * Alias per compatibilità - formatta data in italiano
+ */
+export function formatRomeDate(isoString: string | null | undefined): string {
+  return formatDateTimeIT(isoString)
+}
