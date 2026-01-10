@@ -16,12 +16,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Business plan non trovato" }, { status: 404 })
     }
 
-    // Recupera i dati finanziari
     const { data: financials } = await supabase
-      .from("business_plan_financials")
+      .from("business_plan_years")
       .select("*")
       .eq("business_plan_id", id)
-      .order("year", { ascending: true })
+      .order("year_number", { ascending: true })
 
     // Calcola i KPI principali per il contesto
     const kpis = (financials || []).map((fin: Record<string, number>) => {
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const revpar = roomRevenue / ((plan.num_rooms || 90) * (plan.opening_days_year || 365))
 
       return {
-        year: fin.year,
+        year: fin.year_number, // year_number invece di year
         occupancy: fin.occupancy_rate || 65,
         adr: fin.adr || 180,
         revpar: revpar.toFixed(2),

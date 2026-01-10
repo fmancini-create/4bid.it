@@ -1,16 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = createAdminClient()
 
   console.log("[v0] Financials GET - id:", id)
-  console.log("[v0] Financials GET - SUPABASE_URL:", process.env.SUPABASE_URL ? "set" : "NOT SET")
-  console.log(
-    "[v0] Financials GET - SUPABASE_SERVICE_ROLE_KEY:",
-    process.env.SUPABASE_SERVICE_ROLE_KEY ? "set" : "NOT SET",
-  )
 
   const { data, error } = await supabase
     .from("business_plan_years")
@@ -19,7 +14,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     .order("year_number", { ascending: true })
 
   console.log("[v0] Financials GET - data:", data?.length || 0, "records")
-  console.log("[v0] Financials GET - error:", error?.message || "none")
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -28,8 +22,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   return NextResponse.json(data)
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = createAdminClient()
   const body = await request.json()
 
@@ -46,11 +40,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         fb_revenue_pct: body.fb_revenue_pct || 35.0,
         spa_revenue_pct: body.spa_revenue_pct || 12.0,
         other_revenue_pct: body.other_revenue_pct || 5.0,
+        congress_revenue_pct: body.congress_revenue_pct || 20.0,
         rooms_cost_pct: body.rooms_cost_pct || 25.0,
         fb_cost_pct: body.fb_cost_pct || 35.0,
         spa_cost_pct: body.spa_cost_pct || 40.0,
         other_cost_pct: body.other_cost_pct || 20.0,
-        staff_cost: body.staff_cost || 850000.0,
+        congress_cost_pct: body.congress_cost_pct || 45.0,
+        staff_rooms_cost: body.staff_rooms_cost || 400000.0,
+        staff_fb_cost: body.staff_fb_cost || 300000.0,
+        staff_spa_cost: body.staff_spa_cost || 150000.0,
+        staff_congress_cost: body.staff_congress_cost || 100000.0,
+        staff_admin_cost: body.staff_admin_cost || 180000.0,
         rent_cost: body.rent_cost || 180000.0,
         utilities_cost: body.utilities_cost || 120000.0,
         marketing_cost: body.marketing_cost || 80000.0,
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   return NextResponse.json(data)
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = createAdminClient()
   const body = await request.json()
 
