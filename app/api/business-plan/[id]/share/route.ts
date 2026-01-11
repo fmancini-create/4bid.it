@@ -112,9 +112,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         
         <div class="footer">
           <p><strong>4BID S.r.l.</strong></p>
-          <p>Via Dalmazia, 51 - 72017 Ostuni (BR)</p>
-          <p>P.IVA: 02664480745</p>
-          <p>Tel: +39 347 968 8586 | Email: info@4bid.it</p>
+          <p>Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)</p>
+          <p>P.IVA: 06241710489</p>
+          <p>Email: clienti@4bid.it | Web: www.4bid.it</p>
         </div>
       </div>
     </body>
