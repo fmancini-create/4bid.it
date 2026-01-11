@@ -22,12 +22,38 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient()
 
-    // Chiama la funzione PostgreSQL per salvare lo snapshot
-    const { error } = await supabase.rpc("save_daily_snapshot")
+    console.log("[v0] Starting daily snapshot save...")
 
-    if (error) {
-      console.error("[v0] Error saving daily snapshot:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // Ottieni tutte le landing pages
+    const { data: pages, error: pagesError } = await supabase.from("landing_pages").select("id, views, conversions")
+
+    if (pagesError) {
+      console.error("[v0] Error fetching landing pages:", pagesError)
+      return NextResponse.json({ error: pagesError.message }, { status: 500 })
+    }
+
+    console.log(`[v0] Found ${pages?.length || 0} landing pages to snapshot`)
+
+    // Inserisci uno snapshot per ogni landing page
+    const today = new Date().toISOString().split("T")[0] // YYYY-MM-DD
+    const snapshots =
+      pages?.map((page) => ({
+        landing_page_id: page.id,
+        date: today,
+        views: page.views || 0,
+        conversions: page.conversions || 0,
+      })) || []
+
+    if (snapshots.length > 0) {
+      const { error: insertError } = await supabase.from("landing_page_daily_stats").upsert(snapshots, {
+        onConflict: "landing_page_id,date",
+        ignoreDuplicates: false,
+      })
+
+      if (insertError) {
+        console.error("[v0] Error inserting daily stats:", insertError)
+        return NextResponse.json({ error: insertError.message }, { status: 500 })
+      }
     }
 
     console.log("[v0] Daily snapshot saved successfully at", new Date().toISOString())
@@ -35,6 +61,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Daily snapshot saved successfully",
+      pages_saved: snapshots.length,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
