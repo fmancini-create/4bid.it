@@ -122,15 +122,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   `
 
   try {
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: body.email,
       subject: `Business Plan: ${planName} - Accesso Condiviso`,
       html: emailHtml,
     })
-    console.log("[v0] Share email sent successfully to:", body.email)
+
+    if (emailResult.success) {
+      console.log("[v0] Share email sent successfully to:", body.email)
+    } else {
+      console.error("[v0] Share email failed:", emailResult.error)
+    }
   } catch (emailError) {
-    console.error("[v0] Share email error:", emailError)
-    // Non blocchiamo se l'email fallisce
+    console.error("[v0] Share email exception:", emailError)
   }
 
   return NextResponse.json({

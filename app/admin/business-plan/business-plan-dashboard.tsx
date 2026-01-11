@@ -577,8 +577,20 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       })
       if (res.ok) {
         const { content } = await res.json()
-        setSelectedPlan({ ...selectedPlan, [section]: content })
-        toast.success("Contenuto generato con successo!")
+        const updatedPlan = { ...selectedPlan, [section]: content }
+        setSelectedPlan(updatedPlan)
+
+        // Salva automaticamente nel database
+        const saveRes = await fetch(`/api/business-plan/${selectedPlan.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedPlan),
+        })
+        if (saveRes.ok) {
+          toast.success("Contenuto generato e salvato!")
+        } else {
+          toast.success("Contenuto generato (clicca Salva per confermare)")
+        }
       } else {
         toast.error("Errore nella generazione del contenuto")
       }
