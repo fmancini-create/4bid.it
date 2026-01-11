@@ -268,11 +268,15 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [shareStep, setShareStep] = useState<"form" | "result">("form")
   const [generatingSection, setGeneratingSection] = useState<string | null>(null)
   const [needsInit, setNeedsInit] = useState(false)
+  const [shares, setShares] = useState<BusinessPlanShare[]>([])
+  const [loadingShares, setLoadingShares] = useState(false)
 
   const selectedPlanId = selectedPlan?.id
   useEffect(() => {
     if (selectedPlanId) {
       loadFinancials(selectedPlanId)
+      // Load shares when a plan is selected
+      loadShares(selectedPlanId)
     }
   }, [selectedPlanId])
 
@@ -564,6 +568,36 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
     toast.success(`${label} copiato!`)
+  }
+
+  const loadShares = async (planId: string) => {
+    setLoadingShares(true)
+    try {
+      const res = await fetch(`/api/business-plan/${planId}/shares`)
+      if (res.ok) {
+        const data = await res.json()
+        setShares(data)
+      }
+    } catch (error) {
+      console.error("Error loading shares:", error)
+    }
+    setLoadingShares(false)
+  }
+
+  const deleteShare = async (shareId: string) => {
+    if (!selectedPlan || !confirm("Vuoi eliminare questa condivisione?")) return
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/share?shareId=${shareId}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setShares(shares.filter((s) => s.id !== shareId))
+        toast.success("Condivisione eliminata")
+      }
+    } catch (error) {
+      console.error("Error deleting share:", error)
+      toast.error("Errore nell'eliminazione")
+    }
   }
 
   const generateContent = async (section: string) => {
@@ -906,11 +940,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Generale</TabsTrigger>
             <TabsTrigger value="financials">Parametri</TabsTrigger>
             <TabsTrigger value="projections">Proiezioni</TabsTrigger>
             <TabsTrigger value="content">Contenuto</TabsTrigger>
+            <TabsTrigger value="shares">Condivisioni</TabsTrigger>
           </TabsList>
 
           {/* Tab Generale */}
@@ -2150,6 +2185,68 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             ))}
           </TabsContent>
 
+          <TabsContent value="shares" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Condivisioni</CardTitle>
+                <CardDescription>Lista delle condivisioni attive per questo business plan</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      selectedPlan && loadShares(selectedPlan.id)
+                    }}
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingShares}
+                  >
+                    {loadingShares ? "Caricamento..." : "Aggiorna Lista"}
+                  </Button>
+
+                  {shares.length === 0 ? (
+                    <p className="text-muted-foreground py-8 text-center">Nessuna condivisione attiva</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {shares.map((share) => (
+                        <div key={share.id} className="border rounded-lg p-4 flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="font-medium">{share.email}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Condiviso il {new Date(share.created_at).toLocaleDateString("it-IT")}
+                            </p>
+                            {share.last_accessed_at && (
+                              <p className="text-xs text-muted-foreground">
+                                Ultimo accesso: {new Date(share.last_accessed_at).toLocaleDateString("it-IT")} (
+                                {share.access_count || 0} visualizzazioni)
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const link = `${process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"}/business-plan/${share.token}`
+                                copyToClipboard(link, "Link")
+                              }}
+                            >
+                              <Copy className="h-4 w-4 mr-1" />
+                              Copia Link
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteShare(share.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Dialog Condivisione */}
           <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
             <DialogContent className="sm:max-w-md">
@@ -2161,51 +2258,50 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Email destinatario</Label>
+                      <Label htmlFor="shareEmail">Email destinatario</Label>
                       <Input
+                        id="shareEmail"
                         type="email"
+                        placeholder="cliente@esempio.it"
                         value={shareEmail}
                         onChange={(e) => setShareEmail(e.target.value)}
-                        placeholder="email@esempio.com"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Password di accesso (generata automaticamente)</Label>
+                      <Label>Password di accesso</Label>
                       <div className="flex gap-2">
-                        <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setGeneratedPassword(generatePassword())}
-                          title="Genera nuova password"
-                        >
+                        <Input type="text" value={generatedPassword} readOnly className="font-mono" />
+                        <Button variant="outline" size="icon" onClick={() => setGeneratedPassword(generatePassword())}>
                           <Sparkles className="h-4 w-4" />
                         </Button>
                       </div>
+                      <p className="text-xs text-muted-foreground">Password generata automaticamente</p>
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowShareDialog(false)}>
                       Annulla
                     </Button>
-                    <Button onClick={sharePlan} disabled={!shareEmail}>
+                    <Button onClick={sharePlan}>
                       <Share2 className="h-4 w-4 mr-2" />
-                      Genera Link
+                      Condividi
                     </Button>
                   </DialogFooter>
                 </>
               ) : (
                 <>
                   <div className="space-y-4">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                      <p className="text-green-800 font-medium">Link generato con successo!</p>
-                      <p className="text-sm text-green-600 mt-1">Condividi questi dati con {shareEmail}</p>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                      <p className="font-medium text-green-900">Condivisione creata con successo!</p>
+                      <p className="text-sm text-green-700">
+                        L'email è stata inviata al destinatario con link e password di accesso.
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Link di accesso</Label>
+                      <Label>Link di condivisione</Label>
                       <div className="flex gap-2">
-                        <Input type="text" value={shareLink} readOnly className="font-mono text-xs bg-muted" />
+                        <Input type="text" value={shareLink} readOnly className="font-mono text-sm" />
                         <Button variant="outline" size="icon" onClick={() => copyToClipboard(shareLink, "Link")}>
                           <Copy className="h-4 w-4" />
                         </Button>
@@ -2215,7 +2311,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     <div className="space-y-2">
                       <Label>Password</Label>
                       <div className="flex gap-2">
-                        <Input type="text" value={generatedPassword} readOnly className="font-mono bg-muted" />
+                        <Input type="text" value={generatedPassword} readOnly className="font-mono text-lg font-bold" />
                         <Button
                           variant="outline"
                           size="icon"
@@ -2224,13 +2320,6 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-sm text-amber-800">
-                        <strong>Nota:</strong> Invia link e password al destinatario. Potrà visualizzare, commentare e
-                        scaricare il PDF del business plan.
-                      </p>
                     </div>
                   </div>
                   <DialogFooter>
