@@ -741,6 +741,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     const staffSpaCost = plan.has_spa ? getFinValue(fin, "staff_spa_cost", 150000) : 0
     const staffCongressCost = plan.has_congress ? getFinValue(fin, "staff_congress_cost", 100000) : 0
     const staffAdminCost = getFinValue(fin, "staff_admin_cost", 180000)
+    console.log(
+      "[v0] Admin costs debug - Year:",
+      fin.year_number,
+      "staff_admin_cost:",
+      staffAdminCost,
+      "admin_cost:",
+      getFinValue(fin, "admin_cost", 45000),
+    )
     const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffAdminCost
 
     const rentCosts = getFinValue(fin, "rent_cost", 180000)
@@ -1626,7 +1634,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <LabelWithTooltip field="admin_cost">Amministrazione (€)</LabelWithTooltip>
+                          <LabelWithTooltip field="admin_cost">Costi Amministrativi (€)</LabelWithTooltip>
                           <Input
                             type="number"
                             step="1000"
@@ -1962,17 +1970,33 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             COSTI FISSI
                           </td>
                         </tr>
-                        <tr className="border-b">
-                          <td className="py-1 pl-4">Personale Totale</td>
+                        <tr className="border-b bg-muted/50 font-semibold">
+                          <td className="py-2">COSTI PERSONALE</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
-                              <React.Fragment key={`staff-${fin.year_number}`}>
-                                <td className="text-right py-1 px-2 text-red-600">
+                              <React.Fragment key={`total-staff-${fin.year_number}`}>
+                                <td className="text-right py-2 px-2 text-red-600">
                                   -{formatCurrency(pl.totalStaffCosts)}
                                 </td>
-                                <td className="text-right py-1 px-2 text-muted-foreground">
+                                <td className="text-right py-2 px-2 text-muted-foreground">
                                   {formatPercent((pl.totalStaffCosts / pl.totalRevenue) * 100)}
+                                </td>
+                              </React.Fragment>
+                            )
+                          })}
+                        </tr>
+                        <tr className="border-b">
+                          <td className="py-1 pl-4">Personale Amministrativo</td>
+                          {financials.map((fin) => {
+                            const pl = calculatePL(selectedPlan, fin)
+                            return (
+                              <React.Fragment key={`staff-admin-${fin.year_number}`}>
+                                <td className="text-right py-1 px-2 text-red-600">
+                                  -{formatCurrency(pl.staffAdminCost)}
+                                </td>
+                                <td className="text-right py-1 px-2 text-muted-foreground">
+                                  {formatPercent((pl.staffAdminCost / pl.totalRevenue) * 100)}
                                 </td>
                               </React.Fragment>
                             )
@@ -2057,7 +2081,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                           })}
                         </tr>
                         <tr className="border-b">
-                          <td className="py-1 pl-4">Amministrazione</td>
+                          <td className="py-1 pl-4">Costi Amministrativi</td>
                           {financials.map((fin) => {
                             const pl = calculatePL(selectedPlan, fin)
                             return (
