@@ -41,10 +41,14 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
   // Fallback to SMTP
   try {
     console.log("[v0] Attempting to send email via SMTP to:", to)
+
+    const smtpPort = Number.parseInt(process.env.SMTP_PORT || "465")
+    const smtpSecure = process.env.SMTP_SECURE === "true" || smtpPort === 465
+
     console.log("[v0] SMTP Config:")
     console.log("  - Host:", process.env.SMTP_HOST || "smtp.gmail.com")
-    console.log("  - Port:", process.env.SMTP_PORT || "587")
-    console.log("  - Secure:", process.env.SMTP_SECURE === "true")
+    console.log("  - Port:", smtpPort)
+    console.log("  - Secure:", smtpSecure)
     console.log("  - User:", process.env.SMTP_USER || "NOT SET")
     console.log(
       "  - Password:",
@@ -59,8 +63,8 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: Number.parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
+      port: smtpPort,
+      secure: smtpSecure, // Use calculated secure value
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,

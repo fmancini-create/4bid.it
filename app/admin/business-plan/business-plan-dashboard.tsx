@@ -600,6 +600,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }
 
+  const downloadPDF = () => {
+    if (!selectedPlan) return
+    const url = `/api/business-plan/${selectedPlan.id}/pdf`
+    window.open(url, "_blank")
+  }
+
   const generateContent = async (section: string) => {
     if (!selectedPlan) return
     setGeneratingSection(section)
@@ -932,6 +938,11 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 <Button onClick={savePlan} disabled={isSaving}>
                   <Save className="h-4 w-4 mr-2" />
                   {isSaving ? "Salvataggio..." : "Salva"}
+                </Button>
+                {/* CHANGE: Add downloadPDF button */}
+                <Button variant="outline" onClick={downloadPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Scarica PDF
                 </Button>
               </>
             )}
