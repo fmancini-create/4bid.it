@@ -25,6 +25,7 @@ import {
   Loader2,
   Copy,
   MessageSquare,
+  Mail,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -605,6 +606,28 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       console.error("Error loading shares:", error)
     }
     setLoadingShares(false)
+  }
+
+  const resendShare = async (shareId: string, email: string) => {
+    if (!selectedPlan) return
+
+    try {
+      setLoadingShares(true)
+      const response = await fetch(`/api/business-plan/${selectedPlan.id}/share/${shareId}/resend`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        throw new Error("Errore durante il reinvio dell'email")
+      }
+
+      toast.success(`Email reinviata a ${email}`)
+    } catch (error) {
+      console.error("[v0] Error resending share:", error)
+      toast.error("Impossibile reinviare l'email. Riprova.")
+    } finally {
+      setLoadingShares(false)
+    }
   }
 
   const deleteShare = async (shareId: string) => {
@@ -2363,6 +2386,15 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             )}
                           </div>
                           <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => resendShare(share.id, share.email)}
+                              disabled={loadingShares}
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              Reinvia
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
