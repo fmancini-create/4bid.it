@@ -24,8 +24,10 @@ import {
   Sparkles,
   Loader2,
   Copy,
+  MessageSquare,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 // ADDED: Interface for shares
 interface BusinessPlanShare {
@@ -37,6 +39,17 @@ interface BusinessPlanShare {
   last_accessed_at?: string
   access_count?: number
   expires_at?: string
+}
+
+// ADDED: Interface for comments
+interface BusinessPlanComment {
+  id: string
+  business_plan_id: string
+  author_name: string
+  author_email?: string
+  section: string
+  content: string
+  created_at: string
 }
 
 interface BusinessPlan {
@@ -270,6 +283,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [needsInit, setNeedsInit] = useState(false)
   const [shares, setShares] = useState<BusinessPlanShare[]>([])
   const [loadingShares, setLoadingShares] = useState(false)
+  // ADDED: State for comments
+  const [comments, setComments] = useState<BusinessPlanComment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [showCommentDialog, setShowCommentDialog] = useState(false)
+  const [commentAuthorName, setCommentAuthorName] = useState("")
+  const [commentAuthorEmail, setCommentAuthorEmail] = useState("")
+  const [commentContent, setCommentContent] = useState("")
+  const [commentSection, setCommentSection] = useState<string>("")
 
   const selectedPlanId = selectedPlan?.id
   useEffect(() => {
@@ -277,6 +298,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       loadFinancials(selectedPlanId)
       // Load shares when a plan is selected
       loadShares(selectedPlanId)
+      // Load comments when a plan is selected
+      loadComments(selectedPlanId)
     }
   }, [selectedPlanId])
 
@@ -836,6 +859,87 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     }
   }
 
+  // ADDED: Function to load comments
+  const loadComments = async (planId: string) => {
+    setLoadingComments(true)
+    try {
+      const res = await fetch(`/api/business-plan/${planId}/comments`)
+      if (res.ok) {
+        const data = await res.json()
+        setComments(data)
+      }
+    } catch (error) {
+      console.error("Error loading comments:", error)
+    }
+    setLoadingComments(false)
+  }
+
+  // ADDED: Function to add a comment
+  const addComment = async () => {
+    if (!selectedPlan || !commentContent || !commentSection) {
+      toast.error("Inserisci un commento e seleziona una sezione.")
+      return
+    }
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          author_name: commentAuthorName || "Utente",
+          author_email: commentAuthorEmail || undefined,
+          section: commentSection,
+          content: commentContent,
+        }),
+      })
+      if (res.ok) {
+        const newComment = await res.json()
+        setComments([newComment, ...comments])
+        toast.success("Commento aggiunto con successo!")
+        // Clear form
+        setCommentContent("")
+        setCommentSection("")
+        setShowCommentDialog(false)
+      } else {
+        toast.error("Errore nell'aggiunta del commento")
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error)
+      toast.error("Errore nell'aggiunta del commento")
+    }
+  }
+
+  // ADDED: Function to delete a comment
+  const deleteComment = async (commentId: string) => {
+    if (!confirm("Vuoi eliminare questo commento?")) return
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan?.id}/comments?commentId=${commentId}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setComments(comments.filter((c) => c.id !== commentId))
+        toast.success("Commento eliminato")
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error)
+      toast.error("Errore nell'eliminazione")
+    }
+  }
+
+  // ADDED: Function to open comment dialog
+  const openCommentDialog = (section: string) => {
+    setCommentSection(section)
+    setCommentContent("")
+    setShowCommentDialog(true)
+  }
+
+  // ADDED: Function to format comment author
+  const formatCommentAuthor = (comment: BusinessPlanComment) => {
+    if (comment.author_email) {
+      return `${comment.author_name} (${comment.author_email})`
+    }
+    return comment.author_name
+  }
+
   // Lista piani
   if (!selectedPlan) {
     return (
@@ -957,6 +1061,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             <TabsTrigger value="projections">Proiezioni</TabsTrigger>
             <TabsTrigger value="content">Contenuto</TabsTrigger>
             <TabsTrigger value="shares">Condivisioni</TabsTrigger>
+            {/* ADDED: New Tab for Comments */}
+            <TabsTrigger value="comments">Commenti</TabsTrigger>
           </TabsList>
 
           {/* Tab Generale */}
@@ -2258,6 +2364,68 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
             </Card>
           </TabsContent>
 
+          {/* ADDED: Tab for Comments */}
+          <TabsContent value="comments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Commenti</CardTitle>
+                <CardDescription>Commenti e note aggiunte a questo business plan</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 mb-4">
+                  <Button
+                    onClick={() => {
+                      selectedPlan && loadComments(selectedPlan.id)
+                    }}
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingComments}
+                  >
+                    {loadingComments ? "Caricamento..." : "Aggiorna Lista"}
+                  </Button>
+                  <Button onClick={() => openCommentDialog("general")}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Aggiungi Commento
+                  </Button>
+                </div>
+
+                {comments.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">Nessun commento ancora</p>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>{comment.author_name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{formatCommentAuthor(comment)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(comment.created_at).toLocaleString("it-IT")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            {/* Aggiungere logica di editing se necessario */}
+                            <Button variant="ghost" size="icon" onClick={() => deleteComment(comment.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-sm">{comment.content}</p>
+                        <Badge variant="outline" className="mt-2">
+                          Sezione: {comment.section}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Dialog Condivisione */}
           <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
             <DialogContent className="sm:max-w-md">
@@ -2338,6 +2506,74 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   </DialogFooter>
                 </>
               )}
+            </DialogContent>
+          </Dialog>
+
+          {/* ADDED: Dialog for Comments */}
+          <Dialog open={showCommentDialog} onOpenChange={setShowCommentDialog}>
+            <DialogContent className="sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Aggiungi Commento</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="commentAuthorName">Il tuo Nome</Label>
+                    <Input
+                      id="commentAuthorName"
+                      value={commentAuthorName}
+                      onChange={(e) => setCommentAuthorName(e.target.value)}
+                      placeholder="Il tuo nome"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commentAuthorEmail">La tua Email (Opzionale)</Label>
+                    <Input
+                      id="commentAuthorEmail"
+                      type="email"
+                      value={commentAuthorEmail}
+                      onChange={(e) => setCommentAuthorEmail(e.target.value)}
+                      placeholder="tua@email.com"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sezione di riferimento</Label>
+                  <select
+                    value={commentSection}
+                    onChange={(e) => setCommentSection(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="">Seleziona una sezione</option>
+                    <option value="overview">Generale</option>
+                    <option value="financials">Parametri</option>
+                    <option value="projections">Proiezioni</option>
+                    <option value="content">Contenuto</option>
+                    <option value="shares">Condivisioni</option>
+                    <option value="comments">Commenti</option>
+                    <option value="general">Generale (senza tab)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commentContent">Commento</Label>
+                  <Textarea
+                    id="commentContent"
+                    rows={5}
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    placeholder="Scrivi qui il tuo commento..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowCommentDialog(false)}>
+                  Annulla
+                </Button>
+                <Button onClick={addComment}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Salva Commento
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </Tabs>
