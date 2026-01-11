@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params
   const supabase = createAdminClient()
 
   // Fetch business plan with financials
@@ -615,7 +615,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       
       <!-- Footer on all pages -->
       <div class="footer">
-        <span>4BID S.r.l. - Via Dalmazia, 51 - 72017 Ostuni (BR) - P.IVA 02664480745</span>
+        <span>4BID S.r.l. - Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI) - P.IVA 06241710489</span>
         <span>Documento riservato - ${generationDate}</span>
       </div>
     </body>
