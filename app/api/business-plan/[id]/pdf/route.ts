@@ -1,16 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  console.log("[v0] PDF: Generating PDF for business plan:", id)
+
   const supabase = createAdminClient()
 
   // Fetch business plan with financials
   const { data: plan, error: planError } = await supabase.from("business_plans").select("*").eq("id", id).single()
 
   if (planError || !plan) {
+    console.log("[v0] PDF: Business plan not found:", id, planError)
     return NextResponse.json({ error: "Business plan non trovato" }, { status: 404 })
   }
+
+  console.log("[v0] PDF: Business plan found:", plan.name || plan.client_name)
 
   const { data: financials } = await supabase
     .from("business_plan_years")
