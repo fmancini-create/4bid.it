@@ -9,6 +9,8 @@ interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
+  console.log("[v0] sendEmail called - to:", to, "subject:", subject)
+
   // Try Resend first (more reliable)
   if (process.env.RESEND_API_KEY) {
     try {
@@ -39,14 +41,16 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
   // Fallback to SMTP
   try {
     console.log("[v0] Attempting to send email via SMTP to:", to)
+    console.log("[v0] SMTP Config:")
+    console.log("  - Host:", process.env.SMTP_HOST || "smtp.gmail.com")
+    console.log("  - Port:", process.env.SMTP_PORT || "587")
+    console.log("  - Secure:", process.env.SMTP_SECURE === "true")
+    console.log("  - User:", process.env.SMTP_USER || "NOT SET")
     console.log(
-      "[v0] SMTP Config - Host:",
-      process.env.SMTP_HOST,
-      "Port:",
-      process.env.SMTP_PORT,
-      "User:",
-      process.env.SMTP_USER ? "SET" : "NOT SET",
+      "  - Password:",
+      process.env.SMTP_PASSWORD ? `SET (${process.env.SMTP_PASSWORD.length} chars)` : "NOT SET",
     )
+    console.log("  - From:", process.env.SMTP_FROM || process.env.SMTP_USER || "NOT SET")
 
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
       console.error("[v0] SMTP credentials not configured")
@@ -61,7 +65,13 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+      debug: true,
+      logger: true,
     })
+
+    console.log("[v0] Testing SMTP connection...")
+    await transporter.verify()
+    console.log("[v0] SMTP connection successful")
 
     const info = await transporter.sendMail({
       from: `"4BID.IT" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
@@ -74,7 +84,10 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
     console.log("[v0] Email sent successfully via SMTP:", info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
-    console.error("[v0] Error sending email via SMTP:", error)
+    console.error("[v0] Error sending email via SMTP:")
+    console.error("  - Error type:", error instanceof Error ? error.constructor.name : typeof error)
+    console.error("  - Error message:", error instanceof Error ? error.message : String(error))
+    console.error("  - Full error:", error)
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }

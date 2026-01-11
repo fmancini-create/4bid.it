@@ -714,11 +714,39 @@ export default function SharedBusinessPlanView({ share, token }: Props) {
         </Tabs>
       </main>
 
-      <footer className="border-t py-6 mt-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p className="font-medium">4BID S.r.l.</p>
-          <p>Via Dalmazia, 51 - 72017 Ostuni (BR) | P.IVA: 02664480745</p>
-          <p>Tel: +39 347 968 8586 | Email: info@4bid.it</p>
+      <footer className="border-t py-6 mt-8 bg-gray-900 text-white">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 mb-6">
+            <div>
+              <img src="https://4bid.it/logo.png" alt="4BID Logo" className="h-12 mb-4" />
+              <p className="text-gray-400 text-sm leading-relaxed">
+                4BID SRL è la tua partner di fiducia per la consulenza e il revenue management nel settore
+                turistico-ricettivo.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-3">Dati Aziendali</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li className="font-semibold text-white">4BID SRL</li>
+                <li>Via Sorripa, 10</li>
+                <li>50026 San Casciano in Val di Pesa (FI)</li>
+                <li>P.IVA: 06241710489</li>
+                <li>
+                  Email:{" "}
+                  <a href="mailto:info@4bid.it" className="hover:text-white">
+                    info@4bid.it
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div className="text-sm text-gray-400">
+              <p>
+                Business plan generato il{" "}
+                {new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })}
+              </p>
+              <p className="mt-2">© {new Date().getFullYear()} 4BID SRL. Tutti i diritti riservati.</p>
+            </div>
+          </div>
         </div>
       </footer>
 
