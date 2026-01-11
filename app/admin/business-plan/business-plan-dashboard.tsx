@@ -1055,13 +1055,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Generale</TabsTrigger>
             <TabsTrigger value="financials">Parametri</TabsTrigger>
             <TabsTrigger value="projections">Proiezioni</TabsTrigger>
             <TabsTrigger value="content">Contenuto</TabsTrigger>
             <TabsTrigger value="shares">Condivisioni</TabsTrigger>
-            {/* ADDED: New Tab for Comments */}
             <TabsTrigger value="comments">Commenti</TabsTrigger>
           </TabsList>
 
