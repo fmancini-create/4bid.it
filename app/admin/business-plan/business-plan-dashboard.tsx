@@ -570,6 +570,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     if (!selectedPlan) return
     setGeneratingSection(section)
     try {
+      console.log("[v0] Generating content for section:", section)
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -577,25 +578,32 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       })
       if (res.ok) {
         const { content } = await res.json()
+        console.log("[v0] Content generated, length:", content?.length || 0)
         const updatedPlan = { ...selectedPlan, [section]: content }
         setSelectedPlan(updatedPlan)
 
         // Salva automaticamente nel database
+        console.log("[v0] Auto-saving content to database for section:", section)
         const saveRes = await fetch(`/api/business-plan/${selectedPlan.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedPlan),
         })
         if (saveRes.ok) {
+          console.log("[v0] Content saved successfully for section:", section)
           toast.success("Contenuto generato e salvato!")
         } else {
+          const errorText = await saveRes.text()
+          console.error("[v0] Failed to save content:", saveRes.status, errorText)
           toast.success("Contenuto generato (clicca Salva per confermare)")
         }
       } else {
+        const errorText = await res.text()
+        console.error("[v0] Failed to generate content:", res.status, errorText)
         toast.error("Errore nella generazione del contenuto")
       }
     } catch (error) {
-      console.error("Error generating content:", error)
+      console.error("[v0] Error generating content:", error)
       toast.error("Errore nella generazione del contenuto")
     }
     setGeneratingSection(null)
