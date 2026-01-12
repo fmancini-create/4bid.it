@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .header { background: white; padding: 30px; text-align: center; border-bottom: 2px solid #f59e0b; }
-        .header img { height: 50px; }
+        .header img { height: 60px; }
         .content { padding: 40px 30px; }
         .content h2 { color: #1a1a1a; margin-top: 0; }
         .info-box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0; border-radius: 6px; }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     <body>
       <div class="container">
         <div class="header">
-          <img src="${baseUrl}/4bid-colorful-logo.jpg" alt="4BID.IT" />
+          <img src="/images/image.png" alt="4BID" />
         </div>
         
         <div class="content">
