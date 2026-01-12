@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/server-admin"
+import { neon } from "@neondatabase/serverless"
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = createAdminClient()
+    const sql = neon(process.env.SUPABASE_POSTGRES_URL!)
 
     console.log("[v0] Starting daily snapshot save at", new Date().toISOString())
     console.log("[v0] Environment check:", {
@@ -32,12 +32,7 @@ export async function GET(request: Request) {
     })
 
     // Ottieni tutte le landing pages
-    const { data: pages, error: pagesError } = await supabase.from("landing_pages").select("id, views, conversions")
-
-    if (pagesError) {
-      console.error("[v0] Error fetching landing pages:", pagesError)
-      return NextResponse.json({ error: pagesError.message }, { status: 500 })
-    }
+    const pages = await sql`SELECT id, views, conversions FROM landing_pages`
 
     console.log(`[v0] Found ${pages?.length || 0} landing pages to snapshot`)
     console.log(
@@ -46,40 +41,18 @@ export async function GET(request: Request) {
     )
 
     const today = new Date().toISOString().split("T")[0] // YYYY-MM-DD
-    const snapshots =
-      pages?.map((page) => ({
-        landing_page_id: page.id,
-        date: today,
-        views: page.views || 0,
-        conversions: page.conversions || 0,
-      })) || []
 
-    console.log("[v0] Attempting to insert snapshots:", {
-      count: snapshots.length,
-      date: today,
-      snapshots: snapshots,
-    })
-
-    if (snapshots.length > 0) {
-      const { data: insertedData, error: insertError } = await supabase
-        .from("landing_page_daily_stats")
-        .upsert(snapshots, {
-          onConflict: "landing_page_id,date",
-          ignoreDuplicates: false,
-        })
-        .select()
-
-      if (insertError) {
-        console.error("[v0] Error inserting daily stats:", {
-          message: insertError.message,
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint,
-        })
-        return NextResponse.json({ error: insertError.message, details: insertError }, { status: 500 })
+    if (pages && pages.length > 0) {
+      // Inserisci ogni snapshot usando SQL diretto (bypassa RLS)
+      for (const page of pages) {
+        await sql`
+          INSERT INTO landing_page_daily_stats (landing_page_id, date, views, conversions)
+          VALUES (${page.id}, ${today}, ${page.views || 0}, ${page.conversions || 0})
+          ON CONFLICT (landing_page_id, date) 
+          DO UPDATE SET views = ${page.views || 0}, conversions = ${page.conversions || 0}
+        `
+        console.log(`[v0] Saved snapshot for page ${page.id}`)
       }
-
-      console.log("[v0] Successfully inserted snapshots:", insertedData)
     }
 
     console.log("[v0] Daily snapshot saved successfully at", new Date().toISOString())
@@ -87,9 +60,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Daily snapshot saved successfully",
-      pages_saved: snapshots.length,
+      pages_saved: pages?.length || 0,
       timestamp: new Date().toISOString(),
-      snapshots_preview: snapshots.slice(0, 3),
+      snapshots_preview: pages?.slice(0, 3) || [],
     })
   } catch (error) {
     console.error("[v0] Error in save-daily-snapshot cron:", {
