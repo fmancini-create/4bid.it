@@ -48,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       <body>
         <div class="container">
           <div class="header">
-            <img src="/images/image.png" alt="4BID" />
+            <img src="https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75" alt="4BID" />
           </div>
           
           <div class="content">
