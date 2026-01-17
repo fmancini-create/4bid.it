@@ -44,6 +44,7 @@ import {
   FileText,
   Zap,
   Timer,
+  ExternalLink,
 } from "lucide-react"
 
 interface Vehicle {
@@ -808,7 +809,7 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
               </Card>
             </TabsContent>
 
-            {/* ... existing bookings, vehicles, pricing, settings tabs ... */}
+            {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1390,6 +1391,42 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                       }}
                     >
                       Copia
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accesso Gestore Struttura</CardTitle>
+                  <CardDescription>
+                    Link per il gestore della struttura per accedere alla propria dashboard
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={`https://4bid.it/ecomobility/${selectedStructure.slug}/admin`}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://4bid.it/ecomobility/${selectedStructure.slug}/admin`)
+                        toast({ title: "Link copiato!" })
+                      }}
+                    >
+                      Copia
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => window.open(`/ecomobility/${selectedStructure.slug}/admin`, "_blank")}
+                      className="flex-1"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Apri Dashboard Gestore
                     </Button>
                   </div>
                 </CardContent>
