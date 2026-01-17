@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Gestione strategica dei canali di distribuzione online per hotel. Ottimizza OTA, aumenta prenotazioni dirette e riduci le commissioni. Consulenza specializzata Channel Management.",
   keywords:
     "gestione canali distribuzione hotel, ottimizzazione OTA, channel manager hotel, prenotazioni dirette, commissioni booking, distribuzione online hotel",
+  openGraph: {
+    title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
+    description: "Ottimizza la presenza del tuo hotel sui canali OTA e aumenta le prenotazioni dirette fino al 40%.",
+    url: "https://www.4bid.it/gestione-canali-distribuzione-hotel",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/gestione-canali-distribuzione-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Quali canali di distribuzione gestite per gli hotel?",
+    answer:
+      "Gestiamo tutti i principali canali: Booking.com, Expedia Group (Hotels.com, Vrbo), Google Hotel Ads, Airbnb, TripAdvisor, metasearch (Trivago, Kayak, Skyscanner), GDS e Bedbanks per agenzie viaggi e tour operator.",
+  },
+  {
+    question: "Come si riducono le commissioni OTA?",
+    answer:
+      "Le commissioni si riducono attraverso: negoziazione diretta con gli account manager, accesso a programmi speciali (Preferred Partner), diversificazione dei canali, aumento delle prenotazioni dirette e ottimizzazione del channel mix.",
+  },
+  {
+    question: "Quali risultati si possono ottenere con l'ottimizzazione dei canali?",
+    answer:
+      "I risultati tipici sono: +40% prenotazioni dirette, -30% costo commissioni, +25% profitto netto. Un hotel 45 camere può risparmiare €38.400/anno in commissioni.",
+  },
+]
 
 export default function GestioneCanaliDistribuzioneHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Gestione Canali Distribuzione Hotel"
+        description="Gestione strategica dei canali di distribuzione online per hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="gestione-canali-distribuzione-hotel" />
 
       <Header />

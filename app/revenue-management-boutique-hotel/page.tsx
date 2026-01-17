@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Management Boutique Hotel | Strategie per Hotel di Charme | 4BID.IT",
@@ -11,11 +12,24 @@ export const metadata = {
     "Revenue Management specializzato per boutique hotel e hotel di charme. Strategie su misura che valorizzano unicità, esperienza guest e posizionamento premium.",
   keywords:
     "revenue management boutique hotel, hotel di charme, piccoli hotel lusso, revenue management hotel indipendenti, strategie pricing boutique, hotel design",
+  alternates: {
+    canonical: "https://4bid.it/revenue-management-boutique-hotel",
+  },
 }
 
 export default function RevenueManagementBoutiqueHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Management Boutique Hotel"
+        description="Revenue Management specializzato per boutique hotel e hotel di charme. Strategie su misura che valorizzano unicità, esperienza guest e posizionamento premium."
+        url="https://4bid.it/revenue-management-boutique-hotel"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Revenue Management Boutique Hotel", url: "https://4bid.it/revenue-management-boutique-hotel" },
+        ]}
+      />
       <LandingPageTracker slug="revenue-management-boutique-hotel" />
 
       <Header />

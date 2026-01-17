@@ -16,11 +16,18 @@ import {
   Send,
   Settings,
   RefreshCw,
-  Edit2,
   Trash2,
   ArrowLeft,
   AlertCircle,
   CheckCircle2,
+  ImageIcon,
+  Loader2,
+  Pencil,
+  FileText,
+  ExternalLink,
+  Eye,
+  Link2,
+  LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,7 +46,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  formatDateOnlyIT,
+  formatDateTimeIT,
+  localDatetimeToUTC,
+  utcToLocalDatetime,
+  nowAsLocalDatetime,
+} from "@/lib/date-utils"
 
 interface SocialAccount {
   id: string
@@ -48,6 +73,7 @@ interface SocialAccount {
   account_id: string | null
   is_active: boolean
   created_at: string
+  page_id?: string | null // Added page_id
 }
 
 interface SocialPost {
@@ -58,7 +84,7 @@ interface SocialPost {
   hashtags: string[] | null
   scheduled_for: string | null
   published_at: string | null
-  status: string
+  status: "draft" | "pending_approval" | "approved" | "scheduled" | "published" | "failed" | "pending_review"
   is_ai_generated: boolean
   ai_topic: string | null
   platforms: string[]
@@ -66,6 +92,9 @@ interface SocialPost {
   requires_approval: boolean
   error_message: string | null
   created_at: string
+  target_accounts?: string[] // Added target_accounts
+  link_url?: string | null // Added link_url
+  media_priority: "image" | "link" // Added media_priority
 }
 
 interface SocialSettings {
@@ -80,10 +109,10 @@ interface SocialSettings {
 }
 
 interface Props {
-  initialAccounts: SocialAccount[]
-  initialPosts: SocialPost[]
-  initialSettings: SocialSettings | null
-  userEmail: string
+  initialAccounts?: SocialAccount[]
+  initialPosts?: SocialPost[]
+  initialSettings?: SocialSettings | null
+  userEmail?: string
 }
 
 const platformIcons = {
@@ -99,24 +128,36 @@ const platformColors = {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  draft: { label: "Bozza", color: "bg-gray-500", icon: Edit2 },
-  pending_approval: { label: "Da approvare", color: "bg-yellow-500", icon: Clock },
-  approved: { label: "Approvato", color: "bg-green-500", icon: Check },
+  draft: { label: "Bozza", color: "bg-gray-500", icon: FileText }, // Changed icon to FileText for drafts
   scheduled: { label: "Programmato", color: "bg-blue-500", icon: Calendar },
   published: { label: "Pubblicato", color: "bg-emerald-500", icon: CheckCircle2 },
   failed: { label: "Errore", color: "bg-red-500", icon: AlertCircle },
+  pending_approval: { label: "In attesa approvazione", color: "bg-yellow-500", icon: Clock }, // Added pending_approval status
 }
 
-export default function SocialMediaDashboard({ initialAccounts, initialPosts, initialSettings, userEmail }: Props) {
+export default function SocialMediaDashboard({
+  initialAccounts = [],
+  initialPosts = [],
+  initialSettings,
+  userEmail,
+}: Props) {
   const router = useRouter()
-  const [accounts, setAccounts] = useState(initialAccounts)
-  const [posts, setPosts] = useState(initialPosts)
+  const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts)
+  const [posts, setPosts] = useState<SocialPost[]>(initialPosts)
   const [settings, setSettings] = useState<SocialSettings | null>(initialSettings)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [showNewPostDialog, setShowNewPostDialog] = useState(false)
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showConnectDialog, setShowConnectDialog] = useState(false)
-  const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null)
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // Added loading state
+
+  const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
+  const [manualPageId, setManualPageId] = useState("")
+  const [manualPageName, setManualPageName] = useState("")
+  const [manualAccessToken, setManualAccessToken] = useState("")
+  const [isSavingManual, setIsSavingManual] = useState(false)
 
   // New post form state
   const [newPost, setNewPost] = useState({
@@ -125,7 +166,18 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     auto_publish: false,
     scheduled_for: "",
     ai_topic: "",
+    target_accounts: [] as string[], // Changed to string[] for account IDs
+    image_url: "",
+    image_topic: "",
+    image_style: "professional" as string,
+    link_url: "", // Added link_url
+    media_priority: "image" as "image" | "link", // "image" = usa immagine caricata, "link" = usa anteprima link
   })
+
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+
+  const [publishConfirmPost, setPublishConfirmPost] = useState<SocialPost | null>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
 
   const generateAIPost = async (topic?: string) => {
     setIsGenerating(true)
@@ -153,35 +205,168 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
-  const savePost = async (status: "draft" | "pending_approval" | "scheduled") => {
+  const generateAIImage = async () => {
+    if (!newPost.image_topic && !newPost.ai_topic) {
+      toast.error("Inserisci un argomento per l'immagine")
+      return
+    }
+
+    setIsGeneratingImage(true)
     try {
-      const response = await fetch("/api/social/posts", {
+      const response = await fetch("/api/social/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...newPost,
-          status,
-          is_ai_generated: newPost.content.includes("#") && newPost.ai_topic !== "",
-          ai_topic: newPost.ai_topic,
+          topic: newPost.image_topic || newPost.ai_topic || "hospitality, hotel, revenue management",
+          style: newPost.image_style,
         }),
+      })
+
+      if (!response.ok) throw new Error("Errore nella generazione")
+
+      const data = await response.json()
+      setNewPost((prev) => ({ ...prev, image_url: data.imageUrl }))
+      toast.success("Immagine generata con AI!")
+    } catch (error) {
+      toast.error("Errore nella generazione dell'immagine")
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }
+
+  const savePost = async () => {
+    // Simplified savePost to align with the update's DialogFooter
+    if (!newPost.content || newPost.platforms.length === 0) return
+
+    setIsLoading(true)
+    try {
+      const scheduledForUTC = newPost.scheduled_for ? localDatetimeToUTC(newPost.scheduled_for) : null
+
+      const status = scheduledForUTC ? "scheduled" : "draft"
+
+      const postData = {
+        content: newPost.content,
+        platforms: newPost.platforms,
+        status,
+        scheduled_for: scheduledForUTC,
+        auto_publish: newPost.auto_publish,
+        link_url: newPost.link_url || null,
+        image_url: newPost.image_url || null,
+        target_accounts: newPost.target_accounts.length > 0 ? newPost.target_accounts : null,
+        media_priority: newPost.media_priority,
+      }
+
+      const response = await fetch("/api/social/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(postData),
       })
 
       if (!response.ok) throw new Error("Errore nel salvataggio")
 
       const savedPost = await response.json()
       setPosts((prev) => [savedPost, ...prev])
-      setShowNewPostDialog(false)
+      setShowCreateDialog(false)
       setNewPost({
         content: "",
         platforms: ["facebook", "instagram", "linkedin"],
         auto_publish: false,
         scheduled_for: "",
         ai_topic: "",
+        target_accounts: [],
+        image_url: "",
+        image_topic: "",
+        image_style: "professional",
+        link_url: "", // Reset link_url
+        media_priority: "image",
       })
       toast.success("Post salvato!")
       router.refresh()
     } catch (error) {
+      console.error("Save post error:", error)
       toast.error("Errore nel salvataggio")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const updatePost = async () => {
+    if (!editingPost || !editingPost.content || editingPost.platforms.length === 0) return
+
+    setIsLoading(true)
+    try {
+      const scheduledForUTC = editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
+
+      // Determine status: if has scheduled_for -> scheduled, otherwise keep as draft
+      let newStatus = editingPost.status
+      if (scheduledForUTC && editingPost.status === "draft") {
+        newStatus = "scheduled"
+      } else if (!scheduledForUTC && editingPost.status === "scheduled") {
+        newStatus = "draft"
+      }
+
+      // If this is a repost (id is empty), create a new post
+      if (!editingPost.id) {
+        const postData = {
+          content: editingPost.content,
+          platforms: editingPost.platforms,
+          status: scheduledForUTC ? "scheduled" : "draft",
+          scheduled_for: scheduledForUTC,
+          auto_publish: editingPost.auto_publish,
+          link_url: editingPost.link_url || null,
+          image_url: editingPost.image_url || null,
+          target_accounts:
+            editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
+          media_priority: editingPost.media_priority || "image",
+        }
+
+        const response = await fetch("/api/social/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(postData),
+        })
+
+        if (!response.ok) throw new Error("Errore nel salvataggio")
+
+        const savedPost = await response.json()
+        setPosts((prev) => [savedPost, ...prev])
+        setShowEditDialog(false)
+        setEditingPost(null)
+        toast.success(scheduledForUTC ? "Post programmato!" : "Bozza salvata!")
+        return
+      }
+
+      const postData = {
+        id: editingPost.id,
+        content: editingPost.content,
+        platforms: editingPost.platforms,
+        status: newStatus,
+        scheduled_for: scheduledForUTC,
+        auto_publish: editingPost.auto_publish,
+        link_url: editingPost.link_url || null,
+        image_url: editingPost.image_url || null,
+        target_accounts:
+          editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
+        media_priority: editingPost.media_priority || "image",
+      }
+
+      const response = await fetch("/api/social/posts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(postData),
+      })
+
+      if (!response.ok) throw new Error("Errore nel salvataggio")
+
+      const updatedPost = await response.json()
+      setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)))
+      setShowEditDialog(false)
+      setEditingPost(null)
+      toast.success(scheduledForUTC ? "Post programmato!" : "Bozza aggiornata!")
+    } catch (error) {
+      toast.error("Errore nel salvataggio del post")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -217,22 +402,14 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
+  const openPublishConfirm = (post: SocialPost) => {
+    setPublishConfirmPost(post)
+  }
+
   const publishNow = async (postId: string) => {
-    try {
-      const response = await fetch(`/api/social/posts/${postId}/publish`, {
-        method: "POST",
-      })
-
-      if (!response.ok) throw new Error("Errore nella pubblicazione")
-
-      const result = await response.json()
-      setPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, status: "published", published_at: new Date().toISOString() } : p)),
-      )
-      toast.success("Post pubblicato!")
-      router.refresh()
-    } catch (error) {
-      toast.error("Errore nella pubblicazione")
+    const post = posts.find((p) => p.id === postId)
+    if (post) {
+      openPublishConfirm(post)
     }
   }
 
@@ -253,96 +430,215 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
     }
   }
 
-  const pendingApproval = posts.filter((p) => p.status === "pending_approval")
-  const scheduled = posts.filter((p) => p.status === "scheduled" || p.status === "approved")
-  const published = posts.filter((p) => p.status === "published")
+  const saveManualConnection = async (platform: string) => {
+    if (!manualPageId || !manualPageName || !manualAccessToken) {
+      toast.error("Compila tutti i campi")
+      return
+    }
+
+    setIsSavingManual(true)
+    try {
+      const response = await fetch("/api/social/connect/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          pageId: manualPageId,
+          pageName: manualPageName,
+          accessToken: manualAccessToken,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Errore durante il salvataggio")
+      }
+
+      const data = await response.json()
+      toast.success(`Account ${platform} collegato con successo!`)
+
+      // Refresh accounts
+      setAccounts((prev) => {
+        const filtered = prev.filter((a) => a.platform !== platform)
+        return [...filtered, data.account]
+      })
+
+      setShowManualConnect(null)
+      setManualPageId("")
+      setManualPageName("")
+      setManualAccessToken("")
+      setShowConnectDialog(false)
+    } catch (error) {
+      console.error("Errore:", error)
+      toast.error(error instanceof Error ? error.message : "Errore durante il salvataggio")
+    } finally {
+      setIsSavingManual(false)
+    }
+  }
+
+  const openEditDialog = (post: SocialPost) => {
+    setEditingPost({ ...post })
+    setShowEditDialog(true)
+  }
+
+  const drafts = posts.filter((p) => p.status === "draft")
+  const pendingApproval = posts.filter((p) => p.status === "pending_approval") // Added pendingApproval filter
+  const scheduled = posts.filter((p) => p.status === "scheduled")
+  const published = posts.filter((p) => p.status === "published" || p.status === "failed")
+  const allPosts = posts
+
+  const repostPost = async (postToRepost: SocialPost) => {
+    setEditingPost({
+      ...postToRepost,
+      id: "", // New post ID
+      status: "draft", // Reset status to draft
+      scheduled_for: postToRepost.scheduled_for, // Keep original schedule
+      published_at: null, // Clear published date
+      created_at: new Date().toISOString(), // Reset creation date
+    })
+    setShowEditDialog(true)
+    toast.info("Modifica il post e salva. Puoi mantenere o cambiare la data di programmazione.")
+  }
+
+  const getTargetAccountNames = (post: SocialPost) => {
+    if (!post.target_accounts || post.target_accounts.length === 0) {
+      // All accounts for selected platforms
+      return accounts
+        .filter((a) => post.platforms.includes(a.platform) && a.is_active)
+        .map((a) => ({ name: a.account_name, platform: a.platform }))
+    }
+    return accounts
+      .filter((a) => post.target_accounts?.includes(a.id))
+      .map((a) => ({ name: a.account_name, platform: a.platform }))
+  }
+
+  const confirmPublish = async () => {
+    if (!publishConfirmPost) return
+
+    setIsPublishing(true)
+    try {
+      const response = await fetch(`/api/social/posts/${publishConfirmPost.id}/publish`, {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) throw new Error(result.error || "Errore nella pubblicazione")
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === publishConfirmPost.id ? { ...p, status: "published", published_at: new Date().toISOString() } : p,
+        ),
+      )
+      toast.success("Post pubblicato!")
+      setPublishConfirmPost(null)
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] publish error:", error)
+      toast.error("Errore nella pubblicazione")
+    } finally {
+      setIsPublishing(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
+      <header
+        className="sticky top-0 z-50 bg-background border-b border-border"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
+        <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="icon" asChild className="shrink-0 h-9 w-9">
                 <a href="/admin">
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </a>
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Gestione Social Media</h1>
-                <p className="text-sm text-muted-foreground">Genera e pubblica contenuti con AI</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-2xl font-bold truncate">Social Media</h1>
+                <p className="text-[10px] sm:text-sm text-muted-foreground truncate hidden sm:block">
+                  Gestisci e programma i tuoi post
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Impostazioni
+            <div className="flex gap-1.5 sm:gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettingsDialog(true)}
+                className="h-8 w-8 sm:w-auto px-0 sm:px-3 bg-transparent"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Impostazioni</span>
               </Button>
-              <Button onClick={() => setShowNewPostDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuovo Post
+              <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-8 px-2 sm:px-4">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Nuovo Post</span>
+                <span className="sm:hidden ml-1 text-xs">Post</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <main
+        className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Da Approvare</p>
-                  <p className="text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Da Approvare</p>
+                  <p className="text-lg sm:text-3xl font-bold text-yellow-500">{pendingApproval.length}</p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
+                <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Programmati</p>
-                  <p className="text-3xl font-bold text-blue-500">{scheduled.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Programmati</p>
+                  <p className="text-lg sm:text-3xl font-bold text-blue-500">{scheduled.length}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-blue-500" />
+                <Calendar className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pubblicati</p>
-                  <p className="text-3xl font-bold text-emerald-500">{published.length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Pubblicati</p>
+                  <p className="text-lg sm:text-3xl font-bold text-emerald-500">{published.length}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                <CheckCircle2 className="h-5 w-5 sm:h-8 sm:w-8 text-emerald-500" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-2.5 sm:pt-6 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Account Connessi</p>
-                  <p className="text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">Account</p>
+                  <p className="text-lg sm:text-3xl font-bold">{accounts.filter((a) => a.is_active).length}</p>
                 </div>
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-1">
                   {["facebook", "instagram", "linkedin"].map((platform) => {
                     const Icon = platformIcons[platform as keyof typeof platformIcons]
                     const isConnected = accounts.some((a) => a.platform === platform && a.is_active)
                     return (
                       <div
                         key={platform}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${
                           isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-300"
                         }`}
                       >
-                        <Icon className="h-4 w-4 text-white" />
+                        <Icon className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
                       </div>
                     )
                   })}
@@ -352,55 +648,75 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </Card>
         </div>
 
-        {/* Connected Accounts */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <CardTitle>Account Social Collegati</CardTitle>
-                <CardDescription>Collega i tuoi account per pubblicare automaticamente</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Account Collegati</CardTitle>
+                <CardDescription className="text-xs sm:text-sm hidden sm:block">
+                  Collega i tuoi account per pubblicare
+                </CardDescription>
               </div>
-              <Button variant="outline" onClick={() => setShowConnectDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Collega Account
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowConnectDialog(true)}
+                className="w-full sm:w-auto h-8 text-xs sm:text-sm"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                Collega
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-4">
               {["facebook", "instagram", "linkedin"].map((platform) => {
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
-                const account = accounts.find((a) => a.platform === platform)
+                const platformAccounts = accounts.filter((a) => a.platform === platform)
+                const isConnected = platformAccounts.some((a) => a.is_active)
+                const displayName =
+                  platform === "linkedin" && isConnected
+                    ? `${platformAccounts[0]?.account_name || platform} (Pagina)`
+                    : platformAccounts[0]?.account_name || platform
 
                 return (
                   <div
                     key={platform}
-                    className={`p-4 rounded-lg border-2 ${
-                      account?.is_active
-                        ? "border-green-500 bg-green-500/10"
-                        : "border-dashed border-muted-foreground/30"
+                    className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border ${
+                      isConnected ? "border-primary bg-primary/5" : "border-dashed"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div
-                        className={`w-12 h-12 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                        className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-200"
+                        }`}
                       >
-                        <Icon className="h-6 w-6 text-white" />
+                        <Icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold capitalize">{platform}</p>
-                        {account?.is_active ? (
-                          <p className="text-sm text-green-600">{account.account_name}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Non collegato</p>
-                        )}
+                      <div className="min-w-0">
+                        <p className="font-medium capitalize text-xs sm:text-base">{platform}</p>
+                        <p className="text-[10px] sm:text-sm text-muted-foreground truncate max-w-[100px] sm:max-w-none">
+                          {isConnected ? displayName : "Non collegato"}
+                        </p>
                       </div>
-                      {account?.is_active && (
-                        <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500">
-                          Attivo
-                        </Badge>
-                      )}
                     </div>
+                    <Button
+                      variant={isConnected ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => {
+                        if (platform === "facebook") {
+                          window.location.href = "/api/social/connect/facebook"
+                        } else if (platform === "linkedin") {
+                          window.location.href = "/api/social/connect/linkedin"
+                        } else {
+                          setShowConnectDialog(true)
+                        }
+                      }}
+                      className="shrink-0 text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-3"
+                    >
+                      {isConnected ? "Riconn." : "Collega"}
+                    </Button>
                   </div>
                 )
               })}
@@ -408,43 +724,44 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </CardContent>
         </Card>
 
-        {/* Posts Tabs */}
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="relative">
-              Da Approvare
-              {pendingApproval.length > 0 && (
-                <span className="ml-2 bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {pendingApproval.length}
-                </span>
-              )}
+        <Tabs defaultValue="drafts" className="w-full">
+          {" "}
+          {/* Changed defaultValue to "drafts" */}
+          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
+            <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Bozze
             </TabsTrigger>
-            <TabsTrigger value="scheduled">Programmati</TabsTrigger>
-            <TabsTrigger value="published">Pubblicati</TabsTrigger>
-            <TabsTrigger value="all">Tutti</TabsTrigger>
+            <TabsTrigger value="scheduled" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Programmati
+            </TabsTrigger>
+            <TabsTrigger value="published" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Pubblicati
+            </TabsTrigger>
+            <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Tutti
+            </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="pending" className="space-y-4 mt-4">
-            {pendingApproval.length === 0 ? (
+          <TabsContent value="drafts" className="space-y-4 mt-4">
+            {drafts.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun post in attesa di approvazione</p>
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /> {/* Use FileText icon for drafts */}
+                  <p>Nessuna bozza</p>
                 </CardContent>
               </Card>
             ) : (
-              pendingApproval.map((post) => (
+              drafts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={post}
-                  onApprove={() => approvePost(post.id)}
-                  onReject={() => rejectPost(post.id)}
+                  onApprove={post.scheduled_for ? () => approvePost(post.id) : undefined}
                   onPublish={() => publishNow(post.id)}
+                  onReject={() => rejectPost(post.id)}
+                  onEdit={() => openEditDialog(post)}
                 />
               ))
             )}
           </TabsContent>
-
           <TabsContent value="scheduled" className="space-y-4 mt-4">
             {scheduled.length === 0 ? (
               <Card>
@@ -459,12 +776,11 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                   key={post.id}
                   post={post}
                   onPublish={() => publishNow(post.id)}
-                  onReject={() => rejectPost(post.id)}
+                  onEdit={() => openEditDialog(post)}
                 />
               ))
             )}
           </TabsContent>
-
           <TabsContent value="published" className="space-y-4 mt-4">
             {published.length === 0 ? (
               <Card>
@@ -474,90 +790,208 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                 </CardContent>
               </Card>
             ) : (
-              published.map((post) => <PostCard key={post.id} post={post} />)
+              published.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onEdit={() => openEditDialog(post)}
+                  onRepost={() => repostPost(post)}
+                />
+              ))
             )}
           </TabsContent>
-
           <TabsContent value="all" className="space-y-4 mt-4">
-            {posts.map((post) => (
+            {allPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
-                onApprove={post.status === "pending_approval" ? () => approvePost(post.id) : undefined}
-                onReject={() => rejectPost(post.id)}
-                onPublish={["approved", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined}
+                onPublish={["draft", "scheduled"].includes(post.status) ? () => publishNow(post.id) : undefined}
+                onEdit={() => openEditDialog(post)}
+                onRepost={post.status === "published" || post.status === "failed" ? () => repostPost(post) : undefined}
               />
             ))}
           </TabsContent>
         </Tabs>
       </main>
 
-      {/* New Post Dialog */}
-      <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Crea Nuovo Post</DialogTitle>
-            <DialogDescription>Scrivi manualmente o genera con AI</DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Crea Nuovo Post</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">Scrivi manualmente o genera con AI</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* AI Generation */}
-            <div className="p-4 bg-muted rounded-lg space-y-3">
+            {/* AI Generation - Mobile optimized */}
+            <div className="p-3 sm:p-4 bg-muted rounded-lg space-y-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <span className="font-medium">Genera con AI</span>
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <span className="font-medium text-sm sm:text-base">Genera con AI</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Argomento (es: revenue management, Hotel Accelerator...)"
+                  placeholder="Argomento..."
                   value={newPost.ai_topic}
                   onChange={(e) => setNewPost((prev) => ({ ...prev, ai_topic: e.target.value }))}
+                  className="text-sm"
                 />
-                <Button onClick={() => generateAIPost()} disabled={isGenerating}>
+                <Button onClick={() => generateAIPost()} disabled={isGenerating} className="shrink-0">
                   {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="sm:hidden ml-2">Genera</span>
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {["Revenue Management", "Hotel Accelerator", "Manubot", "Hospitality Trends", "Tips Hotel"].map(
-                  (topic) => (
-                    <Button
-                      key={topic}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => generateAIPost(topic)}
-                      disabled={isGenerating}
-                    >
-                      {topic}
-                    </Button>
-                  ),
-                )}
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {["Revenue", "Hotel Accelerator", "Manubot", "Hospitality"].map((topic) => (
+                  <Button
+                    key={topic}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateAIPost(topic)}
+                    disabled={isGenerating}
+                    className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
+                  >
+                    {topic}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            {/* Content */}
-            <div className="space-y-2">
-              <Label>Contenuto</Label>
-              <Textarea
-                placeholder="Scrivi il tuo post..."
-                value={newPost.content}
-                onChange={(e) => setNewPost((prev) => ({ ...prev, content: e.target.value }))}
-                rows={6}
-              />
-              <p className="text-xs text-muted-foreground text-right">{newPost.content.length} caratteri</p>
+            {/* AI Image Generation - Mobile optimized */}
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                <span className="font-medium text-sm sm:text-base">Genera Immagine AI</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Input
+                  placeholder="Descrivi l'immagine..."
+                  value={newPost.image_topic}
+                  onChange={(e) => setNewPost((prev) => ({ ...prev, image_topic: e.target.value }))}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Select
+                    value={newPost.image_style}
+                    onValueChange={(value) => setNewPost((prev) => ({ ...prev, image_style: value }))}
+                  >
+                    <SelectTrigger className="flex-1 text-sm">
+                      <SelectValue placeholder="Stile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionale</SelectItem>
+                      <SelectItem value="creative">Creativo</SelectItem>
+                      <SelectItem value="minimal">Minimale</SelectItem>
+                      <SelectItem value="luxury">Lusso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={generateAIImage}
+                    disabled={isGeneratingImage}
+                    variant="outline"
+                    className="shrink-0 border-purple-300 hover:bg-purple-100 dark:border-purple-700 dark:hover:bg-purple-900/50 bg-transparent"
+                  >
+                    {isGeneratingImage ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {newPost.image_url && (
+                <div className="relative mt-2">
+                  <img
+                    src={newPost.image_url || "/placeholder.svg"}
+                    alt="Immagine generata"
+                    className="w-full h-32 sm:h-48 object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 h-6 w-6 p-0"
+                    onClick={() => setNewPost((prev) => ({ ...prev, image_url: "" }))}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
             </div>
 
-            {/* Platforms */}
+            {/* Content textarea */}
             <div className="space-y-2">
-              <Label>Piattaforme</Label>
-              <div className="flex gap-4">
+              <Label className="text-sm">Contenuto</Label>
+              <Textarea
+                placeholder="Scrivi il contenuto del post..."
+                value={newPost.content}
+                onChange={(e) => setNewPost((prev) => ({ ...prev, content: e.target.value }))}
+                rows={4}
+                className="text-sm resize-none"
+              />
+              <p className="text-xs text-muted-foreground text-right">{newPost.content.length} / 2000 caratteri</p>
+            </div>
+
+            {/* Link URL input */}
+            <div className="space-y-2">
+              <Label className="text-sm">Link (Opzionale)</Label>
+              <Input
+                placeholder="https://example.com"
+                value={newPost.link_url}
+                onChange={(e) => setNewPost((prev) => ({ ...prev, link_url: e.target.value }))}
+                className="text-sm"
+              />
+            </div>
+
+            {newPost.image_url && newPost.link_url && (
+              <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <Label className="text-sm font-medium">Priorità Media</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Hai inserito sia un'immagine che un link. Cosa vuoi mostrare nel post?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={newPost.media_priority === "image" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPost((prev) => ({ ...prev, media_priority: "image" }))}
+                    className="flex-1"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Usa mia immagine
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newPost.media_priority === "link" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPost((prev) => ({ ...prev, media_priority: "link" }))}
+                    className="flex-1"
+                  >
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    Anteprima link
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {newPost.media_priority === "image"
+                    ? "Il link verrà aggiunto nel testo del post"
+                    : "Facebook mostrerà l'anteprima del sito linkato"}
+                </p>
+              </div>
+            )}
+
+            {/* Platform selection - Mobile optimized */}
+            <div className="space-y-2">
+              <Label className="text-sm">Piattaforme</Label>
+              <div className="flex flex-wrap gap-2">
                 {["facebook", "instagram", "linkedin"].map((platform) => {
                   const Icon = platformIcons[platform as keyof typeof platformIcons]
                   const isSelected = newPost.platforms.includes(platform)
+                  const isAvailable = accounts.some((a) => a.platform === platform && a.is_active)
 
                   return (
                     <button
                       key={platform}
                       onClick={() => {
+                        if (!isAvailable) return
                         setNewPost((prev) => ({
                           ...prev,
                           platforms: isSelected
@@ -565,11 +999,16 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
                             : [...prev.platforms, platform],
                         }))
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                        isSelected ? "border-primary bg-primary/10" : "border-muted hover:border-muted-foreground/50"
+                      disabled={!isAvailable}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                        isSelected
+                          ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                          : isAvailable
+                            ? "border-border hover:border-primary"
+                            : "border-border opacity-50 cursor-not-allowed"
                       }`}
                     >
-                      <Icon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       <span className="capitalize">{platform}</span>
                     </button>
                   )
@@ -577,47 +1016,91 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
               </div>
             </div>
 
-            {/* Schedule */}
-            <div className="space-y-2">
-              <Label>Programma pubblicazione (opzionale)</Label>
+            {/* Target accounts selection for Facebook */}
+            {newPost.platforms.includes("facebook") && (
+              <div className="space-y-2">
+                <Label className="text-sm">Pagine Facebook</Label>
+                <p className="text-xs text-muted-foreground">Seleziona su quali pagine pubblicare</p>
+                <div className="flex flex-wrap gap-2">
+                  {accounts
+                    .filter((a) => a.platform === "facebook" && a.is_active)
+                    .map((account) => {
+                      const isSelected = newPost.target_accounts?.includes(account.page_id || account.account_id || "")
+                      return (
+                        <button
+                          key={account.id}
+                          onClick={() => {
+                            const accountId = account.page_id || account.account_id || ""
+                            setNewPost((prev) => ({
+                              ...prev,
+                              target_accounts: isSelected
+                                ? (prev.target_accounts || []).filter((id) => id !== accountId)
+                                : [...(prev.target_accounts || []), accountId],
+                            }))
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 text-white border-transparent"
+                              : "border-border hover:border-primary"
+                          }`}
+                        >
+                          <Facebook className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[100px] sm:max-w-none">{account.account_name}</span>
+                        </button>
+                      )
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Schedule toggle */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <Label className="text-sm">Programma pubblicazione</Label>
+                <p className="text-xs text-muted-foreground">Scegli data e ora</p>
+              </div>
+              <Switch
+                checked={!!newPost.scheduled_for}
+                onCheckedChange={(checked) =>
+                  setNewPost((prev) => ({
+                    ...prev,
+                    scheduled_for: checked ? nowAsLocalDatetime() : "",
+                  }))
+                }
+              />
+            </div>
+
+            {newPost.scheduled_for && (
               <Input
                 type="datetime-local"
                 value={newPost.scheduled_for}
                 onChange={(e) => setNewPost((prev) => ({ ...prev, scheduled_for: e.target.value }))}
+                className="text-sm"
               />
-            </div>
-
-            {/* Auto-publish toggle */}
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div>
-                <p className="font-medium">Pubblicazione automatica</p>
-                <p className="text-sm text-muted-foreground">Pubblica senza approvazione manuale</p>
-              </div>
-              <Switch
-                checked={newPost.auto_publish}
-                onCheckedChange={(checked) => setNewPost((prev) => ({ ...prev, auto_publish: checked }))}
-              />
-            </div>
+            )}
           </div>
 
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowNewPostDialog(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="w-full sm:w-auto">
               Annulla
             </Button>
-            <Button variant="secondary" onClick={() => savePost("draft")} disabled={!newPost.content}>
-              Salva Bozza
+            <Button
+              onClick={savePost}
+              disabled={!newPost.content || newPost.platforms.length === 0 || isLoading}
+              className="w-full sm:w-auto"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  {newPost.scheduled_for ? "Programma" : "Salva Bozza"}
+                </>
+              )}
             </Button>
-            {newPost.auto_publish ? (
-              <Button onClick={() => savePost("scheduled")} disabled={!newPost.content}>
-                <Send className="h-4 w-4 mr-2" />
-                Programma
-              </Button>
-            ) : (
-              <Button onClick={() => savePost("pending_approval")} disabled={!newPost.content}>
-                <Clock className="h-4 w-4 mr-2" />
-                Invia per Approvazione
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -631,90 +1114,92 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogHeader>
 
           {settings && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Generazione automatica AI</p>
-                  <p className="text-sm text-muted-foreground">
-                    L'AI genera post ogni {settings.posting_frequency_days} giorni
-                  </p>
+            <ScrollArea className="h-[60vh] pr-4">
+              <div className="space-y-4 pr-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Generazione automatica AI</p>
+                    <p className="text-sm text-muted-foreground">
+                      L'AI genera post ogni {settings.posting_frequency_days} giorni
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.auto_generate_enabled}
+                    onCheckedChange={(checked) =>
+                      setSettings((prev) => (prev ? { ...prev, auto_generate_enabled: checked } : null))
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={settings.auto_generate_enabled}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => (prev ? { ...prev, auto_generate_enabled: checked } : null))
-                  }
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label>Frequenza pubblicazione</Label>
-                <Select
-                  value={String(settings.posting_frequency_days)}
-                  onValueChange={(value) =>
-                    setSettings((prev) => (prev ? { ...prev, posting_frequency_days: Number.parseInt(value) } : null))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Ogni giorno</SelectItem>
-                    <SelectItem value="2">Ogni 2 giorni</SelectItem>
-                    <SelectItem value="3">Ogni 3 giorni</SelectItem>
-                    <SelectItem value="7">Settimanale</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tono dei post</Label>
-                <Select
-                  value={settings.tone}
-                  onValueChange={(value) => setSettings((prev) => (prev ? { ...prev, tone: value } : null))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professionale</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                    <SelectItem value="inspirational">Inspirational</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Includi hashtag</p>
-                  <p className="text-sm text-muted-foreground">Aggiungi hashtag automaticamente</p>
+                <div className="space-y-2">
+                  <Label>Frequenza pubblicazione</Label>
+                  <Select
+                    value={String(settings.posting_frequency_days)}
+                    onValueChange={(value) =>
+                      setSettings((prev) => (prev ? { ...prev, posting_frequency_days: Number.parseInt(value) } : null))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Ogni giorno</SelectItem>
+                      <SelectItem value="2">Ogni 2 giorni</SelectItem>
+                      <SelectItem value="3">Ogni 3 giorni</SelectItem>
+                      <SelectItem value="7">Settimanale</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Switch
-                  checked={settings.include_hashtags}
-                  onCheckedChange={(checked) =>
-                    setSettings((prev) => (prev ? { ...prev, include_hashtags: checked } : null))
-                  }
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label>Hashtag di default</Label>
-                <Input
-                  placeholder="#4BID #RevenueManagement"
-                  value={settings.default_hashtags.join(" ")}
-                  onChange={(e) =>
-                    setSettings((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            default_hashtags: e.target.value.split(" ").filter((h) => h.startsWith("#")),
-                          }
-                        : null,
-                    )
-                  }
-                />
+                <div className="space-y-2">
+                  <Label>Tono dei post</Label>
+                  <Select
+                    value={settings.tone}
+                    onValueChange={(value) => setSettings((prev) => (prev ? { ...prev, tone: value } : null))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionale</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                      <SelectItem value="inspirational">Inspirational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Includi hashtag</p>
+                    <p className="text-sm text-muted-foreground">Aggiungi hashtag automaticamente</p>
+                  </div>
+                  <Switch
+                    checked={settings.include_hashtags}
+                    onCheckedChange={(checked) =>
+                      setSettings((prev) => (prev ? { ...prev, include_hashtags: checked } : null))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hashtag di default</Label>
+                  <Input
+                    placeholder="#4BID #RevenueManagement"
+                    value={settings.default_hashtags.join(" ")}
+                    onChange={(e) =>
+                      setSettings((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              default_hashtags: e.target.value.split(" ").filter((h) => h.startsWith("#")),
+                            }
+                          : null,
+                      )
+                    }
+                  />
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
 
           <DialogFooter>
@@ -728,7 +1213,7 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
 
       {/* Connect Account Dialog */}
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Collega Account Social</DialogTitle>
             <DialogDescription>
@@ -737,35 +1222,48 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-              <p className="text-sm text-yellow-600">
-                <strong>Nota:</strong> Per collegare gli account social è necessario configurare le API di ogni
-                piattaforma. Contatta l'amministratore per la configurazione.
-              </p>
-            </div>
-
             {["facebook", "instagram", "linkedin"].map((platform) => {
               const Icon = platformIcons[platform as keyof typeof platformIcons]
               const account = accounts.find((a) => a.platform === platform)
 
+              const connectUrls: Record<string, string> = {
+                facebook: "/api/social/connect/facebook",
+                instagram: "/api/social/connect/facebook", // Instagram usa Facebook OAuth
+                linkedin: "/api/social/connect/linkedin",
+              }
+
               return (
-                <div key={platform} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                <div key={platform} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium capitalize">{platform}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {account?.is_active ? account.account_name : "Non collegato"}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant={account?.is_active ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => {
+                        if (platform === "facebook") {
+                          window.location.href = connectUrls.facebook
+                        } else if (platform === "linkedin") {
+                          window.location.href = connectUrls.linkedin
+                        } else {
+                          setShowManualConnect("instagram")
+                        }
+                      }}
                     >
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium capitalize">{platform}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {account?.is_active ? account.account_name : "Non collegato"}
-                      </p>
-                    </div>
+                      {account?.is_active ? "Riconnetti" : "OAuth"}
+                    </Button>
                   </div>
-                  <Button variant={account?.is_active ? "outline" : "default"} size="sm" disabled>
-                    {account?.is_active ? "Riconnetti" : "Collega"}
-                  </Button>
                 </div>
               )
             })}
@@ -778,110 +1276,514 @@ export default function SocialMediaDashboard({ initialAccounts, initialPosts, in
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Connect Dialog */}
+      {showManualConnect && (
+        <Dialog open={true} onOpenChange={() => setShowManualConnect(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Collega {showManualConnect} Manuale</DialogTitle>
+              <DialogDescription>
+                Inserisci i dettagli del tuo account {showManualConnect} per collegarlo manualmente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>ID Pagina</Label>
+                <Input placeholder="ID Pagina" value={manualPageId} onChange={(e) => setManualPageId(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nome Pagina</Label>
+                <Input
+                  placeholder="Nome Pagina"
+                  value={manualPageName}
+                  onChange={(e) => setManualPageName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Token di Accesso</Label>
+                <Input
+                  placeholder="Token di Accesso"
+                  value={manualAccessToken}
+                  onChange={(e) => setManualAccessToken(e.target.value)}
+                  type="password"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowManualConnect(null)}>
+                Annulla
+              </Button>
+              <Button onClick={() => saveManualConnection(showManualConnect)}>
+                {isSavingManual ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                Collega
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Modifica Post</DialogTitle>
+            <DialogDescription>Modifica il contenuto, l'immagine o la programmazione del post</DialogDescription>
+          </DialogHeader>
+
+          {editingPost && (
+            <ScrollArea className="h-[75vh] pr-4">
+              <div className="space-y-4 pr-4">
+                {/* Content */}
+                <div className="space-y-2">
+                  <Label>Contenuto</Label>
+                  <Textarea
+                    value={editingPost.content}
+                    onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                    rows={6}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Image */}
+                <div className="space-y-2">
+                  <Label>Immagine</Label>
+                  {editingPost.image_url ? (
+                    <div className="relative">
+                      <img
+                        src={editingPost.image_url || "/placeholder.svg"}
+                        alt="Post image"
+                        className="w-full max-h-48 object-cover rounded-lg"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={() => setEditingPost({ ...editingPost, image_url: null })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center text-muted-foreground">
+                      Nessuna immagine
+                    </div>
+                  )}
+                </div>
+
+                {/* Link URL */}
+                <div className="space-y-2">
+                  <Label>Link</Label>
+                  <Input
+                    placeholder="https://example.com"
+                    value={editingPost.link_url || ""}
+                    onChange={(e) => setEditingPost({ ...editingPost, link_url: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+
+                {editingPost.image_url && editingPost.link_url && (
+                  <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <Label className="text-sm font-medium">Priorità Media</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Hai inserito sia un'immagine che un link. Cosa vuoi mostrare nel post?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={editingPost.media_priority === "image" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditingPost({ ...editingPost, media_priority: "image" })}
+                        className="flex-1"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Usa mia immagine
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={editingPost.media_priority === "link" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditingPost({ ...editingPost, media_priority: "link" })}
+                        className="flex-1"
+                      >
+                        <LinkIcon className="h-4 w-4 mr-2" />
+                        Anteprima link
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Platforms */}
+                <div className="space-y-2">
+                  <Label>Piattaforme</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["facebook", "instagram", "linkedin"].map((platform) => {
+                      const Icon = platformIcons[platform as keyof typeof platformIcons]
+                      const isSelected = editingPost.platforms.includes(platform)
+                      const account = accounts.find((a) => a.platform === platform && a.is_active)
+                      if (!account) return null
+                      return (
+                        <button
+                          key={platform}
+                          type="button"
+                          onClick={() => {
+                            const newPlatforms = isSelected
+                              ? editingPost.platforms.filter((p) => p !== platform)
+                              : [...editingPost.platforms, platform]
+                            setEditingPost({ ...editingPost, platforms: newPlatforms })
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                            isSelected
+                              ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                              : "border-border hover:border-primary"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="capitalize text-sm">{platform}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Schedule */}
+                <div className="space-y-2">
+                  <Label>Programmazione</Label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={editingPost.scheduled_for ? utcToLocalDatetime(editingPost.scheduled_for) : ""}
+                      onChange={(e) =>
+                        setEditingPost({
+                          ...editingPost,
+                          scheduled_for: e.target.value ? localDatetimeToUTC(e.target.value) : null,
+                        })
+                      }
+                      className="flex-1"
+                    />
+                    {editingPost.scheduled_for && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingPost({ ...editingPost, scheduled_for: null })}
+                      >
+                        Rimuovi programmazione
+                      </Button>
+                    )}
+                  </div>
+                  {editingPost.scheduled_for && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {editingPost.scheduled_for
+                        ? `Programmato per: ${formatDateTimeIT(editingPost.scheduled_for)}`
+                        : "Non programmato"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
+                    Annulla
+                  </Button>
+                  <Button onClick={updatePost} disabled={isLoading} className="flex-1 sm:flex-none">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Salvataggio...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Salva modifiche
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Publish Confirmation Dialog */}
+      <AlertDialog open={!!publishConfirmPost} onOpenChange={(open) => !open && setPublishConfirmPost(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Conferma Pubblicazione
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">Stai per pubblicare questo post. Verifica i dettagli:</p>
+
+                {publishConfirmPost && (
+                  <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+                    {/* Content preview */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Contenuto:</p>
+                      <p className="text-sm line-clamp-3">{publishConfirmPost.content}</p>
+                    </div>
+
+                    {/* Target channels */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Canali di pubblicazione:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {getTargetAccountNames(publishConfirmPost).map((account, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1">
+                            {account.platform === "facebook" && <Facebook className="h-3 w-3" />}
+                            {account.platform === "instagram" && <Instagram className="h-3 w-3" />}
+                            {account.platform === "linkedin" && <Linkedin className="h-3 w-3" />}
+                            {account.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Image */}
+                    {publishConfirmPost.image_url && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Immagine:</p>
+                        <Badge variant="outline" className="text-xs">
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          Allegata
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Link */}
+                    {publishConfirmPost.link_url && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Link:</p>
+                        <p className="text-xs text-blue-600 truncate">{publishConfirmPost.link_url}</p>
+                      </div>
+                    )}
+
+                    {/* Scheduled time if present */}
+                    {publishConfirmPost.scheduled_for && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Data programmata:</p>
+                        <Badge variant="outline" className="text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatDateTimeIT(publishConfirmPost.scheduled_for)}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Immediate publish notice */}
+                    {!publishConfirmPost.scheduled_for && (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 rounded p-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <p className="text-xs">Il post verrà pubblicato immediatamente</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={isPublishing}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPublish}
+              disabled={isPublishing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Pubblicazione...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Pubblica Ora
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ... existing settings dialog and manual connect dialog ... */}
     </div>
   )
 }
 
-// Post Card Component
 function PostCard({
   post,
   onApprove,
   onReject,
   onPublish,
+  onEdit,
+  onRepost,
 }: {
   post: SocialPost
   onApprove?: () => void
   onReject?: () => void
   onPublish?: () => void
+  onEdit?: () => void
+  onRepost?: () => void
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
+  const canEdit = ["draft", "scheduled"].includes(post.status)
+  const canRepost = post.status === "published" || post.status === "failed"
+
+  const handlePublish = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onPublish) {
+      onPublish()
+    }
+  }
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex gap-4">
-          <div className="flex-1 space-y-3">
-            {/* Status & Platforms */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className={`${status.color} text-white`}>
-                <StatusIcon className="h-3 w-3 mr-1" />
+      <CardContent className="p-2.5 sm:p-6 sm:pt-6">
+        <div className="space-y-2 sm:space-y-3">
+          {/* Status & Platforms - compact on mobile */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge className={`${status.color} text-white text-[10px] sm:text-xs py-0 h-5`}>
+                <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                 {status.label}
               </Badge>
               {post.is_ai_generated && (
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  AI Generated
+                <Badge
+                  variant="outline"
+                  className="bg-purple-500/10 text-purple-600 border-purple-500 text-[10px] sm:text-xs py-0 h-5"
+                >
+                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                  AI
                 </Badge>
               )}
-              <div className="flex gap-1 ml-auto">
-                {post.platforms.map((platform) => {
-                  const Icon = platformIcons[platform as keyof typeof platformIcons]
-                  return (
-                    <div
-                      key={platform}
-                      className={`w-6 h-6 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
-                    >
-                      <Icon className="h-3 w-3 text-white" />
-                    </div>
-                  )
-                })}
-              </div>
             </div>
-
-            {/* Content */}
-            <p className="text-sm whitespace-pre-wrap">{post.content}</p>
-
-            {/* Meta */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Creato: {new Date(post.created_at).toLocaleString("it-IT")}</span>
-              {post.scheduled_for && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Programmato: {new Date(post.scheduled_for).toLocaleString("it-IT")}
-                </span>
-              )}
-              {post.published_at && (
-                <span className="flex items-center gap-1 text-green-600">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Pubblicato: {new Date(post.published_at).toLocaleString("it-IT")}
-                </span>
-              )}
+            <div className="flex gap-0.5">
+              {post.platforms.map((platform) => {
+                const Icon = platformIcons[platform as keyof typeof platformIcons]
+                return (
+                  <div
+                    key={platform}
+                    className={`w-5 h-5 rounded flex items-center justify-center ${platformColors[platform as keyof typeof platformColors]}`}
+                  >
+                    <Icon className="h-2.5 w-2.5 text-white" />
+                  </div>
+                )
+              })}
             </div>
+          </div>
 
-            {/* Error */}
-            {post.error_message && (
-              <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-sm text-red-600">
-                {post.error_message}
-              </div>
+          {/* Content - truncated on mobile */}
+          <p className="text-xs sm:text-sm whitespace-pre-wrap line-clamp-3 sm:line-clamp-none">{post.content}</p>
+
+          {/* Image - smaller on mobile */}
+          {post.image_url && (
+            <img
+              src={post.image_url || "/placeholder.svg"}
+              alt="Generated Image"
+              className="w-full h-32 sm:h-48 object-cover rounded-lg"
+            />
+          )}
+
+          {/* Link */}
+          {post.link_url && (
+            <a
+              href={post.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              {post.link_url.replace(/https?:\/\//, "").split("/")[0]}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+
+          {/* Meta - stacked on mobile */}
+          <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5 sm:space-y-0 sm:flex sm:gap-4">
+            <span>{formatDateOnlyIT(post.created_at)}</span>
+            {post.scheduled_for && (
+              <span className="flex items-center gap-1 text-amber-600">
+                <Clock className="h-3 w-3" />
+                {formatDateTimeIT(post.scheduled_for)}
+              </span>
+            )}
+            {post.status === "published" && post.published_at && (
+              <span className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Pubblicato: {formatDateTimeIT(post.published_at)}
+              </span>
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
+          {/* Actions - full width buttons on mobile */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {canEdit && onEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs bg-transparent"
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Modifica
+              </Button>
+            )}
+            {canRepost && onRepost && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRepost}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs text-blue-600 border-blue-600 hover:bg-blue-50 bg-transparent"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Modifica e Ripubblica
+              </Button>
+            )}
             {onApprove && (
               <Button
-                size="sm"
                 variant="outline"
-                className="text-green-600 border-green-600 bg-transparent"
+                size="sm"
                 onClick={onApprove}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs text-green-600 border-green-600 hover:bg-green-50 bg-transparent"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-3 w-3 mr-1" />
+                Approva
               </Button>
             )}
             {onPublish && (
-              <Button size="sm" onClick={onPublish}>
-                <Send className="h-4 w-4" />
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                onTouchEnd={handlePublish}
+                className="flex-1 sm:flex-none h-7 text-[10px] sm:text-xs touch-manipulation"
+              >
+                <Send className="h-3 w-3 mr-1" />
+                Pubblica
               </Button>
             )}
             {onReject && (
               <Button
+                variant="ghost"
                 size="sm"
-                variant="outline"
-                className="text-red-600 border-red-600 bg-transparent"
                 onClick={onReject}
+                className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+            {post.status === "failed" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => alert(`Errore: ${post.error_message}`)}
+                className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <Eye className="h-3 w-3" />
               </Button>
             )}
           </div>

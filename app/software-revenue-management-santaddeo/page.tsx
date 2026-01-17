@@ -6,6 +6,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "SANTADDEO: Software Revenue Management Hotel AI Trasparente | 4BID.IT",
@@ -13,11 +14,26 @@ export const metadata = {
     "SANTADDEO: unico software revenue management hotel con AI spiegabile. Personalizza fattori di pricing per struttura/giorno. Dynamic pricing intelligente 24/7. Demo gratuita.",
   keywords:
     "software revenue management hotel, RMS hotel AI, sistema revenue management automatico, SANTADDEO RMS, pricing dinamico software, gestionale revenue hotel avanzato",
+  alternates: {
+    canonical: "https://4bid.it/software-revenue-management-santaddeo",
+  },
 }
 
 export default function SoftwareRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="SoftwareApplication"
+        title="SANTADDEO - Software Revenue Management Hotel"
+        description="SANTADDEO: unico software revenue management hotel con AI spiegabile. Personalizza fattori di pricing per struttura/giorno."
+        url="https://4bid.it/software-revenue-management-santaddeo"
+        softwareCategory="BusinessApplication"
+        operatingSystem="Web"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "SANTADDEO Software", url: "https://4bid.it/software-revenue-management-santaddeo" },
+        ]}
+      />
       <LandingPageTracker slug="software-revenue-management-santaddeo" />
 
       <Header />
@@ -32,10 +48,27 @@ export default function SoftwareRevenueManagementPage() {
                 <h1 className="text-5xl font-bold text-foreground">SANTADDEO</h1>
               </div>
               <p className="text-2xl text-muted-foreground mb-4">The Human Revenue Manager</p>
-              <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
+              <p className="text-xl text-muted-foreground leading-relaxed mb-6 text-pretty">
                 Il primo software di Revenue Management con AI trasparente che spiega ogni decisione di pricing.
                 Personalizza i pesi delle variabili e comprendi ogni scelta strategica.
               </p>
+              <div className="bg-card/50 backdrop-blur-sm rounded-xl p-5 mb-6 border border-border/50">
+                <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>RMS con logiche spiegabili: variabili, pesi e motivazioni delle scelte</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>Personalizzabile per stagione, giorno e tipo struttura</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary-blue mt-0.5">•</span>
+                    <span>Integrazione con dati e canali per supportare il dynamic pricing</span>
+                  </li>
+                </ul>
+              </div>
               <div className="flex gap-4 flex-wrap">
                 <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
                   Richiedi Demo

@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
@@ -12,11 +13,49 @@ export const metadata = {
     "Scopri come aumentare l'ADR (Average Daily Rate) del tuo hotel con strategie pratiche e comprovate. Tecniche concrete per far crescere la tariffa media fino al +40%.",
   keywords:
     "come aumentare ADR hotel, aumentare tariffa media, strategie ADR, crescita revenue hotel, pricing hotel, tariffe hotel più alte",
+  openGraph: {
+    title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
+    description: "Strategie pratiche per far crescere la tariffa media del tuo hotel fino al +40%.",
+    url: "https://www.4bid.it/adr-hotel-come-aumentarlo",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/adr-hotel-come-aumentarlo",
+  },
 }
+
+const faqData = [
+  {
+    question: "Cos'è l'ADR di un hotel?",
+    answer:
+      "L'ADR (Average Daily Rate) è la tariffa media giornaliera delle camere vendute. Si calcola dividendo il revenue totale delle camere per il numero di camere vendute. È uno dei KPI fondamentali nel revenue management alberghiero.",
+  },
+  {
+    question: "Come si può aumentare l'ADR senza perdere occupazione?",
+    answer:
+      "Per aumentare l'ADR mantenendo l'occupazione bisogna: implementare il dynamic pricing, creare pacchetti con valore aggiunto, segmentare il mercato per target disposti a pagare di più, applicare minimum stay nelle date ad alta domanda e ottimizzare la value communication.",
+  },
+  {
+    question: "Quanto tempo serve per vedere risultati sull'ADR?",
+    answer:
+      "Con le strategie giuste si possono vedere i primi risultati in 30 giorni (+10% ADR). In 6 mesi è possibile raggiungere un incremento del 30-35% dell'ADR medio attraverso un piano strutturato di ottimizzazione.",
+  },
+  {
+    question: "Quali sono gli errori più comuni che abbassano l'ADR?",
+    answer:
+      "Gli errori più comuni sono: abbassare i prezzi per paura di bassa occupazione, mantenere la stessa tariffa su tutti i canali, ignorare la competizione, vendere tutto troppo presto a prezzi bassi e non investire nel valore percepito della struttura.",
+  },
+]
 
 export default function ADRHotelComeAumentarloPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Come Aumentare l'ADR Hotel: Guida Completa 2025"
+        description="Strategie concrete per far crescere la tariffa media del tuo hotel fino al +40%"
+        faq={faqData}
+      />
       <LandingPageTracker slug="adr-hotel-come-aumentarlo" />
 
       <Header />

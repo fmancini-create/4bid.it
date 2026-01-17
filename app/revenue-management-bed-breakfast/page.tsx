@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Management Bed & Breakfast: Aumenta Ricavi B&B +40% | 4BID.IT",
@@ -12,11 +13,24 @@ export const metadata = {
     "Revenue management per bed and breakfast e piccole strutture familiari. Strategie pricing B&B, riduzione commissioni OTA, aumento prenotazioni dirette. Solo performance-based.",
   keywords:
     "revenue management bed and breakfast, revenue b&b, pricing bed and breakfast, ottimizzazione tariffe b&b, consulenza bed breakfast, aumento ricavi b&b piccole strutture",
+  alternates: {
+    canonical: "https://4bid.it/revenue-management-bed-breakfast",
+  },
 }
 
 export default function RevenueManagementBBPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Management Bed & Breakfast"
+        description="Revenue management per bed and breakfast e piccole strutture familiari. Strategie pricing B&B, riduzione commissioni OTA, aumento prenotazioni dirette."
+        url="https://4bid.it/revenue-management-bed-breakfast"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Revenue Management B&B", url: "https://4bid.it/revenue-management-bed-breakfast" },
+        ]}
+      />
       <LandingPageTracker slug="revenue-management-bed-breakfast" />
 
       <Header />

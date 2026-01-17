@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Ottimizzazione RevPAR Hotel - Strategie per Massimizzare il Revenue per Available Room | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function OttimizzazioneRevparHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Ottimizzazione RevPAR Hotel"
+        description="Guida completa all'ottimizzazione del RevPAR: strategie, formule di calcolo e best practice per massimizzare il Revenue per Available Room."
+        url="https://www.4bid.it/ottimizzazione-revpar-hotel"
+      />
       <LandingPageTracker slug="ottimizzazione-revpar-hotel" />
 
       <Header />
@@ -31,6 +38,23 @@ export default function OttimizzazioneRevparHotelPage() {
               Aumenta il RevPAR del tuo hotel del 25-40% con strategie avanzate che ottimizzano sia occupazione che
               tariffe medie. Il KPI che conta davvero.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>RevPAR come metrica per collegare prezzo e occupazione</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Leve: mix canali, restrizioni, upsell, conversione, segmentazione</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Benchmark competitivo con indicatori di posizionamento</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
@@ -234,7 +258,7 @@ export default function OttimizzazioneRevparHotelPage() {
             </div>
 
             <div className="bg-yellow/10 border-2 border-yellow rounded-xl p-8">
-              <h4 className="font-bold text-foreground mb-4">Obiettivo: RGI {">"} 105</h4>
+              <h4 className="font-bold text-foreground">Obiettivo: RGI {">"} 105</h4>
               <p className="text-muted-foreground mb-4">
                 Un RGI superiore a 105 significa che stai catturando market share dai tuoi concorrenti. È il segno di
                 una strategia di Revenue Management efficace.

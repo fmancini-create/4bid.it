@@ -13,10 +13,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 
+    const { data: existingPost, error: fetchError } = await supabase
+      .from("social_posts")
+      .select("scheduled_for")
+      .eq("id", id)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    const newStatus = existingPost.scheduled_for ? "scheduled" : "approved"
+
     const { data, error } = await supabase
       .from("social_posts")
       .update({
-        status: "approved",
+        status: newStatus,
         approved_by: user.email,
         approved_at: new Date().toISOString(),
       })

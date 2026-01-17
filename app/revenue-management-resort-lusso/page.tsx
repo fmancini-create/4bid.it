@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Management Resort di Lusso | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function RevenueManagementResortLussoPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Management Resort di Lusso"
+        description="Consulenza Revenue Management specializzata per resort di lusso, hotel 5 stelle e strutture premium. Strategie esclusive per massimizzare i ricavi delle strutture luxury."
+        url="https://www.4bid.it/revenue-management-resort-lusso"
+      />
       <LandingPageTracker slug="revenue-management-resort-lusso" />
 
       <Header />

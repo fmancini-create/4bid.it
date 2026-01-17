@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Prenotazioni Dirette Hotel | Aumenta Direct Booking e Riduci OTA | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function PrenotazioniDiretteHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Prenotazioni Dirette Hotel"
+        description="Guida completa per aumentare le prenotazioni dirette del tuo hotel e ridurre le commissioni OTA. Strategie, best practice e case study."
+        url="https://www.4bid.it/prenotazioni-dirette-hotel"
+      />
       <LandingPageTracker slug="prenotazioni-dirette-hotel" />
 
       <Header />
@@ -31,6 +38,23 @@ export default function PrenotazioniDiretteHotelPage() {
               Piano operativo per incrementare il direct booking, ridurre la dipendenza dalle OTA e aumentare la
               redditività della tua struttura ricettiva.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Incrementare vendite dirette per ridurre costi di intermediazione</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Azioni pratiche: UX, offerte, fiducia, pagamenti, follow-up</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Retention: email e CRM per riacquisto e referral</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

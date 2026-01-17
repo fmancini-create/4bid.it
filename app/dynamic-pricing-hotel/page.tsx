@@ -8,6 +8,7 @@ import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
   title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
@@ -15,11 +16,63 @@ export const metadata: Metadata = {
     "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale. +50 fattori analizzati, aggiornamento continuo su tutti i canali. ROI garantito 90 giorni.",
   keywords:
     "dynamic pricing hotel, prezzi dinamici hotel automatici, pricing dinamico real-time, ottimizzazione tariffe automatica, algoritmo pricing hotel, revenue optimization AI",
+  alternates: {
+    canonical: "https://4bid.it/dynamic-pricing-hotel",
+  },
+  openGraph: {
+    title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
+    description: "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale.",
+    url: "https://4bid.it/dynamic-pricing-hotel",
+    siteName: "4BID.IT",
+    locale: "it_IT",
+    type: "website",
+    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Dynamic Pricing" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI",
+    description: "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-video-preview": -1, "max-image-preview": "large", "max-snippet": -1 },
+  },
 }
 
 export default function DynamicPricingPage() {
+  const faqs = [
+    {
+      question: "Cos'è il dynamic pricing per hotel?",
+      answer:
+        "Il dynamic pricing è una strategia di pricing che adatta automaticamente le tariffe delle camere in tempo reale basandosi su domanda, concorrenza, eventi e altri fattori di mercato per massimizzare i ricavi.",
+    },
+    {
+      question: "Quanto tempo serve per vedere i risultati del dynamic pricing?",
+      answer:
+        "I primi risultati sono visibili entro 30 giorni dall'implementazione. Il ROI completo si ottiene tipicamente entro 90 giorni.",
+    },
+    {
+      question: "Il dynamic pricing funziona anche per piccoli hotel?",
+      answer:
+        "Sì, il dynamic pricing è efficace per hotel di qualsiasi dimensione. Per strutture più piccole, l'automazione riduce significativamente il tempo dedicato alla gestione tariffe.",
+    },
+  ]
+
   return (
     <>
+      <StructuredData
+        type="Service"
+        title="Dynamic Pricing Hotel Automatico"
+        description="Servizio di dynamic pricing automatizzato per hotel con algoritmi AI che ottimizzano le tariffe in tempo reale su tutti i canali di vendita."
+        url="https://4bid.it/dynamic-pricing-hotel"
+        faqs={faqs}
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Dynamic Pricing Hotel", url: "https://4bid.it/dynamic-pricing-hotel" },
+        ]}
+      />
       <LandingPageTracker slug="dynamic-pricing-hotel" />
       <Header />
       <main className="min-h-screen">

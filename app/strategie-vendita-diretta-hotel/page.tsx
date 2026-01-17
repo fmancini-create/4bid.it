@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Strategie Vendita Diretta Hotel | Disintermediazione OTA | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function StrategieVenditaDirettaHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Strategie Vendita Diretta Hotel"
+        description="Aumenta le vendite dirette del tuo hotel riducendo la dipendenza da OTA. Strategie, strumenti e tecniche di disintermediazione."
+        url="https://www.4bid.it/strategie-vendita-diretta-hotel"
+      />
       <LandingPageTracker slug="strategie-vendita-diretta-hotel" />
 
       <Header />

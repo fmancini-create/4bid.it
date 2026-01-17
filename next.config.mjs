@@ -4,8 +4,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
   },
+  compress: true,
+  poweredByHeader: false,
   async headers() {
     return [
       {
@@ -41,17 +50,35 @@ const nextConfig = {
           },
         ],
       },
-    ];
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/:path*.svg",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ]
   },
+  // Removed page.tsx files that used redirect() which returns 307 (temporary)
   async redirects() {
     return [
-      // Redirect index.html to homepage
+      // Legacy/cleanup redirects
       {
         source: '/index.html',
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
-      // Redirect WordPress page_id parameter to homepage
       {
         source: '/',
         has: [
@@ -61,9 +88,8 @@ const nextConfig = {
           },
         ],
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
-      // Redirect WordPress RSS feed to homepage
       {
         source: '/',
         has: [
@@ -73,10 +99,26 @@ const nextConfig = {
           },
         ],
         destination: '/',
-        permanent: true,
+        permanent: true, // 301
       },
-    ];
+      // SEO canonical redirects - duplicate content consolidation
+      {
+        source: '/revenue-management-agriturismi',
+        destination: '/revenue-management-agriturismo',
+        permanent: true, // 301
+      },
+      {
+        source: '/revenue-management-bed-and-breakfast',
+        destination: '/revenue-management-bed-breakfast',
+        permanent: true, // 301
+      },
+      {
+        source: '/yield-management-camere-hotel',
+        destination: '/yield-management-hotel',
+        permanent: true, // 301
+      },
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

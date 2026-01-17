@@ -1,38 +1,58 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { neon } from "@neondatabase/serverless"
 
 export async function GET(request: Request) {
   try {
-    // Supportiamo sia Authorization Bearer che x-vercel-cron-secret
+    // Verifichiamo solo se NON è in produzione o se l'header corrisponde
     const authHeader = request.headers.get("authorization")
-    const vercelCronHeader = request.headers.get("x-vercel-cron-secret")
-
-    const isAuthorized =
-      authHeader === `Bearer ${process.env.CRON_SECRET}` ||
-      vercelCronHeader === process.env.CRON_SECRET ||
-      // Vercel invia anche CRON_SECRET come env var durante l'esecuzione
-      request.headers.get("x-vercel-signature") !== null
-
-    // In development o se CRON_SECRET non è configurato, permetti l'accesso
+    const isVercelCron =
+      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+    const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
     const isDev = process.env.NODE_ENV === "development"
-    const hasCronSecret = !!process.env.CRON_SECRET
 
-    if (!isDev && hasCronSecret && !isAuthorized) {
-      console.error("[v0] Cron unauthorized - headers:", {
-        auth: authHeader ? "present" : "missing",
-        vercelCron: vercelCronHeader ? "present" : "missing",
-      })
+    console.log("[v0] Cron authorization check:", {
+      isDev,
+      isVercelCron,
+      isManuallyAuthorized,
+      hasAuthHeader: !!authHeader,
+      userAgent: request.headers.get("user-agent"),
+    })
+
+    if (!isDev && !isVercelCron && !isManuallyAuthorized) {
+      console.error("[v0] Cron unauthorized")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    const sql = neon(process.env.SUPABASE_POSTGRES_URL!)
 
-    // Chiama la funzione PostgreSQL per salvare lo snapshot
-    const { error } = await supabase.rpc("save_daily_snapshot")
+    console.log("[v0] Starting daily snapshot save at", new Date().toISOString())
+    console.log("[v0] Environment check:", {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    })
 
-    if (error) {
-      console.error("[v0] Error saving daily snapshot:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // Ottieni tutte le landing pages
+    const pages = await sql`SELECT id, views, conversions FROM landing_pages`
+
+    console.log(`[v0] Found ${pages?.length || 0} landing pages to snapshot`)
+    console.log(
+      "[v0] Landing pages data:",
+      pages?.map((p) => ({ id: p.id, views: p.views, conversions: p.conversions })),
+    )
+
+    const today = new Date().toISOString().split("T")[0] // YYYY-MM-DD
+
+    if (pages && pages.length > 0) {
+      // Inserisci ogni snapshot usando SQL diretto (bypassa RLS)
+      for (const page of pages) {
+        await sql`
+          INSERT INTO landing_page_daily_stats (landing_page_id, date, views, conversions)
+          VALUES (${page.id}, ${today}, ${page.views || 0}, ${page.conversions || 0})
+          ON CONFLICT (landing_page_id, date) 
+          DO UPDATE SET views = ${page.views || 0}, conversions = ${page.conversions || 0}
+        `
+        console.log(`[v0] Saved snapshot for page ${page.id}`)
+      }
     }
 
     console.log("[v0] Daily snapshot saved successfully at", new Date().toISOString())
@@ -40,10 +60,19 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Daily snapshot saved successfully",
+      pages_saved: pages?.length || 0,
       timestamp: new Date().toISOString(),
+      snapshots_preview: pages?.slice(0, 3) || [],
     })
   } catch (error) {
-    console.error("[v0] Error in save-daily-snapshot cron:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] Error in save-daily-snapshot cron:", {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    return NextResponse.json(
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    )
   }
 }

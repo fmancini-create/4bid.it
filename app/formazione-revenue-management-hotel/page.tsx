@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Corsi di formazione Revenue Management per hotel: dai fondamentali alle strategie avanzate. Training pratico per hotel manager, revenue manager e staff alberghiero.",
   keywords:
     "formazione revenue management, corsi hotel, training revenue, corso revenue manager, formazione alberghiera, workshop hotel",
+  openGraph: {
+    title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
+    description: "Corsi pratici e training operativo per hotel manager, revenue manager e staff.",
+    url: "https://www.4bid.it/formazione-revenue-management-hotel",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/formazione-revenue-management-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Quali corsi di revenue management offrite per hotel?",
+    answer:
+      "Offriamo: Corso Base sui Fondamentali del Revenue Management (2 giorni, 16 ore), Corso Avanzato di Revenue Strategy (3 giorni, 24 ore), Workshop Pratico di Implementazione Software (1 giorno, 8 ore) e Training On-Site Personalizzato.",
+  },
+  {
+    question: "A chi sono rivolti i corsi di formazione?",
+    answer:
+      "I corsi sono rivolti a hotel manager, front office manager, revenue manager, general manager, proprietari di strutture ricettive e tutto lo staff operativo che utilizzerà sistemi RMS.",
+  },
+  {
+    question: "Quali risultati si ottengono dopo la formazione?",
+    answer:
+      "Dopo un training strutturato del team si registra un aumento medio del RevPAR del 15-25%. I partecipanti acquisiscono competenze per prendere decisioni data-driven e implementare strategie di pricing efficaci.",
+  },
+]
 
 export default function FormazioneRevenueManagementHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Formazione Revenue Management Hotel"
+        description="Corsi di formazione e training per hotel manager e revenue manager"
+        faq={faqData}
+      />
       <LandingPageTracker slug="formazione-revenue-management-hotel" />
 
       <Header />

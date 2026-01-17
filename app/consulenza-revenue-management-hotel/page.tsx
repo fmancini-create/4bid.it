@@ -80,6 +80,23 @@ export default function ConsulenzaRevenueManagementPage() {
               Aumenta i ricavi del tuo hotel fino al 30% con strategie personalizzate di pricing dinamico e
               ottimizzazione tariffe. Esperti di Revenue Management al tuo servizio.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Consulenza revenue per aumentare ricavi e margini in modo misurabile</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Ottimizzazione tariffe, canali, restrizioni e calendario domanda</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Possibile modello a fee fissa o legato a performance</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90">
                 Richiedi Consulenza Gratuita

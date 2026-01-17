@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2025 | 4BID.IT",
@@ -11,11 +12,25 @@ export const metadata = {
     "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente. Aumenta RevPAR +37%. Guida completa.",
   keywords:
     "strategie pricing hotel, BAR strategy hotel, dynamic pricing strategico, price fencing alberghiero, length of stay restrictions, strategie tariffe hotel avanzate, pricing optimization",
+  alternates: {
+    canonical: "https://4bid.it/strategie-pricing-hotel",
+  },
 }
 
 export default function StrategiePricingHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS"
+        description="Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente."
+        url="https://4bid.it/strategie-pricing-hotel"
+        breadcrumbs={[
+          { name: "Home", url: "https://4bid.it" },
+          { name: "Strategie Pricing Hotel", url: "https://4bid.it/strategie-pricing-hotel" },
+        ]}
+        keywords={["strategie pricing hotel", "BAR strategy", "dynamic pricing", "LOS restrictions", "price fencing"]}
+      />
       <LandingPageTracker slug="strategie-pricing-hotel" />
 
       <Header />
@@ -32,6 +47,23 @@ export default function StrategiePricingHotelPage() {
               Dal pricing statico al dynamic pricing intelligente: le strategie comprovate per massimizzare RevPAR senza
               perdere competitività.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Metodi pricing: BAR, dynamic, LOS, fencing e restrizioni</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Passaggio dal pricing statico a regole e aggiornamenti continui</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Supporto con RMS e linee guida operative</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

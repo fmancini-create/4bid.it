@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://4bid.it"
+  const baseUrl = "https://www.4bid.it"
   const lastModified = new Date()
 
   // Homepage
@@ -12,7 +12,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 1.0,
   }
 
-  // Landing Pages Revenue Management
+  const guidePages = ["guida-revenue-management-hotel", "guida-pricing-hotel", "guida-prenotazioni-dirette-hotel"].map(
+    (slug) => ({
+      url: `${baseUrl}/${slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    }),
+  )
+
+  // Landing Pages Revenue Management - tutte le pagine pubbliche
   const landingPages = [
     "consulenza-revenue-management-hotel",
     "software-revenue-management-santaddeo",
@@ -45,7 +54,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "come-aumentare-ricavi-hotel",
     "ottimizzazione-revpar-hotel",
     "cose-il-revenue-management",
-    "revenue-management-agriturismi",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
     lastModified,
@@ -53,6 +61,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
+  // Progetti
   const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
@@ -60,6 +69,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
+  // Altre pagine
   const otherPages = [
     {
       url: `${baseUrl}/proponi-idea`,
@@ -67,7 +77,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
   ]
 
-  return [homepage, ...landingPages, ...progetti, ...otherPages]
+  return [homepage, ...guidePages, ...landingPages, ...progetti, ...otherPages]
 }

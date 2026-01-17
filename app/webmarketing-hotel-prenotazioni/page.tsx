@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Web Marketing Hotel | Aumenta le Prenotazioni Dirette | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function WebMarketingHotelPrenotazioniPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Web Marketing Hotel"
+        description="Servizi di web marketing specializzati per hotel: SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette."
+        url="https://www.4bid.it/webmarketing-hotel-prenotazioni"
+      />
       <LandingPageTracker slug="webmarketing-hotel-prenotazioni" />
 
       <Header />

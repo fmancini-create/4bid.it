@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
@@ -11,11 +12,44 @@ export const metadata = {
     "Guida completa su come aumentare i ricavi del tuo hotel: strategie di Revenue Management, ottimizzazione tariffe, direct booking e molto altro. Risultati concreti in 30 giorni.",
   keywords:
     "aumentare ricavi hotel, revenue hotel, fatturato hotel, guadagni hotel, come aumentare profitti hotel, strategie ricavi alberghieri",
+  openGraph: {
+    title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
+    description: "10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%.",
+    url: "https://www.4bid.it/come-aumentare-ricavi-hotel",
+    type: "article",
+  },
+  alternates: {
+    canonical: "https://www.4bid.it/come-aumentare-ricavi-hotel",
+  },
 }
+
+const faqData = [
+  {
+    question: "Quali sono le strategie più efficaci per aumentare i ricavi di un hotel?",
+    answer:
+      "Le strategie più efficaci sono: dynamic pricing strategico, ottimizzazione del mix tariffario, segmentazione avanzata dei clienti, forecast e capacity control, aumento delle prenotazioni dirette, upselling e cross-selling sistematico, length of stay management ed event-based revenue strategy.",
+  },
+  {
+    question: "In quanto tempo si vedono i risultati delle strategie revenue?",
+    answer:
+      "Con le quick wins si possono vedere risultati in 30 giorni: +15-20% prenotazioni dirette, +12% durata media soggiorno, +8-10% RevPAR. Risultati più significativi (+25-40% ricavi) richiedono 6-12 mesi di implementazione strutturata.",
+  },
+  {
+    question: "Quanto può risparmiare un hotel riducendo le commissioni OTA?",
+    answer:
+      "Un hotel può risparmiare €25.000-40.000 all'anno riducendo la dipendenza dalle OTA e aumentando le prenotazioni dirette del 30-50%. Questo si ottiene con strategie di direct booking, loyalty program e marketing diretto.",
+  },
+]
 
 export default function ComeAumentareRicaviHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025"
+        description="10 strategie comprovate per incrementare il fatturato del tuo hotel"
+        faq={faqData}
+      />
       <LandingPageTracker slug="come-aumentare-ricavi-hotel" />
 
       <Header />

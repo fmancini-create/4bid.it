@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Preventivi Progetti Personalizzati Hotel | Soluzioni Su Misura | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function PreventiviProgettiPersonalizzatiHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Preventivi Progetti Personalizzati Hotel"
+        description="Richiedi preventivo per progetti software personalizzati hotel: revenue management, app mobile, gestione manutenzioni. Risposta in 24h."
+        url="https://www.4bid.it/preventivi-progetti-personalizzati-hotel"
+      />
       <LandingPageTracker slug="preventivi-progetti-personalizzati-hotel" />
 
       <Header />
@@ -32,6 +39,23 @@ export default function PreventiviProgettiPersonalizzatiHotelPage() {
               Descrivi il tuo progetto e in 24 ore ricevi un preventivo dettagliato con fattibilità tecnica, stima costi
               e tempi di sviluppo. Soluzioni software personalizzate per hotel, resort e strutture ricettive.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Preventivi su misura per progetti digitali e revenue in hotel</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Opzioni: prodotto standard o sviluppo custom integrato</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Processo chiaro: analisi, proposta, roadmap, consegna</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

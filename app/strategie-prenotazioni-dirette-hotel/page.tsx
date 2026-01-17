@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Strategie Prenotazioni Dirette Hotel | Ridurre Commissioni OTA | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function StrategiePrenotazioniDiretteHotelPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Article"
+        title="Strategie Prenotazioni Dirette Hotel"
+        description="Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%. Strategie di direct booking e disintermediazione."
+        url="https://www.4bid.it/strategie-prenotazioni-dirette-hotel"
+      />
       <LandingPageTracker slug="strategie-prenotazioni-dirette-hotel" />
 
       <Header />
@@ -31,6 +38,23 @@ export default function StrategiePrenotazioniDiretteHotelPage() {
               Strategie comprovate di disintermediazione per hotel e strutture ricettive. Trasforma le OTA da canale
               principale a canale accessorio, aumentando margini e controllo sul cliente.
             </p>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 mb-8 max-w-2xl mx-auto border border-border/50 text-left">
+              <p className="text-sm font-semibold text-primary-blue mb-3">In sintesi:</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Strategie per aumentare prenotazioni dirette e ridurre dipendenza OTA</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Leve: sito, metasearch, offerte, remarketing, loyalty</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-blue mt-0.5">•</span>
+                  <span>Costruzione database clienti e comunicazioni proprietarie</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
                 <Button size="lg" className="bg-primary-blue hover:bg-primary-blue/90">

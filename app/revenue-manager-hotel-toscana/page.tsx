@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
+import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "Revenue Manager Hotel Toscana | Consulenza Firenze, Siena, Pisa | 4BID.IT",
@@ -16,6 +17,12 @@ export const metadata = {
 export default function RevenueManagerHotelToscanaPage() {
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData
+        type="Service"
+        title="Revenue Manager Hotel Toscana"
+        description="Revenue Manager specializzato in hotel in Toscana. Consulenza Revenue Management a Firenze, Siena, Pisa e tutta la Toscana."
+        url="https://www.4bid.it/revenue-manager-hotel-toscana"
+      />
       <LandingPageTracker slug="revenue-manager-hotel-toscana" />
 
       <Header />
