@@ -45,6 +45,8 @@ import {
   Zap,
   Timer,
   ExternalLink,
+  Trash2,
+  Tag,
 } from "lucide-react"
 
 interface Vehicle {
@@ -86,6 +88,11 @@ interface VehicleType {
   category: string
   requires_license_type: string
   range_km: number
+  // Added fields from updates
+  description?: string
+  icon?: string
+  max_speed_kmh?: number
+  avg_range_km?: number
 }
 
 interface Booking {
@@ -123,19 +130,21 @@ interface Pricing {
   vehicle_type: VehicleType
 }
 
-interface Props {
-  structures: Structure[]
-  vehicleTypes: VehicleType[]
-}
-
-export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
+// Changed props from the update
+export function EcomobilityAdminDashboard({ structures }: { structures: Structure[] }) {
   const { toast } = useToast()
-  const [selectedStructure, setSelectedStructure] = useState<Structure | null>(structures[0] || null)
+  // Modified initial state for selectedStructure based on update
+  const [selectedStructure, setSelectedStructure] = useState<Structure | null>(
+    structures.length > 0 ? structures[0] : null,
+  )
   const [activeTab, setActiveTab] = useState("overview")
-  const [isLoading, setIsLoading] = useState(false)
+  // Changed isLoading to loading based on update
+  const [loading, setLoading] = useState(true)
 
   // Data states
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  // Added vehicleTypes state from update
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pricing, setPricing] = useState<Pricing[]>([])
   const [stats, setStats] = useState({
@@ -155,6 +164,10 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
   const [editingPricing, setEditingPricing] = useState<Pricing | null>(null)
   const [selectedVehicleForBattery, setSelectedVehicleForBattery] = useState<Vehicle | null>(null)
   const [newBatteryLevel, setNewBatteryLevel] = useState<number>(100)
+  // Added dialog states from update
+  const [showVehicleDialog, setShowVehicleDialog] = useState(false)
+  const [showVehicleTypeDialog, setShowVehicleTypeDialog] = useState(false)
+  const [editingVehicleType, setEditingVehicleType] = useState<VehicleType | null>(null)
 
   // Form states
   const [vehicleForm, setVehicleForm] = useState({
@@ -180,62 +193,56 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
   })
 
   // Search/filter
+  // Changed bookingFilter based on update
   const [bookingFilter, setBookingFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  // Changed searchQuery to searchTerm based on update
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     if (selectedStructure) {
       loadData()
+      // Added loadVehicleTypes call from update
+      loadVehicleTypes()
     }
   }, [selectedStructure])
 
+  // Updated loadData function based on update
   const loadData = async () => {
     if (!selectedStructure) return
-    setIsLoading(true)
+    setLoading(true)
 
     try {
-      // Load vehicles
-      const vehiclesRes = await fetch(`/api/ecomobility/admin/vehicles?structureId=${selectedStructure.id}`)
-      const vehiclesData = await vehiclesRes.json()
-      setVehicles(vehiclesData.vehicles || [])
+      const [vehiclesRes, bookingsRes, pricingRes, vehicleTypesRes] = await Promise.all([
+        fetch(`/api/ecomobility/admin/vehicles?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/bookings?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/pricing?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/vehicle-types?structure_id=${selectedStructure.id}`),
+      ])
 
-      // Load bookings
-      const bookingsRes = await fetch(`/api/ecomobility/admin/bookings?structureId=${selectedStructure.id}`)
-      const bookingsData = await bookingsRes.json()
-      setBookings(bookingsData.bookings || [])
-
-      // Load pricing
-      const pricingRes = await fetch(`/api/ecomobility/admin/pricing?structureId=${selectedStructure.id}`)
-      const pricingData = await pricingRes.json()
-      setPricing(pricingData.pricing || [])
-
-      // Calculate stats including battery stats
-      const vehiclesList = vehiclesData.vehicles || []
-      const activeRentals = (bookingsData.bookings || []).filter((b: Booking) => b.status === "picked_up").length
-      const availableVehicles = vehiclesList.filter(
-        (v: Vehicle) => v.status === "available" && v.battery_status === "available",
-      ).length
-      const chargingVehicles = vehiclesList.filter(
-        (v: Vehicle) => v.battery_status === "charging" || v.status === "charging",
-      ).length
-      const lowBatteryVehicles = vehiclesList.filter((v: Vehicle) => v.battery_status === "low_battery").length
-      const totalRevenue = (bookingsData.bookings || [])
-        .filter((b: Booking) => b.status === "completed")
-        .reduce((sum: number, b: Booking) => sum + (b.final_amount || 0), 0)
-
-      setStats({
-        totalBookings: (bookingsData.bookings || []).length,
-        activeRentals,
-        totalRevenue,
-        availableVehicles,
-        chargingVehicles,
-        lowBatteryVehicles,
-      })
+      if (vehiclesRes.ok) setVehicles(await vehiclesRes.json())
+      if (bookingsRes.ok) setBookings(await bookingsRes.json())
+      if (pricingRes.ok) setPricing(await pricingRes.json())
+      if (vehicleTypesRes.ok) setVehicleTypes(await vehicleTypesRes.json())
     } catch (error) {
-      console.error("[v0] Error loading data:", error)
-      toast({ title: "Errore caricamento dati", variant: "destructive" })
+      console.error("Error loading data:", error)
+      toast({ title: "Errore", description: "Errore nel caricamento dei dati", variant: "destructive" })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
+    }
+  }
+
+  // Added loadVehicleTypes function based on update
+  const loadVehicleTypes = async () => {
+    if (!selectedStructure) return
+
+    try {
+      const res = await fetch(`/api/ecomobility/admin/vehicle-types?structure_id=${selectedStructure.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setVehicleTypes(data)
+      }
+    } catch (error) {
+      console.error("Error loading vehicle types:", error)
     }
   }
 
@@ -438,6 +445,55 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
     }
   }
 
+  // Added CRUD functions for vehicle types from update
+  const saveVehicleType = async () => {
+    if (!selectedStructure || !editingVehicleType) return
+
+    try {
+      const method = editingVehicleType.id ? "PUT" : "POST"
+      const res = await fetch("/api/ecomobility/admin/vehicle-types", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editingVehicleType,
+          structure_id: selectedStructure.id,
+        }),
+      })
+
+      if (res.ok) {
+        toast({
+          title: "Successo",
+          description: editingVehicleType.id ? "Tipo veicolo aggiornato" : "Tipo veicolo creato",
+        })
+        setShowVehicleTypeDialog(false)
+        setEditingVehicleType(null)
+        loadData()
+      } else {
+        const error = await res.json()
+        toast({ title: "Errore", description: error.error, variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Errore", description: "Errore nel salvataggio", variant: "destructive" })
+    }
+  }
+
+  const deleteVehicleType = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo tipo di veicolo?")) return
+
+    try {
+      const res = await fetch(`/api/ecomobility/admin/vehicle-types?id=${id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast({ title: "Successo", description: "Tipo veicolo eliminato" })
+        loadData()
+      } else {
+        const error = await res.json()
+        toast({ title: "Errore", description: error.error, variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Errore", description: "Errore nell'eliminazione", variant: "destructive" })
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
       string,
@@ -500,10 +556,11 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
     )
   }
 
+  // Modified filter function based on update
   const filteredBookings = bookings.filter((booking) => {
     if (bookingFilter !== "all" && booking.status !== bookingFilter) return false
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    if (searchTerm) {
+      const query = searchTerm.toLowerCase()
       return (
         booking.booking_code.toLowerCase().includes(query) ||
         booking.customer?.first_name?.toLowerCase().includes(query) ||
@@ -545,8 +602,8 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Aggiorna
             </Button>
             <Button variant="ghost" size="sm" asChild>
@@ -571,6 +628,11 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
               <TabsTrigger value="vehicles">
                 <Bike className="h-4 w-4 mr-2" />
                 Flotta
+              </TabsTrigger>
+              {/* Added TabsTrigger for vehicle types based on update */}
+              <TabsTrigger value="vehicle-types">
+                <Tag className="h-4 w-4 mr-2" />
+                Tipi Veicolo
               </TabsTrigger>
               <TabsTrigger value="pricing">
                 <Euro className="h-4 w-4 mr-2" />
@@ -817,8 +879,8 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Cerca prenotazione..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={searchTerm} // Changed from searchQuery
+                      onChange={(e) => setSearchTerm(e.target.value)} // Changed from setSearchQuery
                       className="pl-9 w-[300px]"
                     />
                   </div>
@@ -1122,6 +1184,103 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+
+            {/* Added TabsContent for vehicle types management based on update */}
+            <TabsContent value="vehicle-types" className="space-y-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Tipi di Veicolo</CardTitle>
+                    <CardDescription>Gestisci le categorie di veicoli disponibili</CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setEditingVehicleType({
+                        id: "",
+                        name: "",
+                        slug: "",
+                        category: "",
+                        requires_license_type: "",
+                        range_km: 50,
+                        description: "",
+                        icon: "bike",
+                        max_speed_kmh: 25,
+                        avg_range_km: 50,
+                      } as any)
+                      setShowVehicleTypeDialog(true)
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuovo Tipo
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descrizione</TableHead>
+                        <TableHead>Velocità Max</TableHead>
+                        <TableHead>Autonomia Media</TableHead>
+                        <TableHead>Veicoli</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vehicleTypes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            Nessun tipo di veicolo configurato
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        vehicleTypes.map((vt: any) => {
+                          const vehicleCount = vehicles.filter((v) => v.vehicle_type?.id === vt.id).length
+                          return (
+                            <TableRow key={vt.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <Bike className="h-4 w-4 text-muted-foreground" />
+                                  {vt.name}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{vt.description || "-"}</TableCell>
+                              <TableCell>{vt.max_speed_kmh} km/h</TableCell>
+                              <TableCell>{vt.avg_range_km} km</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{vehicleCount} veicoli</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingVehicleType(vt)
+                                      setShowVehicleTypeDialog(true)
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteVehicleType(vt.id)}
+                                    disabled={vehicleCount > 0}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Pricing Tab */}
@@ -1483,6 +1642,78 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   Annulla
                 </Button>
                 <Button onClick={handleUpdateBatteryLevel}>Aggiorna</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Added Dialog for vehicle type editing based on update */}
+          <Dialog open={showVehicleTypeDialog} onOpenChange={setShowVehicleTypeDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingVehicleType?.id ? "Modifica Tipo Veicolo" : "Nuovo Tipo Veicolo"}</DialogTitle>
+                <DialogDescription>Configura le caratteristiche del tipo di veicolo</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="vt-name">Nome *</Label>
+                  <Input
+                    id="vt-name"
+                    value={editingVehicleType?.name || ""}
+                    onChange={(e) => setEditingVehicleType((prev) => (prev ? { ...prev, name: e.target.value } : null))}
+                    placeholder="es. E-Bike City"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="vt-description">Descrizione</Label>
+                  <Textarea
+                    id="vt-description"
+                    value={(editingVehicleType as any)?.description || ""}
+                    onChange={(e) =>
+                      setEditingVehicleType((prev) => (prev ? ({ ...prev, description: e.target.value } as any) : null))
+                    }
+                    placeholder="Descrizione del tipo di veicolo"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="vt-speed">Velocità Max (km/h)</Label>
+                    <Input
+                      id="vt-speed"
+                      type="number"
+                      value={(editingVehicleType as any)?.max_speed_kmh || 25}
+                      onChange={(e) =>
+                        setEditingVehicleType((prev) =>
+                          prev ? ({ ...prev, max_speed_kmh: Number.parseInt(e.target.value) } as any) : null,
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="vt-range">Autonomia Media (km)</Label>
+                    <Input
+                      id="vt-range"
+                      type="number"
+                      value={(editingVehicleType as any)?.avg_range_km || 50}
+                      onChange={(e) =>
+                        setEditingVehicleType((prev) =>
+                          prev ? ({ ...prev, avg_range_km: Number.parseInt(e.target.value) } as any) : null,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowVehicleTypeDialog(false)
+                      setEditingVehicleType(null)
+                    }}
+                  >
+                    Annulla
+                  </Button>
+                  <Button onClick={saveVehicleType}>{editingVehicleType?.id ? "Salva" : "Crea"}</Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
