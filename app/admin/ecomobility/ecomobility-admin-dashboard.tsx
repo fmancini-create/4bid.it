@@ -157,14 +157,13 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
 
   // Form states
   const [vehicleForm, setVehicleForm] = useState({
-    internal_code: "",
+    code: "",
+    name: "",
     vehicle_type_id: "",
-    brand: "",
-    model: "",
-    color: "",
-    serial_number: "",
-    license_plate: "",
+    description: "",
+    image_url: "",
     battery_level: 100,
+    status: "available",
   })
 
   const [pricingForm, setPricingForm] = useState({
@@ -329,37 +328,42 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
   }
 
   const handleSaveVehicle = async () => {
-    if (!selectedStructure) return
+    if (!vehicleForm.code || !vehicleForm.vehicle_type_id) {
+      toast({ title: "Errore", description: "Compila i campi obbligatori", variant: "destructive" })
+      return
+    }
 
     try {
-      const response = await fetch("/api/ecomobility/admin/vehicles", {
-        method: editingVehicle ? "PUT" : "POST",
+      const method = editingVehicle ? "PUT" : "POST"
+      const body = editingVehicle
+        ? { id: editingVehicle.id, ...vehicleForm }
+        : { ...vehicleForm, structure_id: selectedStructure?.id }
+
+      const res = await fetch("/api/ecomobility/admin/vehicles", {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...vehicleForm,
-          id: editingVehicle?.id,
-          structure_id: selectedStructure.id,
-        }),
+        body: JSON.stringify(body),
       })
 
-      if (!response.ok) throw new Error("Errore salvataggio")
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || "Errore nel salvataggio")
+      }
 
-      toast({ title: editingVehicle ? "Veicolo aggiornato" : "Veicolo aggiunto" })
+      toast({ title: "Successo", description: editingVehicle ? "Veicolo aggiornato" : "Veicolo aggiunto" })
       setVehicleDialogOpen(false)
-      setEditingVehicle(null)
       setVehicleForm({
-        internal_code: "",
+        code: "",
+        name: "",
         vehicle_type_id: "",
-        brand: "",
-        model: "",
-        color: "",
-        serial_number: "",
-        license_plate: "",
+        description: "",
+        image_url: "",
         battery_level: 100,
+        status: "available",
       })
       loadData()
-    } catch (error) {
-      toast({ title: "Errore salvataggio veicolo", variant: "destructive" })
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" })
     }
   }
 
@@ -947,14 +951,15 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>{editingVehicle ? "Modifica veicolo" : "Nuovo veicolo"}</DialogTitle>
+                      <DialogDescription>Inserisci i dati del veicolo</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>Codice interno *</Label>
                           <Input
-                            value={vehicleForm.internal_code}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, internal_code: e.target.value })}
+                            value={vehicleForm.code}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, code: e.target.value })}
                             placeholder="es. EBIKE-001"
                           />
                         </div>
@@ -977,48 +982,61 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                           </Select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Marca</Label>
-                          <Input
-                            value={vehicleForm.brand}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, brand: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Modello</Label>
-                          <Input
-                            value={vehicleForm.model}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Colore</Label>
-                          <Input
-                            value={vehicleForm.color}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Targa</Label>
-                          <Input
-                            value={vehicleForm.license_plate}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, license_plate: e.target.value })}
-                          />
-                        </div>
-                      </div>
                       <div>
-                        <Label>Numero di serie</Label>
+                        <Label>Nome veicolo</Label>
                         <Input
-                          value={vehicleForm.serial_number}
-                          onChange={(e) => setVehicleForm({ ...vehicleForm, serial_number: e.target.value })}
+                          value={vehicleForm.name}
+                          onChange={(e) => setVehicleForm({ ...vehicleForm, name: e.target.value })}
+                          placeholder="es. E-Bike City Blu"
                         />
                       </div>
-                      <Button onClick={handleSaveVehicle} className="w-full">
-                        {editingVehicle ? "Salva modifiche" : "Aggiungi veicolo"}
-                      </Button>
+                      <div>
+                        <Label>Descrizione</Label>
+                        <Input
+                          value={vehicleForm.description}
+                          onChange={(e) => setVehicleForm({ ...vehicleForm, description: e.target.value })}
+                          placeholder="Descrizione opzionale"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Livello batteria (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={vehicleForm.battery_level}
+                            onChange={(e) =>
+                              setVehicleForm({ ...vehicleForm, battery_level: Number.parseInt(e.target.value) || 0 })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>Stato</Label>
+                          <Select
+                            value={vehicleForm.status}
+                            onValueChange={(v) => setVehicleForm({ ...vehicleForm, status: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Disponibile</SelectItem>
+                              <SelectItem value="charging">In carica</SelectItem>
+                              <SelectItem value="maintenance">Manutenzione</SelectItem>
+                              <SelectItem value="unavailable">Non disponibile</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setVehicleDialogOpen(false)}>
+                          Annulla
+                        </Button>
+                        <Button onClick={handleSaveVehicle}>
+                          {editingVehicle ? "Salva modifiche" : "Aggiungi veicolo"}
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -1085,13 +1103,13 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                           onClick={() => {
                             setEditingVehicle(vehicle)
                             setVehicleForm({
-                              internal_code: vehicle.internal_code,
+                              code: vehicle.internal_code,
+                              name: `${vehicle.brand} ${vehicle.model}`,
                               vehicle_type_id: vehicle.vehicle_type?.id || "",
-                              brand: vehicle.brand || "",
-                              model: vehicle.model || "",
-                              color: vehicle.color || "",
-                              serial_number: "",
-                              license_plate: "",
+                              description: "", // Assuming description might be new field
+                              image_url: "", // Assuming image_url might be new field
+                              battery_level: vehicle.battery_level || 100,
+                              status: vehicle.status,
                             })
                             setVehicleDialogOpen(true)
                           }}
