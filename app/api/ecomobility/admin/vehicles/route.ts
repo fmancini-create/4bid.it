@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { structure_id, vehicle_type_id, code, name, description, image_url } = body
+  const { structure_id, vehicle_type_id, internal_code, brand, model, color, serial_number, license_plate } = body
 
-  if (!structure_id || !vehicle_type_id || !code || !name) {
+  if (!structure_id || !vehicle_type_id || !internal_code) {
     return NextResponse.json({ error: "Dati mancanti" }, { status: 400 })
   }
 
@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
     .insert({
       structure_id,
       vehicle_type_id,
-      code,
-      name,
-      description,
-      image_url,
+      internal_code,
+      brand,
+      model,
+      color,
+      serial_number,
+      license_plate,
       status: "available",
-      battery_level: 100,
-      battery_status: "available",
     })
     .select()
     .single()
