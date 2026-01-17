@@ -1,0 +1,1446 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { Progress } from "@/components/ui/progress"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useToast } from "@/hooks/use-toast"
+import {
+  Bike,
+  Building2,
+  Calendar,
+  Settings,
+  Plus,
+  Edit,
+  Eye,
+  CheckCircle2,
+  Clock,
+  Battery,
+  BatteryLow,
+  BatteryCharging,
+  BatteryFull,
+  BatteryMedium,
+  TrendingUp,
+  Euro,
+  AlertTriangle,
+  Search,
+  RefreshCw,
+  FileText,
+  Zap,
+  Timer,
+} from "lucide-react"
+
+interface Vehicle {
+  id: string
+  internal_code: string
+  brand: string
+  model: string
+  color: string
+  status: string
+  battery_level: number | null
+  battery_status: "available" | "low_battery" | "charging" | "unavailable"
+  estimated_range_km: number | null
+  estimated_available_time: string | null
+  charge_start_time: string | null
+  full_charge_hours: number
+  total_rentals: number
+  vehicle_type: VehicleType
+}
+
+interface Structure {
+  id: string
+  name: string
+  slug: string
+  description: string
+  city: string
+  province: string
+  email: string
+  phone: string
+  is_active: boolean
+  primary_color: string
+  min_battery_threshold: number
+  default_charge_hours: number
+}
+
+interface VehicleType {
+  id: string
+  name: string
+  slug: string
+  category: string
+  requires_license_type: string
+  range_km: number
+}
+
+interface Booking {
+  id: string
+  booking_code: string
+  pickup_date: string
+  pickup_time: string
+  status: string
+  estimated_amount: number
+  final_amount: number
+  battery_level_pickup: number | null
+  battery_level_return: number | null
+  created_at: string
+  customer: {
+    first_name: string
+    last_name: string
+    email: string
+    phone: string
+    documents_status: string
+  }
+  vehicle: {
+    internal_code: string
+    vehicle_type: { name: string }
+  }
+}
+
+interface Pricing {
+  id: string
+  name: string
+  min_price: number
+  price_first_hour: number
+  max_price_day: number
+  deposit_amount: number
+  is_active: boolean
+  vehicle_type: VehicleType
+}
+
+interface Props {
+  structures: Structure[]
+  vehicleTypes: VehicleType[]
+}
+
+export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
+  const { toast } = useToast()
+  const [selectedStructure, setSelectedStructure] = useState<Structure | null>(structures[0] || null)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Data states
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [pricing, setPricing] = useState<Pricing[]>([])
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    activeRentals: 0,
+    totalRevenue: 0,
+    availableVehicles: 0,
+    chargingVehicles: 0,
+    lowBatteryVehicles: 0,
+  })
+
+  // Dialog states
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false)
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false)
+  const [batteryDialogOpen, setBatteryDialogOpen] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
+  const [editingPricing, setEditingPricing] = useState<Pricing | null>(null)
+  const [selectedVehicleForBattery, setSelectedVehicleForBattery] = useState<Vehicle | null>(null)
+  const [newBatteryLevel, setNewBatteryLevel] = useState<number>(100)
+
+  // Form states
+  const [vehicleForm, setVehicleForm] = useState({
+    internal_code: "",
+    vehicle_type_id: "",
+    brand: "",
+    model: "",
+    color: "",
+    serial_number: "",
+    license_plate: "",
+    battery_level: 100,
+  })
+
+  const [pricingForm, setPricingForm] = useState({
+    name: "",
+    vehicle_type_id: "",
+    min_price: 10,
+    price_first_hour: 15,
+    price_second_hour: 12,
+    price_third_hour: 10,
+    price_per_hour_after: 8,
+    max_price_day: 45,
+    deposit_amount: 100,
+  })
+
+  // Search/filter
+  const [bookingFilter, setBookingFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  useEffect(() => {
+    if (selectedStructure) {
+      loadData()
+    }
+  }, [selectedStructure])
+
+  const loadData = async () => {
+    if (!selectedStructure) return
+    setIsLoading(true)
+
+    try {
+      // Load vehicles
+      const vehiclesRes = await fetch(`/api/ecomobility/admin/vehicles?structureId=${selectedStructure.id}`)
+      const vehiclesData = await vehiclesRes.json()
+      setVehicles(vehiclesData.vehicles || [])
+
+      // Load bookings
+      const bookingsRes = await fetch(`/api/ecomobility/admin/bookings?structureId=${selectedStructure.id}`)
+      const bookingsData = await bookingsRes.json()
+      setBookings(bookingsData.bookings || [])
+
+      // Load pricing
+      const pricingRes = await fetch(`/api/ecomobility/admin/pricing?structureId=${selectedStructure.id}`)
+      const pricingData = await pricingRes.json()
+      setPricing(pricingData.pricing || [])
+
+      // Calculate stats including battery stats
+      const vehiclesList = vehiclesData.vehicles || []
+      const activeRentals = (bookingsData.bookings || []).filter((b: Booking) => b.status === "picked_up").length
+      const availableVehicles = vehiclesList.filter(
+        (v: Vehicle) => v.status === "available" && v.battery_status === "available",
+      ).length
+      const chargingVehicles = vehiclesList.filter(
+        (v: Vehicle) => v.battery_status === "charging" || v.status === "charging",
+      ).length
+      const lowBatteryVehicles = vehiclesList.filter((v: Vehicle) => v.battery_status === "low_battery").length
+      const totalRevenue = (bookingsData.bookings || [])
+        .filter((b: Booking) => b.status === "completed")
+        .reduce((sum: number, b: Booking) => sum + (b.final_amount || 0), 0)
+
+      setStats({
+        totalBookings: (bookingsData.bookings || []).length,
+        activeRentals,
+        totalRevenue,
+        availableVehicles,
+        chargingVehicles,
+        lowBatteryVehicles,
+      })
+    } catch (error) {
+      console.error("[v0] Error loading data:", error)
+      toast({ title: "Errore caricamento dati", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getBatteryIcon = (level: number | null, status: string) => {
+    if (status === "charging") return <BatteryCharging className="h-4 w-4 text-yellow-500" />
+    if (level === null || status === "unavailable") return <Battery className="h-4 w-4 text-gray-400" />
+    if (level < 25) return <BatteryLow className="h-4 w-4 text-red-500" />
+    if (level < 50) return <BatteryMedium className="h-4 w-4 text-yellow-500" />
+    if (level < 75) return <BatteryMedium className="h-4 w-4 text-green-500" />
+    return <BatteryFull className="h-4 w-4 text-green-500" />
+  }
+
+  const getChargingTimeRemaining = (vehicle: Vehicle) => {
+    if (!vehicle.estimated_available_time) return null
+    const availableTime = new Date(vehicle.estimated_available_time)
+    const now = new Date()
+    const diffMs = availableTime.getTime() - now.getTime()
+    if (diffMs <= 0) return "Pronto"
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}min`
+  }
+
+  const handleUpdateBatteryLevel = async () => {
+    if (!selectedVehicleForBattery) return
+
+    try {
+      const response = await fetch("/api/ecomobility/admin/vehicles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedVehicleForBattery.id,
+          battery_level: newBatteryLevel,
+          battery_update_type: "manual_update",
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore aggiornamento")
+
+      toast({ title: "Livello batteria aggiornato" })
+      setBatteryDialogOpen(false)
+      setSelectedVehicleForBattery(null)
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore aggiornamento batteria", variant: "destructive" })
+    }
+  }
+
+  const handleSetCharging = async (vehicleId: string) => {
+    try {
+      const response = await fetch("/api/ecomobility/admin/vehicles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: vehicleId,
+          status: "charging",
+          battery_status: "charging",
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore aggiornamento")
+
+      toast({ title: "Veicolo messo in ricarica" })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore", variant: "destructive" })
+    }
+  }
+
+  const handleSetCharged = async (vehicleId: string, batteryLevel = 100) => {
+    try {
+      const response = await fetch("/api/ecomobility/admin/vehicles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: vehicleId,
+          status: "available",
+          battery_level: batteryLevel,
+          battery_status: "available",
+          battery_update_type: "charge_end",
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore aggiornamento")
+
+      toast({ title: "Veicolo pronto e disponibile" })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore", variant: "destructive" })
+    }
+  }
+
+  const handleSaveVehicle = async () => {
+    if (!selectedStructure) return
+
+    try {
+      const response = await fetch("/api/ecomobility/admin/vehicles", {
+        method: editingVehicle ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...vehicleForm,
+          id: editingVehicle?.id,
+          structure_id: selectedStructure.id,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore salvataggio")
+
+      toast({ title: editingVehicle ? "Veicolo aggiornato" : "Veicolo aggiunto" })
+      setVehicleDialogOpen(false)
+      setEditingVehicle(null)
+      setVehicleForm({
+        internal_code: "",
+        vehicle_type_id: "",
+        brand: "",
+        model: "",
+        color: "",
+        serial_number: "",
+        license_plate: "",
+        battery_level: 100,
+      })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore salvataggio veicolo", variant: "destructive" })
+    }
+  }
+
+  const handleSavePricing = async () => {
+    if (!selectedStructure) return
+
+    try {
+      const response = await fetch("/api/ecomobility/admin/pricing", {
+        method: editingPricing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...pricingForm,
+          id: editingPricing?.id,
+          structure_id: selectedStructure.id,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Errore salvataggio")
+
+      toast({ title: editingPricing ? "Tariffa aggiornata" : "Tariffa aggiunta" })
+      setPricingDialogOpen(false)
+      setEditingPricing(null)
+      setPricingForm({
+        name: "",
+        vehicle_type_id: "",
+        min_price: 10,
+        price_first_hour: 15,
+        price_second_hour: 12,
+        price_third_hour: 10,
+        price_per_hour_after: 8,
+        max_price_day: 45,
+        deposit_amount: 100,
+      })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore salvataggio tariffa", variant: "destructive" })
+    }
+  }
+
+  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await fetch("/api/ecomobility/admin/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: bookingId, status: newStatus }),
+      })
+
+      if (!response.ok) throw new Error("Errore aggiornamento")
+
+      toast({ title: "Stato aggiornato" })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore aggiornamento stato", variant: "destructive" })
+    }
+  }
+
+  const handleUpdateVehicleStatus = async (vehicleId: string, newStatus: string) => {
+    try {
+      const response = await fetch("/api/ecomobility/admin/vehicles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: vehicleId, status: newStatus }),
+      })
+
+      if (!response.ok) throw new Error("Errore aggiornamento")
+
+      toast({ title: "Stato veicolo aggiornato" })
+      loadData()
+    } catch (error) {
+      toast({ title: "Errore aggiornamento stato", variant: "destructive" })
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<
+      string,
+      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+    > = {
+      pending: { label: "In attesa", variant: "secondary" },
+      confirmed: { label: "Confermato", variant: "default" },
+      ready: { label: "Pronto ritiro", variant: "default" },
+      picked_up: { label: "In corso", variant: "default" },
+      returned: { label: "Riconsegnato", variant: "outline" },
+      completed: { label: "Completato", variant: "outline" },
+      cancelled: { label: "Annullato", variant: "destructive" },
+      available: { label: "Disponibile", variant: "default" },
+      rented: { label: "Noleggiato", variant: "secondary" },
+      maintenance: { label: "Manutenzione", variant: "destructive" },
+      charging: { label: "In carica", variant: "secondary" },
+    }
+    const config = statusConfig[status] || { label: status, variant: "outline" as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const getBatteryStatusBadge = (vehicle: Vehicle) => {
+    const level = vehicle.battery_level
+    const status = vehicle.battery_status
+    const minThreshold = selectedStructure?.min_battery_threshold || 40
+
+    if (status === "charging") {
+      const timeRemaining = getChargingTimeRemaining(vehicle)
+      return (
+        <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+          <BatteryCharging className="h-3 w-3 mr-1" />
+          In carica {timeRemaining && `(${timeRemaining})`}
+        </Badge>
+      )
+    }
+
+    if (status === "low_battery" || (level !== null && level < minThreshold)) {
+      return (
+        <Badge variant="destructive">
+          <BatteryLow className="h-3 w-3 mr-1" />
+          {level}% - Scarico
+        </Badge>
+      )
+    }
+
+    if (status === "unavailable" || level === null) {
+      return (
+        <Badge variant="outline">
+          <Battery className="h-3 w-3 mr-1" />
+          N/D
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="default" className="bg-green-100 text-green-700">
+        {getBatteryIcon(level, status)}
+        <span className="ml-1">{level}%</span>
+      </Badge>
+    )
+  }
+
+  const filteredBookings = bookings.filter((booking) => {
+    if (bookingFilter !== "all" && booking.status !== bookingFilter) return false
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      return (
+        booking.booking_code.toLowerCase().includes(query) ||
+        booking.customer?.first_name?.toLowerCase().includes(query) ||
+        booking.customer?.last_name?.toLowerCase().includes(query) ||
+        booking.customer?.email?.toLowerCase().includes(query)
+      )
+    }
+    return true
+  })
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Bike className="h-6 w-6 text-orange-500" />
+              <h1 className="text-xl font-bold">Ecomobility Admin</h1>
+            </div>
+
+            {structures.length > 1 && (
+              <Select
+                value={selectedStructure?.id}
+                onValueChange={(id) => setSelectedStructure(structures.find((s) => s.id === id) || null)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Seleziona struttura" />
+                </SelectTrigger>
+                <SelectContent>
+                  {structures.map((structure) => (
+                    <SelectItem key={structure.id} value={structure.id}>
+                      {structure.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+              Aggiorna
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/admin">Torna a 4BID Admin</a>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {selectedStructure ? (
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-6">
+              <TabsTrigger value="overview">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="bookings">
+                <Calendar className="h-4 w-4 mr-2" />
+                Prenotazioni
+              </TabsTrigger>
+              <TabsTrigger value="vehicles">
+                <Bike className="h-4 w-4 mr-2" />
+                Flotta
+              </TabsTrigger>
+              <TabsTrigger value="pricing">
+                <Euro className="h-4 w-4 mr-2" />
+                Tariffe
+              </TabsTrigger>
+              <TabsTrigger value="settings">
+                <Settings className="h-4 w-4 mr-2" />
+                Impostazioni
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              {/* Stats Cards - includes battery stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Prenotazioni</p>
+                        <p className="text-2xl font-bold">{stats.totalBookings}</p>
+                      </div>
+                      <Calendar className="h-8 w-8 text-orange-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Noleggi attivi</p>
+                        <p className="text-2xl font-bold">{stats.activeRentals}</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-blue-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ricavi</p>
+                        <p className="text-2xl font-bold">€{stats.totalRevenue.toFixed(0)}</p>
+                      </div>
+                      <Euro className="h-8 w-8 text-green-500 opacity-50" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-green-700">Disponibili</p>
+                        <p className="text-2xl font-bold text-green-700">{stats.availableVehicles}</p>
+                      </div>
+                      <BatteryFull className="h-8 w-8 text-green-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-yellow-700">In carica</p>
+                        <p className="text-2xl font-bold text-yellow-700">{stats.chargingVehicles}</p>
+                      </div>
+                      <BatteryCharging className="h-8 w-8 text-yellow-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-red-700">Batteria bassa</p>
+                        <p className="text-2xl font-bold text-red-700">{stats.lowBatteryVehicles}</p>
+                      </div>
+                      <BatteryLow className="h-8 w-8 text-red-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Fleet Status with Battery Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Battery className="h-5 w-5" />
+                    Stato flotta e batterie
+                  </CardTitle>
+                  <CardDescription>
+                    Soglia minima batteria: {selectedStructure.min_battery_threshold || 40}%
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {vehicles.map((vehicle) => {
+                      const minThreshold = selectedStructure.min_battery_threshold || 40
+                      const isBookable =
+                        vehicle.status === "available" &&
+                        vehicle.battery_status === "available" &&
+                        vehicle.battery_level !== null &&
+                        vehicle.battery_level >= minThreshold
+
+                      return (
+                        <div
+                          key={vehicle.id}
+                          className={`p-4 rounded-lg border transition-colors ${
+                            isBookable
+                              ? "border-green-200 bg-green-50"
+                              : vehicle.battery_status === "charging"
+                                ? "border-yellow-200 bg-yellow-50"
+                                : vehicle.status === "rented"
+                                  ? "border-blue-200 bg-blue-50"
+                                  : "border-red-200 bg-red-50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-mono text-sm font-medium">{vehicle.internal_code}</span>
+                            {getBatteryStatusBadge(vehicle)}
+                          </div>
+
+                          <p className="text-sm text-muted-foreground mb-2">{vehicle.vehicle_type?.name}</p>
+
+                          {/* Battery level bar */}
+                          {vehicle.battery_level !== null && (
+                            <div className="mb-2">
+                              <Progress
+                                value={vehicle.battery_level}
+                                className={`h-2 ${
+                                  vehicle.battery_level < 25
+                                    ? "[&>div]:bg-red-500"
+                                    : vehicle.battery_level < 50
+                                      ? "[&>div]:bg-yellow-500"
+                                      : "[&>div]:bg-green-500"
+                                }`}
+                              />
+                            </div>
+                          )}
+
+                          {/* Estimated range */}
+                          {vehicle.estimated_range_km && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+                              <Zap className="h-3 w-3" />~{vehicle.estimated_range_km} km autonomia
+                            </p>
+                          )}
+
+                          {/* Charging time remaining */}
+                          {vehicle.battery_status === "charging" && (
+                            <p className="text-xs text-yellow-700 flex items-center gap-1 mb-2">
+                              <Timer className="h-3 w-3" />
+                              {getChargingTimeRemaining(vehicle) || "Tempo stimato N/D"}
+                            </p>
+                          )}
+
+                          {/* Quick actions */}
+                          <div className="flex gap-1 mt-2">
+                            {vehicle.battery_status === "charging" && (
+                              <Button size="sm" variant="outline" onClick={() => handleSetCharged(vehicle.id, 100)}>
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Carico
+                              </Button>
+                            )}
+                            {vehicle.battery_status === "low_battery" && (
+                              <Button size="sm" variant="outline" onClick={() => handleSetCharging(vehicle.id)}>
+                                <BatteryCharging className="h-3 w-3 mr-1" />
+                                Ricarica
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedVehicleForBattery(vehicle)
+                                setNewBatteryLevel(vehicle.battery_level || 50)
+                                setBatteryDialogOpen(true)
+                              }}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Bookings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Prenotazioni recenti</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Codice</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Veicolo</TableHead>
+                        <TableHead>Data ritiro</TableHead>
+                        <TableHead>Batteria</TableHead>
+                        <TableHead>Stato</TableHead>
+                        <TableHead>Importo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookings.slice(0, 5).map((booking) => (
+                        <TableRow key={booking.id}>
+                          <TableCell className="font-mono text-sm">{booking.booking_code}</TableCell>
+                          <TableCell>
+                            {booking.customer?.first_name} {booking.customer?.last_name}
+                          </TableCell>
+                          <TableCell>{booking.vehicle?.vehicle_type?.name}</TableCell>
+                          <TableCell>{booking.pickup_date}</TableCell>
+                          <TableCell>
+                            {booking.battery_level_pickup !== null && (
+                              <span className="text-xs">
+                                {booking.battery_level_pickup}%
+                                {booking.battery_level_return !== null && ` → ${booking.battery_level_return}%`}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                          <TableCell>€{booking.final_amount || booking.estimated_amount || 0}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ... existing bookings, vehicles, pricing, settings tabs ... */}
+            <TabsContent value="bookings" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cerca prenotazione..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 w-[300px]"
+                    />
+                  </div>
+                  <Select value={bookingFilter} onValueChange={setBookingFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filtra per stato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti gli stati</SelectItem>
+                      <SelectItem value="pending">In attesa</SelectItem>
+                      <SelectItem value="confirmed">Confermati</SelectItem>
+                      <SelectItem value="picked_up">In corso</SelectItem>
+                      <SelectItem value="returned">Riconsegnati</SelectItem>
+                      <SelectItem value="completed">Completati</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" asChild>
+                  <a href="/admin/ecomobility/documents">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Verifica documenti
+                  </a>
+                </Button>
+              </div>
+
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Codice</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Contatto</TableHead>
+                      <TableHead>Veicolo</TableHead>
+                      <TableHead>Data ritiro</TableHead>
+                      <TableHead>Documenti</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Importo</TableHead>
+                      <TableHead>Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell className="font-mono text-sm">{booking.booking_code}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {booking.customer?.first_name} {booking.customer?.last_name}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <p>{booking.customer?.email}</p>
+                            <p className="text-muted-foreground">{booking.customer?.phone}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{booking.vehicle?.vehicle_type?.name}</p>
+                            <p className="text-sm text-muted-foreground">{booking.vehicle?.internal_code}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{booking.pickup_date}</p>
+                            <p className="text-sm text-muted-foreground">{booking.pickup_time}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {booking.customer?.documents_status === "verified" ? (
+                            <Badge variant="default" className="bg-green-500">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Verificati
+                            </Badge>
+                          ) : booking.customer?.documents_status === "submitted" ? (
+                            <Badge variant="secondary">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Da verificare
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Mancanti
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>€{booking.final_amount || booking.estimated_amount || 0}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {booking.status === "confirmed" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUpdateBookingStatus(booking.id, "picked_up")}
+                              >
+                                Ritiro
+                              </Button>
+                            )}
+                            {booking.status === "returned" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUpdateBookingStatus(booking.id, "completed")}
+                              >
+                                Completa
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="vehicles" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Gestione Flotta</h2>
+                <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setEditingVehicle(null)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Aggiungi veicolo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingVehicle ? "Modifica veicolo" : "Nuovo veicolo"}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Codice interno *</Label>
+                          <Input
+                            value={vehicleForm.internal_code}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, internal_code: e.target.value })}
+                            placeholder="es. EBIKE-001"
+                          />
+                        </div>
+                        <div>
+                          <Label>Tipo veicolo *</Label>
+                          <Select
+                            value={vehicleForm.vehicle_type_id}
+                            onValueChange={(v) => setVehicleForm({ ...vehicleForm, vehicle_type_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.id}>
+                                  {type.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Marca</Label>
+                          <Input
+                            value={vehicleForm.brand}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, brand: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Modello</Label>
+                          <Input
+                            value={vehicleForm.model}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Colore</Label>
+                          <Input
+                            value={vehicleForm.color}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Targa</Label>
+                          <Input
+                            value={vehicleForm.license_plate}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, license_plate: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Numero di serie</Label>
+                        <Input
+                          value={vehicleForm.serial_number}
+                          onChange={(e) => setVehicleForm({ ...vehicleForm, serial_number: e.target.value })}
+                        />
+                      </div>
+                      <Button onClick={handleSaveVehicle} className="w-full">
+                        {editingVehicle ? "Salva modifiche" : "Aggiungi veicolo"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {vehicles.map((vehicle) => (
+                  <Card key={vehicle.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-mono font-bold">{vehicle.internal_code}</p>
+                          <p className="text-sm text-muted-foreground">{vehicle.vehicle_type?.name}</p>
+                        </div>
+                        {getStatusBadge(vehicle.status)}
+                      </div>
+                      <div className="space-y-1 text-sm mb-3">
+                        <p>
+                          <span className="text-muted-foreground">Marca:</span> {vehicle.brand || "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Modello:</span> {vehicle.model || "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Colore:</span> {vehicle.color || "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Noleggi:</span> {vehicle.total_rentals || 0}
+                        </p>
+                      </div>
+                      {vehicle.battery_level !== null && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <Battery className="h-4 w-4" />
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${
+                                vehicle.battery_level > 50
+                                  ? "bg-green-500"
+                                  : vehicle.battery_level > 20
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                              }`}
+                              style={{ width: `${vehicle.battery_level}%` }}
+                            />
+                          </div>
+                          <span className="text-xs">{vehicle.battery_level}%</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Select value={vehicle.status} onValueChange={(v) => handleUpdateVehicleStatus(vehicle.id, v)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">Disponibile</SelectItem>
+                            <SelectItem value="maintenance">Manutenzione</SelectItem>
+                            <SelectItem value="charging">In carica</SelectItem>
+                            <SelectItem value="damaged">Danneggiato</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingVehicle(vehicle)
+                            setVehicleForm({
+                              internal_code: vehicle.internal_code,
+                              vehicle_type_id: vehicle.vehicle_type?.id || "",
+                              brand: vehicle.brand || "",
+                              model: vehicle.model || "",
+                              color: vehicle.color || "",
+                              serial_number: "",
+                              license_plate: "",
+                            })
+                            setVehicleDialogOpen(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* Pricing Tab */}
+            <TabsContent value="pricing" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Gestione Tariffe</h2>
+                <Dialog open={pricingDialogOpen} onOpenChange={setPricingDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setEditingPricing(null)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuova tariffa
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>{editingPricing ? "Modifica tariffa" : "Nuova tariffa"}</DialogTitle>
+                      <DialogDescription>
+                        Configura il pricing decrescente: più il cliente usa, meno paga all'ora.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Nome tariffa *</Label>
+                          <Input
+                            value={pricingForm.name}
+                            onChange={(e) => setPricingForm({ ...pricingForm, name: e.target.value })}
+                            placeholder="es. Tariffa Standard"
+                          />
+                        </div>
+                        <div>
+                          <Label>Tipo veicolo *</Label>
+                          <Select
+                            value={pricingForm.vehicle_type_id}
+                            onValueChange={(v) => setPricingForm({ ...pricingForm, vehicle_type_id: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vehicleTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.id}>
+                                  {type.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <p className="font-medium text-sm">Pricing decrescente</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">1ª ora (€)</Label>
+                            <Input
+                              type="number"
+                              value={pricingForm.price_first_hour}
+                              onChange={(e) =>
+                                setPricingForm({ ...pricingForm, price_first_hour: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">2ª ora (€)</Label>
+                            <Input
+                              type="number"
+                              value={pricingForm.price_second_hour}
+                              onChange={(e) =>
+                                setPricingForm({ ...pricingForm, price_second_hour: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">3ª ora (€)</Label>
+                            <Input
+                              type="number"
+                              value={pricingForm.price_third_hour}
+                              onChange={(e) =>
+                                setPricingForm({ ...pricingForm, price_third_hour: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Ore successive (€)</Label>
+                            <Input
+                              type="number"
+                              value={pricingForm.price_per_hour_after}
+                              onChange={(e) =>
+                                setPricingForm({ ...pricingForm, price_per_hour_after: Number(e.target.value) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs">Minimo (€)</Label>
+                          <Input
+                            type="number"
+                            value={pricingForm.min_price}
+                            onChange={(e) => setPricingForm({ ...pricingForm, min_price: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Max giorno (€)</Label>
+                          <Input
+                            type="number"
+                            value={pricingForm.max_price_day}
+                            onChange={(e) => setPricingForm({ ...pricingForm, max_price_day: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Cauzione (€)</Label>
+                          <Input
+                            type="number"
+                            value={pricingForm.deposit_amount}
+                            onChange={(e) => setPricingForm({ ...pricingForm, deposit_amount: Number(e.target.value) })}
+                          />
+                        </div>
+                      </div>
+
+                      <Button onClick={handleSavePricing} className="w-full">
+                        {editingPricing ? "Salva modifiche" : "Crea tariffa"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pricing.map((p) => (
+                  <Card key={p.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base">{p.name}</CardTitle>
+                          <CardDescription>{p.vehicle_type?.name}</CardDescription>
+                        </div>
+                        <Badge variant={p.is_active ? "default" : "secondary"}>
+                          {p.is_active ? "Attiva" : "Inattiva"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">1ª ora</span>
+                          <span className="font-medium">€{p.price_first_hour}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Max giorno</span>
+                          <span className="font-medium">€{p.max_price_day}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Cauzione</span>
+                          <span>€{p.deposit_amount}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 bg-transparent"
+                          onClick={() => {
+                            setEditingPricing(p)
+                            setPricingForm({
+                              name: p.name,
+                              vehicle_type_id: p.vehicle_type?.id || "",
+                              min_price: p.min_price,
+                              price_first_hour: p.price_first_hour,
+                              price_second_hour: 0,
+                              price_third_hour: 0,
+                              price_per_hour_after: 0,
+                              max_price_day: p.max_price_day,
+                              deposit_amount: p.deposit_amount,
+                            })
+                            setPricingDialogOpen(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Modifica
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Impostazioni struttura</CardTitle>
+                  <CardDescription>Configura i dettagli della tua struttura</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nome struttura</Label>
+                      <Input value={selectedStructure.name} readOnly />
+                    </div>
+                    <div>
+                      <Label>Slug URL</Label>
+                      <Input value={selectedStructure.slug} readOnly />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Descrizione</Label>
+                    <Textarea value={selectedStructure.description || ""} rows={3} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Email</Label>
+                      <Input value={selectedStructure.email || ""} />
+                    </div>
+                    <div>
+                      <Label>Telefono</Label>
+                      <Input value={selectedStructure.phone || ""} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Città</Label>
+                      <Input value={selectedStructure.city || ""} />
+                    </div>
+                    <div>
+                      <Label>Provincia</Label>
+                      <Input value={selectedStructure.province || ""} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Colore primario</Label>
+                      <div className="flex gap-2">
+                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" />
+                        <div
+                          className="w-10 h-10 rounded border"
+                          style={{ backgroundColor: selectedStructure.primary_color || "#f97316" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <Button>Salva impostazioni</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Link pubblico</CardTitle>
+                  <CardDescription>Condividi questo link con i tuoi clienti</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Input
+                      value={`https://4bid.it/ecomobility/${selectedStructure.slug}`}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://4bid.it/ecomobility/${selectedStructure.slug}`)
+                        toast({ title: "Link copiato!" })
+                      }}
+                    >
+                      Copia
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Battery Update Dialog */}
+          <Dialog open={batteryDialogOpen} onOpenChange={setBatteryDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Aggiorna livello batteria</DialogTitle>
+                <DialogDescription>
+                  Veicolo: {selectedVehicleForBattery?.internal_code} - {selectedVehicleForBattery?.vehicle_type?.name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">0%</span>
+                  <div className="flex items-center gap-2">
+                    {getBatteryIcon(newBatteryLevel, "available")}
+                    <span className="text-2xl font-bold">{newBatteryLevel}%</span>
+                  </div>
+                  <span className="text-sm">100%</span>
+                </div>
+                <Slider
+                  value={[newBatteryLevel]}
+                  onValueChange={(value) => setNewBatteryLevel(value[0])}
+                  max={100}
+                  step={5}
+                />
+                <div className="grid grid-cols-4 gap-2">
+                  {[25, 50, 75, 100].map((level) => (
+                    <Button
+                      key={level}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewBatteryLevel(level)}
+                      className={newBatteryLevel === level ? "border-orange-500" : ""}
+                    >
+                      {level}%
+                    </Button>
+                  ))}
+                </div>
+                {newBatteryLevel < (selectedStructure?.min_battery_threshold || 40) && (
+                  <p className="text-sm text-yellow-600 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Sotto la soglia minima - il veicolo non sarà prenotabile
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setBatteryDialogOpen(false)}>
+                  Annulla
+                </Button>
+                <Button onClick={handleUpdateBatteryLevel}>Aggiorna</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </main>
+      ) : (
+        <main className="max-w-7xl mx-auto px-4 py-12">
+          <Card className="p-8 text-center">
+            <Building2 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Nessuna struttura configurata</h2>
+            <p className="text-muted-foreground">Configura una struttura per iniziare a gestire i noleggi.</p>
+          </Card>
+        </main>
+      )}
+    </div>
+  )
+}

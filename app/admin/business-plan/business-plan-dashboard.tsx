@@ -26,6 +26,15 @@ import {
   Copy,
   MessageSquare,
   Mail,
+  Upload,
+  ImageIcon,
+  Camera,
+  BedDouble,
+  Users,
+  Flower2,
+  UtensilsCrossed,
+  Presentation,
+  TreePine,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -52,6 +61,28 @@ interface BusinessPlanComment {
   content: string
   created_at: string
 }
+
+// ADDED: Interface for photos
+interface BusinessPlanPhoto {
+  id: string
+  business_plan_id: string
+  area: string
+  image_url: string
+  is_ai_generated: boolean
+  ai_prompt?: string
+  sort_order: number
+  created_at: string
+}
+
+const PHOTO_AREAS = [
+  { key: "building", label: "Edificio", icon: Building },
+  { key: "rooms", label: "Camere", icon: BedDouble },
+  { key: "common_areas", label: "Aree Comuni", icon: Users },
+  { key: "spa", label: "SPA", icon: Flower2 },
+  { key: "restaurant", label: "Ristorante", icon: UtensilsCrossed },
+  { key: "congress", label: "Centro Congressi", icon: Presentation },
+  { key: "garden", label: "Giardino/Esterni", icon: TreePine },
+]
 
 interface BusinessPlan {
   id: string
@@ -292,6 +323,10 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [commentAuthorEmail, setCommentAuthorEmail] = useState("")
   const [commentContent, setCommentContent] = useState("")
   const [commentSection, setCommentSection] = useState<string>("")
+  // ADDED: States for photos
+  const [photos, setPhotos] = useState<BusinessPlanPhoto[]>([])
+  const [generatingArea, setGeneratingArea] = useState<string | null>(null)
+  const [uploadingArea, setUploadingArea] = useState<string | null>(null)
 
   const selectedPlanId = selectedPlan?.id
   useEffect(() => {
@@ -301,6 +336,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       loadShares(selectedPlanId)
       // Load comments when a plan is selected
       loadComments(selectedPlanId)
+      // ADDED: Load photos when a plan is selected
+      loadPhotos(selectedPlanId)
     }
   }, [selectedPlanId])
 
@@ -643,6 +680,93 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     } catch (error) {
       console.error("Error deleting share:", error)
       toast.error("Errore nell'eliminazione")
+    }
+  }
+
+  // ADDED: Function to load photos
+  const loadPhotos = async (planId: string) => {
+    try {
+      const res = await fetch(`/api/business-plan/${planId}/photos`)
+      if (res.ok) {
+        const data = await res.json()
+        setPhotos(data)
+      }
+    } catch (error) {
+      console.error("[v0] Error loading photos:", error)
+    }
+  }
+
+  // ADDED: Function to generate photo
+  const generatePhoto = async (area: string) => {
+    if (!selectedPlan) return
+    setGeneratingArea(area)
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/photos/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ area }),
+      })
+      const data = await res.json()
+      if (res.ok && data.photo) {
+        setPhotos([...photos, data.photo])
+      } else {
+        alert(data.error || "Errore nella generazione")
+      }
+    } catch (error) {
+      console.error("[v0] Error generating photo:", error)
+      alert("Errore nella generazione dell'immagine")
+    } finally {
+      setGeneratingArea(null)
+    }
+  }
+
+  // ADDED: Function to upload photo
+  const uploadPhoto = async (area: string, file: File) => {
+    if (!selectedPlan) return
+    setUploadingArea(area)
+    try {
+      // Upload to Vercel Blob or use base64
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string
+        // Per ora salviamo come base64, in produzione usare Vercel Blob
+        const res = await fetch(`/api/business-plan/${selectedPlan.id}/photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            area,
+            image_url: base64, // Changed from photo_url to image_url
+            is_ai_generated: false,
+          }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          setPhotos([...photos, data])
+        } else {
+          alert(data.error || "Errore nel caricamento")
+        }
+        setUploadingArea(null)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error("[v0] Error uploading photo:", error)
+      alert("Errore nel caricamento dell'immagine")
+      setUploadingArea(null)
+    }
+  }
+
+  // ADDED: Function to delete photo
+  const deletePhoto = async (photoId: string) => {
+    if (!selectedPlan || !confirm("Eliminare questa foto?")) return
+    try {
+      const res = await fetch(`/api/business-plan/${selectedPlan.id}/photos?photoId=${photoId}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setPhotos(photos.filter((p) => p.id !== photoId))
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting photo:", error)
     }
   }
 
@@ -1086,11 +1210,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Generale</TabsTrigger>
             <TabsTrigger value="financials">Parametri</TabsTrigger>
             <TabsTrigger value="projections">Proiezioni</TabsTrigger>
             <TabsTrigger value="content">Contenuto</TabsTrigger>
+            <TabsTrigger value="photos">Foto</TabsTrigger>
             <TabsTrigger value="shares">Condivisioni</TabsTrigger>
             <TabsTrigger value="comments">Commenti</TabsTrigger>
           </TabsList>
@@ -2346,6 +2471,110 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                 </CardContent>
               </Card>
             ))}
+          </TabsContent>
+
+          {/* Tab Foto */}
+          <TabsContent value="photos" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="h-5 w-5" />
+                  Galleria Fotografica
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Carica fino a 3 foto per ogni area oppure generale con AI basandoti sui dati del progetto
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {PHOTO_AREAS.map((area) => {
+                  // Filtra per area e mostra solo se il servizio è attivo
+                  if (area.key === "spa" && !selectedPlan?.has_spa) return null
+                  if (area.key === "restaurant" && !selectedPlan?.has_restaurant) return null
+                  if (area.key === "congress" && !selectedPlan?.has_congress) return null
+
+                  const areaPhotos = photos.filter((p) => p.area === area.key)
+                  const canAddMore = areaPhotos.length < 3
+                  const AreaIcon = area.icon
+
+                  return (
+                    <div key={area.key} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          <AreaIcon className="h-5 w-5 text-primary" />
+                          {area.label}
+                          <span className="text-sm font-normal text-muted-foreground">({areaPhotos.length}/3)</span>
+                        </h3>
+                        {canAddMore && (
+                          <div className="flex gap-2">
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) uploadPhoto(area.key, file)
+                                }}
+                                disabled={uploadingArea === area.key}
+                              />
+                              <Button variant="outline" size="sm" disabled={uploadingArea === area.key} asChild>
+                                <span>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  {uploadingArea === area.key ? "Caricamento..." : "Carica"}
+                                </span>
+                              </Button>
+                            </label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => generatePhoto(area.key)}
+                              disabled={generatingArea === area.key}
+                            >
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              {generatingArea === area.key ? "Generazione..." : "Genera con AI"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {areaPhotos.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {areaPhotos.map((photo) => (
+                            <div key={photo.id} className="relative group">
+                              <img
+                                src={photo.image_url || "/placeholder.svg"} // Changed from photo_url to image_url
+                                alt={`${area.label} ${photo.sort_order + 1}`}
+                                className="w-full h-48 object-cover rounded-lg border"
+                              />
+                              {photo.is_ai_generated && (
+                                <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3" />
+                                  AI
+                                </span>
+                              )}
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                onClick={() => deletePhoto(photo.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                          <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>Nessuna foto per questa area</p>
+                          <p className="text-sm">Carica una foto o generala con AI</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="shares" className="space-y-6">
