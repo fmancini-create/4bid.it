@@ -997,4 +997,5 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   )
 }
 
+export { EcomobilityBookingPage }
 export default EcomobilityBookingPage

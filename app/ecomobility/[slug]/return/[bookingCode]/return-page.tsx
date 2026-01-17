@@ -412,4 +412,5 @@ const ReturnPage = ({ structure, booking }: Props) => {
   )
 }
 
+export { ReturnPage }
 export default ReturnPage
