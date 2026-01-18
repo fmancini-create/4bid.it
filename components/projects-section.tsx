@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle, Heart } from "lucide-react"
+import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle, Heart, Bike } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import InvestorInquiryModal from "@/components/investor-inquiry-modal"
@@ -83,6 +83,17 @@ export default function ProjectsSection() {
       color: "from-green-600 to-emerald-700",
       progress: "70%",
       href: "/progetti/risparmio-compulsivo",
+    },
+    {
+      id: "ecomobility",
+      name: "ECOMOBILITY",
+      tagline: "Più usi, meno paghi",
+      description: "La piattaforma per il noleggio di mobilità elettrica nelle strutture turistiche. E-bike, scooter e monopattini con tariffe decrescenti.",
+      logo: "/ecomobility-logo.png",
+      icon: Bike,
+      color: "from-orange-500 to-amber-500",
+      progress: "85%",
+      href: "/ecomobility/noleggio-mobilita-elettrica-hotel",
     },
   ]
 
