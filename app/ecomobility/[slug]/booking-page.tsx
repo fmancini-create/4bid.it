@@ -261,6 +261,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   const handlePayment = async () => {
     setIsLoading(true)
     try {
+      // 1. Crea la prenotazione
       const response = await fetch("/api/ecomobility/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,10 +280,34 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
 
       if (!response.ok) throw new Error("Errore nella prenotazione")
 
-      const data = await response.json()
-      setCurrentStep("confirmation")
-    } catch (error) {
-      toast({ title: "Errore durante il pagamento", variant: "destructive" })
+      const bookingData = await response.json()
+
+      // 2. Crea sessione Stripe Checkout
+      const checkoutRes = await fetch("/api/ecomobility/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: bookingData.booking_id,
+          structure_id: structure.id,
+          customer_email: customerData.email,
+          customer_name: `${customerData.firstName} ${customerData.lastName}`,
+          amount: selectedPricing?.min_price || 0,
+          deposit: selectedPricing?.deposit_amount || 0,
+          description: `${selectedVehicle?.vehicle_type?.name} - ${selectedVehicle?.brand} ${selectedVehicle?.model}`,
+        }),
+      })
+
+      const checkoutData = await checkoutRes.json()
+      if (!checkoutRes.ok) throw new Error(checkoutData.error || "Errore nel pagamento")
+
+      // 3. Redirect a Stripe Checkout
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url
+      } else {
+        throw new Error("Errore nella creazione del pagamento")
+      }
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message || "Errore durante il pagamento", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
