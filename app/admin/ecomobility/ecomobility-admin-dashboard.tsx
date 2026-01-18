@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -1510,6 +1512,24 @@ const handleSaveVehicle = async () => {
   
   {/* Billing Tab */}
   <TabsContent value="billing" className="space-y-6">
+  {/* Admin 4BID Banner */}
+  <Card className="bg-orange-50 border-orange-200">
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="font-medium">Pannello Amministrativo 4BID</p>
+  <p className="text-sm text-muted-foreground">Gestisci piani, abbonamenti e fatture di tutte le strutture</p>
+  </div>
+  <Link href="/admin/ecomobility/billing">
+  <Button className="bg-orange-500 hover:bg-orange-600">
+  <CreditCard className="h-4 w-4 mr-2" />
+  Gestione Fatturazione
+  </Button>
+  </Link>
+  </div>
+  </CardContent>
+  </Card>
+  
   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
   <Card>
   <CardContent className="p-4">
