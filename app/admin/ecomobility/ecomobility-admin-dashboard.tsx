@@ -47,6 +47,8 @@ import {
   ExternalLink,
   Trash2,
   Tag,
+  Wifi,
+  CreditCard,
 } from "lucide-react"
 
 interface Vehicle {
@@ -616,7 +618,7 @@ const handleSaveVehicle = async () => {
       {selectedStructure ? (
         <main className="max-w-7xl mx-auto px-4 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-6">
+            <TabsList className="grid grid-cols-7 w-full max-w-4xl mb-6">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -638,11 +640,19 @@ const handleSaveVehicle = async () => {
                 <Euro className="h-4 w-4 mr-2" />
                 Tariffe
               </TabsTrigger>
-              <TabsTrigger value="settings">
-                <Settings className="h-4 w-4 mr-2" />
-                Impostazioni
-              </TabsTrigger>
-            </TabsList>
+<TabsTrigger value="devices">
+  <Wifi className="h-4 w-4 mr-2" />
+  Dispositivi
+  </TabsTrigger>
+  <TabsTrigger value="billing">
+  <CreditCard className="h-4 w-4 mr-2" />
+  Fatturazione
+  </TabsTrigger>
+  <TabsTrigger value="settings">
+  <Settings className="h-4 w-4 mr-2" />
+  Impostazioni
+  </TabsTrigger>
+  </TabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
@@ -1472,8 +1482,132 @@ const handleSaveVehicle = async () => {
               </div>
             </TabsContent>
 
-            {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-6">
+{/* Devices Tab */}
+  <TabsContent value="devices" className="space-y-6">
+  <Card>
+  <CardHeader>
+  <div className="flex items-center justify-between">
+  <div>
+  <CardTitle>Dispositivi Hardware</CardTitle>
+  <CardDescription>Gestisci GPS tracker e lucchetti smart associati ai veicoli</CardDescription>
+  </div>
+  <Button onClick={() => toast({ title: "Coming soon", description: "Funzionalità in sviluppo" })}>
+  <Plus className="h-4 w-4 mr-2" />
+  Aggiungi dispositivo
+  </Button>
+  </div>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-12 text-muted-foreground">
+  <Wifi className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  <p className="text-lg font-medium mb-2">Nessun dispositivo configurato</p>
+  <p className="text-sm">Aggiungi GPS tracker e lucchetti smart per monitorare i tuoi veicoli.</p>
+  <p className="text-xs mt-4 text-orange-600">Contatta 4BID per acquistare i dispositivi hardware.</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Billing Tab */}
+  <TabsContent value="billing" className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Piano attuale</p>
+  <p className="text-xl font-bold">Starter</p>
+  </div>
+  <CreditCard className="h-8 w-8 text-orange-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Canone mensile</p>
+  <p className="text-xl font-bold">€49,00</p>
+  </div>
+  <Euro className="h-8 w-8 text-green-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Prossima fattura</p>
+  <p className="text-xl font-bold">01/02/2026</p>
+  </div>
+  <FileText className="h-8 w-8 text-blue-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  </div>
+  
+  <Card>
+  <CardHeader>
+  <CardTitle>Piani disponibili</CardTitle>
+  <CardDescription>Scegli il piano più adatto alle tue esigenze</CardDescription>
+  </CardHeader>
+  <CardContent>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div className="border rounded-lg p-6 bg-orange-50 border-orange-200">
+  <h3 className="font-bold text-lg mb-2">Starter</h3>
+  <p className="text-3xl font-bold mb-1">€49<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Fino a 5 veicoli</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Dashboard completa</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Prenotazioni online</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Report base</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €5/mese per dispositivo</li>
+  </ul>
+  <Badge>Piano attuale</Badge>
+  </div>
+  <div className="border rounded-lg p-6">
+  <h3 className="font-bold text-lg mb-2">Professional</h3>
+  <p className="text-3xl font-bold mb-1">€99<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Fino a 15 veicoli</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Tutto Starter +</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Report avanzati</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Multi-operatore</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €4/mese per dispositivo</li>
+  </ul>
+  <Button variant="outline" className="w-full bg-transparent">Upgrade</Button>
+  </div>
+  <div className="border rounded-lg p-6">
+  <h3 className="font-bold text-lg mb-2">Enterprise</h3>
+  <p className="text-3xl font-bold mb-1">€199<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Veicoli illimitati</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Tutto Professional +</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> White label</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Supporto prioritario</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €3/mese per dispositivo</li>
+  </ul>
+  <Button variant="outline" className="w-full bg-transparent">Contattaci</Button>
+  </div>
+  </div>
+  </CardContent>
+  </Card>
+  
+  <Card>
+  <CardHeader>
+  <CardTitle>Storico fatture</CardTitle>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-8 text-muted-foreground">
+  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+  <p>Nessuna fattura disponibile</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Settings Tab */}
+  <TabsContent value="settings" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Impostazioni struttura</CardTitle>
