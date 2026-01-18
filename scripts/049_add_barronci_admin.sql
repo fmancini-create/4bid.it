@@ -2,6 +2,18 @@
 -- Email: f.mancini@ibarronci.com
 -- Password: Pippolo75@
 
+-- Prima aggiungi la colonna password_hash se non esiste
+ALTER TABLE ecomobility_operators 
+ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+-- Poi aggiungi la colonna updated_at se non esiste
+ALTER TABLE ecomobility_operators 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Prima elimina l'operatore esistente con questa email (per evitare conflitti unique)
+DELETE FROM ecomobility_operators WHERE email = 'f.mancini@ibarronci.com';
+
+-- Inserisci il nuovo operatore admin
 INSERT INTO ecomobility_operators (
   structure_id,
   name,
@@ -18,9 +30,4 @@ SELECT
   'admin',
   true
 FROM ecomobility_structures 
-WHERE slug = 'villa-i-barronci'
-ON CONFLICT (email) DO UPDATE SET
-  password_hash = crypt('Pippolo75@', gen_salt('bf')),
-  role = 'admin',
-  is_active = true,
-  updated_at = NOW();
+WHERE slug = 'villa-i-barronci';
