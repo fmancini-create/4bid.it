@@ -106,3 +106,38 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get("id")
+
+  if (!id) {
+    return NextResponse.json({ error: "Vehicle ID required" }, { status: 400 })
+  }
+
+  const supabase = createAdminClient()
+
+  // Verifica che non ci siano prenotazioni attive
+  const { data: activeBookings } = await supabase
+    .from("ecomobility_bookings")
+    .select("id")
+    .eq("vehicle_id", id)
+    .in("status", ["confirmed", "picked_up"])
+    .limit(1)
+
+  if (activeBookings && activeBookings.length > 0) {
+    return NextResponse.json({ error: "Impossibile eliminare: il veicolo ha prenotazioni attive" }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from("ecomobility_vehicles")
+    .delete()
+    .eq("id", id)
+
+  if (error) {
+    console.error("[v0] Error deleting vehicle:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}

@@ -224,7 +224,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
       setVehicles(vehiclesData.vehicles || [])
 
       // Load vehicle types
-      const typesRes = await fetch(`/api/ecomobility/admin/vehicle-types?structureId=${structure.id}`)
+      const typesRes = await fetch(`/api/ecomobility/admin/vehicle-types?structure_id=${structure.id}`)
       const typesData = await typesRes.json()
       setVehicleTypes(typesData.vehicleTypes || typesData || [])
 
