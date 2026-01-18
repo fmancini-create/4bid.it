@@ -81,24 +81,21 @@ export async function POST(request: NextRequest) {
     // Genera codice prenotazione
     const bookingCode = `ECO-${nanoid(8).toUpperCase()}`
 
-    // Crea la prenotazione
+    // Crea la prenotazione (allineato allo schema reale del DB)
     const { data: booking, error: bookingError } = await supabase
       .from("ecomobility_bookings")
       .insert({
         structure_id: structureId,
         customer_id: customerId,
         vehicle_id: vehicleId,
-        pricing_id: pricingId,
         booking_code: bookingCode,
-        pickup_date: pickupDate,
-        pickup_time: pickupTime,
+        pickup_datetime: `${pickupDate}T${pickupTime}:00`,
         status: "pending",
-        estimated_amount: pricing?.min_price || 0,
-        deposit_amount: pricing?.deposit_amount || 100,
-        deposit_status: "pending",
+        estimated_amount: pricing?.hour_1 || pricing?.minimum_charge || 0,
+        deposit_amount: pricing?.deposit || 100,
         payment_status: "pending",
-        terms_accepted: true,
-        terms_accepted_at: new Date().toISOString(),
+        conditions_accepted: true,
+        conditions_accepted_at: new Date().toISOString(),
       })
       .select("*")
       .single()
@@ -108,12 +105,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Errore creazione prenotazione" }, { status: 500 })
     }
 
-    // Log attività
-    await supabase.from("ecomobility_activity_logs").insert({
+    // Log attività (usa tabella corretta)
+    await supabase.from("ecomobility_operation_logs").insert({
       structure_id: structureId,
       booking_id: booking.id,
       vehicle_id: vehicleId,
-      customer_id: customerId,
       action: "booking_created",
       details: { booking_code: bookingCode },
     })
