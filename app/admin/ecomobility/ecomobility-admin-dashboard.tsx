@@ -51,6 +51,7 @@ import {
   Tag,
   Wifi,
   CreditCard,
+  UserPlus,
 } from "lucide-react"
 
 interface Vehicle {
@@ -135,6 +136,129 @@ interface Pricing {
 }
 
 // Changed props from the update
+// Leads Table Component
+function LeadsTable() {
+  const [leads, setLeads] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    loadLeads()
+  }, [])
+
+  const loadLeads = async () => {
+    try {
+      const res = await fetch("/api/ecomobility/admin/leads")
+      const data = await res.json()
+      setLeads(data || [])
+    } catch (error) {
+      console.error("Error loading leads:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      await fetch("/api/ecomobility/admin/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      })
+      loadLeads()
+      toast({ title: "Stato aggiornato" })
+    } catch (error) {
+      toast({ title: "Errore", variant: "destructive" })
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; className: string }> = {
+      new: { label: "Nuovo", className: "bg-blue-100 text-blue-800" },
+      contacted: { label: "Contattato", className: "bg-yellow-100 text-yellow-800" },
+      demo_scheduled: { label: "Demo fissata", className: "bg-purple-100 text-purple-800" },
+      negotiating: { label: "In trattativa", className: "bg-orange-100 text-orange-800" },
+      won: { label: "Acquisito", className: "bg-green-100 text-green-800" },
+      lost: { label: "Perso", className: "bg-gray-100 text-gray-800" },
+    }
+    const s = statusMap[status] || { label: status, className: "bg-gray-100" }
+    return <Badge className={s.className}>{s.label}</Badge>
+  }
+
+  if (loading) {
+    return <div className="text-center py-8">Caricamento leads...</div>
+  }
+
+  if (leads.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium mb-2">Nessun lead ancora</p>
+        <p className="text-sm">Le richieste di demo appariranno qui.</p>
+        <p className="text-xs mt-4">
+          Condividi il link: <code className="bg-muted px-2 py-1 rounded">4bid.it/ecomobility/registra-struttura</code>
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Data</TableHead>
+          <TableHead>Struttura</TableHead>
+          <TableHead>Contatto</TableHead>
+          <TableHead>Tipo</TableHead>
+          <TableHead>Piano</TableHead>
+          <TableHead>Stato</TableHead>
+          <TableHead>Azioni</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {leads.map((lead) => (
+          <TableRow key={lead.id}>
+            <TableCell className="text-sm">
+              {new Date(lead.created_at).toLocaleDateString("it-IT")}
+            </TableCell>
+            <TableCell>
+              <div>
+                <p className="font-medium">{lead.structure_name}</p>
+                <p className="text-xs text-muted-foreground">{lead.city}, {lead.province}</p>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div>
+                <p className="text-sm">{lead.contact_name}</p>
+                <p className="text-xs text-muted-foreground">{lead.email}</p>
+                <p className="text-xs text-muted-foreground">{lead.phone}</p>
+              </div>
+            </TableCell>
+            <TableCell className="text-sm">{lead.structure_type}</TableCell>
+            <TableCell className="text-sm capitalize">{lead.interested_plan}</TableCell>
+            <TableCell>{getStatusBadge(lead.status)}</TableCell>
+            <TableCell>
+              <Select value={lead.status} onValueChange={(value) => updateStatus(lead.id, value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Nuovo</SelectItem>
+                  <SelectItem value="contacted">Contattato</SelectItem>
+                  <SelectItem value="demo_scheduled">Demo fissata</SelectItem>
+                  <SelectItem value="negotiating">In trattativa</SelectItem>
+                  <SelectItem value="won">Acquisito</SelectItem>
+                  <SelectItem value="lost">Perso</SelectItem>
+                </SelectContent>
+              </Select>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
 export function EcomobilityAdminDashboard({ structures }: { structures: Structure[] }) {
   const { toast } = useToast()
   // Modified initial state for selectedStructure based on update
@@ -620,7 +744,7 @@ const handleSaveVehicle = async () => {
       {selectedStructure ? (
         <main className="max-w-7xl mx-auto px-4 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-7 w-full max-w-4xl mb-6">
+            <TabsList className="grid grid-cols-8 w-full max-w-5xl mb-6">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -649,6 +773,10 @@ const handleSaveVehicle = async () => {
   <TabsTrigger value="billing">
   <CreditCard className="h-4 w-4 mr-2" />
   Fatturazione
+  </TabsTrigger>
+  <TabsTrigger value="leads">
+  <UserPlus className="h-4 w-4 mr-2" />
+  Leads
   </TabsTrigger>
   <TabsTrigger value="settings">
   <Settings className="h-4 w-4 mr-2" />
@@ -1621,6 +1749,33 @@ const handleSaveVehicle = async () => {
   <div className="text-center py-8 text-muted-foreground">
   <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
   <p>Nessuna fattura disponibile</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Leads Tab */}
+  <TabsContent value="leads" className="space-y-6">
+  <Card>
+  <CardHeader>
+  <div className="flex items-center justify-between">
+  <div>
+  <CardTitle>Richieste Demo & Leads</CardTitle>
+  <CardDescription>Gestisci le richieste delle strutture interessate a 4BID Ecomobility</CardDescription>
+  </div>
+  <Link href="/ecomobility/registra-struttura" target="_blank">
+  <Button variant="outline">
+  <ExternalLink className="h-4 w-4 mr-2" />
+  Vedi Landing Page
+  </Button>
+  </Link>
+  </div>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-12 text-muted-foreground">
+  <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  <p className="text-lg font-medium mb-2">Nessun lead disponibile</p>
+  <p className="text-sm">Le richieste demo e contatti dalle landing page appariranno qui.</p>
   </div>
   </CardContent>
   </Card>

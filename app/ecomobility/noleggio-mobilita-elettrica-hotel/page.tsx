@@ -370,9 +370,11 @@ export default function NoleggioMobilitaElettricaHotelPage() {
             in un punto di riferimento per il turismo sostenibile.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <ContactButton size="lg" className="bg-orange-500 hover:bg-orange-600">
-              Richiedi Demo Gratuita
-            </ContactButton>
+            <Link href="/ecomobility/registra-struttura">
+              <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
+                Registra la Tua Struttura
+              </Button>
+            </Link>
             <Link href="/ecomobility/piattaforma-ecomobility">
               <Button size="lg" variant="outline">
                 Scopri la Piattaforma
