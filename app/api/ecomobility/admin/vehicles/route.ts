@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { structure_id, vehicle_type_id, internal_code, brand, model, color, serial_number, license_plate } = body
+  const { structure_id, vehicle_type_id, code, name, description, image_url } = body
 
-  if (!structure_id || !vehicle_type_id || !internal_code) {
-    return NextResponse.json({ error: "Dati mancanti" }, { status: 400 })
+  if (!structure_id || !vehicle_type_id || !code || !name) {
+    return NextResponse.json({ error: "Dati mancanti: structure_id, vehicle_type_id, code e name sono obbligatori" }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -40,15 +40,15 @@ export async function POST(request: NextRequest) {
     .insert({
       structure_id,
       vehicle_type_id,
-      internal_code,
-      brand,
-      model,
-      color,
-      serial_number,
-      license_plate,
+      code,
+      name,
+      description: description || null,
+      image_url: image_url || null,
       status: "available",
+      battery_level: 100,
+      battery_status: "available",
     })
-    .select()
+    .select("*, vehicle_type:ecomobility_vehicle_types(*)")
     .single()
 
   if (error) {

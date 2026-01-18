@@ -335,11 +335,11 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
     }
   }
 
-  const handleSaveVehicle = async () => {
-    if (!vehicleForm.code || !vehicleForm.vehicle_type_id) {
-      toast({ title: "Errore", description: "Compila i campi obbligatori", variant: "destructive" })
-      return
-    }
+const handleSaveVehicle = async () => {
+  if (!vehicleForm.code || !vehicleForm.name || !vehicleForm.vehicle_type_id) {
+    toast({ title: "Errore", description: "Compila i campi obbligatori: Codice, Nome e Tipo veicolo", variant: "destructive" })
+    return
+  }
 
     try {
       const method = editingVehicle ? "PUT" : "POST"
@@ -1046,7 +1046,7 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
                         </div>
                       </div>
                       <div>
-                        <Label>Nome veicolo</Label>
+                        <Label>Nome veicolo *</Label>
                         <Input
                           value={vehicleForm.name}
                           onChange={(e) => setVehicleForm({ ...vehicleForm, name: e.target.value })}
@@ -1111,7 +1111,7 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-mono font-bold">{vehicle.code}</p>
+                          <p className="font-mono font-bold">{vehicle.internal_code}</p>
                           <p className="text-sm text-muted-foreground">{vehicle.vehicle_type?.name}</p>
                         </div>
                         {getStatusBadge(vehicle.status)}
@@ -1492,33 +1492,33 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
                   </div>
                   <div>
                     <Label>Descrizione</Label>
-                    <Textarea value={selectedStructure.description || ""} rows={3} readOnly />
+                    <Textarea value={selectedStructure.description || ""} rows={3} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Email</Label>
-                      <Input value={selectedStructure.email || ""} readOnly />
+                      <Input value={selectedStructure.email || ""} />
                     </div>
                     <div>
                       <Label>Telefono</Label>
-                      <Input value={selectedStructure.phone || ""} readOnly />
+                      <Input value={selectedStructure.phone || ""} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Città</Label>
-                      <Input value={selectedStructure.city || ""} readOnly />
+                      <Input value={selectedStructure.city || ""} />
                     </div>
                     <div>
                       <Label>Provincia</Label>
-                      <Input value={selectedStructure.province || ""} readOnly />
+                      <Input value={selectedStructure.province || ""} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Colore primario</Label>
                       <div className="flex gap-2">
-                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" readOnly />
+                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" />
                         <div
                           className="w-10 h-10 rounded border"
                           style={{ backgroundColor: selectedStructure.primary_color || "#f97316" }}
