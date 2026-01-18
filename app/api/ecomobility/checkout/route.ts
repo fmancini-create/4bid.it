@@ -25,14 +25,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Recupera dettagli struttura per metadata
+    // Recupera dettagli struttura e account Stripe Connect
     const { data: structure } = await supabase
       .from("ecomobility_structures")
-      .select("name, slug")
+      .select("name, slug, stripe_account_id, stripe_onboarding_complete")
       .eq("id", structure_id)
       .single()
 
-    // Crea sessione Stripe Checkout
+    // Verifica che la struttura abbia Stripe Connect configurato
+    if (!structure?.stripe_account_id || !structure?.stripe_onboarding_complete) {
+      return NextResponse.json({ 
+        error: "La struttura non ha ancora configurato i pagamenti. Contattare la struttura." 
+      }, { status: 400 })
+    }
+
+    // Calcola la commissione 4BID (5% del totale)
+    const totalAmount = amount + (deposit || 0)
+    const applicationFee = Math.round(totalAmount * 0.05 * 100) // 5% in centesimi
+
+    // Crea sessione Stripe Checkout con Stripe Connect
+    // Il pagamento va alla struttura, 4BID trattiene la commissione
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -61,6 +73,17 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         }] : []),
       ],
+      // Stripe Connect: pagamento va all'account della struttura
+      payment_intent_data: {
+        application_fee_amount: applicationFee, // Commissione 4BID
+        transfer_data: {
+          destination: structure.stripe_account_id, // Account Stripe della struttura
+        },
+        metadata: {
+          booking_id,
+          structure_id,
+        },
+      },
       metadata: {
         booking_id,
         structure_id,

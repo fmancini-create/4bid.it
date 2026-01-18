@@ -1744,6 +1744,111 @@ const handleSaveVehicle = async () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Stripe Connect Configuration */}
+              <Card className="border-2 border-orange-200">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-orange-500" />
+                    <CardTitle>Configurazione Pagamenti (Stripe)</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Collega l'account Stripe della struttura per ricevere i pagamenti dai clienti
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedStructure.stripe_account_id && selectedStructure.stripe_onboarding_complete ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-medium">Account Stripe collegato e attivo</span>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg space-y-2">
+                        <p className="text-sm"><strong>Account ID:</strong> {selectedStructure.stripe_account_id}</p>
+                        <p className="text-sm text-muted-foreground">
+                          I pagamenti dei clienti andranno direttamente su questo account.
+                          4BID trattiene una commissione del 5% su ogni transazione.
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                        onClick={async () => {
+                          if (confirm("Sei sicuro di voler scollegare l'account Stripe? La struttura non potrà più ricevere pagamenti.")) {
+                            await fetch(`/api/ecomobility/stripe-connect?structure_id=${selectedStructure.id}`, { method: "DELETE" })
+                            loadData()
+                            toast({ title: "Account Stripe scollegato" })
+                          }
+                        }}
+                      >
+                        Scollega Account Stripe
+                      </Button>
+                    </div>
+                  ) : selectedStructure.stripe_account_id && !selectedStructure.stripe_onboarding_complete ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-yellow-600">
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-medium">Onboarding Stripe incompleto</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        La struttura ha iniziato la configurazione di Stripe ma non l'ha completata.
+                      </p>
+                      <Button 
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={async () => {
+                          const res = await fetch("/api/ecomobility/stripe-connect", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                              structure_id: selectedStructure.id,
+                              structure_name: selectedStructure.name,
+                              structure_email: selectedStructure.email,
+                            }),
+                          })
+                          const data = await res.json()
+                          if (data.onboarding_url) {
+                            window.open(data.onboarding_url, "_blank")
+                          }
+                        }}
+                      >
+                        Completa Configurazione Stripe
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CreditCard className="h-5 w-5" />
+                        <span>Nessun account Stripe collegato</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Per ricevere pagamenti, la struttura deve collegare il proprio account Stripe.
+                        Verrà guidata attraverso il processo di onboarding di Stripe Express.
+                      </p>
+                      <Button 
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={async () => {
+                          const res = await fetch("/api/ecomobility/stripe-connect", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                              structure_id: selectedStructure.id,
+                              structure_name: selectedStructure.name,
+                              structure_email: selectedStructure.email,
+                            }),
+                          })
+                          const data = await res.json()
+                          if (data.onboarding_url) {
+                            window.open(data.onboarding_url, "_blank")
+                          }
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Configura Stripe per questa struttura
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
 
