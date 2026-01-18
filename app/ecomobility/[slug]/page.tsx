@@ -45,24 +45,36 @@ export default async function EcomobilityStructurePage({ params }: Props) {
     notFound()
   }
 
-  // Carica veicoli disponibili con tipo
-  const { data: vehicles } = await supabase
+  // Carica TUTTI i veicoli prima per debug
+  const { data: allVehicles, error: vehiclesError } = await supabase
     .from("ecomobility_vehicles")
     .select(`
       *,
       vehicle_type:ecomobility_vehicle_types(*)
     `)
     .eq("structure_id", structure.id)
-    .in("status", ["available", "charging"])
+
+  console.log("[v0] Structure ID:", structure.id)
+  console.log("[v0] All vehicles count:", allVehicles?.length || 0)
+  console.log("[v0] All vehicles:", JSON.stringify(allVehicles, null, 2))
+  console.log("[v0] Vehicles error:", vehiclesError)
+
+  // Filtra i veicoli disponibili
+  const vehicles = allVehicles?.filter(v => v.status === "available" || v.status === "charging") || []
+  console.log("[v0] Available vehicles count:", vehicles.length)
 
   // Carica tariffe attive
-  const { data: pricing } = await supabase
+  const { data: pricing, error: pricingError } = await supabase
     .from("ecomobility_pricing")
     .select(`
       *,
       vehicle_type:ecomobility_vehicle_types(*)
     `)
     .eq("structure_id", structure.id)
+
+  console.log("[v0] Pricing count:", pricing?.length || 0)
+  console.log("[v0] Pricing:", JSON.stringify(pricing, null, 2))
+  console.log("[v0] Pricing error:", pricingError)
 
   // Carica condizioni noleggio
   const { data: terms } = await supabase
