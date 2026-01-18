@@ -78,7 +78,6 @@ interface Vehicle {
 interface Pricing {
   id: string
   vehicle_type_id: string
-  structure_id: string
   hour_1: number
   hour_2: number
   hour_3: number
@@ -88,8 +87,8 @@ interface Pricing {
   hour_7: number
   hour_8_plus: number
   daily_cap: number
-  minimum_charge: number
   deposit: number
+  minimum_charge: number
   vehicle_type: VehicleType
 }
 
@@ -143,12 +142,13 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   const isVehicleBookable = (vehicle: Vehicle): boolean => {
     // Must not be already rented or in maintenance
     if (vehicle.status !== "available" && vehicle.status !== "charging") return false
-    // If charging, not bookable
+    // If charging, not bookable now
     if (vehicle.status === "charging" || vehicle.battery_status === "charging") return false
-    // Battery status must be 'available' or not set
-    if (vehicle.battery_status && vehicle.battery_status !== "available") return false
+    // If explicitly unavailable, not bookable
+    if (vehicle.battery_status === "unavailable" || vehicle.battery_status === "low_battery") return false
     // Battery level must be >= threshold (if set)
-    if (vehicle.battery_level !== null && vehicle.battery_level !== undefined && vehicle.battery_level < minBatteryThreshold) return false
+    if (vehicle.battery_level !== null && vehicle.battery_level < minBatteryThreshold) return false
+    // If battery_status is null/undefined but status is available, consider it bookable
     return true
   }
 
@@ -295,8 +295,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
           structure_id: structure.id,
           customer_email: customerData.email,
           customer_name: `${customerData.firstName} ${customerData.lastName}`,
-          amount: selectedPricing?.min_price || 0,
-          deposit: selectedPricing?.deposit_amount || 0,
+          amount: selectedPricing?.minimum_charge || selectedPricing?.hour_1 || 0,
+          deposit: selectedPricing?.deposit || 0,
           description: `${selectedVehicle?.vehicle_type?.name} - ${selectedVehicle?.brand} ${selectedVehicle?.model}`,
         }),
       })
@@ -448,19 +448,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{type.description}</p>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          {type.avg_range_km && (
+                          {type.range_km && (
                             <span className="flex items-center gap-1">
-                              <Zap className="h-3 w-3" /> {type.avg_range_km} km
+                              <Zap className="h-3 w-3" /> {type.range_km} km
                             </span>
                           )}
-                          {type.requires_license && (
+                          {type.requires_license_type && type.requires_license_type !== "nessuna" && (
                             <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> Patente richiesta
-                            </span>
-                          )}
-                          {type.max_passengers > 1 && (
-                            <span className="flex items-center gap-1">
-                              Max {type.max_passengers} persone
+                              <Shield className="h-3 w-3" /> Pat. {type.requires_license_type}
                             </span>
                           )}
                         </div>
@@ -619,7 +614,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>1ª ora</span>
-                      <span className="font-medium">€{selectedPricing.price_first_hour}</span>
+                      <span className="font-medium">€{selectedPricing.hour_1}</span>
                     </div>
                     {selectedPricing.price_second_hour && (
                       <div className="flex justify-between">
@@ -643,12 +638,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                     <div className="flex justify-between text-base">
                       <span className="font-medium">Max giornaliero</span>
                       <span className="font-bold" style={{ color: primaryColor }}>
-                        €{selectedPricing.max_price_day}
+                        €{selectedPricing.daily_cap}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Cauzione</span>
-                      <span>€{selectedPricing.deposit_amount}</span>
+                      <span>€{selectedPricing.deposit}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -938,17 +933,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Prezzo minimo</span>
-                    <span>€{selectedPricing.min_price}</span>
+                    <span>€{selectedPricing.minimum_charge}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cauzione</span>
-                    <span>€{selectedPricing.deposit_amount}</span>
+                    <span>€{selectedPricing.deposit}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-medium">
                     <span>Da pagare ora</span>
                     <span style={{ color: primaryColor }}>
-                      €{selectedPricing.min_price + selectedPricing.deposit_amount}
+                      €{(selectedPricing.minimum_charge || 0) + (selectedPricing.deposit || 0)}
                     </span>
                   </div>
                 </div>

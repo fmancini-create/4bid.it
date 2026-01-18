@@ -1801,33 +1801,33 @@ const handleSaveVehicle = async () => {
                   </div>
                   <div>
                     <Label>Descrizione</Label>
-                    <Textarea value={selectedStructure.description || ""} rows={3} />
+                    <Textarea defaultValue={selectedStructure.description || ""} rows={3} readOnly />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Email</Label>
-                      <Input value={selectedStructure.email || ""} />
+                      <Input defaultValue={selectedStructure.email || ""} readOnly />
                     </div>
                     <div>
                       <Label>Telefono</Label>
-                      <Input value={selectedStructure.phone || ""} />
+                      <Input defaultValue={selectedStructure.phone || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Città</Label>
-                      <Input value={selectedStructure.city || ""} />
+                      <Input defaultValue={selectedStructure.city || ""} readOnly />
                     </div>
                     <div>
                       <Label>Provincia</Label>
-                      <Input value={selectedStructure.province || ""} />
+                      <Input defaultValue={selectedStructure.province || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Colore primario</Label>
                       <div className="flex gap-2">
-                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" />
+                        <Input defaultValue={selectedStructure.primary_color || "#f97316"} className="flex-1" readOnly />
                         <div
                           className="w-10 h-10 rounded border"
                           style={{ backgroundColor: selectedStructure.primary_color || "#f97316" }}
@@ -1835,7 +1835,7 @@ const handleSaveVehicle = async () => {
                       </div>
                     </div>
                   </div>
-                  <Button>Salva impostazioni</Button>
+                  <p className="text-sm text-muted-foreground">Per modificare questi dati contatta il supporto 4BID.</p>
                 </CardContent>
               </Card>
 

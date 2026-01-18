@@ -88,14 +88,17 @@ export async function POST(request: NextRequest) {
         structure_id: structureId,
         customer_id: customerId,
         vehicle_id: vehicleId,
+        pricing_id: pricingId,
         booking_code: bookingCode,
-        pickup_datetime: `${pickupDate}T${pickupTime}:00`,
+        pickup_date: pickupDate,
+        pickup_time: pickupTime,
         status: "pending",
-        estimated_amount: pricing?.hour_1 || pricing?.minimum_charge || 0,
-        deposit_amount: pricing?.deposit || 100,
+        estimated_amount: pricing?.min_price || 0,
+        deposit_amount: pricing?.deposit_amount || 100,
+        deposit_status: "pending",
         payment_status: "pending",
-        conditions_accepted: true,
-        conditions_accepted_at: new Date().toISOString(),
+        terms_accepted: true,
+        terms_accepted_at: new Date().toISOString(),
       })
       .select("*")
       .single()
@@ -106,10 +109,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Log attività
-    await supabase.from("ecomobility_operation_logs").insert({
+    await supabase.from("ecomobility_activity_logs").insert({
       structure_id: structureId,
       booking_id: booking.id,
       vehicle_id: vehicleId,
+      customer_id: customerId,
       action: "booking_created",
       details: { booking_code: bookingCode },
     })
