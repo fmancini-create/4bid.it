@@ -53,7 +53,6 @@ export default async function EcomobilityStructurePage({ params }: Props) {
       vehicle_type:ecomobility_vehicle_types(*)
     `)
     .eq("structure_id", structure.id)
-    .eq("is_active", true)
     .in("status", ["available", "charging"])
 
   // Carica tariffe attive
@@ -64,15 +63,13 @@ export default async function EcomobilityStructurePage({ params }: Props) {
       vehicle_type:ecomobility_vehicle_types(*)
     `)
     .eq("structure_id", structure.id)
-    .eq("is_active", true)
 
   // Carica condizioni noleggio
   const { data: terms } = await supabase
-    .from("ecomobility_rental_terms")
+    .from("ecomobility_rental_conditions")
     .select("*")
     .eq("structure_id", structure.id)
     .eq("is_active", true)
-    .eq("language", "it")
     .order("version", { ascending: false })
     .limit(1)
     .single()

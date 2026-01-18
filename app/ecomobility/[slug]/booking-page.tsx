@@ -52,14 +52,12 @@ interface Structure {
 interface VehicleType {
   id: string
   name: string
-  slug: string
   description: string
-  category: string
-  image_url: string
+  icon: string
   max_speed_kmh: number
-  range_km: number
-  requires_license_type: string
-  min_age: number
+  avg_range_km: number
+  requires_license: boolean
+  max_passengers: number
 }
 
 interface Vehicle {
@@ -79,15 +77,19 @@ interface Vehicle {
 
 interface Pricing {
   id: string
-  name: string
-  description: string
-  min_price: number
-  price_first_hour: number
-  price_second_hour: number
-  price_third_hour: number
-  price_per_hour_after: number
-  max_price_day: number
-  deposit_amount: number
+  vehicle_type_id: string
+  structure_id: string
+  hour_1: number
+  hour_2: number
+  hour_3: number
+  hour_4: number
+  hour_5: number
+  hour_6: number
+  hour_7: number
+  hour_8_plus: number
+  daily_cap: number
+  minimum_charge: number
+  deposit: number
   vehicle_type: VehicleType
 }
 
@@ -140,11 +142,13 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
 
   const isVehicleBookable = (vehicle: Vehicle): boolean => {
     // Must not be already rented or in maintenance
-    if (vehicle.status !== "available") return false
-    // Battery status must be 'available'
-    if (vehicle.battery_status !== "available") return false
-    // Battery level must be >= threshold
-    if (vehicle.battery_level === null || vehicle.battery_level < minBatteryThreshold) return false
+    if (vehicle.status !== "available" && vehicle.status !== "charging") return false
+    // If charging, not bookable
+    if (vehicle.status === "charging" || vehicle.battery_status === "charging") return false
+    // Battery status must be 'available' or not set
+    if (vehicle.battery_status && vehicle.battery_status !== "available") return false
+    // Battery level must be >= threshold (if set)
+    if (vehicle.battery_level !== null && vehicle.battery_level !== undefined && vehicle.battery_level < minBatteryThreshold) return false
     return true
   }
 
@@ -444,14 +448,19 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{type.description}</p>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          {type.range_km && (
+                          {type.avg_range_km && (
                             <span className="flex items-center gap-1">
-                              <Zap className="h-3 w-3" /> {type.range_km} km
+                              <Zap className="h-3 w-3" /> {type.avg_range_km} km
                             </span>
                           )}
-                          {type.requires_license_type && type.requires_license_type !== "nessuna" && (
+                          {type.requires_license && (
                             <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> Pat. {type.requires_license_type}
+                              <Shield className="h-3 w-3" /> Patente richiesta
+                            </span>
+                          )}
+                          {type.max_passengers > 1 && (
+                            <span className="flex items-center gap-1">
+                              Max {type.max_passengers} persone
                             </span>
                           )}
                         </div>
@@ -460,11 +469,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                           <div className="flex items-center justify-between">
                             <div>
                               <span className="text-lg font-bold" style={{ color: primaryColor }}>
-                                €{typePricing.price_first_hour}
+                                €{typePricing.hour_1}
                               </span>
                               <span className="text-xs text-muted-foreground">/1ª ora</span>
                               <span className="text-xs text-muted-foreground ml-2">
-                                max €{typePricing.max_price_day}/giorno
+                                max €{typePricing.daily_cap}/giorno
                               </span>
                             </div>
                             <Button
