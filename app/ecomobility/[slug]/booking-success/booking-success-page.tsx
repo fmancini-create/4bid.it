@@ -54,7 +54,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
       <header className="bg-white border-b py-4">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <Link href={`/ecomobility/${structure.slug}`}>
-            <Image src="https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75" alt="4BID" width={100} height={40} />
+            <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={120} height={60} />
           </Link>
           <span className="font-semibold" style={{ color: primaryColor }}>{structure.name}</span>
         </div>

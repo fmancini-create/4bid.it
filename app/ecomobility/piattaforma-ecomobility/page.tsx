@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://4bid.it/ecomobility-logo.png",
         width: 1200,
         height: 630,
         alt: "4BID Ecomobility Platform",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Piattaforma Ecomobility per Strutture Ricettive | 4BID",
     description: "Software SaaS per gestire il noleggio di mobilità elettrica. Multi-tenant e white-label.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://4bid.it/ecomobility-logo.png"],
   },
   robots: {
     index: true,

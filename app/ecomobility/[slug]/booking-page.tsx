@@ -350,7 +350,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
             <h1 className="font-semibold text-sm">{structure.name}</h1>
             <p className="text-xs text-muted-foreground">4BID Ecomobility</p>
           </div>
-          <Image src="https://www.4bid.it/_next/image?url=%2Flogo.png&w=96&q=75" alt="4BID" width={32} height={32} />
+          <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={48} height={48} />
         </div>
       </header>
 

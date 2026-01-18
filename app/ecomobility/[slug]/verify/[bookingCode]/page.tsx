@@ -73,10 +73,10 @@ export default async function VerifyBookingPage({
         {/* Header */}
         <div className="text-center mb-6">
           <Image 
-            src="https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75" 
-            alt="4BID" 
-            width={80} 
-            height={32} 
+            src="/ecomobility-logo.png" 
+            alt="4BID Ecomobility" 
+            width={100} 
+            height={50} 
             className="mx-auto mb-2"
           />
           <p className="text-sm text-muted-foreground">{structure.name}</p>

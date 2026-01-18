@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://4bid.it/ecomobility-logo.png",
         width: 1200,
         height: 630,
         alt: "4BID Ecomobility - Mobilità Elettrica per Hotel",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Noleggio Mobilità Elettrica per Hotel | 4BID Ecomobility",
     description: "E-bike, scooter elettrici e veicoli green per i tuoi ospiti. Gestione automatizzata, zero pensieri.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://4bid.it/ecomobility-logo.png"],
   },
   robots: {
     index: true,
