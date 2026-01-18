@@ -34,6 +34,7 @@ export default function InvestorInquiryModal({ isOpen, onClose }: InvestorInquir
     { id: "hotel-accelerator", name: "HOTEL ACCELERATOR - Performance Booster" },
     { id: "risparmio-compulsivo", name: "RISPARMIO COMPULSIVO - Savings App" },
     { id: "autoexel", name: "AUTOEXEL - Smart Excel" },
+    { id: "ecomobility", name: "ECOMOBILITY - Mobilità Elettrica per Hotel" },
   ]
 
   const inquiryTypes = [
