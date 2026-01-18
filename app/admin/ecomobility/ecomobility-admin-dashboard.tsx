@@ -1111,7 +1111,7 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-mono font-bold">{vehicle.internal_code}</p>
+                          <p className="font-mono font-bold">{vehicle.code}</p>
                           <p className="text-sm text-muted-foreground">{vehicle.vehicle_type?.name}</p>
                         </div>
                         {getStatusBadge(vehicle.status)}
@@ -1492,33 +1492,33 @@ export function EcomobilityAdminDashboard({ structures }: { structures: Structur
                   </div>
                   <div>
                     <Label>Descrizione</Label>
-                    <Textarea value={selectedStructure.description || ""} rows={3} />
+                    <Textarea value={selectedStructure.description || ""} rows={3} readOnly />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Email</Label>
-                      <Input value={selectedStructure.email || ""} />
+                      <Input value={selectedStructure.email || ""} readOnly />
                     </div>
                     <div>
                       <Label>Telefono</Label>
-                      <Input value={selectedStructure.phone || ""} />
+                      <Input value={selectedStructure.phone || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Città</Label>
-                      <Input value={selectedStructure.city || ""} />
+                      <Input value={selectedStructure.city || ""} readOnly />
                     </div>
                     <div>
                       <Label>Provincia</Label>
-                      <Input value={selectedStructure.province || ""} />
+                      <Input value={selectedStructure.province || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Colore primario</Label>
                       <div className="flex gap-2">
-                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" />
+                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" readOnly />
                         <div
                           className="w-10 h-10 rounded border"
                           style={{ backgroundColor: selectedStructure.primary_color || "#f97316" }}
