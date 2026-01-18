@@ -7,7 +7,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { structureId, vehicleId, pricingId, pickupDate, pickupTime, customer, termsAccepted } = body
 
+    console.log("[v0] Booking request body:", JSON.stringify(body, null, 2))
+    
     if (!structureId || !vehicleId || !pickupDate || !pickupTime || !customer || !termsAccepted) {
+      console.log("[v0] Missing fields:", {
+        structureId: !!structureId,
+        vehicleId: !!vehicleId,
+        pickupDate: !!pickupDate,
+        pickupTime: !!pickupTime,
+        customer: !!customer,
+        termsAccepted: !!termsAccepted,
+      })
       return NextResponse.json({ error: "Dati mancanti" }, { status: 400 })
     }
 
