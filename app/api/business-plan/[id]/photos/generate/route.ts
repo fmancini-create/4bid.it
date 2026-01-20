@@ -117,7 +117,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .insert({
         business_plan_id: id,
         area,
-        image_url: imageUrl,
+        photo_url: imageUrl,
         is_ai_generated: true,
         ai_prompt: customPrompt,
         sort_order: count || 0,
