@@ -92,9 +92,35 @@ interface BusinessPlan {
   project_type: string
   num_rooms: number
   stars: number
+  // Servizi accessori con gestione diretta/affitto
   has_spa: boolean
+  spa_management: 'direct' | 'rental' // gestione diretta o affitto
+  spa_rental_fee?: number // canone annuo se in affitto
   has_restaurant: boolean
-  has_congress: boolean // Aggiunto comparto congressuale
+  restaurant_management: 'direct' | 'rental'
+  restaurant_rental_fee?: number
+  has_congress: boolean
+  congress_management: 'direct' | 'rental'
+  congress_rental_fee?: number
+  // Nuovi centri di ricavo
+  has_bar: boolean
+  bar_management: 'direct' | 'rental'
+  bar_rental_fee?: number
+  has_bistrot: boolean
+  bistrot_management: 'direct' | 'rental'
+  bistrot_rental_fee?: number
+  has_gym: boolean
+  gym_management: 'direct' | 'rental'
+  gym_rental_fee?: number
+  has_pool: boolean
+  pool_management: 'direct' | 'rental'
+  pool_rental_fee?: number
+  has_parking: boolean
+  parking_management: 'direct' | 'rental'
+  parking_rental_fee?: number
+  has_laundry: boolean
+  laundry_management: 'direct' | 'rental'
+  laundry_rental_fee?: number
   location: string
   opening_days_year: number
   projection_years: number
@@ -294,6 +320,86 @@ const LabelWithTooltip = ({ field, children }: { field: string; children: React.
           <p className="text-xs text-muted-foreground">{info.benchmark}</p>
         </TooltipContent>
       </Tooltip>
+    </div>
+  )
+}
+
+// Componente per la gestione dei servizi con flag diretta/affitto
+interface ServiceRowProps {
+  label: string
+  hasService: boolean
+  management: 'direct' | 'rental'
+  rentalFee: number
+  onToggle: (checked: boolean) => void
+  onManagementChange: (management: 'direct' | 'rental') => void
+  onRentalFeeChange: (fee: number) => void
+}
+
+const ServiceRow = ({ 
+  label, 
+  hasService, 
+  management, 
+  rentalFee, 
+  onToggle, 
+  onManagementChange, 
+  onRentalFeeChange 
+}: ServiceRowProps) => {
+  return (
+    <div className="border rounded-lg p-3 bg-muted/30">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="rounded"
+          />
+          <span className="font-medium">{label}</span>
+        </label>
+        
+        {hasService && (
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name={`${label}-management`}
+                  checked={management === 'direct'}
+                  onChange={() => onManagementChange('direct')}
+                  className="text-primary"
+                />
+                <span>Gestione diretta</span>
+              </label>
+              <label className="flex items-center gap-1 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name={`${label}-management`}
+                  checked={management === 'rental'}
+                  onChange={() => onManagementChange('rental')}
+                  className="text-primary"
+                />
+                <span>In affitto</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {hasService && management === 'rental' && (
+        <div className="mt-3 pl-6">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm whitespace-nowrap">Canone annuo (€):</Label>
+            <Input
+              type="number"
+              value={rentalFee}
+              onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+              className="w-32"
+              placeholder="0"
+            />
+            <span className="text-xs text-muted-foreground">/anno</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1095,6 +1201,65 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     return comment.author_name
   }
 
+  // Helper component for service rows
+  const ServiceRow = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+  }) => {
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+            <div className="space-y-2">
+              <Label className="text-sm">Modalità gestione</Label>
+              <select
+                value={management}
+                onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="direct">Gestione diretta</option>
+                <option value="rental">Affitto</option>
+              </select>
+            </div>
+            {management === 'rental' && (
+              <div className="space-y-2">
+                <Label className="text-sm">Canone annuo (€)</Label>
+                <Input
+                  type="number"
+                  value={rentalFee}
+                  onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Lista piani
   if (!selectedPlan) {
     return (
@@ -1328,59 +1493,121 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Servizi Inclusi</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_spa}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_spa: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Centro Benessere / SPA</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_restaurant}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_restaurant: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Ristorante</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_congress || false}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_congress: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Centro Congressi</span>
-                  </label>
-                </CardContent>
-              </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Servizi e Centri di Ricavo</CardTitle>
+                <CardDescription>Seleziona i servizi disponibili e indica se gestiti direttamente o in affitto</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Ristorante */}
+                <ServiceRow
+                  label="Ristorante"
+                  hasService={selectedPlan.has_restaurant}
+                  management={selectedPlan.restaurant_management || 'direct'}
+                  rentalFee={selectedPlan.restaurant_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_restaurant: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, restaurant_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, restaurant_rental_fee: fee })}
+                />
+                {/* Centro Benessere / SPA */}
+                <ServiceRow
+                  label="Centro Benessere / SPA"
+                  hasService={selectedPlan.has_spa}
+                  management={selectedPlan.spa_management || 'direct'}
+                  rentalFee={selectedPlan.spa_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_spa: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, spa_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, spa_rental_fee: fee })}
+                />
+                {/* Centro Congressi */}
+                <ServiceRow
+                  label="Centro Congressi"
+                  hasService={selectedPlan.has_congress || false}
+                  management={selectedPlan.congress_management || 'direct'}
+                  rentalFee={selectedPlan.congress_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_congress: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, congress_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, congress_rental_fee: fee })}
+                />
+                {/* Bar */}
+                <ServiceRow
+                  label="Bar"
+                  hasService={selectedPlan.has_bar || false}
+                  management={selectedPlan.bar_management || 'direct'}
+                  rentalFee={selectedPlan.bar_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_bar: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, bar_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, bar_rental_fee: fee })}
+                />
+                {/* Bistrot */}
+                <ServiceRow
+                  label="Bistrot / Caffetteria"
+                  hasService={selectedPlan.has_bistrot || false}
+                  management={selectedPlan.bistrot_management || 'direct'}
+                  rentalFee={selectedPlan.bistrot_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_bistrot: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, bistrot_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, bistrot_rental_fee: fee })}
+                />
+                {/* Palestra */}
+                <ServiceRow
+                  label="Palestra / Fitness"
+                  hasService={selectedPlan.has_gym || false}
+                  management={selectedPlan.gym_management || 'direct'}
+                  rentalFee={selectedPlan.gym_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_gym: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, gym_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, gym_rental_fee: fee })}
+                />
+                {/* Piscina */}
+                <ServiceRow
+                  label="Piscina"
+                  hasService={selectedPlan.has_pool || false}
+                  management={selectedPlan.pool_management || 'direct'}
+                  rentalFee={selectedPlan.pool_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_pool: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, pool_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, pool_rental_fee: fee })}
+                />
+                {/* Parcheggio */}
+                <ServiceRow
+                  label="Parcheggio"
+                  hasService={selectedPlan.has_parking || false}
+                  management={selectedPlan.parking_management || 'direct'}
+                  rentalFee={selectedPlan.parking_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_parking: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, parking_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, parking_rental_fee: fee })}
+                />
+                {/* Lavanderia */}
+                <ServiceRow
+                  label="Lavanderia"
+                  hasService={selectedPlan.has_laundry || false}
+                  management={selectedPlan.laundry_management || 'direct'}
+                  rentalFee={selectedPlan.laundry_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_laundry: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, laundry_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, laundry_rental_fee: fee })}
+                />
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Stato</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <select
-                    value={selectedPlan.status}
-                    onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="draft">Bozza</option>
-                    <option value="active">Attivo</option>
-                    <option value="archived">Archiviato</option>
-                  </select>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Stato</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <select
+                  value={selectedPlan.status}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="draft">Bozza</option>
+                  <option value="active">Attivo</option>
+                  <option value="archived">Archiviato</option>
+                </select>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab Parametri Finanziari */}
