@@ -162,67 +162,24 @@ interface BusinessPlanFinancials {
   occupancy_rate: number
   adr: number
 
-// Ricavi extra (percentuali sul fatturato camere)
+  // Ricavi extra (percentuali)
   fb_revenue_pct: number
   spa_revenue_pct: number
-  spa_treatments_revenue_pct: number // Trattamenti benessere
-  spa_entries_revenue_pct: number // Ingressi benessere
-  congress_revenue_pct: number
-  bar_revenue_pct: number
-  bistrot_revenue_pct: number
-  gym_revenue_pct: number
-  pool_revenue_pct: number
-  pool_external_revenue_pct: number // Ingressi esterni piscina
-  parking_revenue_pct: number
-  laundry_revenue_pct: number
-  rentals_revenue_pct: number // Noleggi (bici, auto, ecc)
-  ncc_revenue_pct: number // Servizi NCC
+  congress_revenue_pct: number // Aggiunto ricavi congressuali
   other_revenue_pct: number
-  
-  // Canoni da affitti (se servizio in affitto)
-  spa_rental_income: number
-  restaurant_rental_income: number
-  congress_rental_income: number
-  bar_rental_income: number
-  bistrot_rental_income: number
-  gym_rental_income: number
-  pool_rental_income: number
-  parking_rental_income: number
-  laundry_rental_income: number
-  rentals_rental_income: number
-  ncc_rental_income: number
-  
-  // Costi variabili (percentuali sui ricavi del reparto)
+
+  // Costi variabili (percentuali)
   rooms_cost_pct: number
   fb_cost_pct: number
   spa_cost_pct: number
-  spa_treatments_cost_pct: number
-  spa_entries_cost_pct: number
-  congress_cost_pct: number
-  bar_cost_pct: number
-  bistrot_cost_pct: number
-  gym_cost_pct: number
-  pool_cost_pct: number
-  pool_external_cost_pct: number
-  parking_cost_pct: number
-  laundry_cost_pct: number
-  rentals_cost_pct: number
-  ncc_cost_pct: number
+  congress_cost_pct: number // Aggiunto costi congressuali
   other_cost_pct: number
-  
+
   // Costi fissi annuali - Divisi per reparto
   staff_rooms_cost: number
   staff_fb_cost: number
   staff_spa_cost: number
   staff_congress_cost: number
-  staff_bar_cost: number
-  staff_bistrot_cost: number
-  staff_gym_cost: number
-  staff_pool_cost: number
-  staff_parking_cost: number
-  staff_laundry_cost: number
-  staff_rentals_cost: number
-  staff_ncc_cost: number
   staff_admin_cost: number
   rent_cost: number
   utilities_cost: number
@@ -1027,146 +984,39 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
     const roomNights = numRooms * openingDays * occupancy
 
-    // RICAVI - Gestione diretta vs affitto
+    // RICAVI
     const roomRevenue = roomNights * adr
-    
-    // Ristorante
-    const fbRevenue = plan.has_restaurant && plan.restaurant_management === 'direct' 
-      ? roomRevenue * (getFinValue(fin, "fb_revenue_pct", 35) / 100) : 0
-    const fbRentalIncome = plan.has_restaurant && plan.restaurant_management === 'rental'
-      ? plan.restaurant_rental_fee || 0 : 0
-    
-    // SPA - con sottocategorie
-    let spaRevenue = 0
-    let spaTreatmentsRevenue = 0
-    let spaEntriesRevenue = 0
-    if (plan.has_spa && plan.spa_management === 'direct') {
-      if (plan.spa_treatments_enabled !== false) {
-        spaTreatmentsRevenue = roomRevenue * (getFinValue(fin, "spa_treatments_revenue_pct", 8) / 100)
-      }
-      if (plan.spa_entries_enabled !== false) {
-        spaEntriesRevenue = roomRevenue * (getFinValue(fin, "spa_entries_revenue_pct", 4) / 100)
-      }
-      spaRevenue = spaTreatmentsRevenue + spaEntriesRevenue
-    }
-    const spaRentalIncome = plan.has_spa && plan.spa_management === 'rental'
-      ? plan.spa_rental_fee || 0 : 0
-    
-    // Centro Congressi
-    const congressRevenue = plan.has_congress && plan.congress_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "congress_revenue_pct", 20) / 100) : 0
-    const congressRentalIncome = plan.has_congress && plan.congress_management === 'rental'
-      ? plan.congress_rental_fee || 0 : 0
-    
-    // Bar
-    const barRevenue = plan.has_bar && plan.bar_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "bar_revenue_pct", 8) / 100) : 0
-    const barRentalIncome = plan.has_bar && plan.bar_management === 'rental'
-      ? plan.bar_rental_fee || 0 : 0
-    
-    // Bistrot
-    const bistrotRevenue = plan.has_bistrot && plan.bistrot_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "bistrot_revenue_pct", 5) / 100) : 0
-    const bistrotRentalIncome = plan.has_bistrot && plan.bistrot_management === 'rental'
-      ? plan.bistrot_rental_fee || 0 : 0
-    
-    // Palestra
-    const gymRevenue = plan.has_gym && plan.gym_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "gym_revenue_pct", 3) / 100) : 0
-    const gymRentalIncome = plan.has_gym && plan.gym_management === 'rental'
-      ? plan.gym_rental_fee || 0 : 0
-    
-    // Piscina (con ingressi esterni)
-    let poolRevenue = 0
-    let poolExternalRevenue = 0
-    if (plan.has_pool && plan.pool_management === 'direct') {
-      poolRevenue = roomRevenue * (getFinValue(fin, "pool_revenue_pct", 2) / 100)
-      if (plan.pool_external_entries_enabled) {
-        poolExternalRevenue = roomRevenue * (getFinValue(fin, "pool_external_revenue_pct", 3) / 100)
-      }
-    }
-    const poolRentalIncome = plan.has_pool && plan.pool_management === 'rental'
-      ? plan.pool_rental_fee || 0 : 0
-    
-    // Parcheggio
-    const parkingRevenue = plan.has_parking && plan.parking_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "parking_revenue_pct", 4) / 100) : 0
-    const parkingRentalIncome = plan.has_parking && plan.parking_management === 'rental'
-      ? plan.parking_rental_fee || 0 : 0
-    
-    // Lavanderia
-    const laundryRevenue = plan.has_laundry && plan.laundry_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "laundry_revenue_pct", 2) / 100) : 0
-    const laundryRentalIncome = plan.has_laundry && plan.laundry_management === 'rental'
-      ? plan.laundry_rental_fee || 0 : 0
-    
-    // Noleggi
-    const rentalsRevenue = plan.has_rentals && plan.rentals_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "rentals_revenue_pct", 5) / 100) : 0
-    const rentalsRentalIncome = plan.has_rentals && plan.rentals_management === 'rental'
-      ? plan.rentals_rental_fee || 0 : 0
-    
-    // NCC
-    const nccRevenue = plan.has_ncc && plan.ncc_management === 'direct'
-      ? roomRevenue * (getFinValue(fin, "ncc_revenue_pct", 4) / 100) : 0
-    const nccRentalIncome = plan.has_ncc && plan.ncc_management === 'rental'
-      ? plan.ncc_rental_fee || 0 : 0
-    
-    // Altri ricavi
+    const fbRevenue = plan.has_restaurant ? roomRevenue * (getFinValue(fin, "fb_revenue_pct", 35) / 100) : 0
+    const spaRevenue = plan.has_spa ? roomRevenue * (getFinValue(fin, "spa_revenue_pct", 12) / 100) : 0
+    const congressRevenue = plan.has_congress ? roomRevenue * (getFinValue(fin, "congress_revenue_pct", 20) / 100) : 0
     const otherRevenue = roomRevenue * (getFinValue(fin, "other_revenue_pct", 5) / 100)
-    
-    // Totale canoni da affitto
-    const totalRentalIncome = fbRentalIncome + spaRentalIncome + congressRentalIncome + barRentalIncome +
-      bistrotRentalIncome + gymRentalIncome + poolRentalIncome + parkingRentalIncome + 
-      laundryRentalIncome + rentalsRentalIncome + nccRentalIncome
-    
-    // Totale ricavi operativi
-    const totalOperatingRevenue = roomRevenue + fbRevenue + spaRevenue + congressRevenue + barRevenue +
-      bistrotRevenue + gymRevenue + poolRevenue + poolExternalRevenue + parkingRevenue + laundryRevenue +
-      rentalsRevenue + nccRevenue + otherRevenue
-    
-    const totalRevenue = totalOperatingRevenue + totalRentalIncome
+    const totalRevenue = roomRevenue + fbRevenue + spaRevenue + congressRevenue + otherRevenue
 
     // COSTI VARIABILI
     const roomCosts = roomRevenue * (getFinValue(fin, "rooms_cost_pct", 25) / 100)
     const fbCosts = fbRevenue * (getFinValue(fin, "fb_cost_pct", 35) / 100)
-    const spaTreatmentsCosts = spaTreatmentsRevenue * (getFinValue(fin, "spa_treatments_cost_pct", 45) / 100)
-    const spaEntriesCosts = spaEntriesRevenue * (getFinValue(fin, "spa_entries_cost_pct", 25) / 100)
-    const spaCosts = spaTreatmentsCosts + spaEntriesCosts
+    const spaCosts = spaRevenue * (getFinValue(fin, "spa_cost_pct", 40) / 100)
     const congressCosts = congressRevenue * (getFinValue(fin, "congress_cost_pct", 45) / 100)
-    const barCosts = barRevenue * (getFinValue(fin, "bar_cost_pct", 30) / 100)
-    const bistrotCosts = bistrotRevenue * (getFinValue(fin, "bistrot_cost_pct", 35) / 100)
-    const gymCosts = gymRevenue * (getFinValue(fin, "gym_cost_pct", 20) / 100)
-    const poolCosts = (poolRevenue + poolExternalRevenue) * (getFinValue(fin, "pool_cost_pct", 25) / 100)
-    const parkingCosts = parkingRevenue * (getFinValue(fin, "parking_cost_pct", 15) / 100)
-    const laundryCosts = laundryRevenue * (getFinValue(fin, "laundry_cost_pct", 40) / 100)
-    const rentalsCosts = rentalsRevenue * (getFinValue(fin, "rentals_cost_pct", 25) / 100)
-    const nccCosts = nccRevenue * (getFinValue(fin, "ncc_cost_pct", 55) / 100)
-    
-    const totalVariableCosts = roomCosts + fbCosts + spaCosts + congressCosts + barCosts + bistrotCosts +
-      gymCosts + poolCosts + parkingCosts + laundryCosts + rentalsCosts + nccCosts
+    const totalVariableCosts = roomCosts + fbCosts + spaCosts + congressCosts
 
     // MARGINE DI CONTRIBUZIONE
     const contributionMargin = totalRevenue - totalVariableCosts
 
     // COSTI FISSI - Personale diviso per reparto
     const staffRoomsCost = getFinValue(fin, "staff_rooms_cost", 400000)
-    const staffFbCost = plan.has_restaurant && plan.restaurant_management === 'direct' ? getFinValue(fin, "staff_fb_cost", 300000) : 0
-    const staffSpaCost = plan.has_spa && plan.spa_management === 'direct' ? getFinValue(fin, "staff_spa_cost", 150000) : 0
-    const staffCongressCost = plan.has_congress && plan.congress_management === 'direct' ? getFinValue(fin, "staff_congress_cost", 100000) : 0
-    const staffBarCost = plan.has_bar && plan.bar_management === 'direct' ? getFinValue(fin, "staff_bar_cost", 50000) : 0
-    const staffBistrotCost = plan.has_bistrot && plan.bistrot_management === 'direct' ? getFinValue(fin, "staff_bistrot_cost", 40000) : 0
-    const staffGymCost = plan.has_gym && plan.gym_management === 'direct' ? getFinValue(fin, "staff_gym_cost", 30000) : 0
-    const staffPoolCost = plan.has_pool && plan.pool_management === 'direct' ? getFinValue(fin, "staff_pool_cost", 25000) : 0
-    const staffParkingCost = plan.has_parking && plan.parking_management === 'direct' ? getFinValue(fin, "staff_parking_cost", 20000) : 0
-    const staffLaundryCost = plan.has_laundry && plan.laundry_management === 'direct' ? getFinValue(fin, "staff_laundry_cost", 35000) : 0
-    const staffRentalsCost = plan.has_rentals && plan.rentals_management === 'direct' ? getFinValue(fin, "staff_rentals_cost", 40000) : 0
-    const staffNccCost = plan.has_ncc && plan.ncc_management === 'direct' ? getFinValue(fin, "staff_ncc_cost", 60000) : 0
+    const staffFbCost = plan.has_restaurant ? getFinValue(fin, "staff_fb_cost", 300000) : 0
+    const staffSpaCost = plan.has_spa ? getFinValue(fin, "staff_spa_cost", 150000) : 0
+    const staffCongressCost = plan.has_congress ? getFinValue(fin, "staff_congress_cost", 100000) : 0
     const staffAdminCost = getFinValue(fin, "staff_admin_cost", 180000)
-    
-    const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffBarCost +
-      staffBistrotCost + staffGymCost + staffPoolCost + staffParkingCost + staffLaundryCost + 
-      staffRentalsCost + staffNccCost + staffAdminCost
+    console.log(
+      "[v0] Admin costs debug - Year:",
+      fin.year_number,
+      "staff_admin_cost:",
+      staffAdminCost,
+      "admin_cost:",
+      getFinValue(fin, "admin_cost", 45000),
+    )
+    const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffAdminCost
 
     const rentCosts = getFinValue(fin, "rent_cost", 180000)
     const utilitiesCosts = getFinValue(fin, "utilities_cost", 120000)
@@ -1216,62 +1066,20 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     return {
       roomRevenue,
       fbRevenue,
-      fbRentalIncome,
       spaRevenue,
-      spaTreatmentsRevenue,
-      spaEntriesRevenue,
-      spaRentalIncome,
       congressRevenue,
-      congressRentalIncome,
-      barRevenue,
-      barRentalIncome,
-      bistrotRevenue,
-      bistrotRentalIncome,
-      gymRevenue,
-      gymRentalIncome,
-      poolRevenue,
-      poolExternalRevenue,
-      poolRentalIncome,
-      parkingRevenue,
-      parkingRentalIncome,
-      laundryRevenue,
-      laundryRentalIncome,
-      rentalsRevenue,
-      rentalsRentalIncome,
-      nccRevenue,
-      nccRentalIncome,
       otherRevenue,
-      totalRentalIncome,
-      totalOperatingRevenue,
       totalRevenue,
       roomCosts,
       fbCosts,
       spaCosts,
-      spaTreatmentsCosts,
-      spaEntriesCosts,
       congressCosts,
-      barCosts,
-      bistrotCosts,
-      gymCosts,
-      poolCosts,
-      parkingCosts,
-      laundryCosts,
-      rentalsCosts,
-      nccCosts,
       totalVariableCosts,
       contributionMargin,
       staffRoomsCost,
       staffFbCost,
       staffSpaCost,
       staffCongressCost,
-      staffBarCost,
-      staffBistrotCost,
-      staffGymCost,
-      staffPoolCost,
-      staffParkingCost,
-      staffLaundryCost,
-      staffRentalsCost,
-      staffNccCost,
       staffAdminCost,
       totalStaffCosts,
       rentCosts,
