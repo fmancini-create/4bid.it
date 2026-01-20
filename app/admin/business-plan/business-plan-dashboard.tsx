@@ -94,8 +94,11 @@ interface BusinessPlan {
   stars: number
   // Servizi accessori con gestione diretta/affitto
   has_spa: boolean
-  spa_management: 'direct' | 'rental' // gestione diretta o affitto
-  spa_rental_fee?: number // canone annuo se in affitto
+  spa_management: 'direct' | 'rental'
+  spa_rental_fee?: number
+  // SPA suddivisa in sottocategorie
+  spa_treatments_enabled?: boolean // Trattamenti benessere
+  spa_entries_enabled?: boolean // Ingressi benessere
   has_restaurant: boolean
   restaurant_management: 'direct' | 'rental'
   restaurant_rental_fee?: number
@@ -115,12 +118,23 @@ interface BusinessPlan {
   has_pool: boolean
   pool_management: 'direct' | 'rental'
   pool_rental_fee?: number
+  // Piscina con ingressi esterni
+  pool_external_entries_enabled?: boolean
   has_parking: boolean
   parking_management: 'direct' | 'rental'
   parking_rental_fee?: number
   has_laundry: boolean
   laundry_management: 'direct' | 'rental'
   laundry_rental_fee?: number
+  // Noleggi (biciclette, auto, ecc)
+  has_rentals: boolean
+  rentals_management: 'direct' | 'rental'
+  rentals_rental_fee?: number
+  rentals_types?: string[] // ['bicycles', 'cars', 'scooters', 'ebikes']
+  // Servizi NCC
+  has_ncc: boolean
+  ncc_management: 'direct' | 'rental'
+  ncc_rental_fee?: number
   location: string
   opening_days_year: number
   projection_years: number
@@ -1260,6 +1274,178 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     )
   }
 
+  // Helper component for service rows with subcategories
+  const ServiceRowWithSubcategories = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+    subcategories,
+    onSubcategoryChange,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+    subcategories: Array<{ key: string; label: string; enabled: boolean }>
+    onSubcategoryChange: (key: string, enabled: boolean) => void
+  }) => {
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="text-sm">Modalità gestione</Label>
+                <select
+                  value={management}
+                  onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="direct">Gestione diretta</option>
+                  <option value="rental">Affitto</option>
+                </select>
+              </div>
+              {management === 'rental' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Canone annuo (€)</Label>
+                  <Input
+                    type="number"
+                    value={rentalFee}
+                    onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
+            {subcategories && subcategories.length > 0 && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-sm font-medium">Servizi disponibili:</Label>
+                {subcategories.map((sub) => (
+                  <label key={sub.key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sub.enabled}
+                      onChange={(e) => onSubcategoryChange(sub.key, e.target.checked)}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{sub.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Helper component for service rows with rental types
+  const ServiceRowWithRentalTypes = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+    rentalTypes,
+    onRentalTypesChange,
+    availableTypes,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+    rentalTypes: string[]
+    onRentalTypesChange: (types: string[]) => void
+    availableTypes: Array<{ key: string; label: string }>
+  }) => {
+    const toggleRentalType = (typeKey: string) => {
+      if (rentalTypes.includes(typeKey)) {
+        onRentalTypesChange(rentalTypes.filter((t) => t !== typeKey))
+      } else {
+        onRentalTypesChange([...rentalTypes, typeKey])
+      }
+    }
+
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="text-sm">Modalità gestione</Label>
+                <select
+                  value={management}
+                  onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="direct">Gestione diretta</option>
+                  <option value="rental">Affitto</option>
+                </select>
+              </div>
+              {management === 'rental' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Canone annuo (€)</Label>
+                  <Input
+                    type="number"
+                    value={rentalFee}
+                    onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
+            {availableTypes && availableTypes.length > 0 && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-sm font-medium">Tipologie di noleggio disponibili:</Label>
+                {availableTypes.map((type) => (
+                  <label key={type.key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rentalTypes.includes(type.key)}
+                      onChange={() => toggleRentalType(type.key)}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{type.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
+
   // Lista piani
   if (!selectedPlan) {
     return (
@@ -1509,8 +1695,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, restaurant_management: mgmt })}
                   onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, restaurant_rental_fee: fee })}
                 />
-                {/* Centro Benessere / SPA */}
-                <ServiceRow
+                {/* Centro Benessere / SPA con sottocategorie */}
+                <ServiceRowWithSubcategories
                   label="Centro Benessere / SPA"
                   hasService={selectedPlan.has_spa}
                   management={selectedPlan.spa_management || 'direct'}
@@ -1518,6 +1704,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_spa: checked })}
                   onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, spa_management: mgmt })}
                   onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, spa_rental_fee: fee })}
+                  subcategories={[
+                    { key: 'treatments', label: 'Trattamenti benessere', enabled: selectedPlan.spa_treatments_enabled ?? true },
+                    { key: 'entries', label: 'Ingressi benessere', enabled: selectedPlan.spa_entries_enabled ?? true },
+                  ]}
+                  onSubcategoryChange={(key, enabled) => {
+                    if (key === 'treatments') setSelectedPlan({ ...selectedPlan, spa_treatments_enabled: enabled })
+                    if (key === 'entries') setSelectedPlan({ ...selectedPlan, spa_entries_enabled: enabled })
+                  }}
                 />
                 {/* Centro Congressi */}
                 <ServiceRow
@@ -1559,8 +1753,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, gym_management: mgmt })}
                   onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, gym_rental_fee: fee })}
                 />
-                {/* Piscina */}
-                <ServiceRow
+                {/* Piscina con ingressi esterni */}
+                <ServiceRowWithSubcategories
                   label="Piscina"
                   hasService={selectedPlan.has_pool || false}
                   management={selectedPlan.pool_management || 'direct'}
@@ -1568,6 +1762,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_pool: checked })}
                   onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, pool_management: mgmt })}
                   onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, pool_rental_fee: fee })}
+                  subcategories={[
+                    { key: 'external_entries', label: 'Ingressi esterni', enabled: selectedPlan.pool_external_entries_enabled ?? false },
+                  ]}
+                  onSubcategoryChange={(key, enabled) => {
+                    if (key === 'external_entries') setSelectedPlan({ ...selectedPlan, pool_external_entries_enabled: enabled })
+                  }}
                 />
                 {/* Parcheggio */}
                 <ServiceRow
@@ -1588,6 +1788,36 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                   onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_laundry: checked })}
                   onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, laundry_management: mgmt })}
                   onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, laundry_rental_fee: fee })}
+                />
+                {/* Noleggi */}
+                <ServiceRowWithRentalTypes
+                  label="Noleggi"
+                  hasService={selectedPlan.has_rentals || false}
+                  management={selectedPlan.rentals_management || 'direct'}
+                  rentalFee={selectedPlan.rentals_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_rentals: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, rentals_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, rentals_rental_fee: fee })}
+                  rentalTypes={selectedPlan.rentals_types || []}
+                  onRentalTypesChange={(types) => setSelectedPlan({ ...selectedPlan, rentals_types: types })}
+                  availableTypes={[
+                    { key: 'bicycles', label: 'Biciclette' },
+                    { key: 'ebikes', label: 'E-bike' },
+                    { key: 'scooters', label: 'Scooter' },
+                    { key: 'cars', label: 'Auto' },
+                    { key: 'golf_carts', label: 'Golf cart' },
+                    { key: 'boats', label: 'Barche/Gommoni' },
+                  ]}
+                />
+                {/* Servizi NCC */}
+                <ServiceRow
+                  label="Servizi NCC (Noleggio Con Conducente)"
+                  hasService={selectedPlan.has_ncc || false}
+                  management={selectedPlan.ncc_management || 'direct'}
+                  rentalFee={selectedPlan.ncc_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_ncc: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, ncc_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, ncc_rental_fee: fee })}
                 />
               </CardContent>
             </Card>
