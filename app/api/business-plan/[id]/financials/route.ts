@@ -19,8 +19,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Map year to year_number for compatibility with frontend
-  const mappedData = data?.map(d => ({ ...d, year_number: d.year })) || []
+  // Map year to year_number and convert monthly to annual for frontend
+  const mappedData = data?.map(d => ({
+    ...d,
+    year_number: d.year,
+    // Convert monthly costs to annual for frontend display
+    rent_cost: (d.rent_cost_monthly || 0) * 12,
+    utilities_cost: (d.utilities_cost_monthly || 0) * 12,
+    maintenance_cost: (d.maintenance_cost_monthly || 0) * 12,
+    insurance_cost: (d.insurance_cost_monthly || 0) * 12,
+    marketing_cost: (d.marketing_cost_monthly || 0) * 12,
+    admin_cost: (d.admin_cost_monthly || 0) * 12,
+    other_fixed_cost: (d.other_fixed_monthly || 0) * 12,
+  })) || []
   return NextResponse.json(mappedData)
 }
 
@@ -203,7 +214,7 @@ const VALID_FINANCIALS_COLUMNS = [
   'spa_treatments_revenue', 'spa_treatments_costs', 'spa_entries_revenue', 'spa_entries_costs',
   'spa_treatments_revenue_pct', 'spa_entries_revenue_pct',
   // Congress
-  'congress_events_year', 'congress_avg_revenue', 'congress_revenue_absolute',
+  'congress_events_year', 'congress_avg_revenue', 'congress_revenue_absolute', 'congress_cost_pct',
   // Bar
   'bar_internal_pct', 'bar_internal_avg_spend', 'bar_external_clients', 'bar_external_avg_spend',
   'bar_revenue_absolute', 'bar_cost_pct', 'bar_revenue_pct',
@@ -231,10 +242,28 @@ const VALID_FINANCIALS_COLUMNS = [
   'restaurant_rental_income', 'spa_rental_income', 'congress_rental_income', 'bar_rental_income',
   'bistrot_rental_income', 'gym_rental_income', 'pool_rental_income', 'parking_rental_income',
   'laundry_rental_income', 'rentals_rental_income', 'ncc_rental_income',
-  // Staff by department
+  // Staff by department (annuali)
+  'staff_rooms_cost', 'staff_fb_cost', 'staff_spa_cost', 'staff_congress_cost',
   'staff_bar_cost', 'staff_bistrot_cost', 'staff_gym_cost', 'staff_pool_cost',
   'staff_parking_cost', 'staff_laundry_cost', 'staff_rentals_cost', 'staff_ncc_cost',
+  'staff_admin_cost',
+  // Fixed costs (annuali - saranno convertiti a mensili)
+  'rent_cost', 'utilities_cost', 'maintenance_cost', 'insurance_cost',
+  'marketing_cost', 'admin_cost', 'other_fixed_cost',
+  // Legacy fields
+  'depreciation', 'interest_cost', 'rooms_cost_pct',
 ]
+
+// Map from frontend annual fields to database monthly fields
+const ANNUAL_TO_MONTHLY_MAP: Record<string, string> = {
+  'rent_cost': 'rent_cost_monthly',
+  'utilities_cost': 'utilities_cost_monthly',
+  'maintenance_cost': 'maintenance_cost_monthly',
+  'insurance_cost': 'insurance_cost_monthly',
+  'marketing_cost': 'marketing_cost_monthly',
+  'admin_cost': 'admin_cost_monthly',
+  'other_fixed_cost': 'other_fixed_monthly',
+}
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -244,14 +273,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   // Map year_number to year for database
   const yearValue = body.year_number || body.year || 1
 
-  // Filter only valid columns to prevent errors
+  // Filter only valid columns and convert annual to monthly
   const filteredData: Record<string, unknown> = {
     business_plan_id: id,
     year: yearValue,
   }
   
   for (const key of Object.keys(body)) {
-    if (VALID_FINANCIALS_COLUMNS.includes(key) && key !== 'year_number') {
+    if (key === 'year_number') continue
+    
+    // Check if this is an annual field that needs to be converted to monthly
+    if (ANNUAL_TO_MONTHLY_MAP[key]) {
+      const monthlyKey = ANNUAL_TO_MONTHLY_MAP[key]
+      const annualValue = Number(body[key]) || 0
+      filteredData[monthlyKey] = annualValue / 12 // Convert annual to monthly
+    } else if (VALID_FINANCIALS_COLUMNS.includes(key)) {
       filteredData[key] = body[key]
     }
   }
