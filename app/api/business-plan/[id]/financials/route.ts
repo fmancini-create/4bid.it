@@ -186,16 +186,156 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const body = await request.json()
 
   // Map year_number to year for database
-  const { year_number, ...rest } = body
-  const yearValue = year_number || body.year || 1
+  const yearValue = body.year_number || body.year || 1
+
+  // Only include valid columns from business_plan_financials table
+  const validFields: Record<string, unknown> = {
+    business_plan_id: id,
+    year: yearValue,
+    // Core metrics
+    occupancy_rate: body.occupancy_rate,
+    adr: body.adr,
+    room_cost_pct: body.room_cost_pct,
+    // F&B
+    fb_revenue_per_room_night: body.fb_revenue_per_room_night,
+    fb_cost_pct: body.fb_cost_pct,
+    fb_revenue_mode: body.fb_revenue_mode,
+    fb_internal_pct: body.fb_internal_pct,
+    fb_internal_avg_spend: body.fb_internal_avg_spend,
+    fb_external_covers: body.fb_external_covers,
+    fb_external_avg_spend: body.fb_external_avg_spend,
+    fb_revenue_absolute: body.fb_revenue_absolute,
+    // SPA
+    spa_revenue_per_room_night: body.spa_revenue_per_room_night,
+    spa_cost_pct: body.spa_cost_pct,
+    spa_revenue_mode: body.spa_revenue_mode,
+    spa_treatments_internal_pct: body.spa_treatments_internal_pct,
+    spa_treatments_internal_avg: body.spa_treatments_internal_avg,
+    spa_treatments_external_clients: body.spa_treatments_external_clients,
+    spa_treatments_external_avg: body.spa_treatments_external_avg,
+    spa_entries_internal_pct: body.spa_entries_internal_pct,
+    spa_entries_internal_avg: body.spa_entries_internal_avg,
+    spa_entries_external_clients: body.spa_entries_external_clients,
+    spa_entries_external_avg: body.spa_entries_external_avg,
+    spa_revenue_absolute: body.spa_revenue_absolute,
+    spa_treatments_cost_pct: body.spa_treatments_cost_pct,
+    spa_entries_cost_pct: body.spa_entries_cost_pct,
+    // Congress
+    congress_revenue_mode: body.congress_revenue_mode,
+    congress_events_year: body.congress_events_year,
+    congress_avg_revenue: body.congress_avg_revenue,
+    congress_revenue_absolute: body.congress_revenue_absolute,
+    // Bar
+    bar_revenue_mode: body.bar_revenue_mode,
+    bar_internal_pct: body.bar_internal_pct,
+    bar_internal_avg_spend: body.bar_internal_avg_spend,
+    bar_external_clients: body.bar_external_clients,
+    bar_external_avg_spend: body.bar_external_avg_spend,
+    bar_revenue_absolute: body.bar_revenue_absolute,
+    bar_cost_pct: body.bar_cost_pct,
+    // Bistrot
+    bistrot_revenue_mode: body.bistrot_revenue_mode,
+    bistrot_internal_pct: body.bistrot_internal_pct,
+    bistrot_internal_avg_spend: body.bistrot_internal_avg_spend,
+    bistrot_external_clients: body.bistrot_external_clients,
+    bistrot_external_avg_spend: body.bistrot_external_avg_spend,
+    bistrot_revenue_absolute: body.bistrot_revenue_absolute,
+    bistrot_cost_pct: body.bistrot_cost_pct,
+    // Gym
+    gym_revenue_mode: body.gym_revenue_mode,
+    gym_internal_pct: body.gym_internal_pct,
+    gym_internal_avg: body.gym_internal_avg,
+    gym_external_clients: body.gym_external_clients,
+    gym_external_avg: body.gym_external_avg,
+    gym_revenue_absolute: body.gym_revenue_absolute,
+    gym_cost_pct: body.gym_cost_pct,
+    // Pool
+    pool_revenue_mode: body.pool_revenue_mode,
+    pool_external_entries: body.pool_external_entries,
+    pool_external_avg: body.pool_external_avg,
+    pool_revenue_absolute: body.pool_revenue_absolute,
+    pool_cost_pct: body.pool_cost_pct,
+    pool_external_cost_pct: body.pool_external_cost_pct,
+    // Parking
+    parking_revenue_mode: body.parking_revenue_mode,
+    parking_internal_pct: body.parking_internal_pct,
+    parking_internal_avg: body.parking_internal_avg,
+    parking_external_spaces: body.parking_external_spaces,
+    parking_external_days: body.parking_external_days,
+    parking_external_avg: body.parking_external_avg,
+    parking_revenue_absolute: body.parking_revenue_absolute,
+    parking_cost_pct: body.parking_cost_pct,
+    // Laundry
+    laundry_revenue_mode: body.laundry_revenue_mode,
+    laundry_internal_pct: body.laundry_internal_pct,
+    laundry_internal_avg: body.laundry_internal_avg,
+    laundry_revenue_absolute: body.laundry_revenue_absolute,
+    laundry_cost_pct: body.laundry_cost_pct,
+    // Rentals
+    rentals_revenue_mode: body.rentals_revenue_mode,
+    rentals_internal_pct: body.rentals_internal_pct,
+    rentals_internal_avg: body.rentals_internal_avg,
+    rentals_external_clients: body.rentals_external_clients,
+    rentals_external_avg: body.rentals_external_avg,
+    rentals_revenue_absolute: body.rentals_revenue_absolute,
+    rentals_cost_pct: body.rentals_cost_pct,
+    // NCC
+    ncc_revenue_mode: body.ncc_revenue_mode,
+    ncc_internal_pct: body.ncc_internal_pct,
+    ncc_internal_avg: body.ncc_internal_avg,
+    ncc_external_trips: body.ncc_external_trips,
+    ncc_external_avg: body.ncc_external_avg,
+    ncc_revenue_absolute: body.ncc_revenue_absolute,
+    ncc_cost_pct: body.ncc_cost_pct,
+    // Rental income (affitti)
+    restaurant_rental_income: body.restaurant_rental_income,
+    spa_rental_income: body.spa_rental_income,
+    congress_rental_income: body.congress_rental_income,
+    bar_rental_income: body.bar_rental_income,
+    bistrot_rental_income: body.bistrot_rental_income,
+    gym_rental_income: body.gym_rental_income,
+    pool_rental_income: body.pool_rental_income,
+    parking_rental_income: body.parking_rental_income,
+    laundry_rental_income: body.laundry_rental_income,
+    rentals_rental_income: body.rentals_rental_income,
+    ncc_rental_income: body.ncc_rental_income,
+    // Staff costs
+    staff_cost_monthly: body.staff_cost_monthly,
+    staff_bar_cost: body.staff_bar_cost,
+    staff_bistrot_cost: body.staff_bistrot_cost,
+    staff_gym_cost: body.staff_gym_cost,
+    staff_pool_cost: body.staff_pool_cost,
+    staff_parking_cost: body.staff_parking_cost,
+    staff_laundry_cost: body.staff_laundry_cost,
+    staff_rentals_cost: body.staff_rentals_cost,
+    staff_ncc_cost: body.staff_ncc_cost,
+    // Fixed costs
+    rent_cost_monthly: body.rent_cost_monthly,
+    utilities_cost_monthly: body.utilities_cost_monthly,
+    maintenance_cost_monthly: body.maintenance_cost_monthly,
+    insurance_cost_monthly: body.insurance_cost_monthly,
+    marketing_cost_monthly: body.marketing_cost_monthly,
+    admin_cost_monthly: body.admin_cost_monthly,
+    other_fixed_monthly: body.other_fixed_monthly,
+    // OTA
+    ota_commission_pct: body.ota_commission_pct,
+    ota_share_pct: body.ota_share_pct,
+    // Investment and depreciation
+    initial_investment: body.initial_investment,
+    depreciation_years: body.depreciation_years,
+    loan_amount: body.loan_amount,
+    loan_interest_rate: body.loan_interest_rate,
+    loan_years: body.loan_years,
+  }
+
+  // Remove undefined values
+  const cleanedFields = Object.fromEntries(
+    Object.entries(validFields).filter(([, v]) => v !== undefined)
+  )
 
   const { data, error } = await supabase
     .from("business_plan_financials")
-    .upsert({
-      ...rest,
-      year: yearValue,
-      business_plan_id: id,
-    })
+    .upsert(cleanedFields)
     .select()
     .single()
 
