@@ -21,10 +21,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   console.log("[v0] Share found, loading financials for business_plan_id:", share.business_plan_id)
 
   const { data, error } = await supabase
-    .from("business_plan_years")
+    .from("business_plan_financials")
     .select("*")
     .eq("business_plan_id", share.business_plan_id)
-    .order("year_number", { ascending: true })
+    .order("year", { ascending: true })
 
   if (error) {
     console.error("[v0] Error loading financials:", error)
@@ -33,5 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   console.log("[v0] Financials loaded:", data?.length || 0, "years")
 
-  return NextResponse.json(data)
+  // Map year to year_number for compatibility with frontend
+  const mappedData = data?.map(d => ({ ...d, year_number: d.year })) || []
+  return NextResponse.json(mappedData)
 }
