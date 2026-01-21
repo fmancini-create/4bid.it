@@ -1158,7 +1158,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       )
     }
     const fbRentalIncome = plan.has_restaurant && plan.restaurant_management === 'rental'
-      ? plan.restaurant_rental_fee || 0 : 0
+      ? getFinValue(fin, "restaurant_rental_income", plan.restaurant_rental_fee || 0) : 0
     
     // SPA - con sottocategorie
     let spaRevenue = 0
@@ -1191,7 +1191,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const spaRentalIncome = plan.has_spa && plan.spa_management === 'rental'
-      ? plan.spa_rental_fee || 0 : 0
+      ? getFinValue(fin, "spa_rental_income", plan.spa_rental_fee || 0) : 0
     
     // Centro Congressi
     let congressRevenue = 0
@@ -1206,7 +1206,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const congressRentalIncome = plan.has_congress && plan.congress_management === 'rental'
-      ? plan.congress_rental_fee || 0 : 0
+      ? getFinValue(fin, "congress_rental_income", plan.congress_rental_fee || 0) : 0
     
     // Bar
     let barRevenue = 0
@@ -1223,7 +1223,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       )
     }
     const barRentalIncome = plan.has_bar && plan.bar_management === 'rental'
-      ? plan.bar_rental_fee || 0 : 0
+      ? getFinValue(fin, "bar_rental_income", plan.bar_rental_fee || 0) : 0
     
     // Bistrot
     let bistrotRevenue = 0
@@ -1240,7 +1240,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       )
     }
     const bistrotRentalIncome = plan.has_bistrot && plan.bistrot_management === 'rental'
-      ? plan.bistrot_rental_fee || 0 : 0
+      ? getFinValue(fin, "bistrot_rental_income", plan.bistrot_rental_fee || 0) : 0
     
     // Palestra
     let gymRevenue = 0
@@ -1257,7 +1257,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       )
     }
     const gymRentalIncome = plan.has_gym && plan.gym_management === 'rental'
-      ? plan.gym_rental_fee || 0 : 0
+      ? getFinValue(fin, "gym_rental_income", plan.gym_rental_fee || 0) : 0
     
     // Piscina (con ingressi esterni)
     let poolRevenue = 0
@@ -1279,7 +1279,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const poolRentalIncome = plan.has_pool && plan.pool_management === 'rental'
-      ? plan.pool_rental_fee || 0 : 0
+      ? getFinValue(fin, "pool_rental_income", plan.pool_rental_fee || 0) : 0
     
     // Parcheggio
     let parkingRevenue = 0
@@ -1296,7 +1296,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const parkingRentalIncome = plan.has_parking && plan.parking_management === 'rental'
-      ? plan.parking_rental_fee || 0 : 0
+      ? getFinValue(fin, "parking_rental_income", plan.parking_rental_fee || 0) : 0
     
     // Lavanderia
     let laundryRevenue = 0
@@ -1311,7 +1311,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const laundryRentalIncome = plan.has_laundry && plan.laundry_management === 'rental'
-      ? plan.laundry_rental_fee || 0 : 0
+      ? getFinValue(fin, "laundry_rental_income", plan.laundry_rental_fee || 0) : 0
     
     // Noleggi
     let rentalsRevenue = 0
@@ -1328,7 +1328,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       )
     }
     const rentalsRentalIncome = plan.has_rentals && plan.rentals_management === 'rental'
-      ? plan.rentals_rental_fee || 0 : 0
+      ? getFinValue(fin, "rentals_rental_income", plan.rentals_rental_fee || 0) : 0
     
     // NCC
     let nccRevenue = 0
@@ -1345,7 +1345,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       }
     }
     const nccRentalIncome = plan.has_ncc && plan.ncc_management === 'rental'
-      ? plan.ncc_rental_fee || 0 : 0
+      ? getFinValue(fin, "ncc_rental_income", plan.ncc_rental_fee || 0) : 0
     
     // Altri ricavi
     const otherRevenue = roomRevenue * (getFinValue(fin, "other_revenue_pct", 5) / 100)
@@ -2789,7 +2789,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                       </CardContent>
                     </Card>
 
-                    {/* CANONI DA AFFITTO - Solo per servizi in affitto */}
+                    {/* CANONI DA AFFITTO - Solo per servizi in affitto - PER ANNO */}
                     {(
                       (selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'rental') ||
                       (selectedPlan.has_spa && selectedPlan.spa_management === 'rental') ||
@@ -2805,8 +2805,8 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                     ) && (
                       <Card>
                         <CardHeader>
-                          <CardTitle>Canoni da Affitto (€/anno)</CardTitle>
-                          <CardDescription>Ricavi da servizi dati in gestione esterna</CardDescription>
+                          <CardTitle>Canoni da Affitto - Anno {fin.year_number} (€/anno)</CardTitle>
+                          <CardDescription>Ricavi da servizi dati in gestione esterna per questo anno specifico</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                           {selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'rental' && (
@@ -2815,9 +2815,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.restaurant_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, restaurant_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "restaurant_rental_income", selectedPlan.restaurant_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, restaurant_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2827,9 +2827,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.spa_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, spa_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "spa_rental_income", selectedPlan.spa_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, spa_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2839,9 +2839,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.congress_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, congress_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "congress_rental_income", selectedPlan.congress_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, congress_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2851,9 +2851,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.bar_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, bar_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "bar_rental_income", selectedPlan.bar_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, bar_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2863,9 +2863,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.bistrot_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, bistrot_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "bistrot_rental_income", selectedPlan.bistrot_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, bistrot_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2875,9 +2875,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.gym_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, gym_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "gym_rental_income", selectedPlan.gym_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, gym_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2887,9 +2887,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.pool_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, pool_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "pool_rental_income", selectedPlan.pool_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, pool_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2899,9 +2899,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.parking_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, parking_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "parking_rental_income", selectedPlan.parking_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, parking_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2911,9 +2911,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.laundry_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, laundry_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "laundry_rental_income", selectedPlan.laundry_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, laundry_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2923,9 +2923,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.rentals_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, rentals_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "rentals_rental_income", selectedPlan.rentals_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, rentals_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
@@ -2935,9 +2935,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               <Input
                                 type="number"
                                 step="1000"
-                                value={selectedPlan.ncc_rental_fee || 0}
-                                onChange={(e) => setSelectedPlan({ ...selectedPlan, ncc_rental_fee: Number.parseFloat(e.target.value) || 0 })}
-                                onBlur={() => savePlan()}
+                                value={getFinValue(fin, "ncc_rental_income", selectedPlan.ncc_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, ncc_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
                               />
                             </div>
                           )}
