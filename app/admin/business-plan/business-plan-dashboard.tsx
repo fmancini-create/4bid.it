@@ -1464,14 +1464,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     // MARGINE DI CONTRIBUZIONE
     const contributionMargin = totalRevenue - totalVariableCosts
 
-    // COSTI FISSI - Personale diviso per reparto (valori annuali o mensili * 12)
-    const staffRoomsCost = getFinValue(fin, "staff_rooms_cost", 0) || getFinValue(fin, "staff_rooms_cost_monthly", 33333) * 12
+    // COSTI FISSI - Personale diviso per reparto (valori annuali salvati per ogni anno)
+    const staffRoomsCost = getFinValue(fin, "staff_rooms_cost", 400000)
     const staffFbCost = plan.has_restaurant && plan.restaurant_management === 'direct' 
-      ? (getFinValue(fin, "staff_fb_cost", 0) || getFinValue(fin, "staff_fb_cost_monthly", 25000) * 12) : 0
+      ? getFinValue(fin, "staff_fb_cost", 300000) : 0
     const staffSpaCost = plan.has_spa && plan.spa_management === 'direct' 
-      ? (getFinValue(fin, "staff_spa_cost", 0) || getFinValue(fin, "staff_spa_cost_monthly", 12500) * 12) : 0
+      ? getFinValue(fin, "staff_spa_cost", 150000) : 0
     const staffCongressCost = plan.has_congress && plan.congress_management === 'direct' 
-      ? (getFinValue(fin, "staff_congress_cost", 0) || getFinValue(fin, "staff_congress_cost_monthly", 8333) * 12) : 0
+      ? getFinValue(fin, "staff_congress_cost", 100000) : 0
     const staffBarCost = plan.has_bar && plan.bar_management === 'direct' 
       ? getFinValue(fin, "staff_bar_cost", 50000) : 0
     const staffBistrotCost = plan.has_bistrot && plan.bistrot_management === 'direct' 
@@ -1488,20 +1488,20 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       ? getFinValue(fin, "staff_rentals_cost", 40000) : 0
     const staffNccCost = plan.has_ncc && plan.ncc_management === 'direct' 
       ? getFinValue(fin, "staff_ncc_cost", 60000) : 0
-    const staffAdminCost = getFinValue(fin, "staff_admin_cost", 0) || getFinValue(fin, "staff_admin_cost_monthly", 15000) * 12
+    const staffAdminCost = getFinValue(fin, "staff_admin_cost", 180000)
     
     const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffBarCost +
       staffBistrotCost + staffGymCost + staffPoolCost + staffParkingCost + staffLaundryCost + 
       staffRentalsCost + staffNccCost + staffAdminCost
 
-    // Costi fissi mensili * 12 per annuale
-    const rentCosts = getFinValue(fin, "rent_cost", 0) || getFinValue(fin, "rent_cost_monthly", 15000) * 12
-    const utilitiesCosts = getFinValue(fin, "utilities_cost", 0) || getFinValue(fin, "utilities_cost_monthly", 10000) * 12
-    const maintenanceCosts = getFinValue(fin, "maintenance_cost", 0) || getFinValue(fin, "maintenance_cost_monthly", 5000) * 12
-    const insuranceCosts = getFinValue(fin, "insurance_cost", 0) || getFinValue(fin, "insurance_cost_monthly", 3000) * 12
-    const marketingCosts = getFinValue(fin, "marketing_cost", 0) || getFinValue(fin, "marketing_cost_monthly", 7000) * 12
-    const adminCosts = getFinValue(fin, "admin_cost", 0) || getFinValue(fin, "admin_cost_monthly", 4000) * 12
-    const otherFixedCosts = getFinValue(fin, "other_fixed_cost", 0) || getFinValue(fin, "other_fixed_monthly", 2500) * 12
+    // Costi fissi annuali (l'API converte da/a mensili automaticamente)
+    const rentCosts = getFinValue(fin, "rent_cost", 180000)
+    const utilitiesCosts = getFinValue(fin, "utilities_cost", 120000)
+    const maintenanceCosts = getFinValue(fin, "maintenance_cost", 60000)
+    const insuranceCosts = getFinValue(fin, "insurance_cost", 36000)
+    const marketingCosts = getFinValue(fin, "marketing_cost", 84000)
+    const adminCosts = getFinValue(fin, "admin_cost", 48000)
+    const otherFixedCosts = getFinValue(fin, "other_fixed_cost", 30000)
     const totalFixedCosts =
       totalStaffCosts +
       rentCosts +
