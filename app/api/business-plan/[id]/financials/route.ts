@@ -303,6 +303,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Map year to year_number for compatibility with frontend
-  return NextResponse.json({ ...data, year_number: data.year })
+  // Map year to year_number and convert monthly to annual for frontend
+  return NextResponse.json({
+    ...data,
+    year_number: data.year,
+    // Convert monthly costs to annual for frontend display
+    rent_cost: (data.rent_cost_monthly || 0) * 12,
+    utilities_cost: (data.utilities_cost_monthly || 0) * 12,
+    maintenance_cost: (data.maintenance_cost_monthly || 0) * 12,
+    insurance_cost: (data.insurance_cost_monthly || 0) * 12,
+    marketing_cost: (data.marketing_cost_monthly || 0) * 12,
+    admin_cost: (data.admin_cost_monthly || 0) * 12,
+    other_fixed_cost: (data.other_fixed_monthly || 0) * 12,
+  })
 }
