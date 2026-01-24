@@ -729,7 +729,21 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           laundry_rental_income: selectedPlan?.laundry_management === 'rental' ? (selectedPlan?.laundry_rental_fee || 0) : 0,
           rentals_rental_income: selectedPlan?.rentals_management === 'rental' ? (selectedPlan?.rentals_rental_fee || 0) : 0,
           ncc_rental_income: selectedPlan?.ncc_management === 'rental' ? (selectedPlan?.ncc_rental_fee || 0) : 0,
-          // Fixed costs
+          // Staff costs (annuali)
+          staff_rooms_cost: 400000,
+          staff_fb_cost: selectedPlan?.has_restaurant && selectedPlan?.restaurant_management === 'direct' ? 300000 : 0,
+          staff_spa_cost: selectedPlan?.has_spa && selectedPlan?.spa_management === 'direct' ? 150000 : 0,
+          staff_congress_cost: selectedPlan?.has_congress && selectedPlan?.congress_management === 'direct' ? 100000 : 0,
+          staff_bar_cost: selectedPlan?.has_bar && selectedPlan?.bar_management === 'direct' ? 50000 : 0,
+          staff_bistrot_cost: selectedPlan?.has_bistrot && selectedPlan?.bistrot_management === 'direct' ? 40000 : 0,
+          staff_gym_cost: selectedPlan?.has_gym && selectedPlan?.gym_management === 'direct' ? 30000 : 0,
+          staff_pool_cost: selectedPlan?.has_pool && selectedPlan?.pool_management === 'direct' ? 25000 : 0,
+          staff_parking_cost: selectedPlan?.has_parking && selectedPlan?.parking_management === 'direct' ? 20000 : 0,
+          staff_laundry_cost: selectedPlan?.has_laundry && selectedPlan?.laundry_management === 'direct' ? 35000 : 0,
+          staff_rentals_cost: selectedPlan?.has_rentals && selectedPlan?.rentals_management === 'direct' ? 40000 : 0,
+          staff_ncc_cost: selectedPlan?.has_ncc && selectedPlan?.ncc_management === 'direct' ? 60000 : 0,
+          staff_admin_cost: 180000,
+          // Fixed costs (mensili)
           rent_cost_monthly: 15000,
           utilities_cost_monthly: 10000,
           maintenance_cost_monthly: 5000,
@@ -740,10 +754,14 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
           // OTA
           ota_commission_pct: 15,
           ota_share_pct: 40,
-          // Investment
+          // Ammortamenti e investimenti
+          depreciation: 150000, // Valore di default per ammortamenti annui
+          initial_investment: selectedPlan?.initial_investment || 0,
           depreciation_years: 20,
+          loan_amount: 0,
           loan_interest_rate: 4,
           loan_years: 15,
+          interest_cost: 0,
         }
         await fetch(`/api/business-plan/${planId}/financials`, {
           method: "POST",
@@ -1515,10 +1533,13 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     // EBITDA
     const ebitda = contributionMargin - totalFixedCosts
 
-    // AMMORTAMENTI - Calcolato da investimento iniziale / anni ammortamento
+    // AMMORTAMENTI - Prima usa il valore diretto, poi calcola da investimento se disponibile
+    const directDepreciation = getFinValue(fin, "depreciation", 0)
     const initialInvestment = getFinValue(fin, "initial_investment", plan.initial_investment || 0)
     const depreciationYears = getFinValue(fin, "depreciation_years", 20)
-    const depreciation = depreciationYears > 0 ? initialInvestment / depreciationYears : getFinValue(fin, "depreciation", 150000)
+    const calculatedDepreciation = depreciationYears > 0 && initialInvestment > 0 ? initialInvestment / depreciationYears : 0
+    // Usa il valore diretto se impostato, altrimenti quello calcolato, altrimenti default
+    const depreciation = directDepreciation > 0 ? directDepreciation : (calculatedDepreciation > 0 ? calculatedDepreciation : 150000)
 
     // EBIT
     const ebit = ebitda - depreciation
