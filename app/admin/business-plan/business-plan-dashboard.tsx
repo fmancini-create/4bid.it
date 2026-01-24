@@ -895,6 +895,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const saveFinancials = async (yearFinancials: BusinessPlanFinancials) => {
     if (!selectedPlan) return
     setIsSaving(true)
+    console.log("[v0] saveFinancials sending:", { depreciation: yearFinancials.depreciation, admin_cost: yearFinancials.admin_cost, utilities_cost: yearFinancials.utilities_cost })
     try {
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/financials`, {
         method: "PUT",
@@ -903,6 +904,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       })
       if (res.ok) {
         const updated = await res.json()
+        console.log("[v0] saveFinancials received:", { depreciation: updated.depreciation, admin_cost: updated.admin_cost, utilities_cost: updated.utilities_cost })
         setFinancials(financials.map((f) => (f.year_number === updated.year_number ? updated : f)))
         toast.success(`Parametri Anno ${updated.year_number} salvati con successo!`)
       } else {

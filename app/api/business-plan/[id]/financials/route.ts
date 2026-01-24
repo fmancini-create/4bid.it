@@ -20,18 +20,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   // Map year to year_number and convert monthly to annual for frontend
-  const mappedData = data?.map(d => ({
-    ...d,
-    year_number: d.year,
-    // Convert monthly costs to annual for frontend display
-    rent_cost: (d.rent_cost_monthly || 0) * 12,
-    utilities_cost: (d.utilities_cost_monthly || 0) * 12,
-    maintenance_cost: (d.maintenance_cost_monthly || 0) * 12,
-    insurance_cost: (d.insurance_cost_monthly || 0) * 12,
-    marketing_cost: (d.marketing_cost_monthly || 0) * 12,
-    admin_cost: (d.admin_cost_monthly || 0) * 12,
-    other_fixed_cost: (d.other_fixed_monthly || 0) * 12,
-  })) || []
+  const mappedData = data?.map(d => {
+    console.log("[v0] GET record year:", d.year, "depreciation:", d.depreciation, "admin_cost_monthly:", d.admin_cost_monthly)
+    return {
+      ...d,
+      year_number: d.year,
+      // Convert monthly costs to annual for frontend display
+      rent_cost: (d.rent_cost_monthly || 0) * 12,
+      utilities_cost: (d.utilities_cost_monthly || 0) * 12,
+      maintenance_cost: (d.maintenance_cost_monthly || 0) * 12,
+      insurance_cost: (d.insurance_cost_monthly || 0) * 12,
+      marketing_cost: (d.marketing_cost_monthly || 0) * 12,
+      admin_cost: (d.admin_cost_monthly || 0) * 12,
+      other_fixed_cost: (d.other_fixed_monthly || 0) * 12,
+      // Ensure depreciation is included (already in d from database)
+      depreciation: d.depreciation || 0,
+    }
+  }) || []
   return NextResponse.json(mappedData)
 }
 
@@ -156,25 +161,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         laundry_rental_income: body.laundry_rental_income || 0,
         rentals_rental_income: body.rentals_rental_income || 0,
         ncc_rental_income: body.ncc_rental_income || 0,
-        // Staff costs
-        staff_cost_monthly: body.staff_cost_monthly || 0,
-        // Fixed costs
-        rent_cost_monthly: body.rent_cost_monthly || 15000,
-        utilities_cost_monthly: body.utilities_cost_monthly || 10000,
-        maintenance_cost_monthly: body.maintenance_cost_monthly || 5000,
-        insurance_cost_monthly: body.insurance_cost_monthly || 3000,
-        marketing_cost_monthly: body.marketing_cost_monthly || 7000,
-        admin_cost_monthly: body.admin_cost_monthly || 4000,
-        other_fixed_monthly: body.other_fixed_monthly || 2500,
+        // Staff costs by department (annual)
+        staff_rooms_cost: body.staff_rooms_cost || 400000,
+        staff_fb_cost: body.staff_fb_cost || 0,
+        staff_spa_cost: body.staff_spa_cost || 0,
+        staff_congress_cost: body.staff_congress_cost || 0,
+        staff_bar_cost: body.staff_bar_cost || 0,
+        staff_bistrot_cost: body.staff_bistrot_cost || 0,
+        staff_gym_cost: body.staff_gym_cost || 0,
+        staff_pool_cost: body.staff_pool_cost || 0,
+        staff_parking_cost: body.staff_parking_cost || 0,
+        staff_laundry_cost: body.staff_laundry_cost || 0,
+        staff_rentals_cost: body.staff_rentals_cost || 0,
+        staff_ncc_cost: body.staff_ncc_cost || 0,
+        staff_admin_cost: body.staff_admin_cost || 180000,
+        // Fixed costs (monthly) - convert from annual if provided
+        rent_cost_monthly: body.rent_cost_monthly || (body.rent_cost ? body.rent_cost / 12 : 15000),
+        utilities_cost_monthly: body.utilities_cost_monthly || (body.utilities_cost ? body.utilities_cost / 12 : 10000),
+        maintenance_cost_monthly: body.maintenance_cost_monthly || (body.maintenance_cost ? body.maintenance_cost / 12 : 5000),
+        insurance_cost_monthly: body.insurance_cost_monthly || (body.insurance_cost ? body.insurance_cost / 12 : 3000),
+        marketing_cost_monthly: body.marketing_cost_monthly || (body.marketing_cost ? body.marketing_cost / 12 : 7000),
+        admin_cost_monthly: body.admin_cost_monthly || (body.admin_cost ? body.admin_cost / 12 : 4000),
+        other_fixed_monthly: body.other_fixed_monthly || (body.other_fixed_cost ? body.other_fixed_cost / 12 : 2500),
         // OTA
         ota_commission_pct: body.ota_commission_pct || 15,
         ota_share_pct: body.ota_share_pct || 40,
         // Investment and depreciation
+        depreciation: body.depreciation || 150000,
         initial_investment: body.initial_investment || 0,
         depreciation_years: body.depreciation_years || 20,
         loan_amount: body.loan_amount || 0,
         loan_interest_rate: body.loan_interest_rate || 4,
         loan_years: body.loan_years || 15,
+        interest_cost: body.interest_cost || 0,
       },
       {
         onConflict: "business_plan_id,year",
@@ -279,6 +298,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     year: yearValue,
   }
   
+  console.log("[v0] PUT body keys:", Object.keys(body))
+  console.log("[v0] PUT body.depreciation:", body.depreciation)
+  console.log("[v0] PUT body.admin_cost:", body.admin_cost)
+  console.log("[v0] PUT body.utilities_cost:", body.utilities_cost)
+  
   for (const key of Object.keys(body)) {
     if (key === 'year_number') continue
     
@@ -287,10 +311,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const monthlyKey = ANNUAL_TO_MONTHLY_MAP[key]
       const annualValue = Number(body[key]) || 0
       filteredData[monthlyKey] = annualValue / 12 // Convert annual to monthly
+      console.log(`[v0] Converting ${key}=${annualValue} to ${monthlyKey}=${annualValue / 12}`)
     } else if (VALID_FINANCIALS_COLUMNS.includes(key)) {
       filteredData[key] = body[key]
     }
   }
+  
+  console.log("[v0] filteredData.depreciation:", filteredData.depreciation)
+  console.log("[v0] filteredData.admin_cost_monthly:", filteredData.admin_cost_monthly)
 
   const { data, error } = await supabase
     .from("business_plan_financials")
@@ -304,6 +332,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   // Map year to year_number and convert monthly to annual for frontend
+  console.log("[v0] PUT saved data.depreciation:", data.depreciation, "data.admin_cost_monthly:", data.admin_cost_monthly)
   return NextResponse.json({
     ...data,
     year_number: data.year,
@@ -315,5 +344,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     marketing_cost: (data.marketing_cost_monthly || 0) * 12,
     admin_cost: (data.admin_cost_monthly || 0) * 12,
     other_fixed_cost: (data.other_fixed_monthly || 0) * 12,
+    // Ensure depreciation is included
+    depreciation: data.depreciation || 0,
   })
 }
