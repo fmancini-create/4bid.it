@@ -204,7 +204,6 @@ export default function DemDashboard({
     }
     setLoading(true)
     try {
-      console.log("[v0] Adding recipient:", manualEmail, "to campaign:", selectedCampaign.id)
       const res = await fetch("/api/dem/recipients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,7 +220,6 @@ export default function DemDashboard({
         }),
       })
       const data = await res.json()
-      console.log("[v0] Recipients API response:", res.status, JSON.stringify(data))
       if (!res.ok) {
         throw new Error(data.error || `Errore HTTP ${res.status}: il salvataggio e' fallito`)
       }
@@ -234,7 +232,6 @@ export default function DemDashboard({
       fetchStats(selectedCampaign.id)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Errore sconosciuto"
-      console.error("[v0] Error adding recipient:", msg)
       showMessage(`ERRORE nel salvataggio: ${msg}`, true)
     } finally {
       setLoading(false)
@@ -284,7 +281,6 @@ export default function DemDashboard({
         return
       }
 
-      console.log("[v0] CSV upload: sending", recipients.length, "recipients to campaign:", selectedCampaign.id)
       const res = await fetch("/api/dem/recipients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -294,7 +290,6 @@ export default function DemDashboard({
         }),
       })
       const data = await res.json()
-      console.log("[v0] CSV upload response:", res.status, JSON.stringify(data))
       if (!res.ok) {
         throw new Error(data.error || `Errore HTTP ${res.status}: il salvataggio CSV e' fallito`)
       }
