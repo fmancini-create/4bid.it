@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
   try {
-    const { campaign_id } = await request.json()
+    const body = await request.json()
+    const { campaign_id } = body
+
+    console.log("[v0] DEM send called with body:", JSON.stringify(body))
 
     if (!campaign_id) {
       return NextResponse.json({ error: "Missing campaign_id" }, { status: 400 })
@@ -70,6 +73,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 })
     }
 
+    console.log("[v0] Campaign found:", campaign.id, "status:", campaign.status, "subject:", campaign.subject)
+
     if (campaign.status === "sending") {
       return NextResponse.json({ error: "Campagna gia' in fase di invio" }, { status: 400 })
     }
@@ -80,6 +85,8 @@ export async function POST(request: NextRequest) {
       .select("*")
       .eq("campaign_id", campaign_id)
       .eq("send_status", "pending")
+
+    console.log("[v0] Recipients found:", recipients?.length, "error:", recipientsError?.message)
 
     if (recipientsError || !recipients || recipients.length === 0) {
       return NextResponse.json({ error: "Nessun destinatario in attesa" }, { status: 400 })
@@ -94,15 +101,18 @@ export async function POST(request: NextRequest) {
     // Determine base URL
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      process.env.VERCEL_PROJECT_PRODUCTION_URL
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : request.headers.get("origin") || "https://4bid.it"
+        : request.headers.get("origin") || "https://www.4bid.it")
+
+    console.log("[v0] Base URL:", baseUrl)
 
     let sentCount = campaign.sent_count || 0
     let failedCount = campaign.failed_count || 0
 
     // Send emails with throttling
     for (const recipient of recipients) {
+      console.log("[v0] Sending to:", recipient.email)
       try {
         // Personalize template
         const personalizedHtml = personalizeTemplate(campaign.html_template, recipient)
