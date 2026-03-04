@@ -103,8 +103,8 @@ export default function ProjectsSection() {
         "Massimizza i profitti del tuo hotel con un team di commercialisti specializzati supportati dall'AI. Analisi real-time, forecasting e consigli personalizzati.",
       logo: "/hotelprofit-ai-logo.png",
       icon: TrendingUp,
-      color: "from-red-500 to-pink-600",
-      progress: "In Development",
+      color: "from-blue-600 to-green-500",
+      progress: "100% testing",
       href: "https://www.hotelprofitai.com",
     },
   ]
