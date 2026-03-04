@@ -46,7 +46,7 @@ export default function ProjectsSection() {
       logo: "/santaddeo-logo.png",
       icon: TrendingUp,
       color: "from-teal-500 to-cyan-600",
-      progress: "75%",
+      progress: "In Testing",
       href: "/progetti/santaddeo",
     },
     {
@@ -70,7 +70,7 @@ export default function ProjectsSection() {
       logo: "/hotel-accelerator-logo.jpg",
       icon: TrendingUp,
       color: "from-blue-500 to-indigo-600",
-      progress: "70%",
+      progress: "80%",
       href: "/progetti/hotel-accelerator",
     },
     {
@@ -94,6 +94,18 @@ export default function ProjectsSection() {
       color: "from-orange-500 to-amber-500",
       progress: "85%",
       href: "/ecomobility/noleggio-mobilita-elettrica-hotel",
+    },
+    {
+      id: "hotelprofit-ai",
+      name: "HOTELPROFIT AI",
+      tagline: "Controllo di gestione intelligente",
+      description:
+        "Massimizza i profitti del tuo hotel con un team di commercialisti specializzati supportati dall'AI. Analisi real-time, forecasting e consigli personalizzati.",
+      logo: "/hotelprofit-ai-logo.png",
+      icon: TrendingUp,
+      color: "from-red-500 to-pink-600",
+      progress: "In Development",
+      href: "https://www.hotelprofitai.com",
     },
   ]
 
