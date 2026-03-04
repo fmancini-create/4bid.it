@@ -105,7 +105,7 @@ export default function ProjectsSection() {
       icon: TrendingUp,
       color: "from-blue-600 to-green-500",
       progress: "100% testing",
-      href: "https://www.hotelprofitai.com",
+      href: "/progetti/hotelprofit-ai",
     },
   ]
 
