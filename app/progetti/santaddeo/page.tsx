@@ -67,12 +67,14 @@ export default function SantaddeoPage() {
                 ad ogni struttura nel mondo.
               </p>
               <div className="flex gap-4">
-                <ContactButton
-                  size="lg"
-                  className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
-                >
-                  Richiedi Demo
-                </ContactButton>
+                <Link href="https://santaddeo.com" target="_blank" rel="noopener noreferrer">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700"
+                  >
+                    Accedi a SANTADDEO
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -81,11 +83,11 @@ export default function SantaddeoPage() {
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Avanzamento</span>
-                    <span className="text-sm font-bold text-teal-600">75%</span>
+                    <span className="text-sm font-medium text-gray-700">Stato</span>
+                    <span className="text-sm font-bold text-teal-600">In Testing</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-600 w-3/4" />
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-600 w-full" />
                   </div>
                 </div>
                 <div className="pt-4 space-y-2">
