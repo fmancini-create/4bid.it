@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   Bike,
   Mail,
+  CalendarDays,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -142,6 +143,14 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
           >
             <Mail className="h-5 w-5 text-primary shrink-0" />
             <span className="font-medium text-sm sm:text-base">DEM</span>
+          </a>
+
+          <a
+            href="/admin/eventi"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+          >
+            <CalendarDays className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Eventi</span>
           </a>
 
           <a
