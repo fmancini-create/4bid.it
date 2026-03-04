@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { Calendar, MapPin, Clock, Users, CheckCircle2, Star, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,17 +48,9 @@ export default function SantaddeoLaunchPage() {
               Evento Esclusivo
             </div>
             
-            <Image
-              src="/santaddeo-logo.png"
-              alt="SANTADDEO Logo"
-              width={400}
-              height={133}
-              className="mx-auto mb-8"
-              style={{ width: 'auto', height: 'auto' }}
-            />
-            
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
-              SANTADDEO Launch Event
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-cyan-600">SANTADDEO</span>
+              <br />Launch Event
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               Partecipa alla presentazione ufficiale del primo Revenue Management System intelligente e umano. 
