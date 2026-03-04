@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
     .select(`
       *,
       customer:ecomobility_customers(*),
-      vehicle:ecomobility_vehicles(*, vehicle_type:ecomobility_vehicle_types(*)),
-      pricing:ecomobility_pricing(*)
+      vehicle:ecomobility_vehicles(*, vehicle_type:ecomobility_vehicle_types(*))
     `)
     .eq("structure_id", structureId)
     .order("created_at", { ascending: false })

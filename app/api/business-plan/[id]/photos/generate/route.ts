@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import * as fal from "@fal-ai/serverless-client"
+import { fal } from "@fal-ai/client"
 
 // Configure fal client
 fal.config({

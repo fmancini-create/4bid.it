@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://www.4bid.it"
+  const baseUrl = "https://4bid.it"
   const lastModified = new Date()
 
   // Homepage
@@ -62,12 +62,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // Progetti
-  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
+  const progetti = [
+    "santaddeo",
+    "manubot",
+    "risparmio-compulsivo",
+    "autoexel",
+    "hotel-accelerator",
+    "hotelprofitai",
+    "mypetsenseai",
+  ].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
+
+  // Ecomobility
+  const ecomobilityPages = [
+    "noleggio-mobilita-elettrica-hotel",
+    "come-funziona",
+    "piattaforma-ecomobility",
+  ].map((slug) => ({
+    url: `${baseUrl}/ecomobility/${slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }))
+
+  // Eventi
+  const eventiPages = [
+    {
+      url: `${baseUrl}/eventi/santaddeo-launch`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
+  ]
 
   // Altre pagine
   const otherPages = [
@@ -91,5 +121,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  return [homepage, ...guidePages, ...landingPages, ...progetti, ...otherPages]
+  return [homepage, ...guidePages, ...landingPages, ...progetti, ...ecomobilityPages, ...eventiPages, ...otherPages]
 }

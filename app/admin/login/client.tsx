@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -13,10 +13,8 @@ import { Eye, EyeOff } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-const DEV_CREDENTIALS = {
-  email: "f.mancini@4bid.it",
-  password: "Pippolo75@4bid",
-}
+// Dev credentials are passed from server component via environment variables
+// Never hardcode credentials in client-side code
 
 interface ClientLoginPageProps {
   SUPER_ADMIN_EMAIL: string
@@ -28,58 +26,13 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
   const [showPassword, setShowPassword] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isDevOrPreview, setIsDevOrPreview] = useState(false)
+
   const router = useRouter()
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hostname = window.location.hostname
-      const isDev =
-        hostname === "localhost" ||
-        hostname.includes("vercel.app") ||
-        hostname.includes("v0.dev") ||
-        hostname.includes("vusercontent.net")
-      setIsDevOrPreview(isDev)
-    }
-  }, [])
 
-  const handleDevLogin = async () => {
-    setEmail(DEV_CREDENTIALS.email)
-    setPassword(DEV_CREDENTIALS.password)
-    setIsLoading(true)
 
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInWithPassword({
-        email: DEV_CREDENTIALS.email,
-        password: DEV_CREDENTIALS.password,
-      })
 
-      if (error) {
-        toast({
-          title: "Errore di accesso",
-          description: error.message,
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Accesso effettuato",
-          description: "Benvenuto nel pannello admin!",
-        })
-        router.push("/admin")
-      }
-    } catch (error) {
-      console.error("Dev login error:", error)
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore. Riprova.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,9 +53,8 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
         return
       }
 
-      console.log("[v0] Creating Supabase client...")
       const supabase = createClient()
-      console.log("[v0] Attempting sign in...")
+      if (!supabase) throw new Error("Supabase non disponibile")
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -152,6 +104,7 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
       }
 
       const supabase = createClient()
+      if (!supabase) throw new Error("Supabase non disponibile")
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/admin/reset-password`,
       })
@@ -254,19 +207,7 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
               </button>
             </form>
 
-            {isDevOrPreview && !isResetting && (
-              <div className="mt-4 pt-4 border-t border-dashed border-orange-300">
-                <Button
-                  type="button"
-                  onClick={handleDevLogin}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Accesso in corso..." : "🔧 Dev Login (solo dev/preview)"}
-                </Button>
-                <p className="text-xs text-center text-orange-600 mt-2">Questo pulsante non è visibile in produzione</p>
-              </div>
-            )}
+
           </CardContent>
         </Card>
       </main>

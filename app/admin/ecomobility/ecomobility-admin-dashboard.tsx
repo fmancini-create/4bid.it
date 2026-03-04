@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,6 +46,12 @@ import {
   FileText,
   Zap,
   Timer,
+  ExternalLink,
+  Trash2,
+  Tag,
+  Wifi,
+  CreditCard,
+  UserPlus,
 } from "lucide-react"
 
 interface Vehicle {
@@ -85,6 +93,11 @@ interface VehicleType {
   category: string
   requires_license_type: string
   range_km: number
+  // Added fields from updates
+  description?: string
+  icon?: string
+  max_speed_kmh?: number
+  avg_range_km?: number
 }
 
 interface Booking {
@@ -122,19 +135,144 @@ interface Pricing {
   vehicle_type: VehicleType
 }
 
-interface Props {
-  structures: Structure[]
-  vehicleTypes: VehicleType[]
+// Changed props from the update
+// Leads Table Component
+function LeadsTable() {
+  const [leads, setLeads] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    loadLeads()
+  }, [])
+
+  const loadLeads = async () => {
+    try {
+      const res = await fetch("/api/ecomobility/admin/leads")
+      const data = await res.json()
+      setLeads(data || [])
+    } catch (error) {
+      console.error("Error loading leads:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      await fetch("/api/ecomobility/admin/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      })
+      loadLeads()
+      toast({ title: "Stato aggiornato" })
+    } catch (error) {
+      toast({ title: "Errore", variant: "destructive" })
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; className: string }> = {
+      new: { label: "Nuovo", className: "bg-blue-100 text-blue-800" },
+      contacted: { label: "Contattato", className: "bg-yellow-100 text-yellow-800" },
+      demo_scheduled: { label: "Demo fissata", className: "bg-purple-100 text-purple-800" },
+      negotiating: { label: "In trattativa", className: "bg-orange-100 text-orange-800" },
+      won: { label: "Acquisito", className: "bg-green-100 text-green-800" },
+      lost: { label: "Perso", className: "bg-gray-100 text-gray-800" },
+    }
+    const s = statusMap[status] || { label: status, className: "bg-gray-100" }
+    return <Badge className={s.className}>{s.label}</Badge>
+  }
+
+  if (loading) {
+    return <div className="text-center py-8">Caricamento leads...</div>
+  }
+
+  if (leads.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium mb-2">Nessun lead ancora</p>
+        <p className="text-sm">Le richieste di demo appariranno qui.</p>
+        <p className="text-xs mt-4">
+          Condividi il link: <code className="bg-muted px-2 py-1 rounded">4bid.it/ecomobility/registra-struttura</code>
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Data</TableHead>
+          <TableHead>Struttura</TableHead>
+          <TableHead>Contatto</TableHead>
+          <TableHead>Tipo</TableHead>
+          <TableHead>Piano</TableHead>
+          <TableHead>Stato</TableHead>
+          <TableHead>Azioni</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {leads.map((lead) => (
+          <TableRow key={lead.id}>
+            <TableCell className="text-sm">
+              {new Date(lead.created_at).toLocaleDateString("it-IT")}
+            </TableCell>
+            <TableCell>
+              <div>
+                <p className="font-medium">{lead.structure_name}</p>
+                <p className="text-xs text-muted-foreground">{lead.city}, {lead.province}</p>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div>
+                <p className="text-sm">{lead.contact_name}</p>
+                <p className="text-xs text-muted-foreground">{lead.email}</p>
+                <p className="text-xs text-muted-foreground">{lead.phone}</p>
+              </div>
+            </TableCell>
+            <TableCell className="text-sm">{lead.structure_type}</TableCell>
+            <TableCell className="text-sm capitalize">{lead.interested_plan}</TableCell>
+            <TableCell>{getStatusBadge(lead.status)}</TableCell>
+            <TableCell>
+              <Select value={lead.status} onValueChange={(value) => updateStatus(lead.id, value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Nuovo</SelectItem>
+                  <SelectItem value="contacted">Contattato</SelectItem>
+                  <SelectItem value="demo_scheduled">Demo fissata</SelectItem>
+                  <SelectItem value="negotiating">In trattativa</SelectItem>
+                  <SelectItem value="won">Acquisito</SelectItem>
+                  <SelectItem value="lost">Perso</SelectItem>
+                </SelectContent>
+              </Select>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
 }
 
-export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
+export function EcomobilityAdminDashboard({ structures }: { structures: Structure[] }) {
   const { toast } = useToast()
-  const [selectedStructure, setSelectedStructure] = useState<Structure | null>(structures[0] || null)
+  // Modified initial state for selectedStructure based on update
+  const [selectedStructure, setSelectedStructure] = useState<Structure | null>(
+    structures.length > 0 ? structures[0] : null,
+  )
   const [activeTab, setActiveTab] = useState("overview")
-  const [isLoading, setIsLoading] = useState(false)
+  // Changed isLoading to loading based on update
+  const [loading, setLoading] = useState(true)
 
   // Data states
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  // Added vehicleTypes state from update
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pricing, setPricing] = useState<Pricing[]>([])
   const [stats, setStats] = useState({
@@ -154,17 +292,20 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
   const [editingPricing, setEditingPricing] = useState<Pricing | null>(null)
   const [selectedVehicleForBattery, setSelectedVehicleForBattery] = useState<Vehicle | null>(null)
   const [newBatteryLevel, setNewBatteryLevel] = useState<number>(100)
+  // Added dialog states from update
+  const [showVehicleDialog, setShowVehicleDialog] = useState(false)
+  const [showVehicleTypeDialog, setShowVehicleTypeDialog] = useState(false)
+  const [editingVehicleType, setEditingVehicleType] = useState<VehicleType | null>(null)
 
   // Form states
   const [vehicleForm, setVehicleForm] = useState({
-    internal_code: "",
+    code: "",
+    name: "",
     vehicle_type_id: "",
-    brand: "",
-    model: "",
-    color: "",
-    serial_number: "",
-    license_plate: "",
+    description: "",
+    image_url: "",
     battery_level: 100,
+    status: "available",
   })
 
   const [pricingForm, setPricingForm] = useState({
@@ -180,62 +321,56 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
   })
 
   // Search/filter
+  // Changed bookingFilter based on update
   const [bookingFilter, setBookingFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  // Changed searchQuery to searchTerm based on update
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     if (selectedStructure) {
       loadData()
+      // Added loadVehicleTypes call from update
+      loadVehicleTypes()
     }
   }, [selectedStructure])
 
+  // Updated loadData function based on update
   const loadData = async () => {
     if (!selectedStructure) return
-    setIsLoading(true)
+    setLoading(true)
 
     try {
-      // Load vehicles
-      const vehiclesRes = await fetch(`/api/ecomobility/admin/vehicles?structureId=${selectedStructure.id}`)
-      const vehiclesData = await vehiclesRes.json()
-      setVehicles(vehiclesData.vehicles || [])
+      const [vehiclesRes, bookingsRes, pricingRes, vehicleTypesRes] = await Promise.all([
+        fetch(`/api/ecomobility/admin/vehicles?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/bookings?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/pricing?structure_id=${selectedStructure.id}`),
+        fetch(`/api/ecomobility/admin/vehicle-types?structure_id=${selectedStructure.id}`),
+      ])
 
-      // Load bookings
-      const bookingsRes = await fetch(`/api/ecomobility/admin/bookings?structureId=${selectedStructure.id}`)
-      const bookingsData = await bookingsRes.json()
-      setBookings(bookingsData.bookings || [])
-
-      // Load pricing
-      const pricingRes = await fetch(`/api/ecomobility/admin/pricing?structureId=${selectedStructure.id}`)
-      const pricingData = await pricingRes.json()
-      setPricing(pricingData.pricing || [])
-
-      // Calculate stats including battery stats
-      const vehiclesList = vehiclesData.vehicles || []
-      const activeRentals = (bookingsData.bookings || []).filter((b: Booking) => b.status === "picked_up").length
-      const availableVehicles = vehiclesList.filter(
-        (v: Vehicle) => v.status === "available" && v.battery_status === "available",
-      ).length
-      const chargingVehicles = vehiclesList.filter(
-        (v: Vehicle) => v.battery_status === "charging" || v.status === "charging",
-      ).length
-      const lowBatteryVehicles = vehiclesList.filter((v: Vehicle) => v.battery_status === "low_battery").length
-      const totalRevenue = (bookingsData.bookings || [])
-        .filter((b: Booking) => b.status === "completed")
-        .reduce((sum: number, b: Booking) => sum + (b.final_amount || 0), 0)
-
-      setStats({
-        totalBookings: (bookingsData.bookings || []).length,
-        activeRentals,
-        totalRevenue,
-        availableVehicles,
-        chargingVehicles,
-        lowBatteryVehicles,
-      })
+      if (vehiclesRes.ok) setVehicles(await vehiclesRes.json())
+      if (bookingsRes.ok) setBookings(await bookingsRes.json())
+      if (pricingRes.ok) setPricing(await pricingRes.json())
+      if (vehicleTypesRes.ok) setVehicleTypes(await vehicleTypesRes.json())
     } catch (error) {
-      console.error("[v0] Error loading data:", error)
-      toast({ title: "Errore caricamento dati", variant: "destructive" })
+      console.error("Error loading data:", error)
+      toast({ title: "Errore", description: "Errore nel caricamento dei dati", variant: "destructive" })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
+    }
+  }
+
+  // Added loadVehicleTypes function based on update
+  const loadVehicleTypes = async () => {
+    if (!selectedStructure) return
+
+    try {
+      const res = await fetch(`/api/ecomobility/admin/vehicle-types?structure_id=${selectedStructure.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setVehicleTypes(data)
+      }
+    } catch (error) {
+      console.error("Error loading vehicle types:", error)
     }
   }
 
@@ -328,38 +463,43 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
     }
   }
 
-  const handleSaveVehicle = async () => {
-    if (!selectedStructure) return
+const handleSaveVehicle = async () => {
+  if (!vehicleForm.code || !vehicleForm.name || !vehicleForm.vehicle_type_id) {
+    toast({ title: "Errore", description: "Compila i campi obbligatori: Codice, Nome e Tipo veicolo", variant: "destructive" })
+    return
+  }
 
     try {
-      const response = await fetch("/api/ecomobility/admin/vehicles", {
-        method: editingVehicle ? "PUT" : "POST",
+      const method = editingVehicle ? "PUT" : "POST"
+      const body = editingVehicle
+        ? { id: editingVehicle.id, ...vehicleForm }
+        : { ...vehicleForm, structure_id: selectedStructure?.id }
+
+      const res = await fetch("/api/ecomobility/admin/vehicles", {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...vehicleForm,
-          id: editingVehicle?.id,
-          structure_id: selectedStructure.id,
-        }),
+        body: JSON.stringify(body),
       })
 
-      if (!response.ok) throw new Error("Errore salvataggio")
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || "Errore nel salvataggio")
+      }
 
-      toast({ title: editingVehicle ? "Veicolo aggiornato" : "Veicolo aggiunto" })
+      toast({ title: "Successo", description: editingVehicle ? "Veicolo aggiornato" : "Veicolo aggiunto" })
       setVehicleDialogOpen(false)
-      setEditingVehicle(null)
       setVehicleForm({
-        internal_code: "",
+        code: "",
+        name: "",
         vehicle_type_id: "",
-        brand: "",
-        model: "",
-        color: "",
-        serial_number: "",
-        license_plate: "",
+        description: "",
+        image_url: "",
         battery_level: 100,
+        status: "available",
       })
       loadData()
-    } catch (error) {
-      toast({ title: "Errore salvataggio veicolo", variant: "destructive" })
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" })
     }
   }
 
@@ -433,6 +573,55 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
     }
   }
 
+  // Added CRUD functions for vehicle types from update
+  const saveVehicleType = async () => {
+    if (!selectedStructure || !editingVehicleType) return
+
+    try {
+      const method = editingVehicleType.id ? "PUT" : "POST"
+      const res = await fetch("/api/ecomobility/admin/vehicle-types", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editingVehicleType,
+          structure_id: selectedStructure.id,
+        }),
+      })
+
+      if (res.ok) {
+        toast({
+          title: "Successo",
+          description: editingVehicleType.id ? "Tipo veicolo aggiornato" : "Tipo veicolo creato",
+        })
+        setShowVehicleTypeDialog(false)
+        setEditingVehicleType(null)
+        loadData()
+      } else {
+        const error = await res.json()
+        toast({ title: "Errore", description: error.error, variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Errore", description: "Errore nel salvataggio", variant: "destructive" })
+    }
+  }
+
+  const deleteVehicleType = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo tipo di veicolo?")) return
+
+    try {
+      const res = await fetch(`/api/ecomobility/admin/vehicle-types?id=${id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast({ title: "Successo", description: "Tipo veicolo eliminato" })
+        loadData()
+      } else {
+        const error = await res.json()
+        toast({ title: "Errore", description: error.error, variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Errore", description: "Errore nell'eliminazione", variant: "destructive" })
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
       string,
@@ -495,10 +684,11 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
     )
   }
 
+  // Modified filter function based on update
   const filteredBookings = bookings.filter((booking) => {
     if (bookingFilter !== "all" && booking.status !== bookingFilter) return false
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    if (searchTerm) {
+      const query = searchTerm.toLowerCase()
       return (
         booking.booking_code.toLowerCase().includes(query) ||
         booking.customer?.first_name?.toLowerCase().includes(query) ||
@@ -540,8 +730,8 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Aggiorna
             </Button>
             <Button variant="ghost" size="sm" asChild>
@@ -554,7 +744,7 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
       {selectedStructure ? (
         <main className="max-w-7xl mx-auto px-4 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-6">
+            <TabsList className="grid grid-cols-8 w-full max-w-5xl mb-6">
               <TabsTrigger value="overview">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Overview
@@ -567,15 +757,32 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                 <Bike className="h-4 w-4 mr-2" />
                 Flotta
               </TabsTrigger>
+              {/* Added TabsTrigger for vehicle types based on update */}
+              <TabsTrigger value="vehicle-types">
+                <Tag className="h-4 w-4 mr-2" />
+                Tipi Veicolo
+              </TabsTrigger>
               <TabsTrigger value="pricing">
                 <Euro className="h-4 w-4 mr-2" />
                 Tariffe
               </TabsTrigger>
-              <TabsTrigger value="settings">
-                <Settings className="h-4 w-4 mr-2" />
-                Impostazioni
-              </TabsTrigger>
-            </TabsList>
+<TabsTrigger value="devices">
+  <Wifi className="h-4 w-4 mr-2" />
+  Dispositivi
+  </TabsTrigger>
+  <TabsTrigger value="billing">
+  <CreditCard className="h-4 w-4 mr-2" />
+  Fatturazione
+  </TabsTrigger>
+  <TabsTrigger value="leads">
+  <UserPlus className="h-4 w-4 mr-2" />
+  Leads
+  </TabsTrigger>
+  <TabsTrigger value="settings">
+  <Settings className="h-4 w-4 mr-2" />
+  Impostazioni
+  </TabsTrigger>
+  </TabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
@@ -804,7 +1011,7 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
               </Card>
             </TabsContent>
 
-            {/* ... existing bookings, vehicles, pricing, settings tabs ... */}
+            {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -812,8 +1019,8 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Cerca prenotazione..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={searchTerm} // Changed from searchQuery
+                      onChange={(e) => setSearchTerm(e.target.value)} // Changed from setSearchQuery
                       className="pl-9 w-[300px]"
                     />
                   </div>
@@ -947,14 +1154,15 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>{editingVehicle ? "Modifica veicolo" : "Nuovo veicolo"}</DialogTitle>
+                      <DialogDescription>Inserisci i dati del veicolo</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>Codice interno *</Label>
                           <Input
-                            value={vehicleForm.internal_code}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, internal_code: e.target.value })}
+                            value={vehicleForm.code}
+                            onChange={(e) => setVehicleForm({ ...vehicleForm, code: e.target.value })}
                             placeholder="es. EBIKE-001"
                           />
                         </div>
@@ -977,48 +1185,61 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                           </Select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Marca</Label>
-                          <Input
-                            value={vehicleForm.brand}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, brand: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Modello</Label>
-                          <Input
-                            value={vehicleForm.model}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Colore</Label>
-                          <Input
-                            value={vehicleForm.color}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Targa</Label>
-                          <Input
-                            value={vehicleForm.license_plate}
-                            onChange={(e) => setVehicleForm({ ...vehicleForm, license_plate: e.target.value })}
-                          />
-                        </div>
-                      </div>
                       <div>
-                        <Label>Numero di serie</Label>
+                        <Label>Nome veicolo *</Label>
                         <Input
-                          value={vehicleForm.serial_number}
-                          onChange={(e) => setVehicleForm({ ...vehicleForm, serial_number: e.target.value })}
+                          value={vehicleForm.name}
+                          onChange={(e) => setVehicleForm({ ...vehicleForm, name: e.target.value })}
+                          placeholder="es. E-Bike City Blu"
                         />
                       </div>
-                      <Button onClick={handleSaveVehicle} className="w-full">
-                        {editingVehicle ? "Salva modifiche" : "Aggiungi veicolo"}
-                      </Button>
+                      <div>
+                        <Label>Descrizione</Label>
+                        <Input
+                          value={vehicleForm.description}
+                          onChange={(e) => setVehicleForm({ ...vehicleForm, description: e.target.value })}
+                          placeholder="Descrizione opzionale"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Livello batteria (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={vehicleForm.battery_level}
+                            onChange={(e) =>
+                              setVehicleForm({ ...vehicleForm, battery_level: Number.parseInt(e.target.value) || 0 })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>Stato</Label>
+                          <Select
+                            value={vehicleForm.status}
+                            onValueChange={(v) => setVehicleForm({ ...vehicleForm, status: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Disponibile</SelectItem>
+                              <SelectItem value="charging">In carica</SelectItem>
+                              <SelectItem value="maintenance">Manutenzione</SelectItem>
+                              <SelectItem value="unavailable">Non disponibile</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setVehicleDialogOpen(false)}>
+                          Annulla
+                        </Button>
+                        <Button onClick={handleSaveVehicle}>
+                          {editingVehicle ? "Salva modifiche" : "Aggiungi veicolo"}
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -1085,13 +1306,13 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                           onClick={() => {
                             setEditingVehicle(vehicle)
                             setVehicleForm({
-                              internal_code: vehicle.internal_code,
+                              code: vehicle.internal_code,
+                              name: `${vehicle.brand} ${vehicle.model}`,
                               vehicle_type_id: vehicle.vehicle_type?.id || "",
-                              brand: vehicle.brand || "",
-                              model: vehicle.model || "",
-                              color: vehicle.color || "",
-                              serial_number: "",
-                              license_plate: "",
+                              description: "", // Assuming description might be new field
+                              image_url: "", // Assuming image_url might be new field
+                              battery_level: vehicle.battery_level || 100,
+                              status: vehicle.status,
                             })
                             setVehicleDialogOpen(true)
                           }}
@@ -1103,6 +1324,103 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+
+            {/* Added TabsContent for vehicle types management based on update */}
+            <TabsContent value="vehicle-types" className="space-y-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Tipi di Veicolo</CardTitle>
+                    <CardDescription>Gestisci le categorie di veicoli disponibili</CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setEditingVehicleType({
+                        id: "",
+                        name: "",
+                        slug: "",
+                        category: "",
+                        requires_license_type: "",
+                        range_km: 50,
+                        description: "",
+                        icon: "bike",
+                        max_speed_kmh: 25,
+                        avg_range_km: 50,
+                      } as any)
+                      setShowVehicleTypeDialog(true)
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuovo Tipo
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descrizione</TableHead>
+                        <TableHead>Velocità Max</TableHead>
+                        <TableHead>Autonomia Media</TableHead>
+                        <TableHead>Veicoli</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vehicleTypes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            Nessun tipo di veicolo configurato
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        vehicleTypes.map((vt: any) => {
+                          const vehicleCount = vehicles.filter((v) => v.vehicle_type?.id === vt.id).length
+                          return (
+                            <TableRow key={vt.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <Bike className="h-4 w-4 text-muted-foreground" />
+                                  {vt.name}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{vt.description || "-"}</TableCell>
+                              <TableCell>{vt.max_speed_kmh} km/h</TableCell>
+                              <TableCell>{vt.avg_range_km} km</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{vehicleCount} veicoli</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingVehicleType(vt)
+                                      setShowVehicleTypeDialog(true)
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteVehicleType(vt.id)}
+                                    disabled={vehicleCount > 0}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Pricing Tab */}
@@ -1294,8 +1612,177 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
               </div>
             </TabsContent>
 
-            {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-6">
+{/* Devices Tab */}
+  <TabsContent value="devices" className="space-y-6">
+  <Card>
+  <CardHeader>
+  <div className="flex items-center justify-between">
+  <div>
+  <CardTitle>Dispositivi Hardware</CardTitle>
+  <CardDescription>Gestisci GPS tracker e lucchetti smart associati ai veicoli</CardDescription>
+  </div>
+  <Button onClick={() => toast({ title: "Coming soon", description: "Funzionalità in sviluppo" })}>
+  <Plus className="h-4 w-4 mr-2" />
+  Aggiungi dispositivo
+  </Button>
+  </div>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-12 text-muted-foreground">
+  <Wifi className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  <p className="text-lg font-medium mb-2">Nessun dispositivo configurato</p>
+  <p className="text-sm">Aggiungi GPS tracker e lucchetti smart per monitorare i tuoi veicoli.</p>
+  <p className="text-xs mt-4 text-orange-600">Contatta 4BID per acquistare i dispositivi hardware.</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Billing Tab */}
+  <TabsContent value="billing" className="space-y-6">
+  {/* Admin 4BID Banner */}
+  <Card className="bg-orange-50 border-orange-200">
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="font-medium">Pannello Amministrativo 4BID</p>
+  <p className="text-sm text-muted-foreground">Gestisci piani, abbonamenti e fatture di tutte le strutture</p>
+  </div>
+  <Link href="/admin/ecomobility/billing">
+  <Button className="bg-orange-500 hover:bg-orange-600">
+  <CreditCard className="h-4 w-4 mr-2" />
+  Gestione Fatturazione
+  </Button>
+  </Link>
+  </div>
+  </CardContent>
+  </Card>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Piano attuale</p>
+  <p className="text-xl font-bold">Starter</p>
+  </div>
+  <CreditCard className="h-8 w-8 text-orange-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Canone mensile</p>
+  <p className="text-xl font-bold">€49,00</p>
+  </div>
+  <Euro className="h-8 w-8 text-green-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  <Card>
+  <CardContent className="p-4">
+  <div className="flex items-center justify-between">
+  <div>
+  <p className="text-xs text-muted-foreground">Prossima fattura</p>
+  <p className="text-xl font-bold">01/02/2026</p>
+  </div>
+  <FileText className="h-8 w-8 text-blue-500 opacity-50" />
+  </div>
+  </CardContent>
+  </Card>
+  </div>
+  
+  <Card>
+  <CardHeader>
+  <CardTitle>Piani disponibili</CardTitle>
+  <CardDescription>Scegli il piano più adatto alle tue esigenze</CardDescription>
+  </CardHeader>
+  <CardContent>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div className="border rounded-lg p-6 bg-orange-50 border-orange-200">
+  <h3 className="font-bold text-lg mb-2">Starter</h3>
+  <p className="text-3xl font-bold mb-1">€49<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Fino a 5 veicoli</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Dashboard completa</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Prenotazioni online</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Report base</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €5/mese per dispositivo</li>
+  </ul>
+  <Badge>Piano attuale</Badge>
+  </div>
+  <div className="border rounded-lg p-6">
+  <h3 className="font-bold text-lg mb-2">Professional</h3>
+  <p className="text-3xl font-bold mb-1">€99<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Fino a 15 veicoli</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Tutto Starter +</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Report avanzati</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Multi-operatore</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €4/mese per dispositivo</li>
+  </ul>
+  <Button variant="outline" className="w-full bg-transparent">Upgrade</Button>
+  </div>
+  <div className="border rounded-lg p-6">
+  <h3 className="font-bold text-lg mb-2">Enterprise</h3>
+  <p className="text-3xl font-bold mb-1">€199<span className="text-sm font-normal">/mese</span></p>
+  <p className="text-sm text-muted-foreground mb-4">Veicoli illimitati</p>
+  <ul className="space-y-2 text-sm mb-6">
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Tutto Professional +</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> White label</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Supporto prioritario</li>
+  <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> €3/mese per dispositivo</li>
+  </ul>
+  <Button variant="outline" className="w-full bg-transparent">Contattaci</Button>
+  </div>
+  </div>
+  </CardContent>
+  </Card>
+  
+  <Card>
+  <CardHeader>
+  <CardTitle>Storico fatture</CardTitle>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-8 text-muted-foreground">
+  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+  <p>Nessuna fattura disponibile</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Leads Tab */}
+  <TabsContent value="leads" className="space-y-6">
+  <Card>
+  <CardHeader>
+  <div className="flex items-center justify-between">
+  <div>
+  <CardTitle>Richieste Demo & Leads</CardTitle>
+  <CardDescription>Gestisci le richieste delle strutture interessate a 4BID Ecomobility</CardDescription>
+  </div>
+  <Link href="/ecomobility/registra-struttura" target="_blank">
+  <Button variant="outline">
+  <ExternalLink className="h-4 w-4 mr-2" />
+  Vedi Landing Page
+  </Button>
+  </Link>
+  </div>
+  </CardHeader>
+  <CardContent>
+  <div className="text-center py-12 text-muted-foreground">
+  <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  <p className="text-lg font-medium mb-2">Nessun lead disponibile</p>
+  <p className="text-sm">Le richieste demo e contatti dalle landing page appariranno qui.</p>
+  </div>
+  </CardContent>
+  </Card>
+  </TabsContent>
+  
+  {/* Settings Tab */}
+  <TabsContent value="settings" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Impostazioni struttura</CardTitle>
@@ -1314,33 +1801,33 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   </div>
                   <div>
                     <Label>Descrizione</Label>
-                    <Textarea value={selectedStructure.description || ""} rows={3} />
+                    <Textarea defaultValue={selectedStructure.description || ""} rows={3} readOnly />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Email</Label>
-                      <Input value={selectedStructure.email || ""} />
+                      <Input defaultValue={selectedStructure.email || ""} readOnly />
                     </div>
                     <div>
                       <Label>Telefono</Label>
-                      <Input value={selectedStructure.phone || ""} />
+                      <Input defaultValue={selectedStructure.phone || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Città</Label>
-                      <Input value={selectedStructure.city || ""} />
+                      <Input defaultValue={selectedStructure.city || ""} readOnly />
                     </div>
                     <div>
                       <Label>Provincia</Label>
-                      <Input value={selectedStructure.province || ""} />
+                      <Input defaultValue={selectedStructure.province || ""} readOnly />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Colore primario</Label>
                       <div className="flex gap-2">
-                        <Input value={selectedStructure.primary_color || "#f97316"} className="flex-1" />
+                        <Input defaultValue={selectedStructure.primary_color || "#f97316"} className="flex-1" readOnly />
                         <div
                           className="w-10 h-10 rounded border"
                           style={{ backgroundColor: selectedStructure.primary_color || "#f97316" }}
@@ -1348,7 +1835,7 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                       </div>
                     </div>
                   </div>
-                  <Button>Salva impostazioni</Button>
+                  <p className="text-sm text-muted-foreground">Per modificare questi dati contatta il supporto 4BID.</p>
                 </CardContent>
               </Card>
 
@@ -1374,6 +1861,147 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                       Copia
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accesso Gestore Struttura</CardTitle>
+                  <CardDescription>
+                    Link per il gestore della struttura per accedere alla propria dashboard
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={`https://4bid.it/ecomobility/${selectedStructure.slug}/admin`}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://4bid.it/ecomobility/${selectedStructure.slug}/admin`)
+                        toast({ title: "Link copiato!" })
+                      }}
+                    >
+                      Copia
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => window.open(`/ecomobility/${selectedStructure.slug}/admin`, "_blank")}
+                      className="flex-1"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Apri Dashboard Gestore
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stripe Connect Configuration */}
+              <Card className="border-2 border-orange-200">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-orange-500" />
+                    <CardTitle>Configurazione Pagamenti (Stripe)</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Collega l'account Stripe della struttura per ricevere i pagamenti dai clienti
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedStructure.stripe_account_id && selectedStructure.stripe_onboarding_complete ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-medium">Account Stripe collegato e attivo</span>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg space-y-2">
+                        <p className="text-sm"><strong>Account ID:</strong> {selectedStructure.stripe_account_id}</p>
+                        <p className="text-sm text-muted-foreground">
+                          I pagamenti dei clienti andranno direttamente su questo account.
+                          4BID trattiene una commissione del 5% su ogni transazione.
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                        onClick={async () => {
+                          if (confirm("Sei sicuro di voler scollegare l'account Stripe? La struttura non potrà più ricevere pagamenti.")) {
+                            await fetch(`/api/ecomobility/stripe-connect?structure_id=${selectedStructure.id}`, { method: "DELETE" })
+                            loadData()
+                            toast({ title: "Account Stripe scollegato" })
+                          }
+                        }}
+                      >
+                        Scollega Account Stripe
+                      </Button>
+                    </div>
+                  ) : selectedStructure.stripe_account_id && !selectedStructure.stripe_onboarding_complete ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-yellow-600">
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-medium">Onboarding Stripe incompleto</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        La struttura ha iniziato la configurazione di Stripe ma non l'ha completata.
+                      </p>
+                      <Button 
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={async () => {
+                          const res = await fetch("/api/ecomobility/stripe-connect", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                              structure_id: selectedStructure.id,
+                              structure_name: selectedStructure.name,
+                              structure_email: selectedStructure.email,
+                            }),
+                          })
+                          const data = await res.json()
+                          if (data.onboarding_url) {
+                            window.open(data.onboarding_url, "_blank")
+                          }
+                        }}
+                      >
+                        Completa Configurazione Stripe
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CreditCard className="h-5 w-5" />
+                        <span>Nessun account Stripe collegato</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Per ricevere pagamenti, la struttura deve collegare il proprio account Stripe.
+                        Verrà guidata attraverso il processo di onboarding di Stripe Express.
+                      </p>
+                      <Button 
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={async () => {
+                          const res = await fetch("/api/ecomobility/stripe-connect", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                              structure_id: selectedStructure.id,
+                              structure_name: selectedStructure.name,
+                              structure_email: selectedStructure.email,
+                            }),
+                          })
+                          const data = await res.json()
+                          if (data.onboarding_url) {
+                            window.open(data.onboarding_url, "_blank")
+                          }
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Configura Stripe per questa struttura
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1428,6 +2056,78 @@ export function EcomobilityAdminDashboard({ structures, vehicleTypes }: Props) {
                   Annulla
                 </Button>
                 <Button onClick={handleUpdateBatteryLevel}>Aggiorna</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Added Dialog for vehicle type editing based on update */}
+          <Dialog open={showVehicleTypeDialog} onOpenChange={setShowVehicleTypeDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingVehicleType?.id ? "Modifica Tipo Veicolo" : "Nuovo Tipo Veicolo"}</DialogTitle>
+                <DialogDescription>Configura le caratteristiche del tipo di veicolo</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="vt-name">Nome *</Label>
+                  <Input
+                    id="vt-name"
+                    value={editingVehicleType?.name || ""}
+                    onChange={(e) => setEditingVehicleType((prev) => (prev ? { ...prev, name: e.target.value } : null))}
+                    placeholder="es. E-Bike City"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="vt-description">Descrizione</Label>
+                  <Textarea
+                    id="vt-description"
+                    value={(editingVehicleType as any)?.description || ""}
+                    onChange={(e) =>
+                      setEditingVehicleType((prev) => (prev ? ({ ...prev, description: e.target.value } as any) : null))
+                    }
+                    placeholder="Descrizione del tipo di veicolo"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="vt-speed">Velocità Max (km/h)</Label>
+                    <Input
+                      id="vt-speed"
+                      type="number"
+                      value={(editingVehicleType as any)?.max_speed_kmh || 25}
+                      onChange={(e) =>
+                        setEditingVehicleType((prev) =>
+                          prev ? ({ ...prev, max_speed_kmh: Number.parseInt(e.target.value) } as any) : null,
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="vt-range">Autonomia Media (km)</Label>
+                    <Input
+                      id="vt-range"
+                      type="number"
+                      value={(editingVehicleType as any)?.avg_range_km || 50}
+                      onChange={(e) =>
+                        setEditingVehicleType((prev) =>
+                          prev ? ({ ...prev, avg_range_km: Number.parseInt(e.target.value) } as any) : null,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowVehicleTypeDialog(false)
+                      setEditingVehicleType(null)
+                    }}
+                  >
+                    Annulla
+                  </Button>
+                  <Button onClick={saveVehicleType}>{editingVehicleType?.id ? "Salva" : "Crea"}</Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>

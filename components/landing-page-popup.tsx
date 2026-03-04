@@ -74,8 +74,7 @@ export function LandingPagePopup() {
 
   useEffect(() => {
     // Check if popup was already shown in this session
-    const hasShown = sessionStorage.getItem("landing-popup-shown")
-    if (hasShown) return
+    if (typeof window !== "undefined" && sessionStorage.getItem("landing-popup-shown")) return
 
     // Select random landing page
     const randomPage = landingPages[Math.floor(Math.random() * landingPages.length)]
@@ -85,7 +84,7 @@ export function LandingPagePopup() {
     const delay = 3000 + Math.random() * 2000
     const timer = setTimeout(() => {
       setIsVisible(true)
-      sessionStorage.setItem("landing-popup-shown", "true")
+      if (typeof window !== "undefined") sessionStorage.setItem("landing-popup-shown", "true")
     }, delay)
 
     return () => clearTimeout(timer)

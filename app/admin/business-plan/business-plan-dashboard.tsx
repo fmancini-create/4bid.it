@@ -92,9 +92,49 @@ interface BusinessPlan {
   project_type: string
   num_rooms: number
   stars: number
+  // Servizi accessori con gestione diretta/affitto
   has_spa: boolean
+  spa_management: 'direct' | 'rental'
+  spa_rental_fee?: number
+  // SPA suddivisa in sottocategorie
+  spa_treatments_enabled?: boolean // Trattamenti benessere
+  spa_entries_enabled?: boolean // Ingressi benessere
   has_restaurant: boolean
-  has_congress: boolean // Aggiunto comparto congressuale
+  restaurant_management: 'direct' | 'rental'
+  restaurant_rental_fee?: number
+  has_congress: boolean
+  congress_management: 'direct' | 'rental'
+  congress_rental_fee?: number
+  // Nuovi centri di ricavo
+  has_bar: boolean
+  bar_management: 'direct' | 'rental'
+  bar_rental_fee?: number
+  has_bistrot: boolean
+  bistrot_management: 'direct' | 'rental'
+  bistrot_rental_fee?: number
+  has_gym: boolean
+  gym_management: 'direct' | 'rental'
+  gym_rental_fee?: number
+  has_pool: boolean
+  pool_management: 'direct' | 'rental'
+  pool_rental_fee?: number
+  // Piscina con ingressi esterni
+  pool_external_entries_enabled?: boolean
+  has_parking: boolean
+  parking_management: 'direct' | 'rental'
+  parking_rental_fee?: number
+  has_laundry: boolean
+  laundry_management: 'direct' | 'rental'
+  laundry_rental_fee?: number
+  // Noleggi (biciclette, auto, ecc)
+  has_rentals: boolean
+  rentals_management: 'direct' | 'rental'
+  rentals_rental_fee?: number
+  rentals_types?: string[] // ['bicycles', 'cars', 'scooters', 'ebikes']
+  // Servizi NCC
+  has_ncc: boolean
+  ncc_management: 'direct' | 'rental'
+  ncc_rental_fee?: number
   location: string
   opening_days_year: number
   projection_years: number
@@ -122,24 +162,154 @@ interface BusinessPlanFinancials {
   occupancy_rate: number
   adr: number
 
-  // Ricavi extra (percentuali)
+// Ricavi extra - Modalità: 'pct_rooms' | 'absolute' | 'detailed'
+  // F&B
+  fb_revenue_mode?: string
   fb_revenue_pct: number
+  fb_revenue_absolute?: number
+  fb_internal_pct?: number
+  fb_internal_avg_spend?: number
+  fb_external_covers?: number
+  fb_external_avg_spend?: number
+  
+  // SPA
+  spa_revenue_mode?: string
   spa_revenue_pct: number
-  congress_revenue_pct: number // Aggiunto ricavi congressuali
+  spa_treatments_revenue_pct: number
+  spa_entries_revenue_pct: number
+  spa_revenue_absolute?: number
+  spa_treatments_internal_pct?: number
+  spa_treatments_internal_avg?: number
+  spa_treatments_external_clients?: number
+  spa_treatments_external_avg?: number
+  spa_entries_internal_pct?: number
+  spa_entries_internal_avg?: number
+  spa_entries_external_clients?: number
+  spa_entries_external_avg?: number
+  
+  // Congressi
+  congress_revenue_mode?: string
+  congress_revenue_pct: number
+  congress_revenue_absolute?: number
+  congress_events_year?: number
+  congress_avg_revenue?: number
+  
+  // Bar
+  bar_revenue_mode?: string
+  bar_revenue_pct: number
+  bar_revenue_absolute?: number
+  bar_internal_pct?: number
+  bar_internal_avg_spend?: number
+  bar_external_clients?: number
+  bar_external_avg_spend?: number
+  
+  // Bistrot
+  bistrot_revenue_mode?: string
+  bistrot_revenue_pct: number
+  bistrot_revenue_absolute?: number
+  bistrot_internal_pct?: number
+  bistrot_internal_avg_spend?: number
+  bistrot_external_clients?: number
+  bistrot_external_avg_spend?: number
+  
+  // Palestra
+  gym_revenue_mode?: string
+  gym_revenue_pct: number
+  gym_revenue_absolute?: number
+  gym_internal_pct?: number
+  gym_internal_avg?: number
+  gym_external_clients?: number
+  gym_external_avg?: number
+  
+  // Piscina
+  pool_revenue_mode?: string
+  pool_revenue_pct: number
+  pool_external_revenue_pct: number
+  pool_revenue_absolute?: number
+  pool_external_entries?: number
+  pool_external_avg?: number
+  
+  // Parcheggio
+  parking_revenue_mode?: string
+  parking_revenue_pct: number
+  parking_revenue_absolute?: number
+  parking_internal_pct?: number
+  parking_internal_avg?: number
+  parking_external_spaces?: number
+  parking_external_days?: number
+  parking_external_avg?: number
+  
+  // Lavanderia
+  laundry_revenue_mode?: string
+  laundry_revenue_pct: number
+  laundry_revenue_absolute?: number
+  laundry_internal_pct?: number
+  laundry_internal_avg?: number
+  
+  // Noleggi
+  rentals_revenue_mode?: string
+  rentals_revenue_pct: number
+  rentals_revenue_absolute?: number
+  rentals_internal_pct?: number
+  rentals_internal_avg?: number
+  rentals_external_clients?: number
+  rentals_external_avg?: number
+  
+  // NCC
+  ncc_revenue_mode?: string
+  ncc_revenue_pct: number
+  ncc_revenue_absolute?: number
+  ncc_internal_pct?: number
+  ncc_internal_avg?: number
+  ncc_external_trips?: number
+  ncc_external_avg?: number
+  
   other_revenue_pct: number
-
-  // Costi variabili (percentuali)
+  
+  // Canoni da affitti (se servizio in affitto)
+  spa_rental_income: number
+  restaurant_rental_income: number
+  congress_rental_income: number
+  bar_rental_income: number
+  bistrot_rental_income: number
+  gym_rental_income: number
+  pool_rental_income: number
+  parking_rental_income: number
+  laundry_rental_income: number
+  rentals_rental_income: number
+  ncc_rental_income: number
+  
+  // Costi variabili (percentuali sui ricavi del reparto)
   rooms_cost_pct: number
   fb_cost_pct: number
   spa_cost_pct: number
-  congress_cost_pct: number // Aggiunto costi congressuali
+  spa_treatments_cost_pct: number
+  spa_entries_cost_pct: number
+  congress_cost_pct: number
+  bar_cost_pct: number
+  bistrot_cost_pct: number
+  gym_cost_pct: number
+  pool_cost_pct: number
+  pool_external_cost_pct: number
+  parking_cost_pct: number
+  laundry_cost_pct: number
+  rentals_cost_pct: number
+  ncc_cost_pct: number
   other_cost_pct: number
-
+  
   // Costi fissi annuali - Divisi per reparto
   staff_rooms_cost: number
   staff_fb_cost: number
   staff_spa_cost: number
   staff_congress_cost: number
+  staff_bar_cost: number
+  staff_bistrot_cost: number
+  staff_gym_cost: number
+  staff_pool_cost: number
+  staff_parking_cost: number
+  staff_laundry_cost: number
+  staff_rentals_cost: number
+  staff_ncc_cost: number
   staff_admin_cost: number
   rent_cost: number
   utilities_cost: number
@@ -162,6 +332,12 @@ interface Props {
 const formatNumber = (n: number) => n.toLocaleString("it-IT", { maximumFractionDigits: 0 })
 const formatCurrency = (n: number) => `€ ${formatNumber(n)}`
 const formatPercent = (n: number) => `${n.toFixed(1)}%`
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getFinValueAny = (fin: BusinessPlanFinancials, key: string, defaultVal: any): any => {
+  const val = (fin as Record<string, unknown>)[key]
+  return val !== undefined && val !== null ? val : defaultVal
+}
 
 const getFinValue = (fin: BusinessPlanFinancials, key: keyof BusinessPlanFinancials, defaultVal = 0): number => {
   const val = fin[key]
@@ -298,6 +474,86 @@ const LabelWithTooltip = ({ field, children }: { field: string; children: React.
   )
 }
 
+// Componente per la gestione dei servizi con flag diretta/affitto
+interface ServiceRowProps {
+  label: string
+  hasService: boolean
+  management: 'direct' | 'rental'
+  rentalFee: number
+  onToggle: (checked: boolean) => void
+  onManagementChange: (management: 'direct' | 'rental') => void
+  onRentalFeeChange: (fee: number) => void
+}
+
+const ServiceRow = ({ 
+  label, 
+  hasService, 
+  management, 
+  rentalFee, 
+  onToggle, 
+  onManagementChange, 
+  onRentalFeeChange 
+}: ServiceRowProps) => {
+  return (
+    <div className="border rounded-lg p-3 bg-muted/30">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="rounded"
+          />
+          <span className="font-medium">{label}</span>
+        </label>
+        
+        {hasService && (
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name={`${label}-management`}
+                  checked={management === 'direct'}
+                  onChange={() => onManagementChange('direct')}
+                  className="text-primary"
+                />
+                <span>Gestione diretta</span>
+              </label>
+              <label className="flex items-center gap-1 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name={`${label}-management`}
+                  checked={management === 'rental'}
+                  onChange={() => onManagementChange('rental')}
+                  className="text-primary"
+                />
+                <span>In affitto</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {hasService && management === 'rental' && (
+        <div className="mt-3 pl-6">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm whitespace-nowrap">Canone annuo (€):</Label>
+            <Input
+              type="number"
+              value={rentalFee}
+              onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+              className="w-32"
+              placeholder="0"
+            />
+            <span className="text-xs text-muted-foreground">/anno</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const [plans, setPlans] = useState<BusinessPlan[]>(initialPlans)
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlan | null>(null)
@@ -380,34 +636,132 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
         const defaultData: Partial<BusinessPlanFinancials> = {
           business_plan_id: planId,
           year_number: year,
-          rooms_available: selectedPlan?.num_rooms || 90,
-          opening_days: selectedPlan?.opening_days_year || 365,
+          // Parametri operativi
           occupancy_rate: 55 + year * 5, // Crescita graduale
           adr: 170 + year * 10,
-          fb_revenue_pct: 35,
-          spa_revenue_pct: selectedPlan?.has_spa ? 12 : 0,
-          congress_revenue_pct: selectedPlan?.has_congress ? 20 : 0,
-          other_revenue_pct: 5,
-          rooms_cost_pct: 25,
+          // F&B
+          fb_revenue_mode: 'detailed',
+          fb_internal_pct: 50,
+          fb_internal_avg_spend: 45,
+          fb_external_covers: 30,
+          fb_external_avg_spend: 55,
           fb_cost_pct: 35,
-          spa_cost_pct: 40,
-          congress_cost_pct: 45,
-          other_cost_pct: 20,
+          // SPA Treatments
+          spa_revenue_mode: 'detailed',
+          spa_treatments_internal_pct: selectedPlan?.has_spa ? 15 : 0,
+          spa_treatments_internal_avg: 80,
+          spa_treatments_external_clients: selectedPlan?.has_spa ? 10 : 0,
+          spa_treatments_external_avg: 100,
+          spa_treatments_cost_pct: 30,
+          // SPA Entries
+          spa_entries_internal_pct: selectedPlan?.has_spa ? 20 : 0,
+          spa_entries_internal_avg: 25,
+          spa_entries_external_clients: selectedPlan?.has_spa ? 15 : 0,
+          spa_entries_external_avg: 35,
+          spa_entries_cost_pct: 15,
+          // Congress
+          congress_revenue_mode: 'detailed',
+          congress_events_year: selectedPlan?.has_congress ? 20 : 0,
+          congress_avg_revenue: 5000,
+          // Bar
+          bar_revenue_mode: 'detailed',
+          bar_internal_pct: selectedPlan?.has_bar ? 40 : 0,
+          bar_internal_avg_spend: 15,
+          bar_external_clients: selectedPlan?.has_bar ? 20 : 0,
+          bar_external_avg_spend: 20,
+          bar_cost_pct: 30,
+          // Bistrot
+          bistrot_revenue_mode: 'detailed',
+          bistrot_internal_pct: selectedPlan?.has_bistrot ? 30 : 0,
+          bistrot_internal_avg_spend: 25,
+          bistrot_external_clients: selectedPlan?.has_bistrot ? 40 : 0,
+          bistrot_external_avg_spend: 30,
+          bistrot_cost_pct: 35,
+          // Gym
+          gym_revenue_mode: 'detailed',
+          gym_internal_pct: selectedPlan?.has_gym ? 25 : 0,
+          gym_internal_avg: 10,
+          gym_external_clients: selectedPlan?.has_gym ? 15 : 0,
+          gym_external_avg: 15,
+          gym_cost_pct: 20,
+          // Pool
+          pool_revenue_mode: 'detailed',
+          pool_external_entries: selectedPlan?.has_pool ? 30 : 0,
+          pool_external_avg: 20,
+          pool_cost_pct: 25,
+          pool_external_cost_pct: 15,
+          // Parking
+          parking_revenue_mode: 'detailed',
+          parking_internal_pct: selectedPlan?.has_parking ? 60 : 0,
+          parking_internal_avg: 15,
+          parking_external_spaces: selectedPlan?.has_parking ? 10 : 0,
+          parking_external_days: 200,
+          parking_external_avg: 20,
+          parking_cost_pct: 10,
+          // Laundry
+          laundry_revenue_mode: 'detailed',
+          laundry_internal_pct: selectedPlan?.has_laundry ? 20 : 0,
+          laundry_internal_avg: 12,
+          laundry_cost_pct: 40,
+          // Rentals
+          rentals_revenue_mode: 'detailed',
+          rentals_internal_pct: selectedPlan?.has_rentals ? 15 : 0,
+          rentals_internal_avg: 30,
+          rentals_external_clients: selectedPlan?.has_rentals ? 10 : 0,
+          rentals_external_avg: 40,
+          rentals_cost_pct: 25,
+          // NCC
+          ncc_revenue_mode: 'detailed',
+          ncc_internal_pct: selectedPlan?.has_ncc ? 10 : 0,
+          ncc_internal_avg: 50,
+          ncc_external_trips: selectedPlan?.has_ncc ? 100 : 0,
+          ncc_external_avg: 80,
+          ncc_cost_pct: 45,
+          // Rental income (affitti) - usa i valori dal piano come default
+          restaurant_rental_income: selectedPlan?.restaurant_management === 'rental' ? (selectedPlan?.restaurant_rental_fee || 0) : 0,
+          spa_rental_income: selectedPlan?.spa_management === 'rental' ? (selectedPlan?.spa_rental_fee || 0) : 0,
+          congress_rental_income: selectedPlan?.congress_management === 'rental' ? (selectedPlan?.congress_rental_fee || 0) : 0,
+          bar_rental_income: selectedPlan?.bar_management === 'rental' ? (selectedPlan?.bar_rental_fee || 0) : 0,
+          bistrot_rental_income: selectedPlan?.bistrot_management === 'rental' ? (selectedPlan?.bistrot_rental_fee || 0) : 0,
+          gym_rental_income: selectedPlan?.gym_management === 'rental' ? (selectedPlan?.gym_rental_fee || 0) : 0,
+          pool_rental_income: selectedPlan?.pool_management === 'rental' ? (selectedPlan?.pool_rental_fee || 0) : 0,
+          parking_rental_income: selectedPlan?.parking_management === 'rental' ? (selectedPlan?.parking_rental_fee || 0) : 0,
+          laundry_rental_income: selectedPlan?.laundry_management === 'rental' ? (selectedPlan?.laundry_rental_fee || 0) : 0,
+          rentals_rental_income: selectedPlan?.rentals_management === 'rental' ? (selectedPlan?.rentals_rental_fee || 0) : 0,
+          ncc_rental_income: selectedPlan?.ncc_management === 'rental' ? (selectedPlan?.ncc_rental_fee || 0) : 0,
+          // Staff costs (annuali)
           staff_rooms_cost: 400000,
-          staff_fb_cost: selectedPlan?.has_restaurant ? 300000 : 0,
-          staff_spa_cost: selectedPlan?.has_spa ? 150000 : 0,
-          staff_congress_cost: selectedPlan?.has_congress ? 100000 : 0,
+          staff_fb_cost: selectedPlan?.has_restaurant && selectedPlan?.restaurant_management === 'direct' ? 300000 : 0,
+          staff_spa_cost: selectedPlan?.has_spa && selectedPlan?.spa_management === 'direct' ? 150000 : 0,
+          staff_congress_cost: selectedPlan?.has_congress && selectedPlan?.congress_management === 'direct' ? 100000 : 0,
+          staff_bar_cost: selectedPlan?.has_bar && selectedPlan?.bar_management === 'direct' ? 50000 : 0,
+          staff_bistrot_cost: selectedPlan?.has_bistrot && selectedPlan?.bistrot_management === 'direct' ? 40000 : 0,
+          staff_gym_cost: selectedPlan?.has_gym && selectedPlan?.gym_management === 'direct' ? 30000 : 0,
+          staff_pool_cost: selectedPlan?.has_pool && selectedPlan?.pool_management === 'direct' ? 25000 : 0,
+          staff_parking_cost: selectedPlan?.has_parking && selectedPlan?.parking_management === 'direct' ? 20000 : 0,
+          staff_laundry_cost: selectedPlan?.has_laundry && selectedPlan?.laundry_management === 'direct' ? 35000 : 0,
+          staff_rentals_cost: selectedPlan?.has_rentals && selectedPlan?.rentals_management === 'direct' ? 40000 : 0,
+          staff_ncc_cost: selectedPlan?.has_ncc && selectedPlan?.ncc_management === 'direct' ? 60000 : 0,
           staff_admin_cost: 180000,
-          rent_cost: 180000,
-          utilities_cost: 120000,
-          marketing_cost: 80000,
-          maintenance_cost: 60000,
-          insurance_cost: 35000,
-          admin_cost: 45000,
-          other_fixed_cost: 30000,
-          depreciation: 150000,
-          interest_cost: 80000,
-          tax_rate: 24,
+          // Fixed costs (mensili)
+          rent_cost_monthly: 15000,
+          utilities_cost_monthly: 10000,
+          maintenance_cost_monthly: 5000,
+          insurance_cost_monthly: 3000,
+          marketing_cost_monthly: 7000,
+          admin_cost_monthly: 4000,
+          other_fixed_monthly: 2500,
+          // OTA
+          ota_commission_pct: 15,
+          ota_share_pct: 40,
+          // Ammortamenti e investimenti
+          depreciation: 150000, // Valore di default per ammortamenti annui
+          initial_investment: selectedPlan?.initial_investment || 0,
+          depreciation_years: 20,
+          loan_amount: 0,
+          loan_interest_rate: 4,
+          loan_years: 15,
+          interest_cost: 0,
         }
         await fetch(`/api/business-plan/${planId}/financials`, {
           method: "POST",
@@ -541,6 +895,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
   const saveFinancials = async (yearFinancials: BusinessPlanFinancials) => {
     if (!selectedPlan) return
     setIsSaving(true)
+    console.log("[v0] saveFinancials sending:", { depreciation: yearFinancials.depreciation, admin_cost: yearFinancials.admin_cost, utilities_cost: yearFinancials.utilities_cost })
     try {
       const res = await fetch(`/api/business-plan/${selectedPlan.id}/financials`, {
         method: "PUT",
@@ -549,6 +904,7 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       })
       if (res.ok) {
         const updated = await res.json()
+        console.log("[v0] saveFinancials received:", { depreciation: updated.depreciation, admin_cost: updated.admin_cost, utilities_cost: updated.utilities_cost })
         setFinancials(financials.map((f) => (f.year_number === updated.year_number ? updated : f)))
         toast.success(`Parametri Anno ${updated.year_number} salvati con successo!`)
       } else {
@@ -864,46 +1220,307 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
 
     const roomNights = numRooms * openingDays * occupancy
 
-    // RICAVI
+    // RICAVI - Gestione diretta vs affitto con 3 modalità calcolo
     const roomRevenue = roomNights * adr
-    const fbRevenue = plan.has_restaurant ? roomRevenue * (getFinValue(fin, "fb_revenue_pct", 35) / 100) : 0
-    const spaRevenue = plan.has_spa ? roomRevenue * (getFinValue(fin, "spa_revenue_pct", 12) / 100) : 0
-    const congressRevenue = plan.has_congress ? roomRevenue * (getFinValue(fin, "congress_revenue_pct", 20) / 100) : 0
+    
+    // Helper per calcolo ricavi in base alla modalità
+    const calcServiceRevenue = (
+      mode: string,
+      pctValue: number,
+      absoluteValue: number,
+      internalPct: number,
+      internalAvg: number,
+      externalCount: number,
+      externalAvg: number
+    ) => {
+      if (mode === 'absolute') return absoluteValue
+      if (mode === 'detailed') {
+        const internalRev = roomNights * (internalPct / 100) * internalAvg
+        const externalRev = externalCount * externalAvg
+        return internalRev + externalRev
+      }
+      // default: pct_rooms
+      return roomRevenue * (pctValue / 100)
+    }
+    
+    // Ristorante
+    let fbRevenue = 0
+    if (plan.has_restaurant && plan.restaurant_management === 'direct') {
+      const mode = getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms')
+      fbRevenue = calcServiceRevenue(
+        mode,
+        getFinValue(fin, "fb_revenue_pct", 35),
+        getFinValueAny(fin, "fb_revenue_absolute", 0),
+        getFinValueAny(fin, "fb_internal_pct", 60),
+        getFinValueAny(fin, "fb_internal_avg_spend", 45),
+        getFinValueAny(fin, "fb_external_covers", 2000),
+        getFinValueAny(fin, "fb_external_avg_spend", 55)
+      )
+    }
+    const fbRentalIncome = plan.has_restaurant && plan.restaurant_management === 'rental'
+      ? getFinValue(fin, "restaurant_rental_income", plan.restaurant_rental_fee || 0) : 0
+    
+    // SPA - con sottocategorie
+    let spaRevenue = 0
+    let spaTreatmentsRevenue = 0
+    let spaEntriesRevenue = 0
+    if (plan.has_spa && plan.spa_management === 'direct') {
+      const mode = getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        spaRevenue = getFinValueAny(fin, "spa_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        if (plan.spa_treatments_enabled !== false) {
+          const treatInternal = roomNights * (getFinValueAny(fin, "spa_treatments_internal_pct", 15) / 100) * getFinValueAny(fin, "spa_treatments_internal_avg", 80)
+          const treatExternal = getFinValueAny(fin, "spa_treatments_external_clients", 500) * getFinValueAny(fin, "spa_treatments_external_avg", 90)
+          spaTreatmentsRevenue = treatInternal + treatExternal
+        }
+        if (plan.spa_entries_enabled !== false) {
+          const entryInternal = roomNights * (getFinValueAny(fin, "spa_entries_internal_pct", 25) / 100) * getFinValueAny(fin, "spa_entries_internal_avg", 25)
+          const entryExternal = getFinValueAny(fin, "spa_entries_external_clients", 1000) * getFinValueAny(fin, "spa_entries_external_avg", 30)
+          spaEntriesRevenue = entryInternal + entryExternal
+        }
+        spaRevenue = spaTreatmentsRevenue + spaEntriesRevenue
+      } else {
+        if (plan.spa_treatments_enabled !== false) {
+          spaTreatmentsRevenue = roomRevenue * (getFinValue(fin, "spa_treatments_revenue_pct", 8) / 100)
+        }
+        if (plan.spa_entries_enabled !== false) {
+          spaEntriesRevenue = roomRevenue * (getFinValue(fin, "spa_entries_revenue_pct", 4) / 100)
+        }
+        spaRevenue = spaTreatmentsRevenue + spaEntriesRevenue
+      }
+    }
+    const spaRentalIncome = plan.has_spa && plan.spa_management === 'rental'
+      ? getFinValue(fin, "spa_rental_income", plan.spa_rental_fee || 0) : 0
+    
+    // Centro Congressi
+    let congressRevenue = 0
+    if (plan.has_congress && plan.congress_management === 'direct') {
+      const mode = getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        congressRevenue = getFinValueAny(fin, "congress_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        congressRevenue = getFinValueAny(fin, "congress_events_year", 50) * getFinValueAny(fin, "congress_avg_revenue", 3000)
+      } else {
+        congressRevenue = roomRevenue * (getFinValue(fin, "congress_revenue_pct", 20) / 100)
+      }
+    }
+    const congressRentalIncome = plan.has_congress && plan.congress_management === 'rental'
+      ? getFinValue(fin, "congress_rental_income", plan.congress_rental_fee || 0) : 0
+    
+    // Bar
+    let barRevenue = 0
+    if (plan.has_bar && plan.bar_management === 'direct') {
+      const mode = getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms')
+      barRevenue = calcServiceRevenue(
+        mode,
+        getFinValue(fin, "bar_revenue_pct", 8),
+        getFinValueAny(fin, "bar_revenue_absolute", 0),
+        getFinValueAny(fin, "bar_internal_pct", 40),
+        getFinValueAny(fin, "bar_internal_avg_spend", 15),
+        getFinValueAny(fin, "bar_external_clients", 3000),
+        getFinValueAny(fin, "bar_external_avg_spend", 18)
+      )
+    }
+    const barRentalIncome = plan.has_bar && plan.bar_management === 'rental'
+      ? getFinValue(fin, "bar_rental_income", plan.bar_rental_fee || 0) : 0
+    
+    // Bistrot
+    let bistrotRevenue = 0
+    if (plan.has_bistrot && plan.bistrot_management === 'direct') {
+      const mode = getFinValueAny(fin, "bistrot_revenue_mode", 'pct_rooms')
+      bistrotRevenue = calcServiceRevenue(
+        mode,
+        getFinValue(fin, "bistrot_revenue_pct", 5),
+        getFinValueAny(fin, "bistrot_revenue_absolute", 0),
+        getFinValueAny(fin, "bistrot_internal_pct", 20),
+        getFinValueAny(fin, "bistrot_internal_avg_spend", 25),
+        getFinValueAny(fin, "bistrot_external_clients", 1500),
+        getFinValueAny(fin, "bistrot_external_avg_spend", 30)
+      )
+    }
+    const bistrotRentalIncome = plan.has_bistrot && plan.bistrot_management === 'rental'
+      ? getFinValue(fin, "bistrot_rental_income", plan.bistrot_rental_fee || 0) : 0
+    
+    // Palestra
+    let gymRevenue = 0
+    if (plan.has_gym && plan.gym_management === 'direct') {
+      const mode = getFinValueAny(fin, "gym_revenue_mode", 'pct_rooms')
+      gymRevenue = calcServiceRevenue(
+        mode,
+        getFinValue(fin, "gym_revenue_pct", 3),
+        getFinValueAny(fin, "gym_revenue_absolute", 0),
+        getFinValueAny(fin, "gym_internal_pct", 10),
+        getFinValueAny(fin, "gym_internal_avg", 10),
+        getFinValueAny(fin, "gym_external_clients", 500),
+        getFinValueAny(fin, "gym_external_avg", 15)
+      )
+    }
+    const gymRentalIncome = plan.has_gym && plan.gym_management === 'rental'
+      ? getFinValue(fin, "gym_rental_income", plan.gym_rental_fee || 0) : 0
+    
+    // Piscina (con ingressi esterni)
+    let poolRevenue = 0
+    let poolExternalRevenue = 0
+    if (plan.has_pool && plan.pool_management === 'direct') {
+      const mode = getFinValueAny(fin, "pool_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        poolRevenue = getFinValueAny(fin, "pool_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        if (plan.pool_external_entries_enabled) {
+          poolExternalRevenue = getFinValueAny(fin, "pool_external_entries", 2000) * getFinValueAny(fin, "pool_external_avg", 20)
+        }
+        poolRevenue = poolExternalRevenue
+      } else {
+        poolRevenue = roomRevenue * (getFinValue(fin, "pool_revenue_pct", 2) / 100)
+        if (plan.pool_external_entries_enabled) {
+          poolExternalRevenue = roomRevenue * (getFinValue(fin, "pool_external_revenue_pct", 3) / 100)
+        }
+      }
+    }
+    const poolRentalIncome = plan.has_pool && plan.pool_management === 'rental'
+      ? getFinValue(fin, "pool_rental_income", plan.pool_rental_fee || 0) : 0
+    
+    // Parcheggio
+    let parkingRevenue = 0
+    if (plan.has_parking && plan.parking_management === 'direct') {
+      const mode = getFinValueAny(fin, "parking_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        parkingRevenue = getFinValueAny(fin, "parking_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        const internalRev = roomNights * (getFinValueAny(fin, "parking_internal_pct", 30) / 100) * getFinValueAny(fin, "parking_internal_avg", 15)
+        const externalRev = getFinValueAny(fin, "parking_external_spaces", 20) * getFinValueAny(fin, "parking_external_days", 200) * getFinValueAny(fin, "parking_external_avg", 10)
+        parkingRevenue = internalRev + externalRev
+      } else {
+        parkingRevenue = roomRevenue * (getFinValue(fin, "parking_revenue_pct", 4) / 100)
+      }
+    }
+    const parkingRentalIncome = plan.has_parking && plan.parking_management === 'rental'
+      ? getFinValue(fin, "parking_rental_income", plan.parking_rental_fee || 0) : 0
+    
+    // Lavanderia
+    let laundryRevenue = 0
+    if (plan.has_laundry && plan.laundry_management === 'direct') {
+      const mode = getFinValueAny(fin, "laundry_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        laundryRevenue = getFinValueAny(fin, "laundry_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        laundryRevenue = roomNights * (getFinValueAny(fin, "laundry_internal_pct", 8) / 100) * getFinValueAny(fin, "laundry_internal_avg", 20)
+      } else {
+        laundryRevenue = roomRevenue * (getFinValue(fin, "laundry_revenue_pct", 2) / 100)
+      }
+    }
+    const laundryRentalIncome = plan.has_laundry && plan.laundry_management === 'rental'
+      ? getFinValue(fin, "laundry_rental_income", plan.laundry_rental_fee || 0) : 0
+    
+    // Noleggi
+    let rentalsRevenue = 0
+    if (plan.has_rentals && plan.rentals_management === 'direct') {
+      const mode = getFinValueAny(fin, "rentals_revenue_mode", 'pct_rooms')
+      rentalsRevenue = calcServiceRevenue(
+        mode,
+        getFinValue(fin, "rentals_revenue_pct", 5),
+        getFinValueAny(fin, "rentals_revenue_absolute", 0),
+        getFinValueAny(fin, "rentals_internal_pct", 15),
+        getFinValueAny(fin, "rentals_internal_avg", 35),
+        getFinValueAny(fin, "rentals_external_clients", 800),
+        getFinValueAny(fin, "rentals_external_avg", 40)
+      )
+    }
+    const rentalsRentalIncome = plan.has_rentals && plan.rentals_management === 'rental'
+      ? getFinValue(fin, "rentals_rental_income", plan.rentals_rental_fee || 0) : 0
+    
+    // NCC
+    let nccRevenue = 0
+    if (plan.has_ncc && plan.ncc_management === 'direct') {
+      const mode = getFinValueAny(fin, "ncc_revenue_mode", 'pct_rooms')
+      if (mode === 'absolute') {
+        nccRevenue = getFinValueAny(fin, "ncc_revenue_absolute", 0)
+      } else if (mode === 'detailed') {
+        const internalRev = roomNights * (getFinValueAny(fin, "ncc_internal_pct", 5) / 100) * getFinValueAny(fin, "ncc_internal_avg", 80)
+        const externalRev = getFinValueAny(fin, "ncc_external_trips", 300) * getFinValueAny(fin, "ncc_external_avg", 100)
+        nccRevenue = internalRev + externalRev
+      } else {
+        nccRevenue = roomRevenue * (getFinValue(fin, "ncc_revenue_pct", 4) / 100)
+      }
+    }
+    const nccRentalIncome = plan.has_ncc && plan.ncc_management === 'rental'
+      ? getFinValue(fin, "ncc_rental_income", plan.ncc_rental_fee || 0) : 0
+    
+    // Altri ricavi
     const otherRevenue = roomRevenue * (getFinValue(fin, "other_revenue_pct", 5) / 100)
-    const totalRevenue = roomRevenue + fbRevenue + spaRevenue + congressRevenue + otherRevenue
+    
+    // Totale canoni da affitto
+    const totalRentalIncome = fbRentalIncome + spaRentalIncome + congressRentalIncome + barRentalIncome +
+      bistrotRentalIncome + gymRentalIncome + poolRentalIncome + parkingRentalIncome + 
+      laundryRentalIncome + rentalsRentalIncome + nccRentalIncome
+    
+    // Totale ricavi operativi
+    const totalOperatingRevenue = roomRevenue + fbRevenue + spaRevenue + congressRevenue + barRevenue +
+      bistrotRevenue + gymRevenue + poolRevenue + poolExternalRevenue + parkingRevenue + laundryRevenue +
+      rentalsRevenue + nccRevenue + otherRevenue
+    
+    const totalRevenue = totalOperatingRevenue + totalRentalIncome
 
     // COSTI VARIABILI
     const roomCosts = roomRevenue * (getFinValue(fin, "rooms_cost_pct", 25) / 100)
     const fbCosts = fbRevenue * (getFinValue(fin, "fb_cost_pct", 35) / 100)
-    const spaCosts = spaRevenue * (getFinValue(fin, "spa_cost_pct", 40) / 100)
+    const spaTreatmentsCosts = spaTreatmentsRevenue * (getFinValue(fin, "spa_treatments_cost_pct", 45) / 100)
+    const spaEntriesCosts = spaEntriesRevenue * (getFinValue(fin, "spa_entries_cost_pct", 25) / 100)
+    const spaCosts = spaTreatmentsCosts + spaEntriesCosts
     const congressCosts = congressRevenue * (getFinValue(fin, "congress_cost_pct", 45) / 100)
-    const totalVariableCosts = roomCosts + fbCosts + spaCosts + congressCosts
+    const barCosts = barRevenue * (getFinValue(fin, "bar_cost_pct", 30) / 100)
+    const bistrotCosts = bistrotRevenue * (getFinValue(fin, "bistrot_cost_pct", 35) / 100)
+    const gymCosts = gymRevenue * (getFinValue(fin, "gym_cost_pct", 20) / 100)
+    const poolCosts = (poolRevenue + poolExternalRevenue) * (getFinValue(fin, "pool_cost_pct", 25) / 100)
+    const parkingCosts = parkingRevenue * (getFinValue(fin, "parking_cost_pct", 15) / 100)
+    const laundryCosts = laundryRevenue * (getFinValue(fin, "laundry_cost_pct", 40) / 100)
+    const rentalsCosts = rentalsRevenue * (getFinValue(fin, "rentals_cost_pct", 25) / 100)
+    const nccCosts = nccRevenue * (getFinValue(fin, "ncc_cost_pct", 55) / 100)
+    
+    const totalVariableCosts = roomCosts + fbCosts + spaCosts + congressCosts + barCosts + bistrotCosts +
+      gymCosts + poolCosts + parkingCosts + laundryCosts + rentalsCosts + nccCosts
 
     // MARGINE DI CONTRIBUZIONE
     const contributionMargin = totalRevenue - totalVariableCosts
 
-    // COSTI FISSI - Personale diviso per reparto
+    // COSTI FISSI - Personale diviso per reparto (valori annuali salvati per ogni anno)
     const staffRoomsCost = getFinValue(fin, "staff_rooms_cost", 400000)
-    const staffFbCost = plan.has_restaurant ? getFinValue(fin, "staff_fb_cost", 300000) : 0
-    const staffSpaCost = plan.has_spa ? getFinValue(fin, "staff_spa_cost", 150000) : 0
-    const staffCongressCost = plan.has_congress ? getFinValue(fin, "staff_congress_cost", 100000) : 0
+    const staffFbCost = plan.has_restaurant && plan.restaurant_management === 'direct' 
+      ? getFinValue(fin, "staff_fb_cost", 300000) : 0
+    const staffSpaCost = plan.has_spa && plan.spa_management === 'direct' 
+      ? getFinValue(fin, "staff_spa_cost", 150000) : 0
+    const staffCongressCost = plan.has_congress && plan.congress_management === 'direct' 
+      ? getFinValue(fin, "staff_congress_cost", 100000) : 0
+    const staffBarCost = plan.has_bar && plan.bar_management === 'direct' 
+      ? getFinValue(fin, "staff_bar_cost", 50000) : 0
+    const staffBistrotCost = plan.has_bistrot && plan.bistrot_management === 'direct' 
+      ? getFinValue(fin, "staff_bistrot_cost", 40000) : 0
+    const staffGymCost = plan.has_gym && plan.gym_management === 'direct' 
+      ? getFinValue(fin, "staff_gym_cost", 30000) : 0
+    const staffPoolCost = plan.has_pool && plan.pool_management === 'direct' 
+      ? getFinValue(fin, "staff_pool_cost", 25000) : 0
+    const staffParkingCost = plan.has_parking && plan.parking_management === 'direct' 
+      ? getFinValue(fin, "staff_parking_cost", 20000) : 0
+    const staffLaundryCost = plan.has_laundry && plan.laundry_management === 'direct' 
+      ? getFinValue(fin, "staff_laundry_cost", 35000) : 0
+    const staffRentalsCost = plan.has_rentals && plan.rentals_management === 'direct' 
+      ? getFinValue(fin, "staff_rentals_cost", 40000) : 0
+    const staffNccCost = plan.has_ncc && plan.ncc_management === 'direct' 
+      ? getFinValue(fin, "staff_ncc_cost", 60000) : 0
     const staffAdminCost = getFinValue(fin, "staff_admin_cost", 180000)
-    console.log(
-      "[v0] Admin costs debug - Year:",
-      fin.year_number,
-      "staff_admin_cost:",
-      staffAdminCost,
-      "admin_cost:",
-      getFinValue(fin, "admin_cost", 45000),
-    )
-    const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffAdminCost
+    
+    const totalStaffCosts = staffRoomsCost + staffFbCost + staffSpaCost + staffCongressCost + staffBarCost +
+      staffBistrotCost + staffGymCost + staffPoolCost + staffParkingCost + staffLaundryCost + 
+      staffRentalsCost + staffNccCost + staffAdminCost
 
+    // Costi fissi annuali (l'API converte da/a mensili automaticamente)
     const rentCosts = getFinValue(fin, "rent_cost", 180000)
     const utilitiesCosts = getFinValue(fin, "utilities_cost", 120000)
     const maintenanceCosts = getFinValue(fin, "maintenance_cost", 60000)
-    const insuranceCosts = getFinValue(fin, "insurance_cost", 35000)
-    const marketingCosts = getFinValue(fin, "marketing_cost", 80000)
-    const adminCosts = getFinValue(fin, "admin_cost", 45000)
+    const insuranceCosts = getFinValue(fin, "insurance_cost", 36000)
+    const marketingCosts = getFinValue(fin, "marketing_cost", 84000)
+    const adminCosts = getFinValue(fin, "admin_cost", 48000)
     const otherFixedCosts = getFinValue(fin, "other_fixed_cost", 30000)
     const totalFixedCosts =
       totalStaffCosts +
@@ -918,20 +1535,27 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     // EBITDA
     const ebitda = contributionMargin - totalFixedCosts
 
-    // AMMORTAMENTI
-    const depreciation = getFinValue(fin, "depreciation", 150000)
+    // AMMORTAMENTI - Prima usa il valore diretto, poi calcola da investimento se disponibile
+    const directDepreciation = getFinValue(fin, "depreciation", 0)
+    const initialInvestment = getFinValue(fin, "initial_investment", plan.initial_investment || 0)
+    const depreciationYears = getFinValue(fin, "depreciation_years", 20)
+    const calculatedDepreciation = depreciationYears > 0 && initialInvestment > 0 ? initialInvestment / depreciationYears : 0
+    // Usa il valore diretto se impostato, altrimenti quello calcolato, altrimenti default
+    const depreciation = directDepreciation > 0 ? directDepreciation : (calculatedDepreciation > 0 ? calculatedDepreciation : 150000)
 
     // EBIT
     const ebit = ebitda - depreciation
 
-    // INTERESSI
-    const interestCost = getFinValue(fin, "interest_cost", 80000)
+    // INTERESSI - Calcolato da prestito * tasso interesse
+    const loanAmount = getFinValue(fin, "loan_amount", 0)
+    const loanInterestRate = getFinValue(fin, "loan_interest_rate", 4) / 100
+    const interestCost = loanAmount > 0 ? loanAmount * loanInterestRate : getFinValue(fin, "interest_cost", 0)
 
     // EBT
     const ebt = ebit - interestCost
 
-    // IMPOSTE
-    const taxRate = getFinValue(fin, "tax_rate", 24) / 100
+    // IMPOSTE - Aliquota dal piano o default 24%
+    const taxRate = (plan.tax_rate || 24) / 100
     const taxes = ebt > 0 ? ebt * taxRate : 0
 
     // UTILE NETTO
@@ -946,20 +1570,62 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
     return {
       roomRevenue,
       fbRevenue,
+      fbRentalIncome,
       spaRevenue,
+      spaTreatmentsRevenue,
+      spaEntriesRevenue,
+      spaRentalIncome,
       congressRevenue,
+      congressRentalIncome,
+      barRevenue,
+      barRentalIncome,
+      bistrotRevenue,
+      bistrotRentalIncome,
+      gymRevenue,
+      gymRentalIncome,
+      poolRevenue,
+      poolExternalRevenue,
+      poolRentalIncome,
+      parkingRevenue,
+      parkingRentalIncome,
+      laundryRevenue,
+      laundryRentalIncome,
+      rentalsRevenue,
+      rentalsRentalIncome,
+      nccRevenue,
+      nccRentalIncome,
       otherRevenue,
+      totalRentalIncome,
+      totalOperatingRevenue,
       totalRevenue,
       roomCosts,
       fbCosts,
       spaCosts,
+      spaTreatmentsCosts,
+      spaEntriesCosts,
       congressCosts,
+      barCosts,
+      bistrotCosts,
+      gymCosts,
+      poolCosts,
+      parkingCosts,
+      laundryCosts,
+      rentalsCosts,
+      nccCosts,
       totalVariableCosts,
       contributionMargin,
       staffRoomsCost,
       staffFbCost,
       staffSpaCost,
       staffCongressCost,
+      staffBarCost,
+      staffBistrotCost,
+      staffGymCost,
+      staffPoolCost,
+      staffParkingCost,
+      staffLaundryCost,
+      staffRentalsCost,
+      staffNccCost,
       staffAdminCost,
       totalStaffCosts,
       rentCosts,
@@ -1093,6 +1759,237 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
       return `${comment.author_name} (${comment.author_email})`
     }
     return comment.author_name
+  }
+
+  // Helper component for service rows
+  const ServiceRow = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+  }) => {
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+            <div className="space-y-2">
+              <Label className="text-sm">Modalità gestione</Label>
+              <select
+                value={management}
+                onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="direct">Gestione diretta</option>
+                <option value="rental">Affitto</option>
+              </select>
+            </div>
+            {management === 'rental' && (
+              <div className="space-y-2">
+                <Label className="text-sm">Canone annuo (€)</Label>
+                <Input
+                  type="number"
+                  value={rentalFee}
+                  onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Helper component for service rows with subcategories
+  const ServiceRowWithSubcategories = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+    subcategories,
+    onSubcategoryChange,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+    subcategories: Array<{ key: string; label: string; enabled: boolean }>
+    onSubcategoryChange: (key: string, enabled: boolean) => void
+  }) => {
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="text-sm">Modalità gestione</Label>
+                <select
+                  value={management}
+                  onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="direct">Gestione diretta</option>
+                  <option value="rental">Affitto</option>
+                </select>
+              </div>
+              {management === 'rental' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Canone annuo (€)</Label>
+                  <Input
+                    type="number"
+                    value={rentalFee}
+                    onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
+            {subcategories && subcategories.length > 0 && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-sm font-medium">Servizi disponibili:</Label>
+                {subcategories.map((sub) => (
+                  <label key={sub.key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sub.enabled}
+                      onChange={(e) => onSubcategoryChange(sub.key, e.target.checked)}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{sub.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Helper component for service rows with rental types
+  const ServiceRowWithRentalTypes = ({
+    label,
+    hasService,
+    management,
+    rentalFee,
+    onToggle,
+    onManagementChange,
+    onRentalFeeChange,
+    rentalTypes,
+    onRentalTypesChange,
+    availableTypes,
+  }: {
+    label: string
+    hasService: boolean
+    management: 'direct' | 'rental'
+    rentalFee: number
+    onToggle: (checked: boolean) => void
+    onManagementChange: (mgmt: 'direct' | 'rental') => void
+    onRentalFeeChange: (fee: number) => void
+    rentalTypes: string[]
+    onRentalTypesChange: (types: string[]) => void
+    availableTypes: Array<{ key: string; label: string }>
+  }) => {
+    const toggleRentalType = (typeKey: string) => {
+      if (rentalTypes.includes(typeKey)) {
+        onRentalTypesChange(rentalTypes.filter((t) => t !== typeKey))
+      } else {
+        onRentalTypesChange([...rentalTypes, typeKey])
+      }
+    }
+
+    return (
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium">{label}</Label>
+          <input
+            type="checkbox"
+            checked={hasService}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-4 w-4"
+          />
+        </div>
+        {hasService && (
+          <>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="text-sm">Modalità gestione</Label>
+                <select
+                  value={management}
+                  onChange={(e) => onManagementChange(e.target.value as 'direct' | 'rental')}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="direct">Gestione diretta</option>
+                  <option value="rental">Affitto</option>
+                </select>
+              </div>
+              {management === 'rental' && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Canone annuo (€)</Label>
+                  <Input
+                    type="number"
+                    value={rentalFee}
+                    onChange={(e) => onRentalFeeChange(Number.parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
+            {availableTypes && availableTypes.length > 0 && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-sm font-medium">Tipologie di noleggio disponibili:</Label>
+                {availableTypes.map((type) => (
+                  <label key={type.key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rentalTypes.includes(type.key)}
+                      onChange={() => toggleRentalType(type.key)}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{type.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )
   }
 
   // Lista piani
@@ -1328,59 +2225,165 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
               </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Servizi Inclusi</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_spa}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_spa: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Centro Benessere / SPA</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_restaurant}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_restaurant: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Ristorante</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlan.has_congress || false}
-                      onChange={(e) => setSelectedPlan({ ...selectedPlan, has_congress: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span>Centro Congressi</span>
-                  </label>
-                </CardContent>
-              </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Servizi e Centri di Ricavo</CardTitle>
+                <CardDescription>Seleziona i servizi disponibili e indica se gestiti direttamente o in affitto</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Ristorante */}
+                <ServiceRow
+                  label="Ristorante"
+                  hasService={selectedPlan.has_restaurant}
+                  management={selectedPlan.restaurant_management || 'direct'}
+                  rentalFee={selectedPlan.restaurant_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_restaurant: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, restaurant_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, restaurant_rental_fee: fee })}
+                />
+                {/* Centro Benessere / SPA con sottocategorie */}
+                <ServiceRowWithSubcategories
+                  label="Centro Benessere / SPA"
+                  hasService={selectedPlan.has_spa}
+                  management={selectedPlan.spa_management || 'direct'}
+                  rentalFee={selectedPlan.spa_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_spa: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, spa_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, spa_rental_fee: fee })}
+                  subcategories={[
+                    { key: 'treatments', label: 'Trattamenti benessere', enabled: selectedPlan.spa_treatments_enabled ?? true },
+                    { key: 'entries', label: 'Ingressi benessere', enabled: selectedPlan.spa_entries_enabled ?? true },
+                  ]}
+                  onSubcategoryChange={(key, enabled) => {
+                    if (key === 'treatments') setSelectedPlan({ ...selectedPlan, spa_treatments_enabled: enabled })
+                    if (key === 'entries') setSelectedPlan({ ...selectedPlan, spa_entries_enabled: enabled })
+                  }}
+                />
+                {/* Centro Congressi */}
+                <ServiceRow
+                  label="Centro Congressi"
+                  hasService={selectedPlan.has_congress || false}
+                  management={selectedPlan.congress_management || 'direct'}
+                  rentalFee={selectedPlan.congress_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_congress: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, congress_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, congress_rental_fee: fee })}
+                />
+                {/* Bar */}
+                <ServiceRow
+                  label="Bar"
+                  hasService={selectedPlan.has_bar || false}
+                  management={selectedPlan.bar_management || 'direct'}
+                  rentalFee={selectedPlan.bar_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_bar: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, bar_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, bar_rental_fee: fee })}
+                />
+                {/* Bistrot */}
+                <ServiceRow
+                  label="Bistrot / Caffetteria"
+                  hasService={selectedPlan.has_bistrot || false}
+                  management={selectedPlan.bistrot_management || 'direct'}
+                  rentalFee={selectedPlan.bistrot_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_bistrot: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, bistrot_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, bistrot_rental_fee: fee })}
+                />
+                {/* Palestra */}
+                <ServiceRow
+                  label="Palestra / Fitness"
+                  hasService={selectedPlan.has_gym || false}
+                  management={selectedPlan.gym_management || 'direct'}
+                  rentalFee={selectedPlan.gym_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_gym: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, gym_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, gym_rental_fee: fee })}
+                />
+                {/* Piscina con ingressi esterni */}
+                <ServiceRowWithSubcategories
+                  label="Piscina"
+                  hasService={selectedPlan.has_pool || false}
+                  management={selectedPlan.pool_management || 'direct'}
+                  rentalFee={selectedPlan.pool_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_pool: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, pool_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, pool_rental_fee: fee })}
+                  subcategories={[
+                    { key: 'external_entries', label: 'Ingressi esterni', enabled: selectedPlan.pool_external_entries_enabled ?? false },
+                  ]}
+                  onSubcategoryChange={(key, enabled) => {
+                    if (key === 'external_entries') setSelectedPlan({ ...selectedPlan, pool_external_entries_enabled: enabled })
+                  }}
+                />
+                {/* Parcheggio */}
+                <ServiceRow
+                  label="Parcheggio"
+                  hasService={selectedPlan.has_parking || false}
+                  management={selectedPlan.parking_management || 'direct'}
+                  rentalFee={selectedPlan.parking_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_parking: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, parking_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, parking_rental_fee: fee })}
+                />
+                {/* Lavanderia */}
+                <ServiceRow
+                  label="Lavanderia"
+                  hasService={selectedPlan.has_laundry || false}
+                  management={selectedPlan.laundry_management || 'direct'}
+                  rentalFee={selectedPlan.laundry_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_laundry: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, laundry_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, laundry_rental_fee: fee })}
+                />
+                {/* Noleggi */}
+                <ServiceRowWithRentalTypes
+                  label="Noleggi"
+                  hasService={selectedPlan.has_rentals || false}
+                  management={selectedPlan.rentals_management || 'direct'}
+                  rentalFee={selectedPlan.rentals_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_rentals: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, rentals_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, rentals_rental_fee: fee })}
+                  rentalTypes={selectedPlan.rentals_types || []}
+                  onRentalTypesChange={(types) => setSelectedPlan({ ...selectedPlan, rentals_types: types })}
+                  availableTypes={[
+                    { key: 'bicycles', label: 'Biciclette' },
+                    { key: 'ebikes', label: 'E-bike' },
+                    { key: 'scooters', label: 'Scooter' },
+                    { key: 'cars', label: 'Auto' },
+                    { key: 'golf_carts', label: 'Golf cart' },
+                    { key: 'boats', label: 'Barche/Gommoni' },
+                  ]}
+                />
+                {/* Servizi NCC */}
+                <ServiceRow
+                  label="Servizi NCC (Noleggio Con Conducente)"
+                  hasService={selectedPlan.has_ncc || false}
+                  management={selectedPlan.ncc_management || 'direct'}
+                  rentalFee={selectedPlan.ncc_rental_fee || 0}
+                  onToggle={(checked) => setSelectedPlan({ ...selectedPlan, has_ncc: checked })}
+                  onManagementChange={(mgmt) => setSelectedPlan({ ...selectedPlan, ncc_management: mgmt })}
+                  onRentalFeeChange={(fee) => setSelectedPlan({ ...selectedPlan, ncc_rental_fee: fee })}
+                />
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Stato</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <select
-                    value={selectedPlan.status}
-                    onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="draft">Bozza</option>
-                    <option value="active">Attivo</option>
-                    <option value="archived">Archiviato</option>
-                  </select>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Stato</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <select
+                  value={selectedPlan.status}
+                  onChange={(e) => setSelectedPlan({ ...selectedPlan, status: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="draft">Bozza</option>
+                  <option value="active">Attivo</option>
+                  <option value="archived">Archiviato</option>
+                </select>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab Parametri Finanziari */}
@@ -1494,81 +2497,582 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                       </CardContent>
                     </Card>
 
-                    {/* RICAVI EXTRA */}
+                    {/* RICAVI EXTRA - Solo per servizi in gestione diretta - Con 3 modalità */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Ricavi Extra (% sui ricavi camere)</CardTitle>
+                        <CardTitle>Parametri Ricavi Servizi</CardTitle>
+                        <CardDescription>
+                          Per ogni servizio puoi scegliere la modalità di calcolo: % sui ricavi camere, valore assoluto annuo, o parametri dettagliati (% clientela interna/esterna e prezzo medio)
+                        </CardDescription>
                       </CardHeader>
-                      <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {selectedPlan.has_restaurant && (
-                          <div className="space-y-2">
-                            <LabelWithTooltip field="fb_revenue_pct">F&B (%)</LabelWithTooltip>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={getFinValue(fin, "fb_revenue_pct", 35)}
-                              onChange={(e) => {
-                                const updated = { ...fin, fb_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                              }}
-                              onBlur={() => saveFinancials(fin)}
-                            />
+                      <CardContent className="space-y-4">
+                        {/* F&B / Ristorante */}
+                        {selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'direct' && (
+                          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="font-medium">Ristorante / F&B</span>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant={getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'pct_rooms' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, fb_revenue_mode: 'pct_rooms' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>% Ricavi</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'absolute' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, fb_revenue_mode: 'absolute' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Assoluto</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'detailed' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, fb_revenue_mode: 'detailed' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Dettagliato</Button>
+                              </div>
+                            </div>
+                            {getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'pct_rooms' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">% su ricavi camere:</Label>
+                                <Input type="number" step="0.1" className="w-24" value={getFinValue(fin, "fb_revenue_pct", 35)}
+                                  onChange={(e) => { const updated = { ...fin, fb_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">%</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'absolute' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">Valore annuo:</Label>
+                                <Input type="number" step="1000" className="w-32" value={getFinValueAny(fin, "fb_revenue_absolute", 0)}
+                                  onChange={(e) => { const updated = { ...fin, fb_revenue_absolute: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">€</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "fb_revenue_mode", 'pct_rooms') === 'detailed' && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2 p-3 bg-background rounded border">
+                                  <span className="font-medium text-sm">Clientela Interna (Ospiti)</span>
+                                  <div className="grid gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">% ospiti che usano:</Label>
+                                      <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "fb_internal_pct", 60)}
+                                        onChange={(e) => { const updated = { ...fin, fb_internal_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">%</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Spesa media:</Label>
+                                      <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "fb_internal_avg_spend", 45)}
+                                        onChange={(e) => { const updated = { ...fin, fb_internal_avg_spend: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">€</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2 p-3 bg-background rounded border">
+                                  <span className="font-medium text-sm">Clientela Esterna</span>
+                                  <div className="grid gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Coperti/anno:</Label>
+                                      <Input type="number" step="100" className="w-20 h-8" value={getFinValueAny(fin, "fb_external_covers", 2000)}
+                                        onChange={(e) => { const updated = { ...fin, fb_external_covers: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Spesa media:</Label>
+                                      <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "fb_external_avg_spend", 55)}
+                                        onChange={(e) => { const updated = { ...fin, fb_external_avg_spend: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">€</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
-                        {selectedPlan.has_spa && (
-                          <div className="space-y-2">
-                            <LabelWithTooltip field="spa_revenue_pct">SPA (%)</LabelWithTooltip>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={getFinValue(fin, "spa_revenue_pct", 12)}
-                              onChange={(e) => {
-                                const updated = { ...fin, spa_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                              }}
-                              onBlur={() => saveFinancials(fin)}
-                            />
+
+                        {/* SPA */}
+                        {selectedPlan.has_spa && selectedPlan.spa_management === 'direct' && (
+                          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="font-medium">Centro Benessere / SPA</span>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant={getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'pct_rooms' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, spa_revenue_mode: 'pct_rooms' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>% Ricavi</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'absolute' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, spa_revenue_mode: 'absolute' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Assoluto</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'detailed' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, spa_revenue_mode: 'detailed' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Dettagliato</Button>
+                              </div>
+                            </div>
+                            {getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'pct_rooms' && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                {selectedPlan.spa_treatments_enabled !== false && (
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-sm w-40">Trattamenti (%):</Label>
+                                    <Input type="number" step="0.1" className="w-24" value={getFinValue(fin, "spa_treatments_revenue_pct", 8)}
+                                      onChange={(e) => { const updated = { ...fin, spa_treatments_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                      onBlur={() => saveFinancials(fin)} />
+                                    <span className="text-sm">%</span>
+                                  </div>
+                                )}
+                                {selectedPlan.spa_entries_enabled !== false && (
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-sm w-40">Ingressi (%):</Label>
+                                    <Input type="number" step="0.1" className="w-24" value={getFinValue(fin, "spa_entries_revenue_pct", 4)}
+                                      onChange={(e) => { const updated = { ...fin, spa_entries_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                      onBlur={() => saveFinancials(fin)} />
+                                    <span className="text-sm">%</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'absolute' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">Valore annuo totale:</Label>
+                                <Input type="number" step="1000" className="w-32" value={getFinValueAny(fin, "spa_revenue_absolute", 0)}
+                                  onChange={(e) => { const updated = { ...fin, spa_revenue_absolute: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">€</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "spa_revenue_mode", 'pct_rooms') === 'detailed' && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                {selectedPlan.spa_treatments_enabled !== false && (
+                                  <div className="space-y-2 p-3 bg-background rounded border">
+                                    <span className="font-medium text-sm">Trattamenti Benessere</span>
+                                    <div className="grid gap-2 text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">% ospiti:</Label>
+                                        <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "spa_treatments_internal_pct", 15)}
+                                          onChange={(e) => { const updated = { ...fin, spa_treatments_internal_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">%</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Prezzo medio:</Label>
+                                        <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "spa_treatments_internal_avg", 80)}
+                                          onChange={(e) => { const updated = { ...fin, spa_treatments_internal_avg: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">€</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Esterni/anno:</Label>
+                                        <Input type="number" step="50" className="w-20 h-8" value={getFinValueAny(fin, "spa_treatments_external_clients", 500)}
+                                          onChange={(e) => { const updated = { ...fin, spa_treatments_external_clients: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Prezzo esterni:</Label>
+                                        <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "spa_treatments_external_avg", 90)}
+                                          onChange={(e) => { const updated = { ...fin, spa_treatments_external_avg: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">€</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                {selectedPlan.spa_entries_enabled !== false && (
+                                  <div className="space-y-2 p-3 bg-background rounded border">
+                                    <span className="font-medium text-sm">Ingressi Benessere</span>
+                                    <div className="grid gap-2 text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">% ospiti:</Label>
+                                        <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "spa_entries_internal_pct", 25)}
+                                          onChange={(e) => { const updated = { ...fin, spa_entries_internal_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">%</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Prezzo medio:</Label>
+                                        <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "spa_entries_internal_avg", 25)}
+                                          onChange={(e) => { const updated = { ...fin, spa_entries_internal_avg: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">€</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Esterni/anno:</Label>
+                                        <Input type="number" step="50" className="w-20 h-8" value={getFinValueAny(fin, "spa_entries_external_clients", 1000)}
+                                          onChange={(e) => { const updated = { ...fin, spa_entries_external_clients: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs w-28">Prezzo esterni:</Label>
+                                        <Input type="number" step="5" className="w-20 h-8" value={getFinValueAny(fin, "spa_entries_external_avg", 30)}
+                                          onChange={(e) => { const updated = { ...fin, spa_entries_external_avg: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                          onBlur={() => saveFinancials(fin)} />
+                                        <span className="text-xs">€</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {selectedPlan.has_congress && (
-                          <div className="space-y-2">
-                            <LabelWithTooltip field="congress_revenue_pct">Congressi (%)</LabelWithTooltip>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={getFinValue(fin, "congress_revenue_pct", 20)}
-                              onChange={(e) => {
-                                const updated = { ...fin, congress_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                              }}
-                              onBlur={() => saveFinancials(fin)}
-                            />
+
+                        {/* Congressi */}
+                        {selectedPlan.has_congress && selectedPlan.congress_management === 'direct' && (
+                          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="font-medium">Centro Congressi</span>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant={getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'pct_rooms' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, congress_revenue_mode: 'pct_rooms' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>% Ricavi</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'absolute' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, congress_revenue_mode: 'absolute' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Assoluto</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'detailed' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, congress_revenue_mode: 'detailed' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Dettagliato</Button>
+                              </div>
+                            </div>
+                            {getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'pct_rooms' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">% su ricavi camere:</Label>
+                                <Input type="number" step="0.1" className="w-24" value={getFinValue(fin, "congress_revenue_pct", 20)}
+                                  onChange={(e) => { const updated = { ...fin, congress_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">%</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'absolute' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">Valore annuo:</Label>
+                                <Input type="number" step="1000" className="w-32" value={getFinValueAny(fin, "congress_revenue_absolute", 0)}
+                                  onChange={(e) => { const updated = { ...fin, congress_revenue_absolute: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">€</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "congress_revenue_mode", 'pct_rooms') === 'detailed' && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-sm w-40">Eventi/anno:</Label>
+                                  <Input type="number" step="1" className="w-24" value={getFinValueAny(fin, "congress_events_year", 50)}
+                                    onChange={(e) => { const updated = { ...fin, congress_events_year: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                    onBlur={() => saveFinancials(fin)} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-sm w-40">Ricavo medio/evento:</Label>
+                                  <Input type="number" step="100" className="w-28" value={getFinValueAny(fin, "congress_avg_revenue", 3000)}
+                                    onChange={(e) => { const updated = { ...fin, congress_avg_revenue: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                    onBlur={() => saveFinancials(fin)} />
+                                  <span className="text-sm">€</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
-                        <div className="space-y-2">
-                          <LabelWithTooltip field="other_revenue_pct">Altri (%)</LabelWithTooltip>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={getFinValue(fin, "other_revenue_pct", 5)}
-                            onChange={(e) => {
-                              const updated = { ...fin, other_revenue_pct: Number.parseFloat(e.target.value) || 0 }
-                              setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                            }}
-                            onBlur={() => saveFinancials(fin)}
-                          />
+
+                        {/* Bar */}
+                        {selectedPlan.has_bar && selectedPlan.bar_management === 'direct' && (
+                          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="font-medium">Bar</span>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant={getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'pct_rooms' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, bar_revenue_mode: 'pct_rooms' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>% Ricavi</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'absolute' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, bar_revenue_mode: 'absolute' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Assoluto</Button>
+                                <Button size="sm" variant={getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'detailed' ? 'default' : 'outline'} className="text-xs"
+                                  onClick={() => { const updated = { ...fin, bar_revenue_mode: 'detailed' }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))); saveFinancials(updated) }}>Dettagliato</Button>
+                              </div>
+                            </div>
+                            {getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'pct_rooms' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">% su ricavi camere:</Label>
+                                <Input type="number" step="0.1" className="w-24" value={getFinValue(fin, "bar_revenue_pct", 8)}
+                                  onChange={(e) => { const updated = { ...fin, bar_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">%</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'absolute' && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm w-40">Valore annuo:</Label>
+                                <Input type="number" step="1000" className="w-32" value={getFinValueAny(fin, "bar_revenue_absolute", 0)}
+                                  onChange={(e) => { const updated = { ...fin, bar_revenue_absolute: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                                <span className="text-sm">€</span>
+                              </div>
+                            )}
+                            {getFinValueAny(fin, "bar_revenue_mode", 'pct_rooms') === 'detailed' && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2 p-3 bg-background rounded border">
+                                  <span className="font-medium text-sm">Clientela Interna</span>
+                                  <div className="grid gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">% ospiti:</Label>
+                                      <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "bar_internal_pct", 40)}
+                                        onChange={(e) => { const updated = { ...fin, bar_internal_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">%</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Spesa media:</Label>
+                                      <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "bar_internal_avg_spend", 15)}
+                                        onChange={(e) => { const updated = { ...fin, bar_internal_avg_spend: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">€</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2 p-3 bg-background rounded border">
+                                  <span className="font-medium text-sm">Clientela Esterna</span>
+                                  <div className="grid gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Clienti/anno:</Label>
+                                      <Input type="number" step="100" className="w-20 h-8" value={getFinValueAny(fin, "bar_external_clients", 3000)}
+                                        onChange={(e) => { const updated = { ...fin, bar_external_clients: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs w-28">Spesa media:</Label>
+                                      <Input type="number" step="1" className="w-20 h-8" value={getFinValueAny(fin, "bar_external_avg_spend", 18)}
+                                        onChange={(e) => { const updated = { ...fin, bar_external_avg_spend: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                        onBlur={() => saveFinancials(fin)} />
+                                      <span className="text-xs">€</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Altri servizi con layout semplificato */}
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {selectedPlan.has_bistrot && selectedPlan.bistrot_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">Bistrot (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "bistrot_revenue_pct", 5)}
+                                onChange={(e) => { const updated = { ...fin, bistrot_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          {selectedPlan.has_gym && selectedPlan.gym_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">Palestra (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "gym_revenue_pct", 3)}
+                                onChange={(e) => { const updated = { ...fin, gym_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          {selectedPlan.has_pool && selectedPlan.pool_management === 'direct' && (
+                            <>
+                              <div className="space-y-2 p-3 border rounded bg-muted/30">
+                                <Label className="font-medium">Piscina (%)</Label>
+                                <Input type="number" step="0.1" value={getFinValue(fin, "pool_revenue_pct", 2)}
+                                  onChange={(e) => { const updated = { ...fin, pool_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                  onBlur={() => saveFinancials(fin)} />
+                              </div>
+                              {selectedPlan.pool_external_entries_enabled && (
+                                <div className="space-y-2 p-3 border rounded bg-muted/30">
+                                  <Label className="font-medium">Piscina Esterni (%)</Label>
+                                  <Input type="number" step="0.1" value={getFinValue(fin, "pool_external_revenue_pct", 3)}
+                                    onChange={(e) => { const updated = { ...fin, pool_external_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                    onBlur={() => saveFinancials(fin)} />
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {selectedPlan.has_parking && selectedPlan.parking_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">Parcheggio (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "parking_revenue_pct", 4)}
+                                onChange={(e) => { const updated = { ...fin, parking_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          {selectedPlan.has_laundry && selectedPlan.laundry_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">Lavanderia (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "laundry_revenue_pct", 2)}
+                                onChange={(e) => { const updated = { ...fin, laundry_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          {selectedPlan.has_rentals && selectedPlan.rentals_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">Noleggi (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "rentals_revenue_pct", 5)}
+                                onChange={(e) => { const updated = { ...fin, rentals_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          {selectedPlan.has_ncc && selectedPlan.ncc_management === 'direct' && (
+                            <div className="space-y-2 p-3 border rounded bg-muted/30">
+                              <Label className="font-medium">NCC (%)</Label>
+                              <Input type="number" step="0.1" value={getFinValue(fin, "ncc_revenue_pct", 4)}
+                                onChange={(e) => { const updated = { ...fin, ncc_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)} />
+                            </div>
+                          )}
+                          <div className="space-y-2 p-3 border rounded bg-muted/30">
+                            <Label className="font-medium">Altri Ricavi (%)</Label>
+                            <Input type="number" step="0.1" value={getFinValue(fin, "other_revenue_pct", 5)}
+                              onChange={(e) => { const updated = { ...fin, other_revenue_pct: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                              onBlur={() => saveFinancials(fin)} />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* COSTI VARIABILI */}
+                    {/* CANONI DA AFFITTO - Solo per servizi in affitto - PER ANNO */}
+                    {(
+                      (selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'rental') ||
+                      (selectedPlan.has_spa && selectedPlan.spa_management === 'rental') ||
+                      (selectedPlan.has_congress && selectedPlan.congress_management === 'rental') ||
+                      (selectedPlan.has_bar && selectedPlan.bar_management === 'rental') ||
+                      (selectedPlan.has_bistrot && selectedPlan.bistrot_management === 'rental') ||
+                      (selectedPlan.has_gym && selectedPlan.gym_management === 'rental') ||
+                      (selectedPlan.has_pool && selectedPlan.pool_management === 'rental') ||
+                      (selectedPlan.has_parking && selectedPlan.parking_management === 'rental') ||
+                      (selectedPlan.has_laundry && selectedPlan.laundry_management === 'rental') ||
+                      (selectedPlan.has_rentals && selectedPlan.rentals_management === 'rental') ||
+                      (selectedPlan.has_ncc && selectedPlan.ncc_management === 'rental')
+                    ) && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Canoni da Affitto - Anno {fin.year_number} (€/anno)</CardTitle>
+                          <CardDescription>Ricavi da servizi dati in gestione esterna per questo anno specifico</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          {selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Ristorante (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "restaurant_rental_income", selectedPlan.restaurant_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, restaurant_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_spa && selectedPlan.spa_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>SPA (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "spa_rental_income", selectedPlan.spa_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, spa_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_congress && selectedPlan.congress_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Congressi (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "congress_rental_income", selectedPlan.congress_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, congress_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_bar && selectedPlan.bar_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Bar (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "bar_rental_income", selectedPlan.bar_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, bar_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_bistrot && selectedPlan.bistrot_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Bistrot (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "bistrot_rental_income", selectedPlan.bistrot_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, bistrot_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_gym && selectedPlan.gym_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Palestra (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "gym_rental_income", selectedPlan.gym_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, gym_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_pool && selectedPlan.pool_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Piscina (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "pool_rental_income", selectedPlan.pool_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, pool_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_parking && selectedPlan.parking_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Parcheggio (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "parking_rental_income", selectedPlan.parking_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, parking_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_laundry && selectedPlan.laundry_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Lavanderia (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "laundry_rental_income", selectedPlan.laundry_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, laundry_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_rentals && selectedPlan.rentals_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>Noleggi (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "rentals_rental_income", selectedPlan.rentals_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, rentals_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                          {selectedPlan.has_ncc && selectedPlan.ncc_management === 'rental' && (
+                            <div className="space-y-2">
+                              <Label>NCC (€)</Label>
+                              <Input
+                                type="number"
+                                step="1000"
+                                value={getFinValue(fin, "ncc_rental_income", selectedPlan.ncc_rental_fee || 0)}
+                                onChange={(e) => { const updated = { ...fin, ncc_rental_income: Number.parseFloat(e.target.value) || 0 }; setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f))) }}
+                                onBlur={() => saveFinancials(fin)}
+                              />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* COSTI VARIABILI - Solo per servizi in gestione diretta */}
                     <Card>
                       <CardHeader>
                         <CardTitle>Costi Variabili (% sui rispettivi ricavi)</CardTitle>
+                        <CardDescription>Parametri per i servizi in gestione diretta</CardDescription>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="rooms_cost_pct">Camere (%)</LabelWithTooltip>
+                          <Label>Camere (%)</Label>
                           <Input
                             type="number"
                             step="0.1"
@@ -1580,9 +3084,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             onBlur={() => saveFinancials(fin)}
                           />
                         </div>
-                        {selectedPlan.has_restaurant && (
+                        {selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'direct' && (
                           <div className="space-y-2">
-                            <LabelWithTooltip field="fb_cost_pct">F&B (%)</LabelWithTooltip>
+                            <Label>F&B (%)</Label>
                             <Input
                               type="number"
                               step="0.1"
@@ -1595,30 +3099,169 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             />
                           </div>
                         )}
-                        {selectedPlan.has_spa && (
-                          <div className="space-y-2">
-                            <LabelWithTooltip field="spa_cost_pct">SPA (%)</LabelWithTooltip>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={getFinValue(fin, "spa_cost_pct", 40)}
-                              onChange={(e) => {
-                                const updated = { ...fin, spa_cost_pct: Number.parseFloat(e.target.value) || 0 }
-                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
-                              }}
-                              onBlur={() => saveFinancials(fin)}
-                            />
-                          </div>
+                        {selectedPlan.has_spa && selectedPlan.spa_management === 'direct' && (
+                          <>
+                            {selectedPlan.spa_treatments_enabled !== false && (
+                              <div className="space-y-2">
+                                <Label>SPA Trattamenti (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={getFinValue(fin, "spa_treatments_cost_pct", 45)}
+                                  onChange={(e) => {
+                                    const updated = { ...fin, spa_treatments_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                    setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                                  }}
+                                  onBlur={() => saveFinancials(fin)}
+                                />
+                              </div>
+                            )}
+                            {selectedPlan.spa_entries_enabled !== false && (
+                              <div className="space-y-2">
+                                <Label>SPA Ingressi (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={getFinValue(fin, "spa_entries_cost_pct", 25)}
+                                  onChange={(e) => {
+                                    const updated = { ...fin, spa_entries_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                    setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                                  }}
+                                  onBlur={() => saveFinancials(fin)}
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
-                        {selectedPlan.has_congress && (
+                        {selectedPlan.has_congress && selectedPlan.congress_management === 'direct' && (
                           <div className="space-y-2">
-                            <LabelWithTooltip field="congress_cost_pct">Congressi (%)</LabelWithTooltip>
+                            <Label>Congressi (%)</Label>
                             <Input
                               type="number"
                               step="0.1"
                               value={getFinValue(fin, "congress_cost_pct", 45)}
                               onChange={(e) => {
                                 const updated = { ...fin, congress_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_bar && selectedPlan.bar_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Bar (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "bar_cost_pct", 30)}
+                              onChange={(e) => {
+                                const updated = { ...fin, bar_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_bistrot && selectedPlan.bistrot_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Bistrot (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "bistrot_cost_pct", 35)}
+                              onChange={(e) => {
+                                const updated = { ...fin, bistrot_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_gym && selectedPlan.gym_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Palestra (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "gym_cost_pct", 20)}
+                              onChange={(e) => {
+                                const updated = { ...fin, gym_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_pool && selectedPlan.pool_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Piscina (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "pool_cost_pct", 25)}
+                              onChange={(e) => {
+                                const updated = { ...fin, pool_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_parking && selectedPlan.parking_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Parcheggio (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "parking_cost_pct", 15)}
+                              onChange={(e) => {
+                                const updated = { ...fin, parking_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_laundry && selectedPlan.laundry_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Lavanderia (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "laundry_cost_pct", 40)}
+                              onChange={(e) => {
+                                const updated = { ...fin, laundry_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_rentals && selectedPlan.rentals_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Noleggi (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "rentals_cost_pct", 25)}
+                              onChange={(e) => {
+                                const updated = { ...fin, rentals_cost_pct: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_ncc && selectedPlan.ncc_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>NCC (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={getFinValue(fin, "ncc_cost_pct", 55)}
+                              onChange={(e) => {
+                                const updated = { ...fin, ncc_cost_pct: Number.parseFloat(e.target.value) || 0 }
                                 setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
                               }}
                               onBlur={() => saveFinancials(fin)}
@@ -1632,12 +3275,12 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                       <CardHeader>
                         <CardTitle>Costi Personale per Reparto (€/anno)</CardTitle>
                         <CardDescription>
-                          Inserisci i costi del personale suddivisi per i reparti attivi
+                          Costi personale per i reparti in gestione diretta
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <div className="space-y-2">
-                          <LabelWithTooltip field="staff_rooms_cost">Room Division (€)</LabelWithTooltip>
+                          <Label>Room Division (€)</Label>
                           <Input
                             type="number"
                             step="1000"
@@ -1649,9 +3292,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             onBlur={() => saveFinancials(fin)}
                           />
                         </div>
-                        {selectedPlan.has_restaurant && (
+                        {selectedPlan.has_restaurant && selectedPlan.restaurant_management === 'direct' && (
                           <div className="space-y-2">
-                            <LabelWithTooltip field="staff_fb_cost">F&B (€)</LabelWithTooltip>
+                            <Label>F&B (€)</Label>
                             <Input
                               type="number"
                               step="1000"
@@ -1664,9 +3307,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             />
                           </div>
                         )}
-                        {selectedPlan.has_spa && (
+                        {selectedPlan.has_spa && selectedPlan.spa_management === 'direct' && (
                           <div className="space-y-2">
-                            <LabelWithTooltip field="staff_spa_cost">SPA (€)</LabelWithTooltip>
+                            <Label>SPA (€)</Label>
                             <Input
                               type="number"
                               step="1000"
@@ -1679,9 +3322,9 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                             />
                           </div>
                         )}
-                        {selectedPlan.has_congress && (
+                        {selectedPlan.has_congress && selectedPlan.congress_management === 'direct' && (
                           <div className="space-y-2">
-                            <LabelWithTooltip field="staff_congress_cost">Congressi (€)</LabelWithTooltip>
+                            <Label>Congressi (€)</Label>
                             <Input
                               type="number"
                               step="1000"
@@ -1693,9 +3336,129 @@ export default function BusinessPlanDashboard({ initialPlans }: Props) {
                               onBlur={() => saveFinancials(fin)}
                             />
                           </div>
+)}
+                        {selectedPlan.has_bar && selectedPlan.bar_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Bar (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_bar_cost", 50000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_bar_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_bistrot && selectedPlan.bistrot_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Bistrot (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_bistrot_cost", 40000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_bistrot_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_gym && selectedPlan.gym_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Palestra (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_gym_cost", 30000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_gym_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_pool && selectedPlan.pool_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Piscina (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_pool_cost", 25000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_pool_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_parking && selectedPlan.parking_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Parcheggio (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_parking_cost", 20000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_parking_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_laundry && selectedPlan.laundry_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Lavanderia (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_laundry_cost", 35000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_laundry_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_rentals && selectedPlan.rentals_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>Noleggi (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_rentals_cost", 40000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_rentals_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
+                        )}
+                        {selectedPlan.has_ncc && selectedPlan.ncc_management === 'direct' && (
+                          <div className="space-y-2">
+                            <Label>NCC (€)</Label>
+                            <Input
+                              type="number"
+                              step="1000"
+                              value={getFinValue(fin, "staff_ncc_cost", 60000)}
+                              onChange={(e) => {
+                                const updated = { ...fin, staff_ncc_cost: Number.parseFloat(e.target.value) || 0 }
+                                setFinancials(financials.map((f) => (f.year_number === fin.year_number ? updated : f)))
+                              }}
+                              onBlur={() => saveFinancials(fin)}
+                            />
+                          </div>
                         )}
                         <div className="space-y-2">
-                          <LabelWithTooltip field="staff_admin_cost">Amministrazione (€)</LabelWithTooltip>
+                          <Label>Amministrazione (€)</Label>
                           <Input
                             type="number"
                             step="1000"

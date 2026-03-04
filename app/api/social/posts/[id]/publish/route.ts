@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
 import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
+import { publishToInstagram } from "@/lib/social/instagram"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -109,7 +110,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             if (!post.image_url) {
               errors.push("Instagram richiede un'immagine per pubblicare")
             } else {
-              errors.push("Instagram: pubblicazione in sviluppo")
+              // Instagram usa account_id come ig_user_id (salvato nel callback Facebook OAuth)
+              const igUserId = account.account_id
+              if (!igUserId) {
+                errors.push(
+                  `Instagram (${account.account_name}): ig_user_id mancante. ` +
+                  `Ricollega l'account Facebook per scoprire automaticamente l'account Instagram Business. ` +
+                  `Verifica che l'account IG sia di tipo Business/Creator e collegato alla Pagina FB.`
+                )
+              } else {
+                const igResult = await publishToInstagram(
+                  igUserId,
+                  account.access_token,
+                  post.content,
+                  post.image_url,
+                )
+
+                if (igResult.success && igResult.postId) {
+                  platformPostIds[`instagram_${account.account_name}`] = igResult.postId
+                } else {
+                  // Messaggi chiari per errori comuni di permessi
+                  let errorMsg = igResult.error || "Errore sconosciuto"
+                  if (errorMsg.includes("OAuthException") || errorMsg.includes("permission")) {
+                    errorMsg += " - Verifica che il token abbia i permessi instagram_basic e instagram_content_publish."
+                  }
+                  if (errorMsg.includes("not a Business") || errorMsg.includes("not valid")) {
+                    errorMsg += " - L'account Instagram deve essere di tipo Business o Creator."
+                  }
+                  errors.push(`Instagram (${account.account_name}): ${errorMsg}`)
+                }
+              }
             }
           } else if (platform === "linkedin") {
             const result = await publishToLinkedInWithFallback(
@@ -118,6 +148,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               account.page_id, // Person URN (salvato come page_id per LinkedIn)
               post.content,
               post.link_url,
+              post.image_url,
             )
 
             console.log(`[v0] LinkedIn result:`, result)

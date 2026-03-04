@@ -8,29 +8,20 @@ interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
-  console.log("[v0] sendEmail called - to:", to, "subject:", subject)
-
   try {
-    console.log("[v0] Attempting to send email via Gmail SMTP to:", to)
-
     const smtpPort = Number.parseInt(process.env.SMTP_PORT || "465")
     const smtpSecure = process.env.SMTP_SECURE === "true" || smtpPort === 465
 
-    console.log("[v0] SMTP Config:")
-    console.log("  - Host:", process.env.SMTP_HOST || "smtp.gmail.com")
-    console.log("  - Port:", smtpPort)
-    console.log("  - Secure:", smtpSecure)
-    console.log("  - User:", process.env.SMTP_USER || "NOT SET")
-    console.log(
-      "  - Password:",
-      process.env.SMTP_PASSWORD ? `SET (${process.env.SMTP_PASSWORD.length} chars)` : "NOT SET",
-    )
-    console.log("  - From:", process.env.SMTP_FROM || process.env.SMTP_USER || "NOT SET")
-
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.error("[v0] SMTP credentials not configured")
-      return { success: false, error: "SMTP credentials not configured" }
+      return { success: false, error: "Credenziali SMTP non configurate (SMTP_USER / SMTP_PASSWORD)" }
     }
+
+    console.log("[v0] SMTP_HOST:", process.env.SMTP_HOST)
+    console.log("[v0] SMTP_PORT:", smtpPort)
+    console.log("[v0] SMTP_SECURE:", smtpSecure)
+    console.log("[v0] SMTP_USER:", process.env.SMTP_USER)
+    console.log("[v0] SMTP_FROM:", process.env.SMTP_FROM)
+    console.log("[v0] SMTP_PASSWORD length:", process.env.SMTP_PASSWORD?.length)
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -40,13 +31,9 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
-      debug: true,
-      logger: true,
     })
 
-    console.log("[v0] Testing SMTP connection...")
     await transporter.verify()
-    console.log("[v0] SMTP connection successful")
 
     const info = await transporter.sendMail({
       from: `"4BID.IT" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
@@ -56,13 +43,9 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
       replyTo: replyTo || process.env.SMTP_FROM || process.env.SMTP_USER,
     })
 
-    console.log("[v0] Email sent successfully via SMTP:", info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
-    console.error("[v0] Error sending email via SMTP:")
-    console.error("  - Error type:", error instanceof Error ? error.constructor.name : typeof error)
-    console.error("  - Error message:", error instanceof Error ? error.message : String(error))
-    console.error("  - Full error:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+    const message = error instanceof Error ? error.message : "Errore sconosciuto"
+    return { success: false, error: message }
   }
 }

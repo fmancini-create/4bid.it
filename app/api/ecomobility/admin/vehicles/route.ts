@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
     .from("ecomobility_vehicles")
     .select("*, vehicle_type:ecomobility_vehicle_types(*)")
     .eq("structure_id", structureId)
-    .eq("is_active", true)
-    .order("internal_code")
+    .order("code")
 
   if (error) {
     console.error("[v0] Error fetching vehicles:", error)
@@ -28,10 +27,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { structure_id, vehicle_type_id, internal_code, brand, model, color, serial_number, license_plate } = body
+  const { structure_id, vehicle_type_id, code, name, description, image_url } = body
 
-  if (!structure_id || !vehicle_type_id || !internal_code) {
-    return NextResponse.json({ error: "Dati mancanti" }, { status: 400 })
+  if (!structure_id || !vehicle_type_id || !code || !name) {
+    return NextResponse.json({ error: "Dati mancanti: structure_id, vehicle_type_id, code e name sono obbligatori" }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -41,15 +40,15 @@ export async function POST(request: NextRequest) {
     .insert({
       structure_id,
       vehicle_type_id,
-      internal_code,
-      brand,
-      model,
-      color,
-      serial_number,
-      license_plate,
+      code,
+      name,
+      description: description || null,
+      image_url: image_url || null,
       status: "available",
+      battery_level: 100,
+      battery_status: "available",
     })
-    .select()
+    .select("*, vehicle_type:ecomobility_vehicle_types(*)")
     .single()
 
   if (error) {
@@ -102,6 +101,41 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     console.error("[v0] Error updating vehicle status:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get("id")
+
+  if (!id) {
+    return NextResponse.json({ error: "Vehicle ID required" }, { status: 400 })
+  }
+
+  const supabase = createAdminClient()
+
+  // Verifica che non ci siano prenotazioni attive
+  const { data: activeBookings } = await supabase
+    .from("ecomobility_bookings")
+    .select("id")
+    .eq("vehicle_id", id)
+    .in("status", ["confirmed", "picked_up"])
+    .limit(1)
+
+  if (activeBookings && activeBookings.length > 0) {
+    return NextResponse.json({ error: "Impossibile eliminare: il veicolo ha prenotazioni attive" }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from("ecomobility_vehicles")
+    .delete()
+    .eq("id", id)
+
+  if (error) {
+    console.error("[v0] Error deleting vehicle:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

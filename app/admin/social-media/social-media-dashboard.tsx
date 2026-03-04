@@ -108,10 +108,31 @@ interface SocialSettings {
   last_auto_generated_at: string | null
 }
 
+interface TopicRule {
+  id: string
+  topic_name: string
+  platforms: string[]
+  time_windows: { start: string; end: string }[]
+  frequency_days: number
+  exclude_weekdays: number[]
+  min_queue_pending: number
+  batch_size: number
+  tone: string
+  include_hashtags: boolean
+  default_hashtags: string[]
+  link_url: string | null
+  image_style_prompt: string | null
+  target_accounts: string[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 interface Props {
   initialAccounts?: SocialAccount[]
   initialPosts?: SocialPost[]
   initialSettings?: SocialSettings | null
+  initialTopicRules?: TopicRule[]
   userEmail?: string
 }
 
@@ -139,19 +160,31 @@ export default function SocialMediaDashboard({
   initialAccounts = [],
   initialPosts = [],
   initialSettings,
+  initialTopicRules = [],
   userEmail,
 }: Props) {
   const router = useRouter()
   const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts)
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts)
   const [settings, setSettings] = useState<SocialSettings | null>(initialSettings)
+  const [topicRules, setTopicRules] = useState<TopicRule[]>(initialTopicRules)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showConnectDialog, setShowConnectDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [isLoading, setIsLoading] = useState(false) // Added loading state
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Topic rules state
+  const [showTopicRuleDialog, setShowTopicRuleDialog] = useState(false)
+  const [editingTopicRule, setEditingTopicRule] = useState<Partial<TopicRule> | null>(null)
+  const [isSavingTopicRule, setIsSavingTopicRule] = useState(false)
+  const [topicFilter, setTopicFilter] = useState<string>("all")
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set())
+  const [isBulkApproving, setIsBulkApproving] = useState(false)
+  const [isGeneratingBatch, setIsGeneratingBatch] = useState<string | null>(null)
+  const [regeneratingPostId, setRegeneratingPostId] = useState<string | null>(null)
 
   const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
   const [manualPageId, setManualPageId] = useState("")
@@ -500,6 +533,132 @@ export default function SocialMediaDashboard({
     toast.info("Modifica il post e salva. Puoi mantenere o cambiare la data di programmazione.")
   }
 
+  // --- Topic Rules CRUD ---
+  const saveTopicRule = async () => {
+    if (!editingTopicRule?.topic_name) return
+    setIsSavingTopicRule(true)
+    try {
+      const isEditing = !!editingTopicRule.id
+      const response = await fetch("/api/social/topic-rules", {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingTopicRule),
+      })
+      if (!response.ok) throw new Error("Errore nel salvataggio")
+      const saved = await response.json()
+      if (isEditing) {
+        setTopicRules((prev) => prev.map((r) => (r.id === saved.id ? saved : r)))
+      } else {
+        setTopicRules((prev) => [saved, ...prev])
+      }
+      setShowTopicRuleDialog(false)
+      setEditingTopicRule(null)
+      toast.success(isEditing ? "Tema aggiornato!" : "Tema creato!")
+    } catch {
+      toast.error("Errore nel salvataggio del tema")
+    } finally {
+      setIsSavingTopicRule(false)
+    }
+  }
+
+  const deleteTopicRule = async (id: string) => {
+    try {
+      const response = await fetch(`/api/social/topic-rules/${id}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Errore")
+      setTopicRules((prev) => prev.filter((r) => r.id !== id))
+      toast.success("Tema eliminato")
+    } catch {
+      toast.error("Errore nell'eliminazione")
+    }
+  }
+
+  const generateBatchForTopic = async (ruleId: string) => {
+    setIsGeneratingBatch(ruleId)
+    try {
+      const response = await fetch(`/api/social/topic-rules/${ruleId}/generate`, { method: "POST" })
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.error || "Errore nella generazione")
+      }
+      const data = await response.json()
+      if (data.generated === 0) {
+        toast.info(data.message || "Nessun post generato - coda gia' piena")
+      } else {
+        toast.success(`Generati ${data.generated} post per "${data.message?.match(/"([^"]+)"/)?.[1] || "tema"}"!`)
+      }
+      router.refresh()
+    } catch (err) {
+      console.log("[v0] Generate error:", err)
+      toast.error(err instanceof Error ? err.message : "Errore nella generazione batch")
+    } finally {
+      setIsGeneratingBatch(null)
+    }
+  }
+
+  // --- Bulk Actions ---
+  const togglePostSelection = (postId: string) => {
+    setSelectedPostIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(postId)) next.delete(postId)
+      else next.add(postId)
+      return next
+    })
+  }
+
+  const selectAllPending = () => {
+    const filtered = topicFilter === "all"
+      ? pendingApproval
+      : pendingApproval.filter((p) => p.ai_topic === topicFilter)
+    setSelectedPostIds(new Set(filtered.map((p) => p.id)))
+  }
+
+  const deselectAll = () => setSelectedPostIds(new Set())
+
+  const bulkApprove = async () => {
+    if (selectedPostIds.size === 0) return
+    setIsBulkApproving(true)
+    try {
+      const response = await fetch("/api/social/posts/bulk-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postIds: Array.from(selectedPostIds) }),
+      })
+      if (!response.ok) throw new Error("Errore")
+      const data = await response.json()
+      toast.success(data.message || `${data.results?.filter((r: { success: boolean }) => r.success).length || 0} post approvati e programmati!`)
+      setSelectedPostIds(new Set())
+      router.refresh()
+    } catch {
+      toast.error("Errore nell'approvazione batch")
+    } finally {
+      setIsBulkApproving(false)
+    }
+  }
+
+  const bulkReject = async () => {
+    if (selectedPostIds.size === 0) return
+    if (!confirm(`Eliminare ${selectedPostIds.size} post selezionati?`)) return
+    for (const postId of selectedPostIds) {
+      await rejectPost(postId)
+    }
+    setSelectedPostIds(new Set())
+  }
+
+  const regeneratePost = async (postId: string) => {
+    setRegeneratingPostId(postId)
+    try {
+      const response = await fetch(`/api/social/posts/${postId}/regenerate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "both" }) })
+      if (!response.ok) throw new Error("Errore")
+      const data = await response.json()
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, content: data.content, image_url: data.image_url || p.image_url } : p)))
+      toast.success("Post rigenerato!")
+    } catch {
+      toast.error("Errore nella rigenerazione")
+    } finally {
+      setRegeneratingPostId(null)
+    }
+  }
+
   const getTargetAccountNames = (post: SocialPost) => {
     if (!post.target_accounts || post.target_accounts.length === 0) {
       // All accounts for selected platforms
@@ -673,50 +832,82 @@ export default function SocialMediaDashboard({
               {["facebook", "instagram", "linkedin"].map((platform) => {
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
                 const platformAccounts = accounts.filter((a) => a.platform === platform)
-                const isConnected = platformAccounts.some((a) => a.is_active)
-                const displayName =
-                  platform === "linkedin" && isConnected
-                    ? `${platformAccounts[0]?.account_name || platform} (Pagina)`
-                    : platformAccounts[0]?.account_name || platform
+                const activeAccounts = platformAccounts.filter((a) => a.is_active)
+                const isConnected = activeAccounts.length > 0
 
                 return (
                   <div
                     key={platform}
-                    className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border ${
+                    className={`flex flex-col gap-1.5 p-2.5 sm:p-4 rounded-lg border ${
                       isConnected ? "border-primary bg-primary/5" : "border-dashed"
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-200"
-                        }`}
+                    {/* Header piattaforma */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
+                            isConnected ? platformColors[platform as keyof typeof platformColors] : "bg-gray-200"
+                          }`}
+                        >
+                          <Icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium capitalize text-xs sm:text-base">{platform}</p>
+                          {!isConnected && platform === "instagram" && (
+                            <p className="text-[9px] text-muted-foreground mt-0.5">Collega Facebook per scoprire IG</p>
+                          )}
+                          {!isConnected && platform !== "instagram" && (
+                            <p className="text-[10px] text-muted-foreground">Non collegato</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant={isConnected ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => {
+                          if (platform === "facebook" || platform === "instagram") {
+                            window.location.href = "/api/social/connect/facebook"
+                          } else if (platform === "linkedin") {
+                            window.location.href = "/api/social/connect/linkedin"
+                          }
+                        }}
+                        className="shrink-0 text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-3"
                       >
-                        <Icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${isConnected ? "text-white" : "text-gray-500"}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium capitalize text-xs sm:text-base">{platform}</p>
-                        <p className="text-[10px] sm:text-sm text-muted-foreground truncate max-w-[100px] sm:max-w-none">
-                          {isConnected ? displayName : "Non collegato"}
-                        </p>
-                      </div>
+                        {isConnected ? "Riconn." : "Collega"}
+                      </Button>
                     </div>
-                    <Button
-                      variant={isConnected ? "outline" : "default"}
-                      size="sm"
-                      onClick={() => {
-                        if (platform === "facebook") {
-                          window.location.href = "/api/social/connect/facebook"
-                        } else if (platform === "linkedin") {
-                          window.location.href = "/api/social/connect/linkedin"
-                        } else {
-                          setShowConnectDialog(true)
-                        }
-                      }}
-                      className="shrink-0 text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-3"
-                    >
-                      {isConnected ? "Riconn." : "Collega"}
-                    </Button>
+
+                    {/* Lista account connessi */}
+                    {activeAccounts.length > 0 && (
+                      <div className="flex flex-col gap-1 ml-9 sm:ml-12">
+                        {activeAccounts.map((acc) => (
+                          <div key={acc.id} className="flex items-center justify-between">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
+                              {acc.account_name}
+                              {platform === "instagram" && !acc.account_id && (
+                                <span className="text-amber-600 ml-1">(ig_user_id mancante)</span>
+                              )}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bottone aggiungi altro account (solo FB e IG) */}
+                    {isConnected && (platform === "facebook" || platform === "instagram") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-9 sm:ml-12 h-6 text-[9px] sm:text-xs text-muted-foreground justify-start px-1 hover:text-foreground"
+                        onClick={() => {
+                          window.location.href = "/api/social/connect/facebook?new=1"
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Aggiungi altro account FB/IG
+                      </Button>
+                    )}
                   </div>
                 )
               })}
@@ -724,12 +915,10 @@ export default function SocialMediaDashboard({
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="drafts" className="w-full">
-          {" "}
-          {/* Changed defaultValue to "drafts" */}
-          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
-            <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
-              Bozze
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="w-full grid grid-cols-5 h-9 sm:h-10">
+            <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Approvare {pendingApproval.length > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[9px] px-1">{pendingApproval.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="scheduled" className="text-[10px] sm:text-sm py-1.5 px-1">
               Programmati
@@ -737,29 +926,90 @@ export default function SocialMediaDashboard({
             <TabsTrigger value="published" className="text-[10px] sm:text-sm py-1.5 px-1">
               Pubblicati
             </TabsTrigger>
+            <TabsTrigger value="topics" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Temi
+            </TabsTrigger>
             <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 px-1">
               Tutti
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="drafts" className="space-y-4 mt-4">
-            {drafts.length === 0 ? (
+
+          {/* TAB: Da Approvare con filtro tema e bulk actions */}
+          <TabsContent value="pending" className="space-y-4 mt-4">
+            {pendingApproval.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /> {/* Use FileText icon for drafts */}
-                  <p>Nessuna bozza</p>
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nessun post in attesa di approvazione</p>
                 </CardContent>
               </Card>
             ) : (
-              drafts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onApprove={post.scheduled_for ? () => approvePost(post.id) : undefined}
-                  onPublish={() => publishNow(post.id)}
-                  onReject={() => rejectPost(post.id)}
-                  onEdit={() => openEditDialog(post)}
-                />
-              ))
+              <>
+                {/* Barra filtro + bulk actions */}
+                <Card>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Label className="text-xs sm:text-sm shrink-0">Filtra tema:</Label>
+                        <Select value={topicFilter} onValueChange={(v) => { setTopicFilter(v); setSelectedPostIds(new Set()) }}>
+                          <SelectTrigger className="h-8 text-xs sm:text-sm w-full sm:w-[200px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tutti i temi</SelectItem>
+                            {Array.from(new Set(pendingApproval.map((p) => p.ai_topic).filter(Boolean))).map((topic) => (
+                              <SelectItem key={topic!} value={topic!}>{topic}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={selectAllPending} className="h-7 text-xs px-2 bg-transparent">
+                          Seleziona tutti
+                        </Button>
+                        {selectedPostIds.size > 0 && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={deselectAll} className="h-7 text-xs px-2 bg-transparent">
+                              Deseleziona ({selectedPostIds.size})
+                            </Button>
+                            <Button size="sm" onClick={bulkApprove} disabled={isBulkApproving} className="h-7 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                              {isBulkApproving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                              Approva {selectedPostIds.size}
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={bulkReject} className="h-7 text-xs px-2">
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Elimina {selectedPostIds.size}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                {(topicFilter === "all" ? pendingApproval : pendingApproval.filter((p) => p.ai_topic === topicFilter)).map((post) => (
+                  <div key={post.id} className="flex items-start gap-2">
+                    <div className="pt-4 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedPostIds.has(post.id)}
+                        onChange={() => togglePostSelection(post.id)}
+                        className="h-4 w-4 rounded border-border accent-primary"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <PostCard
+                        post={post}
+                        onApprove={() => approvePost(post.id)}
+                        onPublish={() => publishNow(post.id)}
+                        onReject={() => rejectPost(post.id)}
+                        onEdit={() => openEditDialog(post)}
+                        onRegenerate={() => regeneratePost(post.id)}
+                        isRegenerating={regeneratingPostId === post.id}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </TabsContent>
           <TabsContent value="scheduled" className="space-y-4 mt-4">
@@ -800,6 +1050,96 @@ export default function SocialMediaDashboard({
               ))
             )}
           </TabsContent>
+          {/* TAB: Temi (Topic Rules CRUD) */}
+          <TabsContent value="topics" className="space-y-4 mt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Configura i temi per la generazione automatica dei post</p>
+              <Button size="sm" onClick={() => {
+                setEditingTopicRule({
+                  topic_name: "", image_style_prompt: "", platforms: ["facebook", "linkedin"],
+                  time_windows: [{ start: "09:00", end: "12:00" }, { start: "17:00", end: "20:00" }],
+                  frequency_days: 3, exclude_weekdays: [0, 6], min_queue_pending: 5, batch_size: 5,
+                  tone: "professional", include_hashtags: true, default_hashtags: [],
+                  link_url: null, target_accounts: [], is_active: true,
+                })
+                setShowTopicRuleDialog(true)
+              }}>
+                <Plus className="h-4 w-4 mr-1" /> Nuovo Tema
+              </Button>
+            </div>
+            {topicRules.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nessun tema configurato</p>
+                </CardContent>
+              </Card>
+            ) : (
+              topicRules.map((rule) => {
+                const queueCount = posts.filter((p) => p.ai_topic === rule.topic_name && (p.status === "pending_approval" || p.status === "scheduled")).length
+                return (
+                  <Card key={rule.id} className={!rule.is_active ? "opacity-60" : ""}>
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-sm sm:text-base">{rule.topic_name}</h3>
+                            <Badge variant={rule.is_active ? "default" : "secondary"} className="text-[10px]">
+                              {rule.is_active ? "Attivo" : "Disattivato"}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Coda: {queueCount} post
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{rule.image_style_prompt}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {rule.platforms.map((p) => {
+                              const Icon = platformIcons[p as keyof typeof platformIcons]
+                              return Icon ? (
+                                <Badge key={p} variant="outline" className="text-[10px] gap-1">
+                                  <Icon className="h-2.5 w-2.5" /> {p}
+                                </Badge>
+                              ) : null
+                            })}
+                            <Badge variant="outline" className="text-[10px]">Ogni {rule.frequency_days}gg</Badge>
+                            <Badge variant="outline" className="text-[10px]">Batch: {rule.batch_size}</Badge>
+                            {rule.time_windows.map((tw) => {
+                              const label = typeof tw === "string" ? tw : `${tw.start}-${tw.end}`
+                              return (
+                                <Badge key={label} variant="outline" className="text-[10px]">{label}</Badge>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="outline" size="sm"
+                            onClick={() => generateBatchForTopic(rule.id)}
+                            disabled={isGeneratingBatch === rule.id}
+                            className="h-7 text-xs px-2 bg-transparent"
+                          >
+                            {isGeneratingBatch === rule.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            <span className="hidden sm:inline ml-1">Genera</span>
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2 bg-transparent" onClick={() => {
+                            setEditingTopicRule({ ...rule })
+                            setShowTopicRuleDialog(true)
+                          }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2 text-destructive hover:text-destructive bg-transparent" onClick={() => {
+                            if (confirm(`Eliminare il tema "${rule.topic_name}"?`)) deleteTopicRule(rule.id)
+                          }}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })
+            )}
+          </TabsContent>
+
           <TabsContent value="all" className="space-y-4 mt-4">
             {allPosts.map((post) => (
               <PostCard
@@ -1609,6 +1949,228 @@ export default function SocialMediaDashboard({
       </AlertDialog>
 
       {/* ... existing settings dialog and manual connect dialog ... */}
+
+      {/* Dialog Tema (Topic Rule) */}
+      <Dialog open={showTopicRuleDialog} onOpenChange={setShowTopicRuleDialog}>
+        <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>{editingTopicRule?.id ? "Modifica Tema" : "Nuovo Tema"}</DialogTitle>
+            <DialogDescription>Configura un tema per la generazione automatica dei post</DialogDescription>
+          </DialogHeader>
+          {editingTopicRule && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm">Nome tema *</Label>
+                <Input
+                  value={editingTopicRule.topic_name || ""}
+                  onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, topic_name: e.target.value } : prev)}
+                  placeholder="Es: Revenue Management Tips"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm">Stile immagine AI</Label>
+                <Textarea
+                  value={editingTopicRule.image_style_prompt || ""}
+                  onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, image_style_prompt: e.target.value } : prev)}
+                  placeholder="Es: professional hotel marketing, luxury resort photography..."
+                  className="mt-1"
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Frequenza (giorni)</Label>
+                  <Input
+                    type="number" min={1} max={30}
+                    value={editingTopicRule.frequency_days || 3}
+                    onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, frequency_days: Number(e.target.value) } : prev)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Batch size</Label>
+                  <Input
+                    type="number" min={1} max={30}
+                    value={editingTopicRule.batch_size || 5}
+                    onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, batch_size: Number(e.target.value) } : prev)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Min coda pending</Label>
+                  <Input
+                    type="number" min={1} max={50}
+                    value={editingTopicRule.min_queue_pending || 5}
+                    onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, min_queue_pending: Number(e.target.value) } : prev)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Piattaforme</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    {(["facebook", "linkedin", "instagram"] as const).map((p) => {
+                      const Icon = platformIcons[p]
+                      const selected = editingTopicRule.platforms?.includes(p) || false
+                      return (
+                        <Button key={p} variant={selected ? "default" : "outline"} size="sm" className={`h-8 px-2 ${!selected ? 'bg-transparent' : ''}`}
+                          onClick={() => {
+                            setEditingTopicRule((prev) => {
+                              if (!prev) return prev
+                              const platforms = prev.platforms || []
+                              return { ...prev, platforms: selected ? platforms.filter((x) => x !== p) : [...platforms, p] }
+                            })
+                          }}
+                        >
+                          <Icon className="h-3 w-3" />
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+              {/* Selezione account target */}
+              {accounts.filter((a) => editingTopicRule.platforms?.includes(a.platform)).length > 0 && (
+                <div>
+                  <Label className="text-sm">Account destinatari <span className="text-muted-foreground font-normal">(vuoto = tutti gli account attivi)</span></Label>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {accounts
+                      .filter((a) => a.is_active && editingTopicRule.platforms?.includes(a.platform))
+                      .map((a) => {
+                        const Icon = platformIcons[a.platform as keyof typeof platformIcons]
+                        const selected = editingTopicRule.target_accounts?.includes(a.id) || false
+                        return (
+                          <Button
+                            key={a.id}
+                            variant={selected ? "default" : "outline"}
+                            size="sm"
+                            className={`h-7 text-[10px] px-2 ${!selected ? 'bg-transparent' : ''}`}
+                            onClick={() => {
+                              setEditingTopicRule((prev) => {
+                                if (!prev) return prev
+                                const targets = prev.target_accounts || []
+                                return {
+                                  ...prev,
+                                  target_accounts: selected
+                                    ? targets.filter((id) => id !== a.id)
+                                    : [...targets, a.id],
+                                }
+                              })
+                            }}
+                          >
+                            <Icon className="h-2.5 w-2.5 mr-1" />
+                            {a.account_name}
+                          </Button>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+              <div>
+                <Label className="text-sm">Fasce orarie (una per riga, formato HH:MM-HH:MM)</Label>
+                <Textarea
+                  value={(editingTopicRule.time_windows || []).map((tw) => typeof tw === "string" ? tw : `${tw.start}-${tw.end}`).join("\n")}
+                  onChange={(e) => setEditingTopicRule((prev) => {
+                    if (!prev) return prev
+                    const parsed = e.target.value.split("\n").map(s => s.trim()).filter(Boolean).map(line => {
+                      const [start, end] = line.split("-")
+                      return start && end ? { start: start.trim(), end: end.trim() } : null
+                    }).filter((x): x is { start: string; end: string } => x !== null)
+                    return { ...prev, time_windows: parsed }
+                  })}
+                  placeholder={"09:00-12:00\n17:00-20:00"}
+                  className="mt-1 font-mono text-sm"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label className="text-sm">Giorni esclusi dalla pubblicazione <span className="text-muted-foreground font-normal">(clicca per escludere)</span></Label>
+                <div className="flex gap-1.5 mt-1.5">
+                  {["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"].map((day, idx) => {
+                    const selected = editingTopicRule.exclude_weekdays?.includes(idx) || false
+                    return (
+                      <Button key={idx} variant={selected ? "destructive" : "outline"} size="sm" className={`h-7 w-9 text-xs px-0 ${!selected ? 'bg-transparent' : ''}`}
+                        onClick={() => {
+                          setEditingTopicRule((prev) => {
+                            if (!prev) return prev
+                            const days = prev.exclude_weekdays || []
+                            return { ...prev, exclude_weekdays: selected ? days.filter((d) => d !== idx) : [...days, idx] }
+                          })
+                        }}
+                      >
+                        {day}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Tono</Label>
+                  <Select
+                    value={editingTopicRule.tone || "professional"}
+                    onValueChange={(v) => setEditingTopicRule((prev) => prev ? { ...prev, tone: v } : prev)}
+                  >
+                    <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionale</SelectItem>
+                      <SelectItem value="friendly">Amichevole</SelectItem>
+                      <SelectItem value="informative">Informativo</SelectItem>
+                      <SelectItem value="engaging">Coinvolgente</SelectItem>
+                      <SelectItem value="authoritative">Autorevole</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Link predefinito</Label>
+                  <Input
+                    value={editingTopicRule.link_url || ""}
+                    onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, link_url: e.target.value || null } : prev)}
+                    placeholder="https://4bid.it/..."
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm">Hashtag predefiniti (separati da spazio)</Label>
+                <Input
+                  value={(editingTopicRule.default_hashtags || []).join(" ")}
+                  onChange={(e) => setEditingTopicRule((prev) => prev ? { ...prev, default_hashtags: e.target.value.split(/\s+/).filter(Boolean) } : prev)}
+                  placeholder="#revenuemanagement #hotel #hospitality"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editingTopicRule.include_hashtags ?? true}
+                    onCheckedChange={(v) => setEditingTopicRule((prev) => prev ? { ...prev, include_hashtags: v } : prev)}
+                  />
+                  <Label className="text-sm">Includi hashtag</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editingTopicRule.is_active ?? true}
+                    onCheckedChange={(v) => setEditingTopicRule((prev) => prev ? { ...prev, is_active: v } : prev)}
+                  />
+                  <Label className="text-sm">Tema attivo</Label>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowTopicRuleDialog(false); setEditingTopicRule(null) }} className="bg-transparent">
+              Annulla
+            </Button>
+            <Button onClick={saveTopicRule} disabled={isSavingTopicRule || !editingTopicRule?.topic_name}>
+              {isSavingTopicRule ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {editingTopicRule?.id ? "Salva Modifiche" : "Crea Tema"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1620,6 +2182,8 @@ function PostCard({
   onPublish,
   onEdit,
   onRepost,
+  onRegenerate,
+  isRegenerating,
 }: {
   post: SocialPost
   onApprove?: () => void
@@ -1627,10 +2191,12 @@ function PostCard({
   onPublish?: () => void
   onEdit?: () => void
   onRepost?: () => void
+  onRegenerate?: () => void
+  isRegenerating?: boolean
 }) {
   const status = statusConfig[post.status] || statusConfig.draft
   const StatusIcon = status.icon
-  const canEdit = ["draft", "scheduled"].includes(post.status)
+  const canEdit = ["draft", "pending_approval", "scheduled"].includes(post.status)
   const canRepost = post.status === "published" || post.status === "failed"
 
   const handlePublish = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1742,6 +2308,18 @@ function PostCard({
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Modifica e Ripubblica
+              </Button>
+            )}
+            {onRegenerate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRegenerate}
+                disabled={isRegenerating}
+                className="h-7 text-[10px] sm:text-xs bg-transparent"
+              >
+                {isRegenerating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Rigenera
               </Button>
             )}
             {onApprove && (

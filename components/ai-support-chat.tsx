@@ -70,12 +70,6 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     setMessages((prev) => [...prev, tempUserMessage])
 
     try {
-      console.log("[v0] Sending to API:", {
-        message: userMessage,
-        conversationId,
-        leadState,
-      })
-
       const response = await fetch("/api/ai-support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,11 +89,7 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
 
       const data = await response.json()
 
-      console.log("[v0] Received from API:", {
-        hasLeadState: !!data.leadState,
-        leadStateIsCollecting: data.leadState?.isCollecting,
-        leadStateStep: data.leadState?.step,
-      })
+
 
       // Update conversation ID if first message
       if (!conversationId && data.conversationId) {
@@ -107,7 +97,6 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
       }
 
       if (data.leadState !== undefined) {
-        console.log("[v0] Updating leadState to:", data.leadState)
         setLeadState(data.leadState)
       }
 
@@ -126,7 +115,6 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Si è verificato un errore. Riprova."
       setError(errorMessage)
-      console.error("[v0] AI Support Chat error:", err)
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id))
     } finally {

@@ -9,6 +9,21 @@ export const metadata = {
   title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
   description:
     "Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti usando comandi in linguaggio naturale — senza formule.",
+  openGraph: {
+    title: "AutoExel - Il primo Excel per chi non sa usare Excel",
+    description: "Analisi automatiche, KPI e grafici da Excel/CSV. Crea fogli intelligenti in linguaggio naturale.",
+    type: "website",
+    url: "https://4bid.it/progetti/autoexel",
+    locale: "it_IT",
+    siteName: "4BID.IT",
+    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "AutoExel by 4BID" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AutoExel - Il primo Excel per chi non sa usare Excel",
+    description: "Analisi automatiche, KPI e grafici da Excel/CSV. Crea fogli intelligenti in linguaggio naturale.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
   alternates: {
     canonical: "https://4bid.it/progetti/autoexel",
   },
