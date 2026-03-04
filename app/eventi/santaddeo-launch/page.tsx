@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, MapPin, Users, CheckCircle, ArrowRight, Coffee, Presentation, Monitor, MessageSquare, Wine } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, CheckCircle, ArrowRight, Coffee, Presentation, Monitor, MessageSquare, Wine, Zap } from "lucide-react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import LandingPageTracker from "@/components/landing-page-tracker"
@@ -74,6 +74,28 @@ export default function SantaddeoLaunchPage() {
     "Come SANTADDEO si integra con PMS e OTA",
     "Case study e risultati delle prime implementazioni",
     "Roadmap e prossimi sviluppi del prodotto",
+  ]
+
+  const progetti = [
+    {
+      nome: "SANTADDEO",
+      stato: "In Testing",
+      descrizione: "Revenue Management System intelligente e umano",
+      link: "/progetti/santaddeo",
+    },
+    {
+      nome: "Hotel Accelerator",
+      stato: "80%",
+      descrizione: "Programma di accelerazione per strutture ricettive innovative",
+      link: "/progetti/hotel-accelerator",
+    },
+    {
+      nome: "HotelProfitAI",
+      stato: "In Development",
+      descrizione: "Controllo di gestione con team di commercialisti specializzati",
+      link: "https://www.hotelprofitai.com",
+      external: true,
+    },
   ]
 
   return (
@@ -209,6 +231,31 @@ export default function SantaddeoLaunchPage() {
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span>{item}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Progetti Section */}
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-12">I Nostri Progetti nel Settore Hospitality</h2>
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {progetti.map((progetto, index) => (
+                <Link key={index} href={progetto.link} target={progetto.external ? "_blank" : undefined} rel={progetto.external ? "noopener noreferrer" : undefined}>
+                  <Card className="h-full hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer">
+                    <CardContent className="p-8">
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="text-xl font-semibold">{progetto.nome}</h3>
+                        <Badge variant="outline" className="ml-2 whitespace-nowrap">
+                          <Zap className="h-3 w-3 mr-1" />
+                          {progetto.stato}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground">{progetto.descrizione}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           </div>
