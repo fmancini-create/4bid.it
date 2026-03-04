@@ -24,7 +24,7 @@ export function Header() {
           setIsAdmin(user.email === "f.mancini@4bid.it")
         }
       } catch (error) {
-        console.log("[v0] Error checking admin status:", error)
+        // Silently fail
         // Silently fail - user is not admin
         setIsAdmin(false)
       }
@@ -43,7 +43,7 @@ export function Header() {
 
       return () => subscription.unsubscribe()
     } catch (error) {
-      console.log("[v0] Error setting up auth listener:", error)
+      // Silently fail
     }
   }, [])
 
@@ -54,7 +54,7 @@ export function Header() {
       setIsAdmin(false)
       router.push("/")
     } catch (error) {
-      console.log("[v0] Error during logout:", error)
+      // Silently fail
     }
   }
 
@@ -76,7 +76,7 @@ export function Header() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <Image src="/logo.png" alt="4bid Logo" width={80} height={50} className="h-12 w-auto" style={{ height: 'auto' }} priority />
+            <Image src="/logo.png" alt="4bid Logo" width={80} height={50} style={{ width: 'auto', height: 'auto' }} priority />
           </Link>
 
           {/* Desktop Navigation */}
