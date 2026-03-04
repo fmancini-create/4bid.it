@@ -76,7 +76,7 @@ export function Header() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <Image src="/logo.png" alt="4bid Logo" width={80} height={50} className="h-12 w-auto" priority />
+            <Image src="/logo.png" alt="4bid Logo" width={80} height={50} className="h-12 w-auto" style={{ height: 'auto' }} priority />
           </Link>
 
           {/* Desktop Navigation */}
