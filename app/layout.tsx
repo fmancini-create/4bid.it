@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { CookieConsent } from "@/components/cookie-consent"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { LandingPagePopup } from "@/components/landing-page-popup"
 import Script from "next/script"
 import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
@@ -176,10 +175,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {isProduction && <Analytics />}
         <Toaster />
         <CookieConsent />
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <LandingPagePopup />
-          <AISupportChat userEmail="" accountType="pro" />
-        </div>
+        <AISupportChat userEmail="" accountType="pro" />
       </body>
     </html>
   )
