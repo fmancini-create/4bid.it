@@ -232,23 +232,23 @@ export default function RisparmioCompulsivoPage() {
       </section>
 
       {/* Market Potential */}
-      <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="container mx-auto px-6 text-center">
-          <Globe className="h-16 w-16 mx-auto mb-6 opacity-90" />
-          <h2 className="text-4xl font-bold mb-6">Mercato Potenziale</h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto opacity-90">
+          <Globe className="h-16 w-16 mx-auto mb-6 text-green-600" />
+          <h2 className="text-4xl font-bold mb-6 text-gray-900">Mercato Potenziale</h2>
+          <p className="text-xl mb-8 max-w-3xl mx-auto text-gray-600">
             Mercato globale "digital saving & finance wellness": oltre 25 miliardi $ entro il 2030
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto mt-12">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <Users className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">1M</p>
-              <p className="text-sm">Utenti target 3 anni</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-green-100">
+              <Users className="h-12 w-12 mx-auto mb-4 text-green-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">1M</p>
+              <p className="text-sm text-gray-600">Utenti target 3 anni</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <Trophy className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">10 M€</p>
-              <p className="text-sm">Ricavi stimati anno 3</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-green-100">
+              <Trophy className="h-12 w-12 mx-auto mb-4 text-green-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">10 M€</p>
+              <p className="text-sm text-gray-600">Ricavi stimati anno 3</p>
             </div>
           </div>
         </div>

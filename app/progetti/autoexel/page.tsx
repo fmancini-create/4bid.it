@@ -264,20 +264,20 @@ export default function AutoExelPage() {
       </section>
 
       {/* Status Section */}
-      <section className="py-20 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full mb-8">
-              <CheckCircle className="h-6 w-6" />
-              <span className="text-xl font-bold">Progetto On line</span>
+            <div className="inline-flex items-center gap-3 bg-green-100 px-6 py-3 rounded-full mb-8">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <span className="text-xl font-bold text-green-700">Progetto On line</span>
             </div>
-            <h2 className="text-4xl font-bold mb-6">AutoExel è disponibile ora!</h2>
-            <p className="text-xl mb-8 text-white/90">
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">AutoExel è disponibile ora!</h2>
+            <p className="text-xl mb-8 text-gray-600">
               La piattaforma è online e già utilizzata da centinaia di utenti per analizzare dati senza competenze
               tecniche.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button asChild size="lg" className="bg-white text-green-600 hover:bg-white/90 shadow-lg">
+              <Button asChild size="lg" className="bg-green-600 text-white hover:bg-green-700 shadow-lg">
                 <a href="https://www.autoexel.it" target="_blank" rel="noopener noreferrer">
                   Prova AutoExel Gratis
                 </a>
@@ -286,7 +286,7 @@ export default function AutoExelPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white/10 bg-transparent"
+                className="border-green-600 text-green-600 hover:bg-green-50"
               >
                 <Link href="/#contact">Richiedi una Demo</Link>
               </Button>

@@ -283,15 +283,15 @@ export default function SoftwareRevenueManagementPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-gradient-to-br from-primary-blue to-blue-grey text-white">
+      <section className="py-20 bg-muted/50">
         <div className="container mx-auto px-6 text-center">
-          <Bot className="h-16 w-16 mx-auto mb-6 opacity-90" />
-          <h2 className="text-4xl font-bold mb-6">Pronto a Rivoluzionare il Revenue Management?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+          <Bot className="h-16 w-16 mx-auto mb-6 text-primary-blue" />
+          <h2 className="text-4xl font-bold mb-6 text-foreground">Pronto a Rivoluzionare il Revenue Management?</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-muted-foreground">
             Richiedi una demo personalizzata di SANTADDEO e scopri come aumentare i ricavi del tuo hotel con l'AI
             trasparente.
           </p>
-          <ContactButton size="lg" variant="secondary" className="bg-white text-primary-blue hover:bg-white/90">
+          <ContactButton size="lg" className="bg-primary-blue hover:bg-primary-blue/90 text-white">
             Richiedi Demo Gratuita
           </ContactButton>
         </div>

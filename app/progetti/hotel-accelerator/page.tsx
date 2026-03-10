@@ -199,10 +199,10 @@ export default function HotelAcceleratorPage() {
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium text-gray-400">Avanzamento</span>
-                  <span className="text-sm font-bold text-blue-400">70%</span>
+                  <span className="text-sm font-bold text-blue-400">80%</span>
                 </div>
                 <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 w-[70%]" />
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 w-[80%]" />
                 </div>
               </div>
               <div className="pt-4 space-y-2">
