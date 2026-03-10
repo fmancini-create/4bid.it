@@ -99,25 +99,6 @@ export default function SantaddeoLaunchPage() {
 
   return (
     <>
-      <SeoStructuredData
-        type="Event"
-        data={{
-          name: "SANTADDEO Launch Event",
-          description: "Presentazione ufficiale del primo Revenue Management System intelligente e umano",
-          startDate: "2026-04-15T17:00:00+02:00",
-          endDate: "2026-04-15T20:00:00+02:00",
-          location: {
-            name: "Firenze, Toscana",
-            address: "Indirizzo comunicato agli iscritti",
-          },
-          organizer: {
-            name: "4BID SRL",
-            url: "https://www.4bid.it",
-          },
-          eventStatus: "EventScheduled",
-          eventAttendanceMode: "OfflineEventAttendanceMode",
-        }}
-      />
       <LandingPageTracker slug="santaddeo-launch" />
       <Header />
       <main className="min-h-screen bg-background">
