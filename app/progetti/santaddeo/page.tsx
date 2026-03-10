@@ -199,24 +199,24 @@ export default function SantaddeoPage() {
       </section>
 
       {/* Market Potential */}
-      <section className="py-20 bg-gradient-to-br from-teal-500 to-cyan-600 text-white">
+      <section className="py-20 bg-gradient-to-br from-teal-50 to-cyan-50">
         <div className="container mx-auto px-6 text-center">
-          <Globe className="h-16 w-16 mx-auto mb-6 opacity-90" />
-          <h2 className="text-4xl font-bold mb-6">Mercato Potenziale</h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto opacity-90">
+          <Globe className="h-16 w-16 mx-auto mb-6 text-teal-600" />
+          <h2 className="text-4xl font-bold mb-6 text-gray-900">Mercato Potenziale</h2>
+          <p className="text-xl mb-8 max-w-3xl mx-auto text-gray-600">
             Mercato mondiale del Revenue Management Software: oltre 10 miliardi $ entro il 2030, con tasso di crescita
             medio annuo del 15%
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto mt-12">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <BarChart3 className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">5.000</p>
-              <p className="text-sm">Strutture target 3 anni</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-teal-100">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 text-teal-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">5.000</p>
+              <p className="text-sm text-gray-600">Strutture target 3 anni</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">5 M€</p>
-              <p className="text-sm">Ricavi stimati anno 3</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-teal-100">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-teal-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">5 M€</p>
+              <p className="text-sm text-gray-600">Ricavi stimati anno 3</p>
             </div>
           </div>
         </div>

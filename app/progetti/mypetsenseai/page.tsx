@@ -330,19 +330,19 @@ export default function MypetSenseAIPage() {
       </section>
 
       {/* Status Section */}
-      <section className="py-20 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
+      <section className="py-20 bg-gradient-to-br from-purple-50 to-pink-50">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full mb-8">
-              <CheckCircle className="h-6 w-6" />
-              <span className="text-xl font-bold">Progetto On line</span>
+            <div className="inline-flex items-center gap-3 bg-purple-100 px-6 py-3 rounded-full mb-8">
+              <CheckCircle className="h-6 w-6 text-purple-600" />
+              <span className="text-xl font-bold text-purple-700">Progetto On line</span>
             </div>
-            <h2 className="text-4xl font-bold mb-6">MyPetSenseAI è disponibile ora!</h2>
-            <p className="text-xl mb-8 text-white/90">
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">MyPetSenseAI è disponibile ora!</h2>
+            <p className="text-xl mb-8 text-gray-600">
               La piattaforma è online con oltre 10,000 analisi completate e 2,500+ utenti attivi.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button asChild size="lg" className="bg-white text-purple-600 hover:bg-white/90 shadow-lg">
+              <Button asChild size="lg" className="bg-purple-600 text-white hover:bg-purple-700 shadow-lg">
                 <a href="https://mypetsenseai.com/pricing" target="_blank" rel="noopener noreferrer">
                   Inizia Gratis
                 </a>
@@ -351,7 +351,7 @@ export default function MypetSenseAIPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white/10 bg-transparent"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50"
               >
                 <Link href="/#contact">Richiedi una Demo</Link>
               </Button>

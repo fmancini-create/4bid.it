@@ -225,24 +225,24 @@ export default function ManubotPage() {
       </section>
 
       {/* Market Potential */}
-      <section className="py-20 bg-gradient-to-br from-orange-500 to-amber-600 text-white">
+      <section className="py-20 bg-gradient-to-br from-orange-50 to-amber-50">
         <div className="container mx-auto px-6 text-center">
-          <Globe className="h-16 w-16 mx-auto mb-6 opacity-90" />
-          <h2 className="text-4xl font-bold mb-6">Mercato Potenziale</h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto opacity-90">
+          <Globe className="h-16 w-16 mx-auto mb-6 text-orange-600" />
+          <h2 className="text-4xl font-bold mb-6 text-gray-900">Mercato Potenziale</h2>
+          <p className="text-xl mb-8 max-w-3xl mx-auto text-gray-600">
             Mercato globale dei software per manutenzione e facility management: oltre 80 miliardi $ entro il 2030,
             crescita media del 14% annuo
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto mt-12">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <BarChart3 className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">10.000</p>
-              <p className="text-sm">Utenti target 3 anni</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-orange-100">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">10.000</p>
+              <p className="text-sm text-gray-600">Utenti target 3 anni</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <Rocket className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-4xl font-bold mb-2">3 M€</p>
-              <p className="text-sm">Ricavi stimati anno 3</p>
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-orange-100">
+              <Rocket className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+              <p className="text-4xl font-bold mb-2 text-gray-900">3 M€</p>
+              <p className="text-sm text-gray-600">Ricavi stimati anno 3</p>
             </div>
           </div>
         </div>
