@@ -6,7 +6,6 @@ import { Calendar, Clock, MapPin, Users, CheckCircle, ArrowRight, Coffee, Presen
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import LandingPageTracker from "@/components/landing-page-tracker"
-import { PageSEO } from "@/components/seo-structured-data"
 
 export const metadata = {
   title: "SANTADDEO Launch Event | Presentazione Ufficiale | 4BID.IT",
