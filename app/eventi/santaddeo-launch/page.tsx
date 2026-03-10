@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, MapPin, Users, CheckCircle, ArrowRight, Coffee, Presentation, Monitor, MessageSquare, Wine, Zap } from "lucide-react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
-import LandingPageTracker from "@/components/landing-page-tracker"
+import { LandingPageTracker } from "@/components/landing-page-tracker"
 
 export const metadata = {
   title: "SANTADDEO Launch Event | Presentazione Ufficiale | 4BID.IT",
