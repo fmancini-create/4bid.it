@@ -65,7 +65,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
       if (post.target_accounts && post.target_accounts.length > 0) {
-        platformAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
+        platformAccounts = platformAccounts.filter(
+          (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
+        )
         console.log(
           `[v0] ${platform} target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
