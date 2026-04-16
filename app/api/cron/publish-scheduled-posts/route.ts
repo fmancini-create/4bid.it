@@ -95,8 +95,10 @@ export async function GET(request: NextRequest) {
         for (const platform of platformsToPublish) {
           let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-          if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
-            platformAccounts = platformAccounts.filter((a) => post.target_accounts.includes(a.id))
+          if (post.target_accounts && post.target_accounts.length > 0) {
+            platformAccounts = platformAccounts.filter(
+              (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
+            )
           }
 
           if (platformAccounts.length === 0) {
