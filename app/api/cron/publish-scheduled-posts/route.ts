@@ -95,7 +95,9 @@ export async function GET(request: NextRequest) {
         for (const platform of platformsToPublish) {
           let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-          if (post.target_accounts && post.target_accounts.length > 0) {
+          // target_accounts è usato solo per Facebook (multi-pagina)
+          // LinkedIn e Instagram usano tutti gli account attivi della piattaforma
+          if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
             platformAccounts = platformAccounts.filter(
               (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
             )

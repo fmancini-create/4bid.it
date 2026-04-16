@@ -64,19 +64,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const platform of platformsToPublish) {
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-      if (post.target_accounts && post.target_accounts.length > 0) {
+      // target_accounts è usato solo per Facebook (multi-pagina)
+      // LinkedIn e Instagram usano tutti gli account attivi della piattaforma
+      if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
         platformAccounts = platformAccounts.filter(
           (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
         )
         console.log(
-          `[v0] ${platform} target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
+          `[v0] facebook target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
-
-        // Se non trova account corrispondenti, salta questa piattaforma
-        if (platformAccounts.length === 0) {
-          console.log(`[v0] No matching accounts for ${platform}, skipping`)
-          continue
-        }
       }
 
       console.log(`[v0] Publishing to ${platform}, accounts:`, platformAccounts.length)
