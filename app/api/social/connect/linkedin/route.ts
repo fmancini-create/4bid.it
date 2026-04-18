@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.redirect(`${baseUrl}/admin/social-media?error=linkedin_not_configured`)
   }
 
-  const scope = "openid profile email w_organization_social r_organization_social"
+  const scope = "w_organization_social r_organization_social"
 
   const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization")
   authUrl.searchParams.set("response_type", "code")

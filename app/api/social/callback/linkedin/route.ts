@@ -59,21 +59,8 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] LinkedIn OAuth: got access token, expires in:", expiresIn)
 
-    // Ottieni info profilo
-    const profileResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    })
-
-    let userName = "4BID"
-    if (profileResponse.ok) {
-      const profileData = await profileResponse.json()
-      userName = profileData.name || profileData.given_name || "4BID"
-      console.log("[v0] LinkedIn user:", userName)
-    } else {
-      console.log("[v0] LinkedIn profile fetch failed:", profileResponse.status)
-    }
+    // Nome fisso della pagina (niente chiamata /userinfo perche' non abbiamo lo scope OpenID)
+    const userName = "4BID"
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
