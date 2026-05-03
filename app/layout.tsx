@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { CookieConsent } from "@/components/cookie-consent"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import Script from "next/script"
 import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
@@ -68,10 +67,8 @@ export default function RootLayout({
       <head>
         {isProduction && (
           <>
-            {/* Google Tag Manager */}
-            <Script
-              id="gtm-script"
-              strategy="afterInteractive"
+            {/* Google Tag Manager - script HTML standard nel head per essere immediatamente visibile ai crawler */}
+            <script
               dangerouslySetInnerHTML={{
                 __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -81,31 +78,25 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               }}
             />
 
-            {/* Google Analytics */}
-            <Script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-S6YEEXE4C3');
-          `}
-            </Script>
+            {/* Google Analytics - script tag standard per garantire rilevamento da crawler */}
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-S6YEEXE4C3');`,
+              }}
+            />
 
             {/* Script inline ufficiale Yandex con Session Replay (webvisor) abilitato */}
-            <Script
-              id="yandex-metrika-loader"
-              strategy="afterInteractive"
+            <script
               dangerouslySetInnerHTML={{
                 __html: `
               window.initYandexMetrika = function() {
                 if (window.yandexMetrikaLoaded) {
-                  console.log("[v0] Yandex Metrika already loaded");
                   return;
                 }
-                
-                console.log("[v0] Loading Yandex Metrika...");
-                
                 (function(m,e,t,r,i,k,a){
                   m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
                   m[i].l=1*new Date();
@@ -114,7 +105,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                   }
                   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
                 })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-                
                 ym(105859080, "init", {
                   clickmap: true,
                   trackLinks: true,
@@ -122,13 +112,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                   webvisor: true,
                   ecommerce: "dataLayer"
                 });
-                
                 window.yandexMetrikaLoaded = true;
-                console.log("[v0] Yandex Metrika loaded successfully with Session Replay enabled");
               };
-              
               if (typeof window !== "undefined") {
-                const consent = localStorage.getItem("cookie-consent");
+                var consent = localStorage.getItem("cookie-consent");
                 if (consent === "accepted") {
                   window.initYandexMetrika();
                 }
