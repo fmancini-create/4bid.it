@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import * as fal from "@fal-ai/serverless-client"
+import { put } from "@vercel/blob"
+
+// Aumenta il timeout: flux/schnell richiede 5-15s + upload su Blob
+export const maxDuration = 60
 
 // Configure fal client
 fal.config({
@@ -10,6 +14,14 @@ fal.config({
 export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Generate image API called")
+
+    if (!process.env.FAL_KEY) {
+      console.error("[v0] FAL_KEY env var missing")
+      return NextResponse.json(
+        { error: "Servizio AI non configurato (FAL_KEY mancante)" },
+        { status: 500 },
+      )
+    }
 
     const supabase = await createClient()
     const {
@@ -43,28 +55,55 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Generating image with prompt:", prompt)
 
     // Generate image using fal schnell model
-    const result = await fal.subscribe("fal-ai/flux/schnell", {
+    const result = (await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt,
-        image_size: "landscape_16_9", // Formato ottimale per social media
+        image_size: "landscape_16_9",
         num_inference_steps: 4,
         num_images: 1,
       },
-    })
+    })) as { images?: { url: string }[] }
 
-    console.log("[v0] Fal AI result:", JSON.stringify(result))
+    const falImageUrl = result.images?.[0]?.url
 
-    // Extract the image URL from the result
-    const imageUrl = (result as { images?: { url: string }[] }).images?.[0]?.url
-
-    if (!imageUrl) {
-      throw new Error("Nessuna immagine generata")
+    if (!falImageUrl) {
+      console.error("[v0] Fal AI returned no image:", JSON.stringify(result))
+      return NextResponse.json(
+        { error: "Nessuna immagine generata dal modello AI" },
+        { status: 502 },
+      )
     }
 
-    console.log("[v0] Generated image URL:", imageUrl)
-    return NextResponse.json({ imageUrl })
+    console.log("[v0] Generated image URL from fal:", falImageUrl)
+
+    // L'URL di fal e' temporaneo (CDN che scade). Salviamo su Vercel Blob per persistenza.
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const imgResponse = await fetch(falImageUrl)
+        if (!imgResponse.ok) {
+          throw new Error(`Fetch fal image failed: ${imgResponse.status}`)
+        }
+        const imgBlob = await imgResponse.blob()
+        const blob = await put(`social-media/${Date.now()}-${user.id}.jpg`, imgBlob, {
+          access: "public",
+          contentType: "image/jpeg",
+        })
+        console.log("[v0] Image saved to Blob:", blob.url)
+        return NextResponse.json({ imageUrl: blob.url })
+      } catch (blobError) {
+        console.error("[v0] Blob upload failed, returning fal URL:", blobError)
+        // Fallback: ritorna l'URL fal originale (anche se temporaneo)
+        return NextResponse.json({ imageUrl: falImageUrl })
+      }
+    }
+
+    return NextResponse.json({ imageUrl: falImageUrl })
   } catch (error) {
-    console.error("[v0] Error generating image:", error)
-    return NextResponse.json({ error: "Errore nella generazione dell'immagine" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto"
+    console.error("[v0] Error generating image:", errorMessage, error)
+    return NextResponse.json(
+      { error: `Errore nella generazione dell'immagine: ${errorMessage}` },
+      { status: 500 },
+    )
   }
 }
