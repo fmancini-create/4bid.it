@@ -232,13 +232,13 @@ function ProductPanel({ product }: { product: Product }) {
               <br />
               <span className="text-gray-200 normal-case tracking-normal">4BID SRL</span>
             </p>
-            <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-white p-1 shrink-0">
+            <div className="relative h-14 w-14 rounded-full overflow-hidden bg-white shadow-md ring-2 ring-white/20 shrink-0 flex items-center justify-center">
               <Image
-                src="/4bid-colorful-logo.jpg"
+                src="/4bid-borghi-logo.jpeg"
                 alt="4BID SRL"
-                fill
-                className="object-contain"
-                sizes="48px"
+                width={56}
+                height={56}
+                className="object-contain w-12 h-12"
               />
             </div>
           </div>
