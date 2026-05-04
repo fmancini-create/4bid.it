@@ -222,13 +222,18 @@ export default function SocialMediaDashboard({
         }),
       })
 
-      if (!response.ok) throw new Error("Errore nella generazione")
-
       const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Errore nella generazione")
+      }
+
       setNewPost((prev) => ({ ...prev, image_url: data.imageUrl }))
       toast.success("Immagine generata con AI!")
     } catch (error) {
-      toast.error("Errore nella generazione dell'immagine")
+      const message = error instanceof Error ? error.message : "Errore nella generazione dell'immagine"
+      console.error("[v0] generateAIImage error:", error)
+      toast.error(message)
     } finally {
       setIsGeneratingImage(false)
     }
