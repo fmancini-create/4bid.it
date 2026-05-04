@@ -226,12 +226,21 @@ function ProductPanel({ product }: { product: Product }) {
             <Globe className="h-4 w-4 text-[#F4B942]" />
             <span className="font-semibold text-sm">{product.url}</span>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest text-gray-400">Un prodotto</p>
-            <p className="text-base font-bold leading-none">
-              4<span className="text-[#F4B942]">BID</span>
-              <span className="text-xs font-normal text-gray-300 ml-1">SRL</span>
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] uppercase tracking-widest text-gray-400 leading-tight text-right">
+              Un prodotto
+              <br />
+              <span className="text-gray-200 normal-case tracking-normal">4BID SRL</span>
             </p>
+            <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-white p-1 shrink-0">
+              <Image
+                src="/4bid-colorful-logo.jpg"
+                alt="4BID SRL"
+                fill
+                className="object-contain"
+                sizes="48px"
+              />
+            </div>
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-gray-700 flex items-center justify-between text-[10px] text-gray-400">
