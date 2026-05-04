@@ -1,0 +1,43 @@
+/* A5 portrait: 148mm x 210mm */
+
+.volantino-page {
+  width: 148mm;
+  height: 210mm;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* On screen: simulate paper with shadow */
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .volantino-page {
+    box-shadow: none;
+    border-radius: 0;
+    page-break-after: always;
+    break-after: page;
+    margin: 0 !important;
+  }
+
+  .volantino-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Hide all non-print elements */
+  .print\\:hidden {
+    display: none !important;
+  }
+}
