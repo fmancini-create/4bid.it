@@ -37,7 +37,7 @@
   }
 
   /* Hide all non-print elements */
-  .print\\:hidden {
+  .no-print {
     display: none !important;
   }
 }

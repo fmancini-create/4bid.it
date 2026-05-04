@@ -257,7 +257,7 @@ export default function VolantinoClient() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Print Toolbar - hidden on print */}
-      <div className="print:hidden sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="no-print sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Volantino Prodotti 4BID</h1>
