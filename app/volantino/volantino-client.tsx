@@ -170,48 +170,48 @@ function ProductPanel({ product }: { product: Product }) {
       <div className={`bg-gradient-to-r ${product.bgGradient} h-3 w-full shrink-0`} aria-hidden="true" />
 
       {/* Logo + Product Icon */}
-      <div className="px-8 pt-8 pb-4 flex items-center justify-between gap-4 shrink-0">
-        <div className="relative h-16 w-44">
+      <div className="px-7 pt-6 pb-3 flex items-center justify-between gap-4 shrink-0">
+        <div className="relative h-12 w-40">
           <Image
             src={product.logo || "/placeholder.svg"}
             alt={`${product.name} logo`}
             fill
             className="object-contain object-left"
-            sizes="180px"
+            sizes="160px"
             priority
           />
         </div>
-        <div className={`${product.iconBg} ${product.accent} h-14 w-14 rounded-2xl flex items-center justify-center`}>
-          <ProductIcon className="h-7 w-7" strokeWidth={2} />
+        <div className={`${product.iconBg} ${product.accent} h-12 w-12 rounded-2xl flex items-center justify-center`}>
+          <ProductIcon className="h-6 w-6" strokeWidth={2} />
         </div>
       </div>
 
       {/* Title + Tagline */}
-      <div className="px-8 pb-4 shrink-0">
-        <h2 className="text-3xl font-bold tracking-tight text-balance leading-tight">{product.name}</h2>
-        <p className={`mt-1 text-sm font-semibold uppercase tracking-wider ${product.accent}`}>{product.tagline}</p>
+      <div className="px-7 pb-3 shrink-0">
+        <h2 className="text-2xl font-bold tracking-tight text-balance leading-tight">{product.name}</h2>
+        <p className={`mt-1 text-xs font-semibold uppercase tracking-wider ${product.accent}`}>{product.tagline}</p>
       </div>
 
       {/* Description */}
-      <div className="px-8 pb-5 shrink-0">
-        <p className="text-base leading-relaxed text-gray-700 text-pretty">{product.description}</p>
+      <div className="px-7 pb-3 shrink-0">
+        <p className="text-sm leading-relaxed text-gray-700 text-pretty">{product.description}</p>
       </div>
 
       {/* Divider */}
-      <div className="mx-8 border-t border-gray-200 shrink-0" />
+      <div className="mx-7 border-t border-gray-200 shrink-0" />
 
-      {/* Features */}
-      <div className="px-8 py-5 flex-1">
-        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Cosa lo rende unico</p>
-        <ul className="space-y-4">
+      {/* Features - flex-1 min-h-0 overflow-hidden ensures footer stays visible even if content overflows */}
+      <div className="px-7 py-3 flex-1 min-h-0 overflow-hidden">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Cosa lo rende unico</p>
+        <ul className="space-y-2.5">
           {product.features.map((f) => {
             const Icon = f.icon
             return (
-              <li key={f.title} className="flex gap-3">
-                <Icon className={`h-5 w-5 mt-0.5 shrink-0 ${product.accent}`} strokeWidth={2.4} />
+              <li key={f.title} className="flex gap-2.5">
+                <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${product.accent}`} strokeWidth={2.4} />
                 <div>
-                  <p className="font-semibold text-sm text-gray-900 leading-snug">{f.title}</p>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-0.5">{f.text}</p>
+                  <p className="font-semibold text-[13px] text-gray-900 leading-snug">{f.title}</p>
+                  <p className="text-[11.5px] text-gray-600 leading-snug mt-0.5">{f.text}</p>
                 </div>
               </li>
             )
@@ -219,31 +219,31 @@ function ProductPanel({ product }: { product: Product }) {
         </ul>
       </div>
 
-      {/* Footer with URL + 4BID Branding */}
-      <div className="bg-gray-900 text-white px-8 py-4 shrink-0">
+      {/* Footer with URL + 4BID Branding - always visible */}
+      <div className="bg-gray-900 text-white px-7 py-3 shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-[#F4B942]" />
             <span className="font-semibold text-sm">{product.url}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <p className="text-[10px] uppercase tracking-widest text-gray-400 leading-tight text-right">
+          <div className="flex items-center gap-2.5">
+            <p className="text-[9px] uppercase tracking-widest text-gray-400 leading-tight text-right">
               Un prodotto
               <br />
               <span className="text-gray-200 normal-case tracking-normal">4BID SRL</span>
             </p>
-            <div className="relative h-14 w-14 rounded-full overflow-hidden bg-white shadow-md ring-2 ring-white/20 shrink-0 flex items-center justify-center">
+            <div className="relative h-11 w-11 rounded-full overflow-hidden bg-white shadow-md ring-2 ring-white/20 shrink-0 flex items-center justify-center">
               <Image
                 src="/4bid-borghi-logo.jpeg"
                 alt="4BID SRL"
-                width={56}
-                height={56}
-                className="object-contain w-12 h-12"
+                width={44}
+                height={44}
+                className="object-contain w-10 h-10"
               />
             </div>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-gray-700 flex items-center justify-between text-[10px] text-gray-400">
+        <div className="mt-2 pt-2 border-t border-gray-700 flex items-center justify-between text-[10px] text-gray-300">
           <div className="flex items-center gap-1.5">
             <Mail className="h-3 w-3" />
             <span>info@4bid.it</span>
