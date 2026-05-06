@@ -19,6 +19,7 @@ type Project = {
   href: string
   isLive?: boolean
   externalUrl?: string
+  blendLogo?: boolean
 }
 
 export default function ProjectsSection() {
@@ -134,6 +135,7 @@ export default function ProjectsSection() {
       color: "from-green-600 to-emerald-700",
       progress: "70%",
       href: "/progetti/risparmio-compulsivo",
+      blendLogo: true,
     },
   ]
 
