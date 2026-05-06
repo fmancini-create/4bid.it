@@ -53,6 +53,7 @@ export default function ProjectsSection() {
       href: "/progetti/hotelprofit-ai",
       isLive: true,
       externalUrl: "https://hotelprofitai.com",
+      blendLogo: true,
     },
     {
       id: "manubot",
@@ -79,6 +80,7 @@ export default function ProjectsSection() {
       color: "from-blue-500 to-indigo-600",
       progress: "80%",
       href: "/progetti/hotel-accelerator",
+      blendLogo: true,
     },
     {
       id: "ecomobility",
@@ -207,13 +209,13 @@ export default function ProjectsSection() {
         <div className="p-8 flex flex-col flex-1">
           {/* Logo */}
           <div className="flex items-center justify-center mb-6 h-32 relative bg-gray-50 rounded-xl p-4">
-            <Image
-              src={project.logo || "/placeholder.svg"}
-              alt={`${project.name} Logo`}
-              width={200}
-              height={120}
-              className="object-contain max-h-full w-auto"
-            />
+                <Image
+                  src={project.logo || "/placeholder.svg"}
+                  alt={`${project.name} Logo`}
+                  width={200}
+                  height={120}
+                  className={`object-contain max-h-full w-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
+                />
           </div>
 
           {/* Icon Badge */}
