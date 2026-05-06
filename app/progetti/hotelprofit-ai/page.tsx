@@ -78,7 +78,7 @@ export default function HotelProfitAiPage() {
                 alt="HotelProfitAI Logo"
                 width={400}
                 height={300}
-                className="mb-8 max-w-md"
+                className="mb-8 max-w-md mix-blend-multiply"
               />
               <h1 className="text-5xl font-bold text-gray-900 mb-6">Controllo di Gestione Intelligente</h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
