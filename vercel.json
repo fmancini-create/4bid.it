@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/crawl-internal-guides",
-      "schedule": "0 4 * * *"
+      "schedule": "0 */6 * * *"
     },
     {
       "path": "/api/cron/generate-social-posts",
