@@ -63,8 +63,10 @@ export default function ProjectsSection() {
       logo: "/manubot-logo.jpg",
       icon: Rocket,
       color: "from-orange-500 to-amber-600",
-      progress: "90%",
+      progress: "On line",
       href: "/progetti/manubot",
+      isLive: true,
+      externalUrl: "https://www.manubot.it",
     },
     {
       id: "hotel-accelerator",
