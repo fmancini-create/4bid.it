@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Globe } from "lucide-react"
+import { Plus, Globe, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
@@ -20,6 +20,8 @@ export default function KnowledgeBaseActions() {
   const [scrapeUrl, setScrapeUrl] = useState("")
   const [scrapeCategory, setScrapeCategory] = useState("website")
   const [isScrapeLoading, setIsScrapeLoading] = useState(false)
+
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false)
   const [manualTitle, setManualTitle] = useState("")
@@ -122,8 +124,43 @@ export default function KnowledgeBaseActions() {
     }
   }
 
+  const handleSyncNow = async () => {
+    setIsSyncing(true)
+    try {
+      const response = await fetch("/api/knowledge/sync-now", { method: "POST" })
+      const data = await response.json()
+      if (response.ok) {
+        toast({
+          title: "Sincronizzazione completata",
+          description: data.message || "Knowledge base aggiornato dal sito",
+        })
+        router.refresh()
+      } else {
+        toast({
+          title: "Errore sincronizzazione",
+          description: data?.error || "Si è verificato un errore",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Errore di rete",
+        description: "Impossibile contattare il server",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <div className="flex gap-2">
+      {/* Sync from site button */}
+      <Button variant="outline" onClick={handleSyncNow} disabled={isSyncing} title="Risincronizza dal sitemap">
+        <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+        {isSyncing ? "Sincronizzo..." : "Sincronizza dal sito"}
+      </Button>
+
       {/* Scrape URL Dialog */}
       <Dialog open={isScrapingDialogOpen} onOpenChange={setIsScrapingDialogOpen}>
         <DialogTrigger asChild>

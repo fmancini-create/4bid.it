@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Facebook, Linkedin, Mail, MapPin } from "lucide-react"
+import { Facebook, Instagram, Linkedin, Mail, MapPin } from "lucide-react"
 
 export function Footer() {
   return (
@@ -27,13 +27,22 @@ export function Footer() {
                 <Facebook className="w-5 h-5" />
               </Link>
               <Link
-                href="https://www.linkedin.com/company/4bid/"
+                href="https://www.linkedin.com/company/4bid-srl/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 text-gray-400 hover:bg-[#5B9BD5] hover:text-white transition-colors"
                 aria-label="Seguici su LinkedIn"
               >
                 <Linkedin className="w-5 h-5" />
+              </Link>
+              <Link
+                href="https://www.instagram.com/4bid_revenue_guru/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 text-gray-400 hover:bg-gradient-to-br hover:from-[#feda75] hover:via-[#fa7e1e] hover:to-[#d62976] hover:text-white transition-colors"
+                aria-label="Seguici su Instagram"
+              >
+                <Instagram className="w-5 h-5" />
               </Link>
             </div>
           </div>

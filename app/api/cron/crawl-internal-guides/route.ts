@@ -1,43 +1,150 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { fetchSitemapUrls, filterGuideUrls } from "@/lib/knowledge/sitemap"
+import { fetchSitemapUrls, filterIndexableUrls } from "@/lib/knowledge/sitemap"
 import { extractMainContent, extractTitle } from "@/lib/knowledge/html-to-text"
 import { chunkText } from "@/lib/knowledge/chunk"
 
 /**
- * CRON: Crawl Internal Guide Pages
+ * CRON: Crawl Internal Site Pages
  *
- * Indicizza le pagine /guida-* del sito 4bid.it nella knowledge_base
+ * Indicizza nel knowledge_base tutte le pagine pubbliche del sito 4bid.it:
+ * - /guida-* (guide tematiche)
+ * - /progetti/* (schede prodotti: Santaddeo, HotelProfitAI, Manubot, Hotel Accelerator,
+ *   4BID Ecomobility, Autoexel, MyPetSenseAI, Risparmio Compulsivo)
+ * - /eventi/* (eventi e lanci)
+ * - Home + pagine marketing chiave (about, features, team, partner-info)
+ *
+ * Schedulato giornalmente (4 AM) in vercel.json. Triggerabile manualmente da
+ * /admin/knowledge-base con il bottone "Sincronizza ora".
  *
  * SICUREZZA: Solo POST con header x-cron-secret o Authorization: Bearer
- *
- * COME TESTARE:
- * curl -i -X POST "https://www.4bid.it/api/cron/crawl-internal-guides" ^
- *   -H "x-cron-secret: IL_TUO_CRON_SECRET"
- *
- * GET non è supportato -> 405 Method Not Allowed
- * POST senza header -> 401 Unauthorized
  */
 
 const SITEMAP_URL = "https://www.4bid.it/sitemap.xml"
 
-// Keywords for guide pages
-const BASE_KEYWORDS = ["guida", "4bid", "revenue management", "hotel"]
+const BASE_KEYWORDS = ["4bid", "4bid srl"]
 
 function getKeywordsForUrl(url: string): string[] {
   const keywords = [...BASE_KEYWORDS]
+  const path = (() => {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return ""
+    }
+  })()
 
-  if (url.includes("pricing")) {
-    keywords.push("pricing", "tariffe", "prezzi", "dynamic pricing")
+  // Guide pages
+  if (path.includes("/guida-")) {
+    keywords.push("guida", "revenue management", "hotel")
+    if (path.includes("pricing")) keywords.push("pricing", "tariffe", "prezzi", "dynamic pricing")
+    if (path.includes("prenotazioni-dirette"))
+      keywords.push("prenotazioni dirette", "direct booking", "disintermediazione", "OTA")
+    if (path.includes("revenue-management")) keywords.push("revenue manager", "RevPAR", "ADR", "occupancy")
+    return keywords
   }
-  if (url.includes("prenotazioni-dirette")) {
-    keywords.push("prenotazioni dirette", "direct booking", "disintermediazione", "OTA")
+
+  // Project pages -> ricco di keyword per il chatbot
+  if (path.startsWith("/progetti/")) {
+    keywords.push("prodotti 4bid", "ecosistema 4bid", "suite horeca")
+
+    if (path.includes("santaddeo"))
+      keywords.push(
+        "santaddeo",
+        "revenue management hotel",
+        "rms",
+        "dynamic pricing",
+        "online",
+        "santaddeo.com",
+      )
+    if (path.includes("hotelprofit-ai") || path.includes("hotelprofitai"))
+      keywords.push(
+        "hotelprofit ai",
+        "hotelprofitai",
+        "controllo di gestione hotel",
+        "online",
+        "hotelprofitai.com",
+      )
+    if (path.includes("manubot"))
+      keywords.push(
+        "manubot",
+        "manutenzioni",
+        "whatsapp bot",
+        "telegram bot",
+        "online",
+        "manubot.it",
+      )
+    if (path.includes("hotel-accelerator") || path.includes("hotelaccelerator"))
+      keywords.push("hotel accelerator", "acceleratore hotel", "in sviluppo")
+    if (path.includes("ecomobility"))
+      keywords.push("ecomobility", "4bid ecomobility", "mobilità elettrica", "colonnine ricarica")
+    if (path.includes("autoexel"))
+      keywords.push("autoexel", "excel ai", "analisi dati")
+    if (path.includes("mypetsense") || path.includes("petsense"))
+      keywords.push("mypetsenseai", "pet care", "animali domestici")
+    if (path.includes("risparmio-compulsivo"))
+      keywords.push("risparmio compulsivo", "app risparmio", "gamification")
+    return keywords
   }
-  if (url.includes("revenue-management")) {
-    keywords.push("revenue manager", "RevPAR", "ADR", "occupancy")
+
+  // Eventi
+  if (path.startsWith("/eventi/")) {
+    keywords.push("evento", "lancio", "4bid")
+    return keywords
   }
+
+  // Home / pagine marketing
+  if (path === "/") {
+    keywords.push(
+      "4bid holding",
+      "ecosistema 4bid",
+      "suite horeca",
+      "software hotel",
+      "tool turismo",
+      "santaddeo",
+      "hotelprofit ai",
+      "manubot",
+      "hotel accelerator",
+      "ecomobility",
+    )
+    return keywords
+  }
+  if (path === "/about") keywords.push("chi siamo", "azienda", "4bid srl", "holding")
+  if (path === "/features") keywords.push("funzionalità", "caratteristiche", "prodotti")
+  if (path === "/team") keywords.push("team", "fondatori", "filippo mancini")
+  if (path === "/partner" || path === "/partner-info") keywords.push("partner", "collaborazioni", "rivenditori")
 
   return keywords
+}
+
+function getCategoryForUrl(url: string): string {
+  const path = (() => {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return ""
+    }
+  })()
+  if (path.includes("/guida-")) return "guide"
+  if (path.startsWith("/progetti/")) return "project"
+  if (path.startsWith("/eventi/")) return "event"
+  if (path === "/") return "company"
+  return "marketing"
+}
+
+function getPriorityForUrl(url: string): number {
+  const path = (() => {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return ""
+    }
+  })()
+  // Priorità max per le pagine prodotto (informazioni più cercate dal chatbot)
+  if (path.startsWith("/progetti/")) return 10
+  if (path === "/" || path === "/about") return 9
+  if (path.includes("/guida-")) return 8
+  return 6
 }
 
 export async function POST(request: Request) {
@@ -68,13 +175,13 @@ export async function POST(request: Request) {
     const allUrls = await fetchSitemapUrls(SITEMAP_URL)
     console.log("[CrawlGuides] Found", allUrls.length, "total URLs in sitemap")
 
-    // Step 2: Filter to guide pages only
-    const guideUrls = filterGuideUrls(allUrls)
-    console.log("[CrawlGuides] Filtered to", guideUrls.length, "guide URLs")
-    stats.scanned = guideUrls.length
+    // Step 2: Filter to indexable pages (guide + progetti + home + marketing)
+    const indexableUrls = filterIndexableUrls(allUrls)
+    console.log("[CrawlGuides] Filtered to", indexableUrls.length, "indexable URLs")
+    stats.scanned = indexableUrls.length
 
-    // Step 3: Process each guide URL
-    for (const url of guideUrls) {
+    // Step 3: Process each URL
+    for (const url of indexableUrls) {
       try {
         console.log("[CrawlGuides] Processing:", url)
 
@@ -109,6 +216,8 @@ export async function POST(request: Request) {
         // Chunk content if needed
         const chunks = chunkText(content)
         const keywords = getKeywordsForUrl(url)
+        const category = getCategoryForUrl(url)
+        const priority = getPriorityForUrl(url)
 
         // Process each chunk
         for (const chunk of chunks) {
@@ -138,7 +247,8 @@ export async function POST(request: Request) {
                 title: chunkTitle,
                 content: chunk.content,
                 keywords,
-                priority: 8,
+                category,
+                priority,
                 last_scraped_at: new Date().toISOString(),
               })
               .eq("id", existing.id)
@@ -156,12 +266,12 @@ export async function POST(request: Request) {
             const { error: insertError } = await supabase.from("knowledge_base").insert({
               source: "internal",
               source_url: sourceUrl,
-              category: "guide",
+              category,
               title: chunkTitle,
               content: chunk.content,
               keywords,
               is_active: true,
-              priority: 8,
+              priority,
               last_scraped_at: new Date().toISOString(),
               created_by: "system",
             })

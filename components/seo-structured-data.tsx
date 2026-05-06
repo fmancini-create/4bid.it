@@ -52,7 +52,11 @@ const companyData = {
     postalCode: "50026",
     addressCountry: "IT",
   },
-  sameAs: ["https://www.linkedin.com/company/4bid-srl", "https://www.facebook.com/4bidIT"],
+  sameAs: [
+    "https://www.linkedin.com/company/4bid-srl/",
+    "https://www.facebook.com/4bidrevenueguru",
+    "https://www.instagram.com/4bid_revenue_guru/",
+  ],
   areaServed: {
     "@type": "Country",
     name: "Italia",

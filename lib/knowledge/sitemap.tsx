@@ -51,3 +51,92 @@ export async function fetchSitemapUrls(sitemapUrl: string, timeoutMs = 15000): P
 export function filterGuideUrls(urls: string[]): string[] {
   return urls.filter((url) => url.includes("/guida-"))
 }
+
+/**
+ * Filter URLs to include all pages relevant to the chatbot knowledge base:
+ * - Guide pages (/guida-*)
+ * - Product/project pages (/progetti/*)
+ * - Key marketing pages (home, about, features, team, partner-info, request-info)
+ *
+ * Excludes admin areas, auth, dashboards, blog, seo landing pages and tools.
+ */
+const PUBLIC_PAGES_WHITELIST = new Set([
+  "/",
+  "/about",
+  "/features",
+  "/team",
+  "/partner",
+  "/partner-info",
+  "/request-info",
+  "/volantino",
+  "/coming-soon",
+])
+
+const EXCLUDED_PATH_PREFIXES = [
+  "/admin",
+  "/superadmin",
+  "/dashboard",
+  "/dashboard-v2",
+  "/dashboard-v3",
+  "/dati",
+  "/onboarding",
+  "/auth",
+  "/profile",
+  "/profilo",
+  "/settings",
+  "/notifiche",
+  "/notifications",
+  "/calendar",
+  "/occupancy",
+  "/api",
+  "/blog/",
+  "/seo/",
+]
+
+export function filterIndexableUrls(urls: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const url of urls) {
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    let pathname: string
+    try {
+      pathname = new URL(url).pathname
+    } catch {
+      continue
+    }
+
+    // Exclude private/admin/auth areas and noisy SEO landings
+    if (EXCLUDED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+      continue
+    }
+
+    // Include: guide pages
+    if (pathname.includes("/guida-")) {
+      result.push(url)
+      continue
+    }
+
+    // Include: product / project pages
+    if (pathname.startsWith("/progetti/") || pathname.startsWith("/progetti")) {
+      result.push(url)
+      continue
+    }
+
+    // Include: events
+    if (pathname.startsWith("/eventi/")) {
+      result.push(url)
+      continue
+    }
+
+    // Include: explicit whitelist
+    if (PUBLIC_PAGES_WHITELIST.has(pathname)) {
+      result.push(url)
+      continue
+    }
+  }
+
+  return result
+}
