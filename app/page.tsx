@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://4bid.it/og-image-4bid.jpg",
         width: 1200,
         height: 630,
         alt: "4BID SRL - Holding di software e tool per il turismo",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "4BID.IT - Holding di software per il turismo",
     description: "Suite HORECA: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator, 4BID Ecomobility",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://4bid.it/og-image-4bid.jpg"],
   },
   alternates: {
     canonical: "https://4bid.it",
