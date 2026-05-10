@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { Printer, TrendingUp, Bot, Calculator, Hotel, CheckCircle2, Globe, Mail, Phone } from "lucide-react"
+import { Printer, TrendingUp, Bot, Calculator, Hotel, CheckCircle2, Shield, Globe, Mail, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import "./print.css"
 
@@ -34,24 +34,24 @@ const products: Product[] = [
     iconBg: "bg-teal-50",
     features: [
       {
+        icon: Shield,
+        title: "Formula a Commissione",
+        text: "Paghi solo in base ai risultati: zero costi fissi, zero rischi per la struttura. Inizi quando vuoi.",
+      },
+      {
+        icon: TrendingUp,
+        title: "Risultati dal Primo Mese",
+        text: "Gia' dopo un mese di utilizzo registriamo importanti aumenti dei ricavi camere sulle strutture clienti.",
+      },
+      {
         icon: CheckCircle2,
         title: "100% Trasparente",
         text: "Ogni prezzo proposto e' spiegato in linguaggio semplice. Sai sempre il perche' di ogni scelta.",
       },
       {
         icon: CheckCircle2,
-        title: "AI che si Adatta",
-        text: "L'algoritmo impara dalla tua struttura e dal mercato locale, non applica logiche standardizzate.",
-      },
-      {
-        icon: CheckCircle2,
-        title: "Push Automatico al PMS",
-        text: "Connesso ai principali PMS: i prezzi vengono aggiornati senza alcun intervento manuale.",
-      },
-      {
-        icon: CheckCircle2,
         title: "Guard - Controllo OTA",
-        text: "Verifica automaticamente che le OTA stiano vendendo ai prezzi inviati dall'RMS e segnala ogni disallineamento.",
+        text: "Verifica che le OTA vendano ai prezzi inviati dall'RMS e segnala ogni disallineamento.",
       },
     ],
   },
