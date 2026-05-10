@@ -50,8 +50,8 @@ const products: Product[] = [
       },
       {
         icon: CheckCircle2,
-        title: "Guard Anti-Errore",
-        text: "Sistema di controllo che blocca tariffe anomale e segnala incongruenze prima della pubblicazione.",
+        title: "Guard - Controllo OTA",
+        text: "Verifica automaticamente che le OTA stiano vendendo ai prezzi inviati dall'RMS e segnala ogni disallineamento.",
       },
     ],
   },
