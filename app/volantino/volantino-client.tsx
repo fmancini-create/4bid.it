@@ -50,8 +50,18 @@ const products: Product[] = [
       },
       {
         icon: CheckCircle2,
+        title: "AI che si Adatta",
+        text: "L'algoritmo impara dalla tua struttura e dal mercato locale, non applica logiche standardizzate.",
+      },
+      {
+        icon: CheckCircle2,
+        title: "Push Automatico al PMS",
+        text: "Connesso ai principali PMS: i prezzi vengono aggiornati senza alcun intervento manuale.",
+      },
+      {
+        icon: CheckCircle2,
         title: "Guard - Controllo OTA",
-        text: "Verifica che le OTA vendano ai prezzi inviati dall'RMS e segnala ogni disallineamento.",
+        text: "Verifica automaticamente che le OTA stiano vendendo ai prezzi inviati dall'RMS e segnala ogni disallineamento.",
       },
     ],
   },
