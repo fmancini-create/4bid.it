@@ -268,6 +268,199 @@ function ProductPanel({ product }: { product: Product }) {
   )
 }
 
+function CoverPage() {
+  return (
+    <div className="volantino-page bg-gray-900 text-white flex flex-col relative overflow-hidden">
+      {/* Decorative gradient orbs */}
+      <div
+        className="absolute top-0 right-0 w-72 h-72 rounded-full opacity-20 blur-3xl"
+        style={{ background: "radial-gradient(circle, #14b8a6 0%, transparent 70%)" }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-0 left-0 w-72 h-72 rounded-full opacity-20 blur-3xl"
+        style={{ background: "radial-gradient(circle, #F4B942 0%, transparent 70%)" }}
+        aria-hidden="true"
+      />
+
+      {/* Top color strip */}
+      <div className="h-3 w-full shrink-0 flex" aria-hidden="true">
+        <div className="flex-1 bg-teal-500" />
+        <div className="flex-1 bg-blue-600" />
+        <div className="flex-1 bg-orange-500" />
+        <div className="flex-1 bg-indigo-600" />
+      </div>
+
+      {/* Holding logo */}
+      <div className="px-8 pt-10 pb-6 flex items-center gap-4 shrink-0 relative z-10">
+        <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-white shadow-lg flex items-center justify-center shrink-0">
+          <Image src="/4bid-borghi-logo.jpeg" alt="4BID SRL" width={80} height={80} className="object-contain w-16 h-16" />
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-[#F4B942] font-semibold">Holding</p>
+          <p className="text-3xl font-black tracking-tight leading-none mt-1">4BID SRL</p>
+        </div>
+      </div>
+
+      {/* Main claim */}
+      <div className="px-8 flex-1 flex flex-col justify-center relative z-10">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#F4B942] mb-3">L&apos;ecosistema 4BID</p>
+        <h1 className="text-[2.4rem] font-black leading-[1.05] tracking-tight text-balance">
+          La Suite Completa
+          <br />
+          per il Settore
+          <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-[#F4B942] to-orange-400">
+            Turismo
+          </span>
+        </h1>
+        <p className="mt-5 text-base leading-relaxed text-gray-300 text-pretty max-w-[90%]">
+          Quattro prodotti pensati, sviluppati e gestiti da chi il settore lo vive ogni giorno. Una sola visione: piu&apos;
+          ricavi, piu&apos; controllo, meno fatica.
+        </p>
+
+        {/* Products grid preview */}
+        <div className="mt-8 grid grid-cols-2 gap-2.5">
+          {products.map((p) => {
+            const Icon = p.productIcon
+            return (
+              <div
+                key={p.id}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 flex items-center gap-2.5 backdrop-blur-sm"
+              >
+                <div className={`${p.iconBg} ${p.accent} h-7 w-7 rounded-md flex items-center justify-center shrink-0`}>
+                  <Icon className="h-4 w-4" strokeWidth={2.4} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold tracking-tight leading-none truncate">{p.name}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5 truncate">{p.url}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Bottom strip */}
+      <div className="px-8 py-5 shrink-0 relative z-10 border-t border-white/10 mt-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-gray-400">Scopri tutta la suite</p>
+            <p className="text-base font-bold mt-0.5 text-[#F4B942]">www.4bid.it</p>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-300">
+            <Mail className="h-3 w-3" />
+            <span>info@4bid.it</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BackCover() {
+  return (
+    <div className="volantino-page bg-white text-gray-900 flex flex-col">
+      {/* Top gradient strip */}
+      <div className="h-3 w-full shrink-0 flex" aria-hidden="true">
+        <div className="flex-1 bg-teal-500" />
+        <div className="flex-1 bg-blue-600" />
+        <div className="flex-1 bg-orange-500" />
+        <div className="flex-1 bg-indigo-600" />
+      </div>
+
+      {/* Header */}
+      <div className="px-8 pt-8 pb-5 shrink-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Inizia oggi</p>
+        <h2 className="text-3xl font-black tracking-tight leading-tight mt-2 text-balance">
+          Pronto a far crescere
+          <br />
+          la tua struttura?
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-gray-600 text-pretty">
+          Contattaci per una demo gratuita di uno qualunque dei prodotti della suite. Senza impegno, senza costi
+          nascosti.
+        </p>
+      </div>
+
+      {/* Steps */}
+      <div className="px-8 pb-5 shrink-0">
+        <div className="space-y-3">
+          {[
+            { n: "1", title: "Contattaci", text: "Email, telefono o dal sito www.4bid.it" },
+            { n: "2", title: "Demo Personalizzata", text: "Ti mostriamo i prodotti adatti alla tua struttura" },
+            { n: "3", title: "Start in Pochi Giorni", text: "Setup rapido e supporto dedicato dal primo giorno" },
+          ].map((s) => (
+            <div key={s.n} className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white font-bold text-sm flex items-center justify-center shrink-0">
+                {s.n}
+              </div>
+              <div>
+                <p className="font-bold text-sm leading-tight">{s.title}</p>
+                <p className="text-[12px] text-gray-600 leading-snug mt-0.5">{s.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1 min-h-0" />
+
+      {/* Contact card */}
+      <div className="mx-8 mb-6 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 text-white p-5 shrink-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#F4B942] mb-3">Contatti</p>
+        <div className="grid grid-cols-1 gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              <Globe className="h-4 w-4 text-[#F4B942]" />
+            </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-gray-400">Sito</p>
+              <p className="text-sm font-semibold">www.4bid.it</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              <Mail className="h-4 w-4 text-[#F4B942]" />
+            </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-gray-400">Email</p>
+              <p className="text-sm font-semibold">info@4bid.it</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer holding */}
+      <div className="bg-gray-900 text-white px-7 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative h-11 w-11 rounded-full overflow-hidden bg-white shadow-md ring-2 ring-white/20 shrink-0 flex items-center justify-center">
+              <Image
+                src="/4bid-borghi-logo.jpeg"
+                alt="4BID SRL"
+                width={44}
+                height={44}
+                className="object-contain w-10 h-10"
+              />
+            </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-widest text-gray-400">Holding</p>
+              <p className="text-base font-black tracking-tight">4BID SRL</p>
+            </div>
+          </div>
+          <p className="text-[9px] uppercase tracking-widest text-gray-400 text-right leading-tight">
+            La suite completa
+            <br />
+            <span className="text-[#F4B942] normal-case tracking-normal">per il turismo</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function VolantinoClient() {
   const handlePrint = () => {
     window.print()
@@ -280,12 +473,12 @@ export default function VolantinoClient() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Volantino Prodotti 4BID</h1>
-            <p className="text-sm text-gray-500">Anteprima 4 facciate A5 - una per prodotto</p>
+            <p className="text-sm text-gray-500">Anteprima 6 facciate A5 - copertina, 4 prodotti, retro copertina</p>
           </div>
           <div className="flex items-center gap-3">
             <p className="hidden md:block text-xs text-gray-500 max-w-xs text-right">
               Premi <span className="font-semibold">Stampa PDF</span> e nel dialog del browser scegli{" "}
-              <span className="font-semibold">"Salva come PDF"</span> con formato A5.
+              <span className="font-semibold">&quot;Salva come PDF&quot;</span> con formato A5.
             </p>
             <Button onClick={handlePrint} size="lg" className="bg-gray-900 hover:bg-gray-800 text-white">
               <Printer className="h-5 w-5 mr-2" />
@@ -297,9 +490,11 @@ export default function VolantinoClient() {
 
       {/* Pages */}
       <div className="py-8 px-4 print:p-0 flex flex-col items-center gap-8 print:gap-0">
+        <CoverPage />
         {products.map((product) => (
           <ProductPanel key={product.id} product={product} />
         ))}
+        <BackCover />
       </div>
     </div>
   )
