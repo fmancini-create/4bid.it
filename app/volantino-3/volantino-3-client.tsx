@@ -192,14 +192,15 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
   const totalNum = String(total).padStart(2, "0")
 
   return (
-    <div className="volantino-3-page bg-[#fef7f0] flex flex-col relative">
+    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
       {/* Giant background number (decorative) */}
       <div
-        className="absolute -top-8 -right-6 select-none pointer-events-none font-black leading-none"
+        className="absolute -top-10 -right-8 select-none pointer-events-none font-black leading-none"
         style={{
-          fontSize: "14rem",
+          fontSize: "16rem",
           color: product.accentSoft,
           letterSpacing: "-0.05em",
+          opacity: 0.55,
         }}
         aria-hidden="true"
       >
@@ -207,7 +208,7 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
       </div>
 
       {/* Top color band */}
-      <div className="h-1.5 w-full shrink-0" style={{ backgroundColor: product.accent }} aria-hidden="true" />
+      <div className="h-2 w-full shrink-0" style={{ backgroundColor: product.accent }} aria-hidden="true" />
 
       {/* Header */}
       <div className="px-7 pt-5 pb-3 flex items-center justify-between shrink-0 relative z-10">
@@ -230,18 +231,17 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
         <StatusPill status={product.status} accent={product.accent} />
       </div>
 
-      {/* Main title block */}
-      <div className="px-7 pt-3 pb-4 shrink-0 relative z-10">
+      {/* Main title block + Logo */}
+      <div className="px-7 pt-2 pb-3 shrink-0 relative z-10">
         <div className="flex items-end gap-3">
           <div className="flex-1 min-w-0">
             <h2
-              className="text-[2.5rem] font-black tracking-tight leading-[0.95] text-balance"
+              className="text-[2.4rem] font-black tracking-tight leading-[0.95] text-balance"
               style={{ color: product.ink }}
             >
               {product.name}
             </h2>
           </div>
-          {/* Logo card */}
           <div className="shrink-0 h-16 w-16 rounded-xl bg-white shadow-md ring-1 ring-black/5 overflow-hidden flex items-center justify-center p-2">
             <div className="relative h-full w-full">
               <Image
@@ -257,15 +257,15 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
         </div>
       </div>
 
-      {/* Pull quote box */}
+      {/* Pull quote box - compact */}
       <div className="px-7 shrink-0 relative z-10">
         <div
-          className="rounded-xl p-3.5 flex items-start gap-2.5 border-l-4"
+          className="rounded-xl px-3 py-2.5 flex items-start gap-2 border-l-4"
           style={{ backgroundColor: product.accentSoft, borderLeftColor: product.accent }}
         >
-          <Quote className="h-4 w-4 shrink-0 mt-0.5" style={{ color: product.accent }} strokeWidth={2.5} />
+          <Quote className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: product.accent }} strokeWidth={2.5} />
           <p
-            className="text-[13px] font-bold leading-snug text-pretty italic"
+            className="text-[12px] font-bold leading-snug text-pretty italic"
             style={{ color: product.ink }}
           >
             {product.pullQuote}
@@ -273,47 +273,42 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
         </div>
       </div>
 
-      {/* Description */}
-      <div className="px-7 pt-3 pb-2 shrink-0 relative z-10">
-        <p className="text-[11px] leading-relaxed text-gray-700 text-pretty">{product.description}</p>
-      </div>
-
       {/* Section label */}
-      <div className="px-7 pt-2 pb-2 shrink-0 relative z-10">
+      <div className="px-7 pt-3 pb-2 shrink-0 relative z-10">
         <div className="flex items-center gap-2">
           <span
             className="text-[9px] font-bold uppercase tracking-[0.25em]"
             style={{ color: product.accent }}
           >
-            8 caratteristiche principali
+            8 Caratteristiche Principali
           </span>
           <div className="flex-1 h-px bg-gray-300" />
         </div>
       </div>
 
-      {/* Features grid 2x4 */}
-      <div className="px-7 flex-1 min-h-0 overflow-hidden relative z-10 pb-3">
-        <div className="grid grid-cols-2 gap-1.5 h-full">
+      {/* Features grid 2x4 - bigger cards filling all available space */}
+      <div className="px-7 flex-1 min-h-0 relative z-10 pb-4">
+        <div className="grid grid-cols-2 grid-rows-4 gap-2 h-full">
           {product.features.map((f, i) => (
             <div
               key={i}
-              className="bg-white rounded-lg p-2 border border-gray-200/80 flex flex-col"
+              className="bg-white rounded-xl p-3 border border-gray-200/80 shadow-sm flex flex-col gap-1.5 overflow-hidden"
             >
-              <div className="flex items-start gap-1.5 mb-0.5">
+              <div className="flex items-center gap-2">
                 <span
-                  className="shrink-0 text-[8px] font-mono font-black w-3.5 h-3.5 rounded-sm flex items-center justify-center text-white"
+                  className="shrink-0 text-[10px] font-mono font-black w-6 h-6 rounded-md flex items-center justify-center text-white"
                   style={{ backgroundColor: product.accent }}
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p
-                  className="text-[10px] font-bold leading-tight text-pretty"
+                  className="text-[11.5px] font-bold leading-tight text-pretty flex-1 min-w-0"
                   style={{ color: product.ink }}
                 >
                   {f.title}
                 </p>
               </div>
-              <p className="text-[8.5px] leading-snug text-gray-600 text-pretty pl-5">{f.text}</p>
+              <p className="text-[10px] leading-snug text-gray-700 text-pretty flex-1">{f.text}</p>
             </div>
           ))}
         </div>
@@ -343,7 +338,7 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
 
 function CoverPage() {
   return (
-    <div className="volantino-3-page bg-[#fef7f0] flex flex-col relative">
+    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
       {/* Giant "4" decorative */}
       <div
         className="absolute -bottom-12 -right-8 select-none pointer-events-none font-black leading-none text-orange-100"
@@ -465,7 +460,7 @@ function CoverPage() {
 
 function BackCover() {
   return (
-    <div className="volantino-3-page bg-[#fef7f0] flex flex-col relative">
+    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
       {/* Color band */}
       <div className="h-1.5 w-full shrink-0 flex" aria-hidden="true">
         <div className="flex-1" style={{ backgroundColor: "#0d9488" }} />
