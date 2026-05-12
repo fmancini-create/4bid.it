@@ -10,7 +10,6 @@ import {
   Zap,
   Globe,
   Mail,
-  Phone,
   ArrowRight,
   Quote,
 } from "lucide-react"
@@ -543,15 +542,6 @@ function BackCover() {
             <div>
               <p className="text-[8px] uppercase tracking-widest text-gray-400">Email</p>
               <p className="text-[12px] font-bold">info@4bid.it</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <Phone className="h-3.5 w-3.5 text-orange-300" />
-            </div>
-            <div>
-              <p className="text-[8px] uppercase tracking-widest text-gray-400">Telefono</p>
-              <p className="text-[12px] font-bold">Su richiesta dal sito</p>
             </div>
           </div>
         </div>
