@@ -242,17 +242,15 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
               {product.name}
             </h2>
           </div>
-          <div className="shrink-0 h-16 w-16 rounded-xl bg-white shadow-md ring-1 ring-black/5 overflow-hidden flex items-center justify-center p-2">
-            <div className="relative h-full w-full">
-              <Image
-                src={product.logo || "/placeholder.svg"}
-                alt={`${product.name} logo`}
-                fill
-                className="object-contain"
-                sizes="64px"
-                priority
-              />
-            </div>
+          <div className="shrink-0 relative h-24 w-24">
+            <Image
+              src={product.logo || "/placeholder.svg"}
+              alt={`${product.name} logo`}
+              fill
+              className="object-contain mix-blend-multiply"
+              sizes="96px"
+              priority
+            />
           </div>
         </div>
       </div>
