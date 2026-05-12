@@ -173,6 +173,16 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
             <Printer className="h-5 w-5 text-primary shrink-0" />
             <span className="font-medium text-sm sm:text-base">Volantino A5</span>
           </a>
+
+          <a
+            href="/volantino-2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+          >
+            <Printer className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Volantino A5 v2 Tech</span>
+          </a>
         </nav>
 
         <div className="pt-4 border-t border-border">
