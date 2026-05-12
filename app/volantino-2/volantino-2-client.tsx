@@ -136,7 +136,7 @@ const products: Product[] = [
       "Trasforma il parcheggio del tuo hotel in un servizio premium: colonnine di ricarica, ricavi extra e ospiti EV soddisfatti.",
     logo: "/ecomobility-logo.png",
     url: "4bid.it/ecomobility",
-    status: "in-sviluppo",
+    status: "online",
     productIcon: Zap,
     heroGradient: "from-emerald-500 via-lime-500 to-teal-500",
     accentColor: "#10b981",

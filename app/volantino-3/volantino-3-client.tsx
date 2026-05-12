@@ -146,7 +146,7 @@ const products: Product[] = [
     pullQuote: "Il tuo parcheggio diventa una fonte di ricavo.",
     logo: "/ecomobility-logo.png",
     url: "4bid.it/ecomobility",
-    status: "in-sviluppo",
+    status: "online",
     productIcon: Zap,
     ink: "#064e3b",
     accent: "#059669",

@@ -92,8 +92,9 @@ export default function ProjectsSection() {
       logo: "/ecomobility-logo.png",
       icon: Bike,
       color: "from-orange-500 to-amber-500",
-      progress: "85%",
+      progress: "On line",
       href: "/ecomobility/noleggio-mobilita-elettrica-hotel",
+      isLive: true,
     },
   ]
 
