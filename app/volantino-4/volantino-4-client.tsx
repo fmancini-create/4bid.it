@@ -596,10 +596,24 @@ function BackCover() {
   )
 }
 
-// Wraps a panel page in the scale container that fits A5 design into 99mm panel.
-function PanelSlot({ children, label }: { children: React.ReactNode; label: string }) {
+// Wraps a panel page in the scale container that fits the design into
+// the correct letter-fold panel width.
+// - variant "wide"   = 100mm (default, used for the 2 outer panels)
+// - variant "narrow" = 99mm  (used for the inner-flap panel that folds first)
+function PanelSlot({
+  children,
+  label,
+  variant = "wide",
+}: {
+  children: React.ReactNode
+  label: string
+  variant?: "wide" | "narrow"
+}) {
   return (
-    <div className="volantino-4-panel">
+    <div
+      className={`volantino-4-panel volantino-4-panel--${variant}`}
+      data-panel-variant={variant}
+    >
       {/* Print-only safe area marker (hidden via no-print outside print) */}
       <span className="sr-only">{label}</span>
       <div className="volantino-4-scale">{children}</div>
@@ -765,13 +779,13 @@ export default function Volantino4Client() {
             </span>
           </div>
           <div ref={sheet1Ref} className="volantino-4-sheet">
-            <PanelSlot label="Pannello 1 - Santaddeo">
+            <PanelSlot label="Pannello 1 - Santaddeo" variant="wide">
               <ProductPage product={santaddeo} index={0} total={totalProducts} />
             </PanelSlot>
-            <PanelSlot label="Pannello 2 - HotelProfit AI">
+            <PanelSlot label="Pannello 2 - HotelProfit AI" variant="wide">
               <ProductPage product={hotelProfit} index={1} total={totalProducts} />
             </PanelSlot>
-            <PanelSlot label="Pannello 3 - Manubot">
+            <PanelSlot label="Pannello 3 - Manubot (inner flap, narrow)" variant="narrow">
               <ProductPage product={manubot} index={2} total={totalProducts} />
             </PanelSlot>
           </div>
@@ -791,13 +805,13 @@ export default function Volantino4Client() {
             </span>
           </div>
           <div ref={sheet2Ref} className="volantino-4-sheet">
-            <PanelSlot label="Pannello 1 - Hotel Accelerator">
+            <PanelSlot label="Pannello 1 - Hotel Accelerator (inner flap, narrow)" variant="narrow">
               <ProductPage product={hotelAccelerator} index={3} total={totalProducts} />
             </PanelSlot>
-            <PanelSlot label="Pannello 2 - Retro copertina">
+            <PanelSlot label="Pannello 2 - Retro copertina" variant="wide">
               <BackCover />
             </PanelSlot>
-            <PanelSlot label="Pannello 3 - Copertina">
+            <PanelSlot label="Pannello 3 - Copertina" variant="wide">
               <CoverPage />
             </PanelSlot>
           </div>

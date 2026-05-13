@@ -1,12 +1,18 @@
-/* Tri-fold A4 Pixart size: 299mm x 212mm (with bleed) with 3 panels of
-   99.67mm each.
+/* Tri-fold A4 Pixart "piega a portafoglio" 299x212mm.
+   IMPORTANT: panels are NOT equal width. The panel that folds inward first
+   must be ~1mm narrower so it doesn't crease when the sheet is closed.
 
-   Math for the panel content:
-   - Logical width  = 148mm  -> scale 0.6735 -> visual 99.67mm (panel width)
-   - Logical height = 314.81mm -> scale 0.6735 -> visual 212mm (panel height)
-   - Scale factor = 99.67 / 148 = 0.6735 (uniform, preserves typography)
-   The inner page is taller-than-A5 so its flex-1 features grid expands
-   vertically and fills the full panel without gray bands top/bottom. */
+   Standard letter-fold for 299mm:
+     - 2 outer panels: 100mm each (wide)
+     - 1 inner-flap panel: 99mm (narrow)
+     - Total: 100 + 100 + 99 = 299mm
+
+   Per-panel scaling uses CSS custom properties:
+     --panel-w-mm:     visual panel width  (e.g. 100 or 99)
+     --panel-scale:    uniform scale factor (e.g. 100/148 = 0.67568)
+     --panel-h-log:    logical height before scale (212 / scale)
+   With logical width fixed at 148mm, every panel keeps the same design
+   typography and the inner flex grid stretches vertically to fill 212mm. */
 
 .volantino-4-sheet {
   width: 299mm;
@@ -29,7 +35,12 @@
 }
 
 .volantino-4-panel {
-  width: 99.67mm;
+  /* Defaults fall back to the wide configuration if no variant set */
+  --panel-w-mm: 100;
+  --panel-scale: 0.67568;
+  --panel-h-log: 313.78mm;
+
+  width: calc(var(--panel-w-mm) * 1mm);
   height: 212mm;
   overflow: hidden;
   position: relative;
@@ -37,30 +48,46 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-/* Fold guides (screen only) */
+/* Wide panel (100mm) - used for the 2 outer panels of each sheet */
+.volantino-4-panel--wide {
+  --panel-w-mm: 100;
+  --panel-scale: 0.67568;
+  --panel-h-log: 313.78mm;
+}
+
+/* Narrow panel (99mm) - the inner-flap panel that folds in first */
+.volantino-4-panel--narrow {
+  --panel-w-mm: 99;
+  --panel-scale: 0.66892;
+  --panel-h-log: 316.94mm;
+}
+
+/* Fold guides (screen only) - automatic between panels */
 .volantino-4-panel + .volantino-4-panel {
   border-left: 1px dashed rgba(0, 0, 0, 0.18);
 }
 
-/* Scaled wrapper: holds a portrait page (148x314.81mm) shrunk to fill
-   the full 99.67x212mm panel (no gray bands). */
+/* Scaled wrapper: holds the design at 148mm logical width and stretches
+   vertically to the variant's logical height; uniform scale shrinks it
+   to the exact panel width and 212mm visual height. */
 .volantino-4-scale {
   width: 148mm;
-  height: 314.81mm;
-  transform: scale(0.6735);
+  height: var(--panel-h-log);
+  transform: scale(var(--panel-scale));
   transform-origin: center center;
   flex-shrink: 0;
 }
 
-/* The page inside the scale wrapper - taller than A5 so flex children
-   (grid features 2x4) auto-expand to fill the panel height. */
+/* The page inside the scale wrapper. Height matches the variant's logical
+   height so flex children (grid features 2x4) auto-expand to fill the panel. */
 .volantino-4-inner-page {
   width: 148mm;
-  height: 314.81mm;
-  min-height: 314.81mm;
-  max-height: 314.81mm;
+  height: var(--panel-h-log);
+  min-height: var(--panel-h-log);
+  max-height: var(--panel-h-log);
   overflow: hidden;
   display: flex;
   flex-direction: column;
