@@ -462,17 +462,19 @@ function CoverPage() {
         </div>
       </div>
 
-      {/* Footer with site URL */}
-      <div className="shrink-0 relative z-10 bg-gray-900 px-8 py-5 flex items-center justify-between">
-        <div>
-          <p className="text-[13px] uppercase tracking-[0.25em] text-orange-300 font-bold">
-            Scopri tutta la suite
-          </p>
-          <p className="text-[1.7rem] font-black text-white mt-1">www.4bid.it</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Mail className="h-5 w-5 text-orange-300" />
-          <span className="text-[14px] text-gray-300 font-medium">info@4bid.it</span>
+      {/* Footer with site URL - single row, same height as product pages */}
+      <div className="shrink-0 relative z-10">
+        <div className="px-8 py-5 flex items-center justify-between bg-gray-900">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Globe className="h-5 w-5 shrink-0 text-orange-300" />
+            <p className="text-[17px] font-bold text-white tracking-tight truncate">www.4bid.it</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[12px] uppercase tracking-widest text-orange-300">
+              Scopri tutta la suite
+            </span>
+            <Mail className="h-4 w-4 text-orange-300" />
+          </div>
         </div>
       </div>
     </div>
@@ -573,24 +575,23 @@ function BackCover() {
         </div>
       </div>
 
-      {/* Holding signature */}
-      <div className="bg-gray-900 px-8 py-5 shrink-0 relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-14 w-14 rounded-full bg-white shadow-md overflow-hidden flex items-center justify-center p-1.5">
-            <div className="relative h-full w-full">
-              <Image src="/4bid-borghi-logo.jpeg" alt="4BID" fill className="object-contain" sizes="56px" />
+      {/* Holding signature - single row, same height as product pages */}
+      <div className="shrink-0 relative z-10">
+        <div className="px-8 py-5 flex items-center justify-between bg-gray-900">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-5 w-5 rounded-sm bg-white flex items-center justify-center shrink-0 p-[1px] overflow-hidden">
+              <div className="relative h-full w-full">
+                <Image src="/4bid-borghi-logo.jpeg" alt="4BID" fill className="object-contain" sizes="20px" />
+              </div>
             </div>
+            <p className="text-[17px] font-bold text-white tracking-tight truncate">4BID SRL</p>
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.25em] text-gray-400 font-bold">Holding</p>
-            <p className="text-[20px] font-black text-white tracking-tight leading-tight mt-0.5">4BID SRL</p>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[12px] uppercase tracking-widest text-orange-300">
+              La suite per il turismo
+            </span>
           </div>
         </div>
-        <p className="text-[11px] uppercase tracking-[0.25em] text-gray-400 text-right leading-tight">
-          La suite completa
-          <br />
-          <span className="text-orange-300 normal-case tracking-normal text-[13px]">per il turismo</span>
-        </p>
       </div>
     </div>
   )
