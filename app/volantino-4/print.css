@@ -1,6 +1,12 @@
 /* Tri-fold A4 Pixart size: 299mm x 212mm (with bleed) with 3 panels of
-   99.67mm each. Each panel hosts the A5-style page from v3 (148x210mm)
-   visually scaled to fit, preserving the editorial layout. */
+   99.67mm each.
+
+   Math for the panel content:
+   - Logical width  = 148mm  -> scale 0.6735 -> visual 99.67mm (panel width)
+   - Logical height = 314.81mm -> scale 0.6735 -> visual 212mm (panel height)
+   - Scale factor = 99.67 / 148 = 0.6735 (uniform, preserves typography)
+   The inner page is taller-than-A5 so its flex-1 features grid expands
+   vertically and fills the full panel without gray bands top/bottom. */
 
 .volantino-4-sheet {
   width: 299mm;
@@ -38,22 +44,23 @@
   border-left: 1px dashed rgba(0, 0, 0, 0.18);
 }
 
-/* Scaled wrapper: holds an A5-like page (148x212mm) shrunk to ~99.67mm width.
-   Scale factor = 99.67 / 148 = 0.6735. */
+/* Scaled wrapper: holds a portrait page (148x314.81mm) shrunk to fill
+   the full 99.67x212mm panel (no gray bands). */
 .volantino-4-scale {
   width: 148mm;
-  height: 212mm;
+  height: 314.81mm;
   transform: scale(0.6735);
   transform-origin: center center;
   flex-shrink: 0;
 }
 
-/* The page inside the scale wrapper */
+/* The page inside the scale wrapper - taller than A5 so flex children
+   (grid features 2x4) auto-expand to fill the panel height. */
 .volantino-4-inner-page {
   width: 148mm;
-  height: 212mm;
-  min-height: 212mm;
-  max-height: 212mm;
+  height: 314.81mm;
+  min-height: 314.81mm;
+  max-height: 314.81mm;
   overflow: hidden;
   display: flex;
   flex-direction: column;
