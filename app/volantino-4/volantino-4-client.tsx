@@ -84,7 +84,7 @@ const products: Product[] = [
       { title: "Consigli Personalizzati", text: "Suggerimenti operativi basati sui tuoi numeri." },
       { title: "Budget vs Consuntivo", text: "Confronti automatici su tutti i KPI di struttura." },
       { title: "Multi-Property", text: "Tutte le tue strutture in un'unica dashboard." },
-      { title: "Adempimenti Fiscali", text: "Integrazione con bilancio e gestione fiscale." },
+      { title: "Costo Variabile", text: "Calcolo del costo variabile e monitoraggio degli acquisti." },
       { title: "Report Automatici", text: "Settimanali, mensili e annuali generati per te." },
     ],
   },
