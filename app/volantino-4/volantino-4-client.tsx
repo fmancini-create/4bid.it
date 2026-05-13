@@ -777,24 +777,25 @@ export default function Volantino4Client() {
           </div>
         </div>
 
-        {/* Sheet 2 - ESTERNO: retro copertina | ultimo prodotto | copertina
-            (ordine corretto per letter-fold: piegando, la copertina finisce sopra a destra) */}
+        {/* Sheet 2 - ESTERNO: Hotel Accelerator | Retro copertina | Copertina
+            (per il letter-fold: il dorso della brochure - "Pronto a far crescere..." -
+            occupa il pannello centrale, Hotel Accelerator passa a sinistra) */}
         <div className="w-full max-w-[calc(299mm+2rem)]">
           <div className="no-print mb-3 flex items-center gap-3">
             <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider">
               Foglio 2 / Esterno
             </span>
             <span className="text-xs text-gray-500">
-              Pannelli: <strong>Retro copertina</strong> &middot; <strong>Hotel Accelerator</strong> &middot;{" "}
+              Pannelli: <strong>Hotel Accelerator</strong> &middot; <strong>Retro copertina</strong> &middot;{" "}
               <strong>Copertina</strong>
             </span>
           </div>
           <div ref={sheet2Ref} className="volantino-4-sheet">
-            <PanelSlot label="Pannello 1 - Retro copertina">
-              <BackCover />
-            </PanelSlot>
-            <PanelSlot label="Pannello 2 - Hotel Accelerator">
+            <PanelSlot label="Pannello 1 - Hotel Accelerator">
               <ProductPage product={hotelAccelerator} index={3} total={totalProducts} />
+            </PanelSlot>
+            <PanelSlot label="Pannello 2 - Retro copertina">
+              <BackCover />
             </PanelSlot>
             <PanelSlot label="Pannello 3 - Copertina">
               <CoverPage />
