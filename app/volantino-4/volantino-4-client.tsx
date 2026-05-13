@@ -143,19 +143,19 @@ const products: Product[] = [
 function StatusPill({ status, accent }: { status: ProductStatus; accent: string }) {
   if (status === "online") {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">
-        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700">Online</span>
+      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 border border-emerald-200">
+        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        <span className="text-[12px] font-bold uppercase tracking-widest text-emerald-700">Online</span>
       </span>
     )
   }
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border"
+      className="inline-flex items-center gap-2 px-3 py-1 rounded-full border"
       style={{ backgroundColor: "#fef3c7", borderColor: "#fcd34d" }}
     >
-      <span className="inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#92400e" }}>
+      <span className="inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+      <span className="text-[12px] font-bold uppercase tracking-widest" style={{ color: "#92400e" }}>
         In Sviluppo
       </span>
     </span>
@@ -184,22 +184,22 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
       </div>
 
       {/* Top color band */}
-      <div className="h-2 w-full shrink-0" style={{ backgroundColor: product.accent }} aria-hidden="true" />
+      <div className="h-3 w-full shrink-0" style={{ backgroundColor: product.accent }} aria-hidden="true" />
 
       {/* Header */}
-      <div className="px-7 pt-5 pb-3 flex items-center justify-between shrink-0 relative z-10">
-        <div className="flex items-center gap-2.5">
+      <div className="px-8 pt-7 pb-4 flex items-center justify-between shrink-0 relative z-10">
+        <div className="flex items-center gap-3">
           <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center"
+            className="h-12 w-12 rounded-xl flex items-center justify-center"
             style={{ backgroundColor: product.accent }}
           >
-            <ProductIcon className="h-4 w-4 text-white" strokeWidth={2.5} />
+            <ProductIcon className="h-6 w-6 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500">
+            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500">
               Suite 4BID &middot; n. {pageNum}/{totalNum}
             </p>
-            <p className="text-[10px] font-semibold mt-0.5" style={{ color: product.ink }}>
+            <p className="text-[15px] font-semibold mt-1" style={{ color: product.ink }}>
               {product.tagline}
             </p>
           </div>
@@ -208,75 +208,66 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
       </div>
 
       {/* Main title block + Logo */}
-      <div className="px-7 pt-2 pb-3 shrink-0 relative z-10">
-        <div className="flex items-end gap-3">
+      <div className="px-8 pt-3 pb-5 shrink-0 relative z-10">
+        <div className="flex items-end gap-4">
           <div className="flex-1 min-w-0">
             <h2
-              className="text-[2.4rem] font-black tracking-tight leading-[0.95] text-balance"
+              className="text-[3.5rem] font-black tracking-tight leading-[0.95] text-balance"
               style={{ color: product.ink }}
             >
               {product.name}
             </h2>
           </div>
-          <div className="shrink-0 relative h-24 w-24">
-            <Image
-              src={product.logo || "/placeholder.svg"}
-              alt={`${product.name} logo`}
-              fill
-              className="object-contain mix-blend-multiply"
-              sizes="96px"
-              priority
-            />
-          </div>
+          <ProductLogo product={product} />
         </div>
       </div>
 
-      {/* Pull quote box - compact */}
-      <div className="px-7 shrink-0 relative z-10">
+      {/* Pull quote box */}
+      <div className="px-8 shrink-0 relative z-10">
         <div
-          className="rounded-xl px-3 py-2.5 flex items-start gap-2 border-l-4"
+          className="rounded-2xl px-5 py-4 flex items-start gap-3 border-l-[6px]"
           style={{ backgroundColor: product.accentSoft, borderLeftColor: product.accent }}
         >
-          <Quote className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: product.accent }} strokeWidth={2.5} />
-          <p className="text-[12px] font-bold leading-snug text-pretty italic" style={{ color: product.ink }}>
+          <Quote className="h-5 w-5 shrink-0 mt-0.5" style={{ color: product.accent }} strokeWidth={2.5} />
+          <p className="text-[18px] font-bold leading-snug text-pretty italic" style={{ color: product.ink }}>
             {product.pullQuote}
           </p>
         </div>
       </div>
 
       {/* Section label */}
-      <div className="px-7 pt-3 pb-2 shrink-0 relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: product.accent }}>
+      <div className="px-8 pt-5 pb-3 shrink-0 relative z-10">
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] font-bold uppercase tracking-[0.25em]" style={{ color: product.accent }}>
             8 Caratteristiche Principali
           </span>
           <div className="flex-1 h-px bg-gray-300" />
         </div>
       </div>
 
-      {/* Features grid 2x4 */}
-      <div className="px-7 flex-1 min-h-0 relative z-10 pb-4">
-        <div className="grid grid-cols-2 grid-rows-4 gap-2 h-full">
+      {/* Features grid 2x4 - larger cards for readability */}
+      <div className="px-8 flex-1 min-h-0 relative z-10 pb-5">
+        <div className="grid grid-cols-2 grid-rows-4 gap-3 h-full">
           {product.features.map((f, i) => (
             <div
               key={i}
-              className="bg-white rounded-xl p-3 border border-gray-200/80 shadow-sm flex flex-col gap-1.5 overflow-hidden"
+              className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm flex flex-col gap-2.5 overflow-hidden"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <span
-                  className="shrink-0 text-[10px] font-mono font-black w-6 h-6 rounded-md flex items-center justify-center text-white"
+                  className="shrink-0 text-[14px] font-mono font-black w-9 h-9 rounded-lg flex items-center justify-center text-white"
                   style={{ backgroundColor: product.accent }}
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p
-                  className="text-[11.5px] font-bold leading-tight text-pretty flex-1 min-w-0"
+                  className="text-[16.5px] font-bold leading-tight text-pretty flex-1 min-w-0"
                   style={{ color: product.ink }}
                 >
                   {f.title}
                 </p>
               </div>
-              <p className="text-[10px] leading-snug text-gray-700 text-pretty flex-1">{f.text}</p>
+              <p className="text-[13.5px] leading-snug text-gray-700 text-pretty flex-1">{f.text}</p>
             </div>
           ))}
         </div>
@@ -285,20 +276,82 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
       {/* Footer */}
       <div className="shrink-0 relative z-10">
         <div
-          className="px-7 py-3 flex items-center justify-between"
+          className="px-8 py-5 flex items-center justify-between"
           style={{ backgroundColor: product.ink }}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <Globe className="h-3.5 w-3.5 shrink-0" style={{ color: product.accentSoft }} />
-            <p className="text-[11px] font-bold text-white tracking-tight truncate">{product.url}</p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Globe className="h-5 w-5 shrink-0" style={{ color: product.accentSoft }} />
+            <p className="text-[17px] font-bold text-white tracking-tight truncate">{product.url}</p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[9px] uppercase tracking-widest" style={{ color: product.accentSoft }}>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[12px] uppercase tracking-widest" style={{ color: product.accentSoft }}>
               Scopri di piu&apos;
             </span>
-            <ArrowRight className="h-3 w-3" style={{ color: product.accentSoft }} />
+            <ArrowRight className="h-4 w-4" style={{ color: product.accentSoft }} />
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ProductLogo renders the product logo at the right size/background per product:
+ * - Santaddeo: wide ratio, larger horizontal container, transparent (already PNG alpha)
+ * - HotelProfit AI: square PNG already transparent, no blend
+ * - Manubot: JPG with dark background, embraced inside a dark rounded box that matches
+ * - Hotel Accelerator: JPG on white background, larger box with explicit white bg
+ */
+function ProductLogo({ product }: { product: Product }) {
+  // Per-product visual config
+  const configs: Record<
+    string,
+    { containerClass: string; bgClass: string; padding: string; rounded: string }
+  > = {
+    santaddeo: {
+      containerClass: "h-24 w-44",
+      bgClass: "bg-transparent",
+      padding: "p-0",
+      rounded: "",
+    },
+    "hotelprofit-ai": {
+      containerClass: "h-28 w-28",
+      bgClass: "bg-transparent",
+      padding: "p-0",
+      rounded: "",
+    },
+    manubot: {
+      containerClass: "h-28 w-28",
+      bgClass: "bg-[#1a1a1a]",
+      padding: "p-2",
+      rounded: "rounded-2xl",
+    },
+    "hotel-accelerator": {
+      containerClass: "h-32 w-32",
+      bgClass: "bg-white",
+      padding: "p-2",
+      rounded: "rounded-2xl shadow-md ring-1 ring-black/5",
+    },
+  }
+  const cfg = configs[product.id] ?? {
+    containerClass: "h-24 w-24",
+    bgClass: "bg-transparent",
+    padding: "p-0",
+    rounded: "",
+  }
+  return (
+    <div
+      className={`shrink-0 relative ${cfg.containerClass} ${cfg.bgClass} ${cfg.padding} ${cfg.rounded} flex items-center justify-center`}
+    >
+      <div className="relative h-full w-full">
+        <Image
+          src={product.logo || "/placeholder.svg"}
+          alt={`${product.name} logo`}
+          fill
+          className="object-contain"
+          sizes="160px"
+          priority
+        />
       </div>
     </div>
   )
@@ -309,15 +362,15 @@ function CoverPage() {
     <div className="volantino-4-inner-page bg-[#f5f5f4]">
       {/* Giant "4" decorative */}
       <div
-        className="absolute -bottom-12 -right-8 select-none pointer-events-none font-black leading-none text-orange-100"
-        style={{ fontSize: "22rem", letterSpacing: "-0.05em" }}
+        className="absolute -bottom-16 -right-10 select-none pointer-events-none font-black leading-none text-orange-100"
+        style={{ fontSize: "30rem", letterSpacing: "-0.05em" }}
         aria-hidden="true"
       >
         4
       </div>
 
       {/* Color band */}
-      <div className="h-1.5 w-full shrink-0 flex" aria-hidden="true">
+      <div className="h-3 w-full shrink-0 flex" aria-hidden="true">
         <div className="flex-1" style={{ backgroundColor: "#0d9488" }} />
         <div className="flex-1" style={{ backgroundColor: "#2563eb" }} />
         <div className="flex-1" style={{ backgroundColor: "#ea580c" }} />
@@ -325,34 +378,34 @@ function CoverPage() {
       </div>
 
       {/* Header */}
-      <div className="px-7 pt-7 pb-3 shrink-0 relative z-10 flex items-center gap-3">
-        <div className="h-16 w-16 rounded-2xl bg-white shadow-md overflow-hidden flex items-center justify-center p-1.5">
+      <div className="px-8 pt-12 pb-5 shrink-0 relative z-10 flex items-center gap-4">
+        <div className="h-24 w-24 rounded-2xl bg-white shadow-md overflow-hidden flex items-center justify-center p-2">
           <div className="relative h-full w-full">
-            <Image src="/4bid-borghi-logo.jpeg" alt="4BID SRL" fill className="object-contain" sizes="64px" />
+            <Image src="/4bid-borghi-logo.jpeg" alt="4BID SRL" fill className="object-contain" sizes="96px" />
           </div>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-[0.3em] text-gray-500 font-bold">Holding</p>
-          <p className="text-2xl font-black tracking-tight leading-none mt-0.5 text-gray-900">4BID SRL</p>
+          <p className="text-[14px] uppercase tracking-[0.3em] text-gray-500 font-bold">Holding</p>
+          <p className="text-[2.6rem] font-black tracking-tight leading-none mt-1 text-gray-900">4BID SRL</p>
         </div>
       </div>
 
       {/* Issue marker */}
-      <div className="px-7 pb-1 shrink-0 relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-orange-600">
+      <div className="px-8 pb-2 shrink-0 relative z-10">
+        <div className="flex items-center gap-3">
+          <span className="text-[14px] font-bold uppercase tracking-[0.25em] text-orange-600">
             Edizione Speciale
           </span>
           <div className="flex-1 h-px bg-gray-300" />
-          <span className="text-[10px] font-mono text-gray-500">2026</span>
+          <span className="text-[14px] font-mono text-gray-500">2026</span>
         </div>
       </div>
 
       {/* Big headline */}
-      <div className="px-7 pt-4 pb-3 shrink-0 relative z-10">
+      <div className="px-8 pt-8 pb-5 shrink-0 relative z-10">
         <h1
           className="font-black tracking-tight leading-[0.9] text-balance text-gray-900"
-          style={{ fontSize: "3.2rem" }}
+          style={{ fontSize: "4.6rem" }}
         >
           La suite
           <br />
@@ -363,39 +416,44 @@ function CoverPage() {
       </div>
 
       {/* Lead paragraph */}
-      <div className="px-7 pb-4 shrink-0 relative z-10">
-        <p className="text-[13px] leading-relaxed text-gray-700 text-pretty max-w-[88%]">
+      <div className="px-8 pb-6 shrink-0 relative z-10">
+        <p className="text-[19px] leading-relaxed text-gray-700 text-pretty max-w-[88%]">
           Quattro prodotti pensati, sviluppati e gestiti da chi il settore lo vive ogni giorno. Una sola visione:
           piu&apos; ricavi, piu&apos; controllo, meno fatica.
         </p>
       </div>
 
+      {/* Spacer pushes the index towards the bottom for better vertical balance */}
+      <div className="flex-1 min-h-0 relative z-10" aria-hidden="true" />
+
       {/* Index */}
-      <div className="px-7 flex-1 min-h-0 relative z-10">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-gray-500">In questo numero</span>
+      <div className="px-8 pb-6 shrink-0 relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-[13px] font-bold uppercase tracking-[0.25em] text-gray-500">
+            In questo numero
+          </span>
           <div className="flex-1 h-px bg-gray-300" />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           {products.map((p, i) => {
             const Icon = p.productIcon
             return (
-              <div key={p.id} className="flex items-center gap-3 py-1">
+              <div key={p.id} className="flex items-center gap-4">
                 <span
-                  className="text-[10px] font-mono font-black w-7 shrink-0"
+                  className="text-[15px] font-mono font-black w-10 shrink-0"
                   style={{ color: p.accent }}
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div
-                  className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                  className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
                   style={{ backgroundColor: p.accentSoft }}
                 >
-                  <Icon className="h-3.5 w-3.5" style={{ color: p.accent }} strokeWidth={2.5} />
+                  <Icon className="h-5 w-5" style={{ color: p.accent }} strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-gray-900 leading-tight truncate">{p.name}</p>
-                  <p className="text-[9px] text-gray-500 leading-tight">{p.tagline}</p>
+                  <p className="text-[18px] font-bold text-gray-900 leading-tight truncate">{p.name}</p>
+                  <p className="text-[13px] text-gray-500 leading-tight mt-0.5">{p.tagline}</p>
                 </div>
                 <StatusPill status={p.status} accent={p.accent} />
               </div>
@@ -405,14 +463,16 @@ function CoverPage() {
       </div>
 
       {/* Footer with site URL */}
-      <div className="shrink-0 relative z-10 bg-gray-900 px-7 py-3 flex items-center justify-between">
+      <div className="shrink-0 relative z-10 bg-gray-900 px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-[9px] uppercase tracking-[0.25em] text-orange-300 font-bold">Scopri tutta la suite</p>
-          <p className="text-base font-black text-white mt-0.5">www.4bid.it</p>
+          <p className="text-[13px] uppercase tracking-[0.25em] text-orange-300 font-bold">
+            Scopri tutta la suite
+          </p>
+          <p className="text-[1.7rem] font-black text-white mt-1">www.4bid.it</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Mail className="h-3.5 w-3.5 text-orange-300" />
-          <span className="text-[10px] text-gray-300 font-medium">info@4bid.it</span>
+        <div className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-orange-300" />
+          <span className="text-[14px] text-gray-300 font-medium">info@4bid.it</span>
         </div>
       </div>
     </div>
@@ -423,7 +483,7 @@ function BackCover() {
   return (
     <div className="volantino-4-inner-page bg-[#f5f5f4]">
       {/* Color band */}
-      <div className="h-1.5 w-full shrink-0 flex" aria-hidden="true">
+      <div className="h-3 w-full shrink-0 flex" aria-hidden="true">
         <div className="flex-1" style={{ backgroundColor: "#0d9488" }} />
         <div className="flex-1" style={{ backgroundColor: "#2563eb" }} />
         <div className="flex-1" style={{ backgroundColor: "#ea580c" }} />
@@ -432,17 +492,20 @@ function BackCover() {
 
       {/* Decorative big arrow */}
       <div
-        className="absolute -top-8 -left-10 select-none pointer-events-none font-black leading-none text-orange-100"
-        style={{ fontSize: "20rem", letterSpacing: "-0.05em" }}
+        className="absolute -top-10 -left-14 select-none pointer-events-none font-black leading-none text-orange-100"
+        style={{ fontSize: "28rem", letterSpacing: "-0.05em" }}
         aria-hidden="true"
       >
         &rsaquo;
       </div>
 
       {/* Header */}
-      <div className="px-7 pt-7 pb-2 shrink-0 relative z-10">
-        <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-orange-600">Inizia oggi</p>
-        <h2 className="text-[2.4rem] font-black tracking-tight leading-[0.95] mt-2 text-balance text-gray-900">
+      <div className="px-8 pt-12 pb-3 shrink-0 relative z-10">
+        <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-orange-600">Inizia oggi</p>
+        <h2
+          className="font-black tracking-tight leading-[0.95] mt-3 text-balance text-gray-900"
+          style={{ fontSize: "3.6rem" }}
+        >
           Pronto a far
           <br />
           crescere
@@ -451,15 +514,15 @@ function BackCover() {
         </h2>
       </div>
 
-      <div className="px-7 pb-3 shrink-0 relative z-10">
-        <p className="text-[12px] leading-relaxed text-gray-700 text-pretty max-w-[92%]">
+      <div className="px-8 pb-6 shrink-0 relative z-10">
+        <p className="text-[18px] leading-relaxed text-gray-700 text-pretty max-w-[92%]">
           Contattaci per una demo gratuita di uno qualunque dei prodotti della suite. Senza impegno, senza costi
           nascosti.
         </p>
       </div>
 
       {/* Steps */}
-      <div className="px-7 shrink-0 relative z-10 space-y-2.5 pb-3">
+      <div className="px-8 shrink-0 relative z-10 space-y-4 pb-4">
         {[
           { n: "01", title: "Contattaci", text: "Email o dal sito www.4bid.it" },
           { n: "02", title: "Demo Personalizzata", text: "Ti mostriamo i prodotti adatti alla tua struttura" },
@@ -467,17 +530,17 @@ function BackCover() {
         ].map((s) => (
           <div
             key={s.n}
-            className="bg-white rounded-xl border border-gray-200/80 px-3.5 py-2.5 flex items-start gap-3"
+            className="bg-white rounded-2xl border border-gray-200/80 px-5 py-4 flex items-start gap-4"
           >
             <span
-              className="shrink-0 text-base font-mono font-black w-9 h-9 rounded-lg flex items-center justify-center text-white"
+              className="shrink-0 font-mono font-black w-14 h-14 rounded-xl flex items-center justify-center text-white text-[20px]"
               style={{ backgroundColor: "#ea580c" }}
             >
               {s.n}
             </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-bold leading-tight text-gray-900">{s.title}</p>
-              <p className="text-[10.5px] text-gray-600 leading-snug mt-0.5">{s.text}</p>
+            <div className="flex-1 min-w-0 pt-1">
+              <p className="text-[19px] font-bold leading-tight text-gray-900">{s.title}</p>
+              <p className="text-[14px] text-gray-600 leading-snug mt-1.5">{s.text}</p>
             </div>
           </div>
         ))}
@@ -486,47 +549,47 @@ function BackCover() {
       <div className="flex-1 min-h-0" />
 
       {/* Contact card */}
-      <div className="mx-7 mb-5 rounded-2xl bg-gray-900 text-white p-4 shrink-0 relative z-10">
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-orange-300 mb-3">Contatti</p>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <Globe className="h-3.5 w-3.5 text-orange-300" />
+      <div className="mx-8 mb-6 rounded-2xl bg-gray-900 text-white p-5 shrink-0 relative z-10">
+        <p className="text-[13px] font-bold uppercase tracking-[0.25em] text-orange-300 mb-4">Contatti</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Globe className="h-5 w-5 text-orange-300" />
             </div>
             <div>
-              <p className="text-[8px] uppercase tracking-widest text-gray-400">Sito</p>
-              <p className="text-[12px] font-bold">www.4bid.it</p>
+              <p className="text-[11px] uppercase tracking-widest text-gray-400">Sito</p>
+              <p className="text-[17px] font-bold mt-0.5">www.4bid.it</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <Mail className="h-3.5 w-3.5 text-orange-300" />
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-orange-300" />
             </div>
             <div>
-              <p className="text-[8px] uppercase tracking-widest text-gray-400">Email</p>
-              <p className="text-[12px] font-bold">info@4bid.it</p>
+              <p className="text-[11px] uppercase tracking-widest text-gray-400">Email</p>
+              <p className="text-[17px] font-bold mt-0.5">info@4bid.it</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Holding signature */}
-      <div className="bg-gray-900 px-7 py-3 shrink-0 relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="h-10 w-10 rounded-full bg-white shadow-md overflow-hidden flex items-center justify-center p-1">
+      <div className="bg-gray-900 px-8 py-5 shrink-0 relative z-10 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-14 w-14 rounded-full bg-white shadow-md overflow-hidden flex items-center justify-center p-1.5">
             <div className="relative h-full w-full">
-              <Image src="/4bid-borghi-logo.jpeg" alt="4BID" fill className="object-contain" sizes="40px" />
+              <Image src="/4bid-borghi-logo.jpeg" alt="4BID" fill className="object-contain" sizes="56px" />
             </div>
           </div>
           <div>
-            <p className="text-[8px] uppercase tracking-[0.25em] text-gray-400 font-bold">Holding</p>
-            <p className="text-[14px] font-black text-white tracking-tight leading-tight">4BID SRL</p>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-gray-400 font-bold">Holding</p>
+            <p className="text-[20px] font-black text-white tracking-tight leading-tight mt-0.5">4BID SRL</p>
           </div>
         </div>
-        <p className="text-[8px] uppercase tracking-[0.25em] text-gray-400 text-right leading-tight">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-gray-400 text-right leading-tight">
           La suite completa
           <br />
-          <span className="text-orange-300 normal-case tracking-normal text-[9px]">per il turismo</span>
+          <span className="text-orange-300 normal-case tracking-normal text-[13px]">per il turismo</span>
         </p>
       </div>
     </div>
@@ -714,24 +777,25 @@ export default function Volantino4Client() {
           </div>
         </div>
 
-        {/* Sheet 2 - ESTERNO: retro copertina | ultimo prodotto | copertina
-            (ordine corretto per letter-fold: piegando, la copertina finisce sopra a destra) */}
+        {/* Sheet 2 - ESTERNO: Hotel Accelerator | Retro copertina | Copertina
+            (per il letter-fold: il dorso della brochure - "Pronto a far crescere..." -
+            occupa il pannello centrale, Hotel Accelerator passa a sinistra) */}
         <div className="w-full max-w-[calc(299mm+2rem)]">
           <div className="no-print mb-3 flex items-center gap-3">
             <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider">
               Foglio 2 / Esterno
             </span>
             <span className="text-xs text-gray-500">
-              Pannelli: <strong>Retro copertina</strong> &middot; <strong>Hotel Accelerator</strong> &middot;{" "}
+              Pannelli: <strong>Hotel Accelerator</strong> &middot; <strong>Retro copertina</strong> &middot;{" "}
               <strong>Copertina</strong>
             </span>
           </div>
           <div ref={sheet2Ref} className="volantino-4-sheet">
-            <PanelSlot label="Pannello 1 - Retro copertina">
-              <BackCover />
-            </PanelSlot>
-            <PanelSlot label="Pannello 2 - Hotel Accelerator">
+            <PanelSlot label="Pannello 1 - Hotel Accelerator">
               <ProductPage product={hotelAccelerator} index={3} total={totalProducts} />
+            </PanelSlot>
+            <PanelSlot label="Pannello 2 - Retro copertina">
+              <BackCover />
             </PanelSlot>
             <PanelSlot label="Pannello 3 - Copertina">
               <CoverPage />
