@@ -1,12 +1,20 @@
-/* Tri-fold A4 Pixart size: 299mm x 212mm (with bleed) with 3 panels of
-   99.67mm each.
+/* Tri-fold A4 Pixart "Pieghevoli 3 ante" 299x212mm con pieghe ai terzi esatti.
+   Le pieghe del template Pixart cadono a 99.67mm e 199.33mm dal bordo,
+   quindi i 3 pannelli sono identici da 99.67mm cadauno.
 
-   Math for the panel content:
-   - Logical width  = 148mm  -> scale 0.6735 -> visual 99.67mm (panel width)
-   - Logical height = 314.81mm -> scale 0.6735 -> visual 212mm (panel height)
-   - Scale factor = 99.67 / 148 = 0.6735 (uniform, preserves typography)
-   The inner page is taller-than-A5 so its flex-1 features grid expands
-   vertically and fills the full panel without gray bands top/bottom. */
+   Math:
+     - Visual panel width = 99.67mm (299 / 3)
+     - Logical design width = 148mm (per mantenere tipografia A5)
+     - Scale uniforme = 99.67 / 148 = 0.6735
+     - Logical design height = 212 / 0.6735 = 314.81mm
+   Con scale uniforme la tipografia resta identica e il flex grid 2x4
+   delle feature si allunga verticalmente fino a riempire i 212mm visivi
+   senza bande grigie sopra/sotto.
+
+   IMPORTANT: l'utente carica il JPG su Pixart a scala 100%. NON serve
+   adattarlo alle pieghe perche' i bordi tra pannelli combaciano gia'
+   con le pieghe gialle Pixart. Se l'utente trascina/scala il file
+   manualmente, le proporzioni si rompono e il contenuto viene tagliato. */
 
 .volantino-4-sheet {
   width: 299mm;
@@ -37,9 +45,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-/* Fold guides (screen only) */
+/* Le varianti --wide e --narrow sono mantenute come alias dello stesso
+   pannello da 99.67mm: il template Pixart usa fold ai terzi esatti,
+   non il letter-fold con pannello narrow. Cosi' i call-site di PanelSlot
+   con variant="wide" o variant="narrow" funzionano comunque. */
+.volantino-4-panel--wide,
+.volantino-4-panel--narrow {
+  width: 99.67mm;
+}
+
+/* Fold guides (screen only) - automatic between panels */
 .volantino-4-panel + .volantino-4-panel {
   border-left: 1px dashed rgba(0, 0, 0, 0.18);
 }
