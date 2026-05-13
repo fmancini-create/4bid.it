@@ -558,18 +558,19 @@ export default function Volantino4Client() {
     if (!node) return
     setDownloading(which)
     try {
-      const { toPng } = await import("html-to-image")
+      const { toJpeg } = await import("html-to-image")
       // Render at high DPI for print quality: ~300 DPI on a 299mm x 212mm sheet.
       // 299mm = 11.77in -> 11.77 * 300 = 3530px width; we use pixelRatio 3 to keep it manageable.
-      const dataUrl = await toPng(node, {
+      const dataUrl = await toJpeg(node, {
         pixelRatio: 3,
         cacheBust: true,
         backgroundColor: "#f5f5f4",
+        quality: 0.95,
         skipFonts: false,
       })
       const link = document.createElement("a")
       link.download =
-        which === "1" ? "volantino-4bid-fronte-interno.png" : "volantino-4bid-retro-esterno.png"
+        which === "1" ? "volantino-4bid-fronte-interno.jpg" : "volantino-4bid-retro-esterno.jpg"
       link.href = dataUrl
       link.click()
     } catch (err) {
@@ -583,16 +584,17 @@ export default function Volantino4Client() {
   const downloadBoth = async () => {
     setDownloading("all")
     try {
-      const { toPng } = await import("html-to-image")
+      const { toJpeg } = await import("html-to-image")
       for (const [ref, name] of [
-        [sheet1Ref, "volantino-4bid-fronte-interno.png"],
-        [sheet2Ref, "volantino-4bid-retro-esterno.png"],
+        [sheet1Ref, "volantino-4bid-fronte-interno.jpg"],
+        [sheet2Ref, "volantino-4bid-retro-esterno.jpg"],
       ] as const) {
         if (!ref.current) continue
-        const dataUrl = await toPng(ref.current, {
+        const dataUrl = await toJpeg(ref.current, {
           pixelRatio: 3,
           cacheBust: true,
           backgroundColor: "#f5f5f4",
+          quality: 0.95,
           skipFonts: false,
         })
         const link = document.createElement("a")
@@ -638,7 +640,7 @@ export default function Volantino4Client() {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Foglio 1 PNG
+              Foglio 1 JPG
             </Button>
             <Button
               onClick={() => downloadSheet("2")}
@@ -651,7 +653,7 @@ export default function Volantino4Client() {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Foglio 2 PNG
+              Foglio 2 JPG
             </Button>
             <Button
               onClick={downloadBoth}
@@ -664,7 +666,7 @@ export default function Volantino4Client() {
               ) : (
                 <Download className="h-4 w-4 mr-2" />
               )}
-              Entrambi PNG
+              Entrambi JPG
             </Button>
             <Button
               onClick={handlePrint}
@@ -679,8 +681,9 @@ export default function Volantino4Client() {
         </div>
         <div className="container mx-auto px-6 pb-3 -mt-1">
           <p className="text-xs text-gray-500">
-            <strong>Per la stampa Pixart:</strong> usa &quot;Entrambi PNG&quot; per scaricare le 2 immagini in alta
-            risoluzione (300 DPI) e caricale come pagina 1 e 2 nel template Pieghevoli 299&times;212mm.
+            <strong>Per la stampa Pixart:</strong> usa &quot;Entrambi JPG&quot; per scaricare le 2 immagini in alta
+            risoluzione (300 DPI, qualita&apos; 95%) e caricale come pagina 1 e 2 nel template Pieghevoli
+            299&times;212mm.
           </p>
         </div>
       </div>
@@ -711,26 +714,27 @@ export default function Volantino4Client() {
           </div>
         </div>
 
-        {/* Sheet 2 - ESTERNO: copertina | ultimo prodotto | retro copertina */}
+        {/* Sheet 2 - ESTERNO: retro copertina | ultimo prodotto | copertina
+            (ordine corretto per letter-fold: piegando, la copertina finisce sopra a destra) */}
         <div className="w-full max-w-[calc(299mm+2rem)]">
           <div className="no-print mb-3 flex items-center gap-3">
             <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider">
               Foglio 2 / Esterno
             </span>
             <span className="text-xs text-gray-500">
-              Pannelli: <strong>Copertina</strong> &middot; <strong>Hotel Accelerator</strong> &middot;{" "}
-              <strong>Retro copertina</strong>
+              Pannelli: <strong>Retro copertina</strong> &middot; <strong>Hotel Accelerator</strong> &middot;{" "}
+              <strong>Copertina</strong>
             </span>
           </div>
           <div ref={sheet2Ref} className="volantino-4-sheet">
-            <PanelSlot label="Pannello 1 - Copertina">
-              <CoverPage />
+            <PanelSlot label="Pannello 1 - Retro copertina">
+              <BackCover />
             </PanelSlot>
             <PanelSlot label="Pannello 2 - Hotel Accelerator">
               <ProductPage product={hotelAccelerator} index={3} total={totalProducts} />
             </PanelSlot>
-            <PanelSlot label="Pannello 3 - Retro copertina">
-              <BackCover />
+            <PanelSlot label="Pannello 3 - Copertina">
+              <CoverPage />
             </PanelSlot>
           </div>
         </div>
