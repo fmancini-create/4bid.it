@@ -27,13 +27,13 @@ type Product = {
   url: string
   status: ProductStatus
   productIcon: typeof TrendingUp
-  // Light editorial palette
-  ink: string // dark ink color for headings (CSS color)
-  accent: string // bright accent for highlights
-  accentSoft: string // very light tint for backgrounds
+  ink: string
+  accent: string
+  accentSoft: string
   features: { title: string; text: string }[]
 }
 
+// Same products as v3 but WITHOUT Ecomobility — 4 products total, 6 panels.
 const products: Product[] = [
   {
     id: "santaddeo",
@@ -119,7 +119,7 @@ const products: Product[] = [
     pullQuote: "+35% di prenotazioni dirette. Meno commissioni OTA.",
     logo: "/hotel-accelerator-logo.jpg",
     url: "hotelaccelerator.com",
-    status: "online",
+    status: "in-sviluppo",
     productIcon: Hotel,
     ink: "#4c1d95",
     accent: "#7c3aed",
@@ -165,7 +165,7 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
   const totalNum = String(total).padStart(2, "0")
 
   return (
-    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
+    <div className="volantino-4-inner-page bg-[#f5f5f4]">
       {/* Giant background number (decorative) */}
       <div
         className="absolute -top-10 -right-8 select-none pointer-events-none font-black leading-none"
@@ -235,10 +235,7 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
           style={{ backgroundColor: product.accentSoft, borderLeftColor: product.accent }}
         >
           <Quote className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: product.accent }} strokeWidth={2.5} />
-          <p
-            className="text-[12px] font-bold leading-snug text-pretty italic"
-            style={{ color: product.ink }}
-          >
+          <p className="text-[12px] font-bold leading-snug text-pretty italic" style={{ color: product.ink }}>
             {product.pullQuote}
           </p>
         </div>
@@ -247,17 +244,14 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
       {/* Section label */}
       <div className="px-7 pt-3 pb-2 shrink-0 relative z-10">
         <div className="flex items-center gap-2">
-          <span
-            className="text-[9px] font-bold uppercase tracking-[0.25em]"
-            style={{ color: product.accent }}
-          >
+          <span className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: product.accent }}>
             8 Caratteristiche Principali
           </span>
           <div className="flex-1 h-px bg-gray-300" />
         </div>
       </div>
 
-      {/* Features grid 2x4 - bigger cards filling all available space */}
+      {/* Features grid 2x4 */}
       <div className="px-7 flex-1 min-h-0 relative z-10 pb-4">
         <div className="grid grid-cols-2 grid-rows-4 gap-2 h-full">
           {product.features.map((f, i) => (
@@ -309,7 +303,7 @@ function ProductPage({ product, index, total }: { product: Product; index: numbe
 
 function CoverPage() {
   return (
-    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
+    <div className="volantino-4-inner-page bg-[#f5f5f4]">
       {/* Giant "4" decorative */}
       <div
         className="absolute -bottom-12 -right-8 select-none pointer-events-none font-black leading-none text-orange-100"
@@ -325,20 +319,13 @@ function CoverPage() {
         <div className="flex-1" style={{ backgroundColor: "#2563eb" }} />
         <div className="flex-1" style={{ backgroundColor: "#ea580c" }} />
         <div className="flex-1" style={{ backgroundColor: "#7c3aed" }} />
-        <div className="flex-1" style={{ backgroundColor: "#059669" }} />
       </div>
 
       {/* Header */}
       <div className="px-7 pt-7 pb-3 shrink-0 relative z-10 flex items-center gap-3">
         <div className="h-16 w-16 rounded-2xl bg-white shadow-md overflow-hidden flex items-center justify-center p-1.5">
           <div className="relative h-full w-full">
-            <Image
-              src="/4bid-borghi-logo.jpeg"
-              alt="4BID SRL"
-              fill
-              className="object-contain"
-              sizes="64px"
-            />
+            <Image src="/4bid-borghi-logo.jpeg" alt="4BID SRL" fill className="object-contain" sizes="64px" />
           </div>
         </div>
         <div>
@@ -375,7 +362,7 @@ function CoverPage() {
       {/* Lead paragraph */}
       <div className="px-7 pb-4 shrink-0 relative z-10">
         <p className="text-[13px] leading-relaxed text-gray-700 text-pretty max-w-[88%]">
-          Cinque prodotti pensati, sviluppati e gestiti da chi il settore lo vive ogni giorno. Una sola visione:
+          Quattro prodotti pensati, sviluppati e gestiti da chi il settore lo vive ogni giorno. Una sola visione:
           piu&apos; ricavi, piu&apos; controllo, meno fatica.
         </p>
       </div>
@@ -431,14 +418,13 @@ function CoverPage() {
 
 function BackCover() {
   return (
-    <div className="volantino-3-page bg-[#f5f5f4] flex flex-col relative">
+    <div className="volantino-4-inner-page bg-[#f5f5f4]">
       {/* Color band */}
       <div className="h-1.5 w-full shrink-0 flex" aria-hidden="true">
         <div className="flex-1" style={{ backgroundColor: "#0d9488" }} />
         <div className="flex-1" style={{ backgroundColor: "#2563eb" }} />
         <div className="flex-1" style={{ backgroundColor: "#ea580c" }} />
         <div className="flex-1" style={{ backgroundColor: "#7c3aed" }} />
-        <div className="flex-1" style={{ backgroundColor: "#059669" }} />
       </div>
 
       {/* Decorative big arrow */}
@@ -472,7 +458,7 @@ function BackCover() {
       {/* Steps */}
       <div className="px-7 shrink-0 relative z-10 space-y-2.5 pb-3">
         {[
-          { n: "01", title: "Contattaci", text: "Email, telefono o dal sito www.4bid.it" },
+          { n: "01", title: "Contattaci", text: "Email o dal sito www.4bid.it" },
           { n: "02", title: "Demo Personalizzata", text: "Ti mostriamo i prodotti adatti alla tua struttura" },
           { n: "03", title: "Start in Pochi Giorni", text: "Setup rapido e supporto dedicato dal primo giorno" },
         ].map((s) => (
@@ -544,12 +530,24 @@ function BackCover() {
   )
 }
 
-export default function Volantino3Client() {
+// Wraps a panel page in the scale container that fits A5 design into 99mm panel.
+function PanelSlot({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <div className="volantino-4-panel">
+      {/* Print-only safe area marker (hidden via no-print outside print) */}
+      <span className="sr-only">{label}</span>
+      <div className="volantino-4-scale">{children}</div>
+    </div>
+  )
+}
+
+export default function Volantino4Client() {
   const handlePrint = () => {
     window.print()
   }
 
-  const totalProductPages = products.length
+  const totalProducts = products.length // 4
+  const [santaddeo, hotelProfit, manubot, hotelAccelerator] = products
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -557,16 +555,16 @@ export default function Volantino3Client() {
       <div className="no-print sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Volantino Prodotti 4BID &mdash; v3 Editoriale</h1>
+            <h1 className="text-xl font-bold text-gray-900">Volantino Prodotti 4BID &mdash; v4 Tri-fold A4</h1>
             <p className="text-sm text-gray-500">
-              {totalProductPages + 2} facciate A5 &middot; stile light editoriale &middot; 8 caratteristiche per
-              prodotto
+              2 fogli A4 orizzontali &middot; 3 pannelli per lato (99mm) &middot; 6 facciate totali pronte stampa
             </p>
           </div>
           <div className="flex items-center gap-3">
             <p className="hidden md:block text-xs text-gray-500 max-w-xs text-right">
               Premi <span className="font-semibold">Stampa PDF</span> e nel dialog del browser scegli{" "}
-              <span className="font-semibold">&quot;Salva come PDF&quot;</span> con formato A5.
+              <span className="font-semibold">&quot;Salva come PDF&quot;</span> con formato{" "}
+              <span className="font-semibold">A4 orizzontale</span>.
             </p>
             <Button onClick={handlePrint} size="lg" className="bg-gray-900 hover:bg-gray-800 text-white">
               <Printer className="h-5 w-5 mr-2" />
@@ -576,13 +574,55 @@ export default function Volantino3Client() {
         </div>
       </div>
 
-      {/* Pages */}
-      <div className="py-8 px-4 print:p-0 flex flex-col items-center gap-8 print:gap-0">
-        <CoverPage />
-        {products.map((p, i) => (
-          <ProductPage key={p.id} product={p} index={i} total={totalProductPages} />
-        ))}
-        <BackCover />
+      {/* Sheets */}
+      <div className="py-8 px-4 print:p-0 flex flex-col items-center gap-10 print:gap-0">
+        {/* Sheet 1 - INTERNO (interior face): pages 2, 3, 4 = 3 products */}
+        <div className="w-full max-w-[calc(297mm+2rem)]">
+          <div className="no-print mb-3 flex items-center gap-3">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+              Foglio 1 / Interno
+            </span>
+            <span className="text-xs text-gray-500">
+              Pannelli: <strong>Santaddeo</strong> &middot; <strong>HotelProfit AI</strong> &middot;{" "}
+              <strong>Manubot</strong>
+            </span>
+          </div>
+          <div className="volantino-4-sheet">
+            <PanelSlot label="Pannello 1 - Santaddeo">
+              <ProductPage product={santaddeo} index={0} total={totalProducts} />
+            </PanelSlot>
+            <PanelSlot label="Pannello 2 - HotelProfit AI">
+              <ProductPage product={hotelProfit} index={1} total={totalProducts} />
+            </PanelSlot>
+            <PanelSlot label="Pannello 3 - Manubot">
+              <ProductPage product={manubot} index={2} total={totalProducts} />
+            </PanelSlot>
+          </div>
+        </div>
+
+        {/* Sheet 2 - ESTERNO (exterior face): copertina | ultimo prodotto | retro copertina */}
+        <div className="w-full max-w-[calc(297mm+2rem)]">
+          <div className="no-print mb-3 flex items-center gap-3">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider">
+              Foglio 2 / Esterno
+            </span>
+            <span className="text-xs text-gray-500">
+              Pannelli: <strong>Copertina</strong> &middot; <strong>Hotel Accelerator</strong> &middot;{" "}
+              <strong>Retro copertina</strong>
+            </span>
+          </div>
+          <div className="volantino-4-sheet">
+            <PanelSlot label="Pannello 1 - Copertina">
+              <CoverPage />
+            </PanelSlot>
+            <PanelSlot label="Pannello 2 - Hotel Accelerator">
+              <ProductPage product={hotelAccelerator} index={3} total={totalProducts} />
+            </PanelSlot>
+            <PanelSlot label="Pannello 3 - Retro copertina">
+              <BackCover />
+            </PanelSlot>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -1,0 +1,102 @@
+/* Tri-fold A4 LANDSCAPE: 297mm x 210mm with 3 panels of 99mm each.
+   Each panel hosts the same A5 layout from v3 (148x210mm) visually
+   scaled to 99mm width via CSS transform, keeping the editorial look
+   intact and ready for offset/digital print. */
+
+.volantino-4-sheet {
+  width: 297mm;
+  height: 210mm;
+  display: flex;
+  background: #f5f5f4;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  color-adjust: exact;
+}
+
+@media screen {
+  .volantino-4-sheet {
+    margin: 0 auto;
+  }
+}
+
+.volantino-4-panel {
+  width: 99mm;
+  height: 210mm;
+  overflow: hidden;
+  position: relative;
+  background: #f5f5f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fold guides (screen only) */
+.volantino-4-panel + .volantino-4-panel {
+  border-left: 1px dashed rgba(0, 0, 0, 0.18);
+}
+
+/* Scaled wrapper: holds an A5-sized page (148x210mm) shrunk to 99mm width.
+   Scale factor = 99/148 = 0.6689. */
+.volantino-4-scale {
+  width: 148mm;
+  height: 210mm;
+  transform: scale(0.6689);
+  transform-origin: center center;
+  flex-shrink: 0;
+}
+
+/* The page inside the scale wrapper still uses .volantino-3-page-like geometry */
+.volantino-4-inner-page {
+  width: 148mm;
+  height: 210mm;
+  min-height: 210mm;
+  max-height: 210mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  color-adjust: exact;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #f5f5f4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .volantino-4-sheet {
+    width: 297mm !important;
+    height: 210mm !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: hidden !important;
+  }
+
+  .volantino-4-sheet:last-child {
+    page-break-after: auto;
+  }
+
+  .volantino-4-panel + .volantino-4-panel {
+    border-left: none;
+  }
+}
