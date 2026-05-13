@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useState } from "react"
 import Image from "next/image"
 import {
   Printer,
@@ -11,6 +12,8 @@ import {
   Mail,
   ArrowRight,
   Quote,
+  Download,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import "./print.css"
@@ -119,7 +122,7 @@ const products: Product[] = [
     pullQuote: "+35% di prenotazioni dirette. Meno commissioni OTA.",
     logo: "/hotel-accelerator-logo.jpg",
     url: "hotelaccelerator.com",
-    status: "in-sviluppo",
+    status: "online",
     productIcon: Hotel,
     ink: "#4c1d95",
     accent: "#7c3aed",
@@ -542,8 +545,69 @@ function PanelSlot({ children, label }: { children: React.ReactNode; label: stri
 }
 
 export default function Volantino4Client() {
+  const sheet1Ref = useRef<HTMLDivElement>(null)
+  const sheet2Ref = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState<"idle" | "1" | "2" | "all">("idle")
+
   const handlePrint = () => {
     window.print()
+  }
+
+  const downloadSheet = async (which: "1" | "2") => {
+    const node = which === "1" ? sheet1Ref.current : sheet2Ref.current
+    if (!node) return
+    setDownloading(which)
+    try {
+      const { toPng } = await import("html-to-image")
+      // Render at high DPI for print quality: ~300 DPI on a 299mm x 212mm sheet.
+      // 299mm = 11.77in -> 11.77 * 300 = 3530px width; we use pixelRatio 3 to keep it manageable.
+      const dataUrl = await toPng(node, {
+        pixelRatio: 3,
+        cacheBust: true,
+        backgroundColor: "#f5f5f4",
+        skipFonts: false,
+      })
+      const link = document.createElement("a")
+      link.download =
+        which === "1" ? "volantino-4bid-fronte-interno.png" : "volantino-4bid-retro-esterno.png"
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error("[v0] download error", err)
+      alert("Errore nel download. Riprova o usa il pulsante Stampa PDF.")
+    } finally {
+      setDownloading("idle")
+    }
+  }
+
+  const downloadBoth = async () => {
+    setDownloading("all")
+    try {
+      const { toPng } = await import("html-to-image")
+      for (const [ref, name] of [
+        [sheet1Ref, "volantino-4bid-fronte-interno.png"],
+        [sheet2Ref, "volantino-4bid-retro-esterno.png"],
+      ] as const) {
+        if (!ref.current) continue
+        const dataUrl = await toPng(ref.current, {
+          pixelRatio: 3,
+          cacheBust: true,
+          backgroundColor: "#f5f5f4",
+          skipFonts: false,
+        })
+        const link = document.createElement("a")
+        link.download = name
+        link.href = dataUrl
+        link.click()
+        // Small pause so the browser registers the second download
+        await new Promise((r) => setTimeout(r, 400))
+      }
+    } catch (err) {
+      console.error("[v0] download all error", err)
+      alert("Errore nel download. Riprova o usa il pulsante Stampa PDF.")
+    } finally {
+      setDownloading("idle")
+    }
   }
 
   const totalProducts = products.length // 4
@@ -553,31 +617,78 @@ export default function Volantino4Client() {
     <div className="min-h-screen bg-gray-100">
       {/* Toolbar - hidden on print */}
       <div className="no-print sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Volantino Prodotti 4BID &mdash; v4 Tri-fold A4</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              Volantino Prodotti 4BID &mdash; v4 Tri-fold A4 (Pixart 299&times;212mm)
+            </h1>
             <p className="text-sm text-gray-500">
-              2 fogli A4 orizzontali &middot; 3 pannelli per lato (99mm) &middot; 6 facciate totali pronte stampa
+              2 fogli A4 orizzontali &middot; 3 pannelli da 99,67mm &middot; pronto per upload su Pixart
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <p className="hidden md:block text-xs text-gray-500 max-w-xs text-right">
-              Premi <span className="font-semibold">Stampa PDF</span> e nel dialog del browser scegli{" "}
-              <span className="font-semibold">&quot;Salva come PDF&quot;</span> con formato{" "}
-              <span className="font-semibold">A4 orizzontale</span>.
-            </p>
-            <Button onClick={handlePrint} size="lg" className="bg-gray-900 hover:bg-gray-800 text-white">
-              <Printer className="h-5 w-5 mr-2" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => downloadSheet("1")}
+              size="sm"
+              variant="outline"
+              disabled={downloading !== "idle"}
+            >
+              {downloading === "1" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Foglio 1 PNG
+            </Button>
+            <Button
+              onClick={() => downloadSheet("2")}
+              size="sm"
+              variant="outline"
+              disabled={downloading !== "idle"}
+            >
+              {downloading === "2" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Foglio 2 PNG
+            </Button>
+            <Button
+              onClick={downloadBoth}
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={downloading !== "idle"}
+            >
+              {downloading === "all" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Entrambi PNG
+            </Button>
+            <Button
+              onClick={handlePrint}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+              disabled={downloading !== "idle"}
+            >
+              <Printer className="h-4 w-4 mr-2" />
               Stampa PDF
             </Button>
           </div>
+        </div>
+        <div className="container mx-auto px-6 pb-3 -mt-1">
+          <p className="text-xs text-gray-500">
+            <strong>Per la stampa Pixart:</strong> usa &quot;Entrambi PNG&quot; per scaricare le 2 immagini in alta
+            risoluzione (300 DPI) e caricale come pagina 1 e 2 nel template Pieghevoli 299&times;212mm.
+          </p>
         </div>
       </div>
 
       {/* Sheets */}
       <div className="py-8 px-4 print:p-0 flex flex-col items-center gap-10 print:gap-0">
-        {/* Sheet 1 - INTERNO (interior face): pages 2, 3, 4 = 3 products */}
-        <div className="w-full max-w-[calc(297mm+2rem)]">
+        {/* Sheet 1 - INTERNO: 3 prodotti */}
+        <div className="w-full max-w-[calc(299mm+2rem)]">
           <div className="no-print mb-3 flex items-center gap-3">
             <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider">
               Foglio 1 / Interno
@@ -587,7 +698,7 @@ export default function Volantino4Client() {
               <strong>Manubot</strong>
             </span>
           </div>
-          <div className="volantino-4-sheet">
+          <div ref={sheet1Ref} className="volantino-4-sheet">
             <PanelSlot label="Pannello 1 - Santaddeo">
               <ProductPage product={santaddeo} index={0} total={totalProducts} />
             </PanelSlot>
@@ -600,8 +711,8 @@ export default function Volantino4Client() {
           </div>
         </div>
 
-        {/* Sheet 2 - ESTERNO (exterior face): copertina | ultimo prodotto | retro copertina */}
-        <div className="w-full max-w-[calc(297mm+2rem)]">
+        {/* Sheet 2 - ESTERNO: copertina | ultimo prodotto | retro copertina */}
+        <div className="w-full max-w-[calc(299mm+2rem)]">
           <div className="no-print mb-3 flex items-center gap-3">
             <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider">
               Foglio 2 / Esterno
@@ -611,7 +722,7 @@ export default function Volantino4Client() {
               <strong>Retro copertina</strong>
             </span>
           </div>
-          <div className="volantino-4-sheet">
+          <div ref={sheet2Ref} className="volantino-4-sheet">
             <PanelSlot label="Pannello 1 - Copertina">
               <CoverPage />
             </PanelSlot>
