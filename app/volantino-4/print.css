@@ -1,18 +1,20 @@
-/* Tri-fold A4 Pixart "piega a portafoglio" 299x212mm.
-   IMPORTANT: panels are NOT equal width. The panel that folds inward first
-   must be ~1mm narrower so it doesn't crease when the sheet is closed.
+/* Tri-fold A4 Pixart "Pieghevoli 3 ante" 299x212mm con pieghe ai terzi esatti.
+   Le pieghe del template Pixart cadono a 99.67mm e 199.33mm dal bordo,
+   quindi i 3 pannelli sono identici da 99.67mm cadauno.
 
-   Standard letter-fold for 299mm:
-     - 2 outer panels: 100mm each (wide)
-     - 1 inner-flap panel: 99mm (narrow)
-     - Total: 100 + 100 + 99 = 299mm
+   Math:
+     - Visual panel width = 99.67mm (299 / 3)
+     - Logical design width = 148mm (per mantenere tipografia A5)
+     - Scale uniforme = 99.67 / 148 = 0.6735
+     - Logical design height = 212 / 0.6735 = 314.81mm
+   Con scale uniforme la tipografia resta identica e il flex grid 2x4
+   delle feature si allunga verticalmente fino a riempire i 212mm visivi
+   senza bande grigie sopra/sotto.
 
-   Per-panel scaling uses CSS custom properties:
-     --panel-w-mm:     visual panel width  (e.g. 100 or 99)
-     --panel-scale:    uniform scale factor (e.g. 100/148 = 0.67568)
-     --panel-h-log:    logical height before scale (212 / scale)
-   With logical width fixed at 148mm, every panel keeps the same design
-   typography and the inner flex grid stretches vertically to fill 212mm. */
+   IMPORTANT: l'utente carica il JPG su Pixart a scala 100%. NON serve
+   adattarlo alle pieghe perche' i bordi tra pannelli combaciano gia'
+   con le pieghe gialle Pixart. Se l'utente trascina/scala il file
+   manualmente, le proporzioni si rompono e il contenuto viene tagliato. */
 
 .volantino-4-sheet {
   width: 299mm;
@@ -35,12 +37,7 @@
 }
 
 .volantino-4-panel {
-  /* Defaults fall back to the wide configuration if no variant set */
-  --panel-w-mm: 100;
-  --panel-scale: 0.67568;
-  --panel-h-log: 313.78mm;
-
-  width: calc(var(--panel-w-mm) * 1mm);
+  width: 99.67mm;
   height: 212mm;
   overflow: hidden;
   position: relative;
@@ -51,18 +48,13 @@
   flex-shrink: 0;
 }
 
-/* Wide panel (100mm) - used for the 2 outer panels of each sheet */
-.volantino-4-panel--wide {
-  --panel-w-mm: 100;
-  --panel-scale: 0.67568;
-  --panel-h-log: 313.78mm;
-}
-
-/* Narrow panel (99mm) - the inner-flap panel that folds in first */
+/* Le varianti --wide e --narrow sono mantenute come alias dello stesso
+   pannello da 99.67mm: il template Pixart usa fold ai terzi esatti,
+   non il letter-fold con pannello narrow. Cosi' i call-site di PanelSlot
+   con variant="wide" o variant="narrow" funzionano comunque. */
+.volantino-4-panel--wide,
 .volantino-4-panel--narrow {
-  --panel-w-mm: 99;
-  --panel-scale: 0.66892;
-  --panel-h-log: 316.94mm;
+  width: 99.67mm;
 }
 
 /* Fold guides (screen only) - automatic between panels */
@@ -70,24 +62,23 @@
   border-left: 1px dashed rgba(0, 0, 0, 0.18);
 }
 
-/* Scaled wrapper: holds the design at 148mm logical width and stretches
-   vertically to the variant's logical height; uniform scale shrinks it
-   to the exact panel width and 212mm visual height. */
+/* Scaled wrapper: holds a portrait page (148x314.81mm) shrunk to fill
+   the full 99.67x212mm panel (no gray bands). */
 .volantino-4-scale {
   width: 148mm;
-  height: var(--panel-h-log);
-  transform: scale(var(--panel-scale));
+  height: 314.81mm;
+  transform: scale(0.6735);
   transform-origin: center center;
   flex-shrink: 0;
 }
 
-/* The page inside the scale wrapper. Height matches the variant's logical
-   height so flex children (grid features 2x4) auto-expand to fill the panel. */
+/* The page inside the scale wrapper - taller than A5 so flex children
+   (grid features 2x4) auto-expand to fill the panel height. */
 .volantino-4-inner-page {
   width: 148mm;
-  height: var(--panel-h-log);
-  min-height: var(--panel-h-log);
-  max-height: var(--panel-h-log);
+  height: 314.81mm;
+  min-height: 314.81mm;
+  max-height: 314.81mm;
   overflow: hidden;
   display: flex;
   flex-direction: column;
