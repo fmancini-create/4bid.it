@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CampaignsManager } from "@/components/social/campaigns-manager"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -732,7 +733,7 @@ export default function SocialMediaDashboard({
         <Tabs defaultValue="drafts" className="w-full">
           {" "}
           {/* Changed defaultValue to "drafts" */}
-          <TabsList className="w-full grid grid-cols-4 h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-5 h-9 sm:h-10">
             <TabsTrigger value="drafts" className="text-[10px] sm:text-sm py-1.5 px-1">
               Bozze
             </TabsTrigger>
@@ -744,6 +745,9 @@ export default function SocialMediaDashboard({
             </TabsTrigger>
             <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 px-1">
               Tutti
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="text-[10px] sm:text-sm py-1.5 px-1">
+              Campagne
             </TabsTrigger>
           </TabsList>
           <TabsContent value="drafts" className="space-y-4 mt-4">
@@ -815,6 +819,9 @@ export default function SocialMediaDashboard({
                 onRepost={post.status === "published" || post.status === "failed" ? () => repostPost(post) : undefined}
               />
             ))}
+          </TabsContent>
+          <TabsContent value="campaigns" className="space-y-4 mt-4">
+            <CampaignsManager />
           </TabsContent>
         </Tabs>
       </main>

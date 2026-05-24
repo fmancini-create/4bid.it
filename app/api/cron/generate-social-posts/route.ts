@@ -1,112 +1,116 @@
-import { createClient } from "@/lib/supabase/server"
-import { generateText } from "ai"
+import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
+import { runCampaign, shouldRunCampaign, type CampaignRule } from "@/lib/social/campaign-runner"
 
+export const maxDuration = 300
+
+/**
+ * Cron giornaliero: scorre tutte le campagne attive in social_topic_rules,
+ * decide quali sono "due" (cadenza, weekday, range date) e per ognuna genera
+ * batch_size post (testo + immagine + scheduling) inserendoli in social_posts.
+ *
+ * NB: usa il client service-role per bypassare RLS, come tutti i cron del progetto.
+ */
 export async function GET(request: NextRequest) {
+  const startedAt = new Date()
   try {
     const authHeader = request.headers.get("authorization")
     const isVercelCron =
-      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+      request.headers.has("x-vercel-cron-signature") ||
+      request.headers.get("user-agent")?.includes("vercel-cron")
     const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
     const isDev = process.env.NODE_ENV === "development"
+
+    console.log("[v0] generate-social-posts cron called", {
+      isVercelCron,
+      isManuallyAuthorized,
+      isDev,
+    })
 
     if (!isDev && !isVercelCron && !isManuallyAuthorized) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 
-    const supabase = await createClient()
-
-    // Recupera impostazioni
-    const { data: settings } = await supabase.from("social_settings").select("*").single()
-
-    if (!settings?.auto_generate_enabled) {
-      return NextResponse.json({ message: "Auto-generation disabled" })
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json(
+        { error: "Supabase env missing", details: { supabaseUrl: !!supabaseUrl, serviceKey: !!serviceKey } },
+        { status: 500 },
+      )
     }
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
 
-    // Controlla se è il momento di generare
-    const lastGenerated = settings.last_auto_generated_at ? new Date(settings.last_auto_generated_at) : new Date(0)
-
-    const daysSinceLastGeneration = Math.floor((Date.now() - lastGenerated.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (daysSinceLastGeneration < settings.posting_frequency_days) {
-      return NextResponse.json({
-        message: "Not time yet",
-        daysSinceLastGeneration,
-        frequencyDays: settings.posting_frequency_days,
-      })
-    }
-
-    // Recupera contesto dal knowledge base
-    const { data: knowledge } = await supabase
-      .from("knowledge_base")
-      .select("title, content")
+    // Carica tutte le campagne attive
+    const { data: rules, error: rulesErr } = await supabase
+      .from("social_topic_rules")
+      .select("*")
       .eq("is_active", true)
-      .limit(5)
+      .order("created_at", { ascending: true })
 
-    const knowledgeContext = knowledge?.map((k) => `${k.title}: ${k.content}`).join("\n") || ""
-
-    // Scegli un topic casuale
-    const topics = settings.topics || ["revenue management", "hospitality", "hotel technology"]
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)]
-
-    const toneInstructions = {
-      professional: "Usa un tono professionale e autorevole.",
-      casual: "Usa un tono amichevole e accessibile.",
-      inspirational: "Usa un tono motivazionale e ispirante.",
+    if (rulesErr) {
+      return NextResponse.json({ error: "Errore lettura campagne", details: rulesErr.message }, { status: 500 })
     }
 
-    // Genera il post con AI
-    const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4-20250514",
-      prompt: `Sei il social media manager di 4BID, società italiana specializzata in Revenue Management per hotel e sviluppo di prodotti tecnologici innovativi.
+    const summary = {
+      started_at: startedAt.toISOString(),
+      total_rules: rules?.length || 0,
+      executed: 0,
+      skipped: 0,
+      total_posts_created: 0,
+      details: [] as Array<{
+        id: string
+        topic: string
+        action: "executed" | "skipped"
+        reason?: string
+        created?: number
+        errors?: string[]
+      }>,
+    }
 
-Contesto:
-${knowledgeContext}
+    for (const rule of (rules || []) as CampaignRule[]) {
+      const decision = shouldRunCampaign(rule, new Date())
+      if (!decision.run) {
+        summary.skipped++
+        summary.details.push({ id: rule.id, topic: rule.topic_name, action: "skipped", reason: decision.reason })
+        continue
+      }
+      try {
+        const r = await runCampaign(supabase, rule)
+        summary.executed++
+        summary.total_posts_created += r.created
+        summary.details.push({
+          id: rule.id,
+          topic: rule.topic_name,
+          action: "executed",
+          created: r.created,
+          errors: r.errors.length ? r.errors : undefined,
+        })
+      } catch (e) {
+        summary.details.push({
+          id: rule.id,
+          topic: rule.topic_name,
+          action: "executed",
+          created: 0,
+          errors: [e instanceof Error ? e.message : "unknown error"],
+        })
+      }
+    }
 
-Genera un post per social media su: "${randomTopic}"
-
-Requisiti:
-- ${toneInstructions[settings.tone as keyof typeof toneInstructions] || toneInstructions.professional}
-- 150-280 caratteri
-- Deve incuriosire e generare interazione
-- Scrivi in italiano
-${settings.include_hashtags ? `- Aggiungi hashtag: ${settings.default_hashtags?.join(" ") || "#4BID #RevenueManagement"}` : ""}
-
-Rispondi SOLO con il testo del post.`,
-      maxTokens: 500,
+    console.log("[v0] generate-social-posts done", {
+      total: summary.total_rules,
+      executed: summary.executed,
+      created: summary.total_posts_created,
     })
 
-    // Salva il post generato
-    const { data: newPost, error } = await supabase
-      .from("social_posts")
-      .insert({
-        content: text.trim(),
-        platforms: ["facebook", "instagram", "linkedin"],
-        status: "pending_approval",
-        is_ai_generated: true,
-        ai_topic: randomTopic,
-        auto_publish: false,
-        requires_approval: true,
-        hashtags: text.match(/#\w+/g) || [],
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Aggiorna timestamp ultima generazione
-    await supabase
-      .from("social_settings")
-      .update({ last_auto_generated_at: new Date().toISOString() })
-      .eq("id", settings.id)
-
-    return NextResponse.json({
-      success: true,
-      post: newPost,
-      topic: randomTopic,
-    })
+    return NextResponse.json({ success: true, ...summary })
   } catch (error) {
     console.error("[v0] Error in cron generate-social-posts:", error)
-    return NextResponse.json({ error: "Errore nella generazione" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Errore nella generazione", details: error instanceof Error ? error.message : "unknown" },
+      { status: 500 },
+    )
   }
 }
