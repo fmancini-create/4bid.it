@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   try {
-    // Verifichiamo solo se NON è in produzione o se l'header corrisponde
+    // Auth: Vercel cron header OR manual Bearer CRON_SECRET (dev or curl)
     const authHeader = request.headers.get("authorization")
     const isVercelCron =
-      request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
+      request.headers.has("x-vercel-cron-signature") ||
+      request.headers.get("user-agent")?.includes("vercel-cron")
     const isManuallyAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`
     const isDev = process.env.NODE_ENV === "development"
 
@@ -23,55 +26,118 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const sql = neon(process.env.SUPABASE_POSTGRES_URL!)
+    // Use the Supabase REST client with the service role key. This bypasses RLS
+    // without depending on a direct Postgres connection.
+    //
+    // IMPORTANT: do NOT use `neon(SUPABASE_POSTGRES_URL)` here. The Neon driver
+    // talks only to the Neon HTTP proxy on `*.neon.tech`; pointing it at a
+    // Supabase Postgres host (`db.<ref>.supabase.co`) fails with `fetch failed`
+    // and 500s every cron run. See user memory entry "Bug @neondatabase/serverless
+    // puntato a Supabase (18/05/2026)".
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    console.log("[v0] Starting daily snapshot save at", new Date().toISOString())
-    console.log("[v0] Environment check:", {
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("[v0] Missing Supabase env:", {
+        hasSupabaseUrl: !!supabaseUrl,
+        hasServiceRoleKey: !!serviceRoleKey,
+      })
+      return NextResponse.json(
+        { error: "Server misconfigured: missing Supabase credentials" },
+        { status: 500 },
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     })
 
-    // Ottieni tutte le landing pages
-    const pages = await sql`SELECT id, views, conversions FROM landing_pages`
+    console.log("[v0] Starting daily snapshot save at", new Date().toISOString())
 
-    console.log(`[v0] Found ${pages?.length || 0} landing pages to snapshot`)
-    console.log(
-      "[v0] Landing pages data:",
-      pages?.map((p) => ({ id: p.id, views: p.views, conversions: p.conversions })),
-    )
+    // Read the current totals for every landing page
+    const { data: pages, error: pagesError } = await supabase
+      .from("landing_pages")
+      .select("id, views, conversions")
+
+    if (pagesError) {
+      console.error("[v0] Failed to read landing_pages:", pagesError)
+      return NextResponse.json(
+        { error: "Failed to read landing pages", details: pagesError.message },
+        { status: 500 },
+      )
+    }
+
+    console.log(`[v0] Found ${pages?.length ?? 0} landing pages to snapshot`)
 
     const today = new Date().toISOString().split("T")[0] // YYYY-MM-DD
 
+    let upserted = 0
+    const failures: Array<{ landing_page_id: string; error: string }> = []
+
     if (pages && pages.length > 0) {
-      // Inserisci ogni snapshot usando SQL diretto (bypassa RLS)
-      for (const page of pages) {
-        await sql`
-          INSERT INTO landing_page_daily_stats (landing_page_id, date, views, conversions)
-          VALUES (${page.id}, ${today}, ${page.views || 0}, ${page.conversions || 0})
-          ON CONFLICT (landing_page_id, date) 
-          DO UPDATE SET views = ${page.views || 0}, conversions = ${page.conversions || 0}
-        `
-        console.log(`[v0] Saved snapshot for page ${page.id}`)
+      const rows = pages.map((p) => ({
+        landing_page_id: p.id,
+        date: today,
+        views: p.views ?? 0,
+        conversions: p.conversions ?? 0,
+      }))
+
+      // Bulk upsert first (single round-trip when the unique index exists).
+      const { error: bulkError } = await supabase
+        .from("landing_page_daily_stats")
+        .upsert(rows, { onConflict: "landing_page_id,date" })
+
+      if (bulkError) {
+        console.warn(
+          "[v0] Bulk upsert failed, falling back to per-row upsert:",
+          bulkError.message,
+        )
+
+        // Fallback: per-row upsert so one bad row doesn't kill the rest.
+        for (const row of rows) {
+          const { error: rowError } = await supabase
+            .from("landing_page_daily_stats")
+            .upsert(row, { onConflict: "landing_page_id,date" })
+
+          if (rowError) {
+            console.error(`[v0] Failed to upsert page ${row.landing_page_id}:`, rowError.message)
+            failures.push({ landing_page_id: row.landing_page_id, error: rowError.message })
+          } else {
+            upserted += 1
+          }
+        }
+      } else {
+        upserted = rows.length
       }
     }
 
-    console.log("[v0] Daily snapshot saved successfully at", new Date().toISOString())
+    console.log("[v0] Daily snapshot finished at", new Date().toISOString(), {
+      pages_found: pages?.length ?? 0,
+      upserted,
+      failures: failures.length,
+    })
 
     return NextResponse.json({
-      success: true,
-      message: "Daily snapshot saved successfully",
-      pages_saved: pages?.length || 0,
+      success: failures.length === 0,
+      message:
+        failures.length === 0
+          ? "Daily snapshot saved successfully"
+          : "Daily snapshot saved with some failures",
+      pages_found: pages?.length ?? 0,
+      upserted,
+      failures,
       timestamp: new Date().toISOString(),
-      snapshots_preview: pages?.slice(0, 3) || [],
     })
   } catch (error) {
     console.error("[v0] Error in save-daily-snapshot cron:", {
-      error,
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
     return NextResponse.json(
-      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     )
   }
