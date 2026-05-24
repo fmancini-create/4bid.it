@@ -214,36 +214,41 @@ export async function runCampaign(
       const scheduledFor = pickScheduledSlot(rule, i, now)
       const hashtags = text.match(/#\w+/g) || rule.default_hashtags || []
 
-      const { data: newPost, error } = await supabase
-        .from("social_posts")
-        .insert({
-          content: text,
-          platforms,
-          target_accounts: rule.target_accounts || [],
-          status: rule.auto_publish ? "scheduled" : "pending_approval",
-          is_ai_generated: true,
-          ai_topic: rule.topic_name,
-          campaign_rule_id: rule.id,
-          scheduled_for: scheduledFor.toISOString(),
-          auto_publish: rule.auto_publish,
-          requires_approval: !rule.auto_publish,
-          hashtags,
-          image_url: imageUrl,
-          post_type: imageUrl ? "image" : "text",
-          link_url: rule.link_url,
-          media_priority: imageUrl ? "image" : "text",
-        })
-        .select("id")
-        .single()
+      const insertPayload = {
+        content: text,
+        platforms,
+        target_accounts: rule.target_accounts || [],
+        status: rule.auto_publish ? "scheduled" : "pending_approval",
+        is_ai_generated: true,
+        ai_topic: rule.topic_name,
+        campaign_rule_id: rule.id,
+        scheduled_for: scheduledFor.toISOString(),
+        auto_publish: rule.auto_publish,
+        requires_approval: !rule.auto_publish,
+        hashtags,
+        image_url: imageUrl,
+        post_type: imageUrl ? "image" : "text",
+        link_url: rule.link_url,
+        // social_posts_media_priority_check: ammesso 'image' / 'video' / 'link'.
+        // Niente "text": fallback su "link" se c'e' link_url, altrimenti "image".
+        media_priority: imageUrl ? "image" : rule.link_url ? "link" : "image",
+      }
 
-      if (error) {
-        errors.push(`post #${i + 1}: ${error.message}`)
-      } else if (newPost) {
-        postIds.push(newPost.id)
+      // Insert + readback. Tolleriamo il caso in cui il readback fallisca
+      // (es. RLS o trigger di mutazione): se l'INSERT non ha errori, conta come created.
+      const ins = await supabase.from("social_posts").insert(insertPayload).select("id")
+      if (ins.error) {
+        console.error(`[v0] campaign ${rule.topic_name} post #${i + 1} insert error:`, ins.error.message)
+        errors.push(`post #${i + 1}: ${ins.error.message}`)
+      } else {
+        const id = ins.data?.[0]?.id
+        if (id) postIds.push(id)
         created++
       }
     } catch (e) {
-      errors.push(`post #${i + 1}: ${e instanceof Error ? e.message : "unknown error"}`)
+      const msg = e instanceof Error ? e.message : "unknown error"
+      console.error(`[v0] campaign ${rule.topic_name} post #${i + 1} thrown:`, msg)
+      errors.push(`post #${i + 1}: ${msg}`)
     }
   }
 
