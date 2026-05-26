@@ -102,7 +102,11 @@ const ReturnPage = ({ structure, booking }: Props) => {
   }
 
   // Calcola tempo trascorso
-  const pickupTime = booking.actual_pickup_at ? new Date(booking.actual_pickup_at) : null
+  const pickupTime = booking.actual_pickup_datetime
+    ? new Date(booking.actual_pickup_datetime)
+    : booking.actual_pickup_at
+    ? new Date(booking.actual_pickup_at)
+    : null
   const elapsedMinutes = pickupTime ? Math.floor((Date.now() - pickupTime.getTime()) / 60000) : 0
   const elapsedHours = Math.floor(elapsedMinutes / 60)
   const remainingMinutes = elapsedMinutes % 60
