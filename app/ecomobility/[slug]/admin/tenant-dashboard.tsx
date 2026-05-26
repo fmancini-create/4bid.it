@@ -552,6 +552,12 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
               {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
               Accedi
             </Button>
+            <a
+              href={`/ecomobility/${structure.slug}/admin/forgot-password`}
+              className="block text-center text-sm text-muted-foreground hover:text-foreground mt-2"
+            >
+              Password dimenticata?
+            </a>
           </CardContent>
         </Card>
       </div>

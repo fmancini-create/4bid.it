@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { sendBookingConfirmation } from "@/lib/ecomobility/notifications"
+import { sendBookingConfirmation, notifyStructureNewBooking } from "@/lib/ecomobility/notifications"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -137,6 +137,15 @@ export async function POST(request: NextRequest) {
           }
         } catch (e) {
           console.error("[v0] sendBookingConfirmation error:", e)
+        }
+
+        // Notifica reception struttura
+        try {
+          if (session.metadata.structure_id) {
+            await notifyStructureNewBooking(session.metadata.structure_id, bookingId)
+          }
+        } catch (e) {
+          console.error("[v0] notifyStructureNewBooking error:", e)
         }
 
         break
