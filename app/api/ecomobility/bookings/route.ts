@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { nanoid } from "nanoid"
+import { estimateInitialAmount } from "@/lib/ecomobility/pricing"
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
         booking_code: bookingCode,
         pickup_datetime: `${pickupDate}T${pickupTime}:00`,
         status: "pending",
-        estimated_amount: pricing?.hour_1 || pricing?.minimum_charge || 0,
+        estimated_amount: estimateInitialAmount(pricing),
         deposit_amount: pricing?.deposit || 100,
         payment_status: "pending",
         conditions_accepted: true,
@@ -124,9 +125,8 @@ export async function POST(request: NextRequest) {
       details: { booking_code: bookingCode },
     })
 
-    // TODO: Creare sessione Stripe per pagamento e pre-autorizzazione cauzione
-    // TODO: Inviare notifica email al cliente
-    // TODO: Inviare notifica alla struttura
+    // Pagamento, email e notifica struttura sono gestiti dal flusso /api/ecomobility/checkout
+    // (Stripe Checkout) e dal webhook su checkout.session.completed.
 
     return NextResponse.json({
       success: true,

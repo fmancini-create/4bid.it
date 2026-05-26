@@ -1,10 +1,44 @@
 import { sendEmail } from "@/lib/email-smtp"
+import { createAdminClient } from "@/lib/supabase/server-admin"
+
+const LOGO_URL = "https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75"
+
+const wrap = (title: string, body: string) => `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;background-color:#ffffff;padding:40px;">
+    <div style="text-align:center;margin-bottom:30px;"><img src="${LOGO_URL}" alt="4BID" style="height:60px;"></div>
+    <h1 style="color:#1f2937;font-size:24px;margin-bottom:20px;">${title}</h1>
+    ${body}
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;">
+    <p style="color:#9ca3af;font-size:12px;text-align:center;">
+      4BID S.r.l. - Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)<br>P.IVA: 06241710489
+    </p>
+  </div>
+</body></html>`
 
 // Notifica documenti approvati
-export async function notifyDocumentsApproved(customerId: string, structureId: string, bookingId?: string) {
-  // Per ora solo log - implementare con dati reali
-  console.log("[v0] Documents approved notification:", { customerId, structureId, bookingId })
-  return { success: true }
+export async function notifyDocumentsApproved(customerId: string, structureId: string, _bookingId?: string) {
+  const supabase = createAdminClient()
+  const [{ data: customer }, { data: structure }] = await Promise.all([
+    supabase.from("ecomobility_customers").select("email,first_name").eq("id", customerId).single(),
+    supabase.from("ecomobility_structures").select("name").eq("id", structureId).single(),
+  ])
+  if (!customer?.email) return { success: false, error: "no_email" }
+
+  const body = `
+    <p style="color:#4b5563;font-size:16px;line-height:1.6;">
+      Ciao ${customer.first_name || ""},<br><br>
+      I documenti per il noleggio presso <strong>${structure?.name || ""}</strong> sono stati
+      <strong style="color:#16a34a;">verificati e approvati</strong>.
+      Puoi presentarti alla reception per il ritiro del veicolo.
+    </p>`
+  return sendEmail({
+    to: customer.email,
+    subject: "Documenti approvati - Noleggio Ecomobility",
+    html: wrap("Documenti approvati", body),
+  })
 }
 
 // Notifica documenti rifiutati
@@ -12,10 +46,27 @@ export async function notifyDocumentsRejected(
   customerId: string,
   structureId: string,
   reason?: string,
-  bookingId?: string,
+  _bookingId?: string,
 ) {
-  console.log("[v0] Documents rejected notification:", { customerId, structureId, reason, bookingId })
-  return { success: true }
+  const supabase = createAdminClient()
+  const [{ data: customer }, { data: structure }] = await Promise.all([
+    supabase.from("ecomobility_customers").select("email,first_name").eq("id", customerId).single(),
+    supabase.from("ecomobility_structures").select("name").eq("id", structureId).single(),
+  ])
+  if (!customer?.email) return { success: false, error: "no_email" }
+
+  const body = `
+    <p style="color:#4b5563;font-size:16px;line-height:1.6;">
+      Ciao ${customer.first_name || ""},<br><br>
+      I documenti per il noleggio presso <strong>${structure?.name || ""}</strong> non sono stati approvati.
+    </p>
+    ${reason ? `<div style="background-color:#fef2f2;border-left:4px solid #dc2626;padding:12px;margin:16px 0;"><p style="margin:0;color:#991b1b;"><strong>Motivo:</strong> ${reason}</p></div>` : ""}
+    <p style="color:#4b5563;font-size:14px;line-height:1.6;">Per maggiori informazioni contatta la struttura.</p>`
+  return sendEmail({
+    to: customer.email,
+    subject: "Documenti non approvati - Noleggio Ecomobility",
+    html: wrap("Documenti non approvati", body),
+  })
 }
 
 // Notifica conferma prenotazione

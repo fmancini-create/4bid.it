@@ -84,6 +84,8 @@ interface Structure {
   primary_color: string
   min_battery_threshold: number
   default_charge_hours: number
+  stripe_account_id?: string | null
+  stripe_onboarding_complete?: boolean
 }
 
 interface VehicleType {

@@ -54,9 +54,11 @@ interface VehicleType {
   name: string
   description: string
   icon: string
+  image_url?: string | null
   max_speed_kmh: number
   avg_range_km: number
   requires_license: boolean
+  license_type?: string | null
   max_passengers: number
 }
 
@@ -448,14 +450,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{type.description}</p>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          {type.range_km && (
+                          {type.avg_range_km && (
                             <span className="flex items-center gap-1">
-                              <Zap className="h-3 w-3" /> {type.range_km} km
+                              <Zap className="h-3 w-3" /> {type.avg_range_km} km
                             </span>
                           )}
-                          {type.requires_license_type && type.requires_license_type !== "nessuna" && (
+                          {type.requires_license && type.license_type && (
                             <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> Pat. {type.requires_license_type}
+                              <Shield className="h-3 w-3" /> Pat. {type.license_type}
                             </span>
                           )}
                         </div>
@@ -616,22 +618,22 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                       <span>1ª ora</span>
                       <span className="font-medium">€{selectedPricing.hour_1}</span>
                     </div>
-                    {selectedPricing.price_second_hour && (
+                    {selectedPricing.hour_2 && (
                       <div className="flex justify-between">
                         <span>2ª ora</span>
-                        <span className="font-medium">€{selectedPricing.price_second_hour}</span>
+                        <span className="font-medium">€{selectedPricing.hour_2}</span>
                       </div>
                     )}
-                    {selectedPricing.price_third_hour && (
+                    {selectedPricing.hour_3 && (
                       <div className="flex justify-between">
                         <span>3ª ora</span>
-                        <span className="font-medium">€{selectedPricing.price_third_hour}</span>
+                        <span className="font-medium">€{selectedPricing.hour_3}</span>
                       </div>
                     )}
-                    {selectedPricing.price_per_hour_after && (
+                    {selectedPricing.hour_8_plus && (
                       <div className="flex justify-between">
                         <span>Ore successive</span>
-                        <span className="font-medium">€{selectedPricing.price_per_hour_after}/ora</span>
+                        <span className="font-medium">€{selectedPricing.hour_8_plus}/ora</span>
                       </div>
                     )}
                     <Separator />

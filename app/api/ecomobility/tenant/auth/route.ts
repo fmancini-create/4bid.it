@@ -25,25 +25,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verify password
-    // Note: In production, passwords should be hashed with bcrypt
-    // For now, we do a simple comparison or bcrypt comparison if available
-    let passwordValid = false
-
-    if (operator.password_hash) {
-      // If password is hashed
-      passwordValid = await bcrypt.compare(password, operator.password_hash)
-    } else if (operator.password) {
-      // If password is plain text (for initial setup)
-      passwordValid = operator.password === password
+    // Verifica password: SOLO bcrypt. Niente fallback plaintext (security).
+    if (!operator.password_hash) {
+      console.error("[v0] Operator senza password_hash:", operator.id)
+      return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
+    const passwordValid = await bcrypt.compare(password, operator.password_hash)
 
     if (!passwordValid) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Return operator info (without password)
-    const { password: _, password_hash: __, ...operatorData } = operator
+    // Return operator info (senza hash)
+    const { password_hash: _ph, ...operatorData } = operator as any
 
     return NextResponse.json({
       success: true,

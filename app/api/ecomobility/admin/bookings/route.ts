@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
 
   // Se il veicolo viene ritirato, registra l'orario
   if (status === "picked_up") {
-    updates.actual_pickup_at = new Date().toISOString()
+    updates.actual_pickup_datetime = new Date().toISOString()
 
     // Aggiorna anche lo stato del veicolo
     const { data: booking } = await supabase.from("ecomobility_bookings").select("vehicle_id").eq("id", id).single()
@@ -87,12 +87,12 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (bookingData) {
-    await supabase.from("ecomobility_activity_logs").insert({
+    await supabase.from("ecomobility_operation_logs").insert({
       structure_id: bookingData.structure_id,
       booking_id: id,
       vehicle_id: bookingData.vehicle_id,
-      customer_id: bookingData.customer_id,
       action: `booking_status_changed_to_${status}`,
+      details: { customer_id: bookingData.customer_id },
     })
   }
 

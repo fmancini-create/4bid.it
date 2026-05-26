@@ -1,11 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
+import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
+import { calculateRentalAmount } from "@/lib/ecomobility/pricing"
+import { sendReturnConfirmation } from "@/lib/ecomobility/notifications"
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const bookingId = formData.get("bookingId") as string
-    const damageNotes = formData.get("damageNotes") as string
+    const damageNotes = (formData.get("damageNotes") as string) || ""
     const batteryLevelReturn = Number.parseInt(formData.get("batteryLevelReturn") as string) || 0
 
     if (!bookingId) {
@@ -14,10 +19,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Carica prenotazione con pricing e struttura
     const { data: booking, error: bookingError } = await supabase
       .from("ecomobility_bookings")
-      .select("*, pricing:ecomobility_pricing(*), structure:ecomobility_structures(*)")
+      .select(
+        "*, customer:ecomobility_customers(*), vehicle:ecomobility_vehicles(*, vehicle_type:ecomobility_vehicle_types(*)), structure:ecomobility_structures(*)",
+      )
       .eq("id", bookingId)
       .eq("status", "picked_up")
       .single()
@@ -26,146 +32,177 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Prenotazione non trovata o non valida" }, { status: 404 })
     }
 
+    // pickup time: usa actual_pickup_datetime, fallback a pickup_datetime
+    const pickupTime = new Date(
+      booking.actual_pickup_datetime || booking.pickup_datetime || booking.created_at,
+    )
     const returnTime = new Date()
-    const pickupTime = new Date(booking.actual_pickup_at)
-    const elapsedMinutes = Math.ceil((returnTime.getTime() - pickupTime.getTime()) / 60000)
-    const elapsedHours = Math.ceil(elapsedMinutes / 60)
+    const elapsedMinutes = Math.max(
+      1,
+      Math.ceil((returnTime.getTime() - pickupTime.getTime()) / 60000),
+    )
 
-    // Calcola importo finale con pricing decrescente
-    const pricing = booking.pricing
-    let finalAmount = 0
+    // Carica pricing per il vehicle_type del booking
+    const { data: pricing } = await supabase
+      .from("ecomobility_pricing")
+      .select("*")
+      .eq("structure_id", booking.structure_id)
+      .eq("vehicle_type_id", booking.vehicle?.vehicle_type_id)
+      .maybeSingle()
 
-    if (pricing) {
-      // Prima ora
-      if (elapsedHours >= 1) {
-        finalAmount += pricing.price_first_hour
-      }
-      // Seconda ora
-      if (elapsedHours >= 2 && pricing.price_second_hour) {
-        finalAmount += pricing.price_second_hour
-      }
-      // Terza ora
-      if (elapsedHours >= 3 && pricing.price_third_hour) {
-        finalAmount += pricing.price_third_hour
-      }
-      // Ore successive
-      if (elapsedHours > 3 && pricing.price_per_hour_after) {
-        finalAmount += (elapsedHours - 3) * pricing.price_per_hour_after
-      }
+    const { amount: finalAmount, hoursBilled, cappedAt } = calculateRentalAmount(pricing, elapsedMinutes)
 
-      // Applica cap giornaliero
-      if (pricing.max_price_day && finalAmount > pricing.max_price_day) {
-        finalAmount = pricing.max_price_day
-      }
-
-      // Applica minimo
-      if (pricing.min_price && finalAmount < pricing.min_price) {
-        finalAmount = pricing.min_price
-      }
-    }
-
-    // Upload delle foto
+    // Upload foto (schema live: photo_url, NON image_url)
     const photoTypes = ["front", "back", "left", "right"] as const
-    const uploadedPhotos: { type: string; url: string }[] = []
-
     for (const photoType of photoTypes) {
-      const file = formData.get(photoType) as File
-      if (file) {
+      const file = formData.get(photoType) as File | null
+      if (file && typeof file === "object" && "size" in file && file.size > 0) {
         const fileName = `${bookingId}/${photoType}-${Date.now()}.jpg`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("ecomobility-photos")
-          .upload(fileName, file, { contentType: file.type })
+          .upload(fileName, file, { contentType: file.type, upsert: true })
 
-        if (!uploadError && uploadData) {
+        if (!uploadError) {
           const { data: urlData } = supabase.storage.from("ecomobility-photos").getPublicUrl(fileName)
-
-          uploadedPhotos.push({ type: photoType, url: urlData.publicUrl })
-
-          // Salva in tabella return_photos
           await supabase.from("ecomobility_return_photos").insert({
             booking_id: bookingId,
             photo_type: photoType,
-            image_url: urlData.publicUrl,
-            has_damage: !!damageNotes,
-            damage_notes: photoType === "front" ? damageNotes : null,
+            photo_url: urlData.publicUrl,
+            notes: photoType === "front" && damageNotes ? damageNotes : null,
           })
+        } else {
+          console.error("[v0] Photo upload error:", uploadError)
         }
+      }
+    }
+
+    // Stato veicolo: charging se batteria < soglia
+    const minBatteryThreshold = (booking.structure as any)?.settings?.min_battery_threshold || 40
+    const defaultChargeHours = (booking.structure as any)?.settings?.default_charge_hours || 3
+
+    let vehicleStatus: "available" | "charging" = "available"
+    let estimatedAvailableTime: string | null = null
+    if (batteryLevelReturn < minBatteryThreshold) {
+      vehicleStatus = "charging"
+      const chargeNeeded = Math.max(10, minBatteryThreshold - batteryLevelReturn)
+      const hoursNeeded = (chargeNeeded / 100) * defaultChargeHours
+      estimatedAvailableTime = new Date(Date.now() + hoursNeeded * 60 * 60 * 1000).toISOString()
+    }
+
+    // Calcolo importo extra da addebitare (oltre quanto già incassato in checkout)
+    const alreadyPaid = Number(booking.estimated_amount || 0)
+    const extraAmount = Math.max(0, Math.round((finalAmount - alreadyPaid) * 100) / 100)
+    let extraChargeStatus: "succeeded" | "failed" | "not_needed" = "not_needed"
+    let extraChargePaymentIntentId: string | null = null
+    let extraChargeError: string | null = null
+
+    if (extraAmount > 0 && booking.stripe_payment_method_id && booking.stripe_customer_id) {
+      try {
+        const structureStripeAccount = (booking.structure as any)?.stripe_account_id
+        if (!structureStripeAccount) throw new Error("Struttura senza Stripe Connect")
+
+        const applicationFee = Math.round(extraAmount * 100 * 0.05)
+        const pi = await stripe.paymentIntents.create({
+          amount: Math.round(extraAmount * 100),
+          currency: "eur",
+          customer: booking.stripe_customer_id,
+          payment_method: booking.stripe_payment_method_id,
+          off_session: true,
+          confirm: true,
+          application_fee_amount: applicationFee,
+          transfer_data: { destination: structureStripeAccount },
+          metadata: {
+            booking_id: bookingId,
+            type: "ecomobility_extra_charge",
+          },
+          description: `Extra noleggio ${booking.booking_code}`,
+        })
+        extraChargePaymentIntentId = pi.id
+        extraChargeStatus = pi.status === "succeeded" ? "succeeded" : "failed"
+      } catch (err: any) {
+        extraChargeStatus = "failed"
+        extraChargeError = err?.message || "Stripe error"
+        console.error("[v0] Extra charge failed:", err)
       }
     }
 
     await supabase
       .from("ecomobility_bookings")
       .update({
-        status: "returned",
-        actual_return_at: returnTime.toISOString(),
+        status: extraChargeStatus === "failed" ? "returned_payment_failed" : "returned",
+        actual_return_datetime: returnTime.toISOString(),
         final_amount: finalAmount,
         battery_level_return: batteryLevelReturn,
+        damage_reported: !!damageNotes,
+        damage_description: damageNotes || null,
+        extra_charge_amount: extraAmount,
+        extra_charge_status: extraChargeStatus,
+        extra_charge_payment_intent_id: extraChargePaymentIntentId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", bookingId)
 
-    const minBatteryThreshold = booking.structure?.min_battery_threshold || 40
-    const defaultChargeHours = booking.structure?.default_charge_hours || 3
+    if (booking.vehicle_id) {
+      await supabase
+        .from("ecomobility_vehicles")
+        .update({
+          status: vehicleStatus,
+          battery_level: batteryLevelReturn,
+          battery_status: vehicleStatus === "charging" ? "charging" : "ok",
+          estimated_available_time: estimatedAvailableTime,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", booking.vehicle_id)
 
-    let vehicleStatus = "available"
-    let batteryStatus = "available"
-    let estimatedAvailableTime: string | null = null
-
-    if (batteryLevelReturn < minBatteryThreshold) {
-      // Battery below threshold - set to charging
-      vehicleStatus = "charging"
-      batteryStatus = "charging"
-
-      // Calculate estimated charge time
-      const chargeNeeded = minBatteryThreshold - batteryLevelReturn
-      const hoursNeeded = (chargeNeeded / 100) * defaultChargeHours
-      const availableTime = new Date(Date.now() + hoursNeeded * 60 * 60 * 1000)
-      estimatedAvailableTime = availableTime.toISOString()
+      await supabase.from("ecomobility_battery_history").insert({
+        vehicle_id: booking.vehicle_id,
+        booking_id: bookingId,
+        battery_level: batteryLevelReturn,
+        event_type: "return",
+      })
     }
 
-    await supabase
-      .from("ecomobility_vehicles")
-      .update({
-        status: vehicleStatus,
-        battery_level: batteryLevelReturn,
-        battery_status: batteryStatus,
-        last_battery_update: new Date().toISOString(),
-        charge_start_time: vehicleStatus === "charging" ? new Date().toISOString() : null,
-        estimated_available_time: estimatedAvailableTime,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", booking.vehicle_id)
-
-    await supabase.from("ecomobility_battery_history").insert({
-      vehicle_id: booking.vehicle_id,
-      booking_id: bookingId,
-      battery_level: batteryLevelReturn,
-      battery_status: batteryStatus,
-      event_type: "return",
-      recorded_by: "customer",
-      notes: damageNotes || null,
-    })
-
-    // Log attività
-    await supabase.from("ecomobility_activity_logs").insert({
+    await supabase.from("ecomobility_operation_logs").insert({
       structure_id: booking.structure_id,
       booking_id: bookingId,
       vehicle_id: booking.vehicle_id,
-      customer_id: booking.customer_id,
       action: "vehicle_returned",
       details: {
         elapsed_minutes: elapsedMinutes,
+        hours_billed: hoursBilled,
+        capped_at: cappedAt,
         final_amount: finalAmount,
-        has_damage_notes: !!damageNotes,
+        already_paid: alreadyPaid,
+        extra_amount: extraAmount,
+        extra_charge_status: extraChargeStatus,
+        extra_charge_error: extraChargeError,
         battery_level_return: batteryLevelReturn,
-        vehicle_status_post_return: vehicleStatus,
+        vehicle_status: vehicleStatus,
+        has_damage_notes: !!damageNotes,
       },
     })
+
+    // Email cliente
+    if (booking.customer?.email) {
+      const vehicleName = `${booking.vehicle?.brand || ""} ${booking.vehicle?.model || ""}`.trim() ||
+        booking.vehicle?.vehicle_type?.name || "Veicolo"
+      sendReturnConfirmation(
+        booking.customer.email,
+        `${booking.customer.first_name || ""} ${booking.customer.last_name || ""}`.trim(),
+        booking.booking_code,
+        vehicleName,
+        finalAmount,
+        booking.structure?.name || "",
+      ).catch((e) => console.error("[v0] sendReturnConfirmation error:", e))
+    }
 
     return NextResponse.json({
       success: true,
       finalAmount,
-      elapsedMinutes,
+      hoursBilled,
+      cappedAt,
+      extraAmount,
+      extraChargeStatus,
       vehicleStatus,
       estimatedAvailableTime,
     })
