@@ -1,0 +1,10 @@
+const { Client } = require("pg")
+;(async () => {
+  const c = new Client({ connectionString: process.env.SUPABASE_URL ? process.env.POSTGRES_PRISMA_URL : process.env.POSTGRES_URL })
+  await c.connect()
+  const r = await c.query("select pg_get_constraintdef(oid) as def, conname from pg_constraint where conrelid='public.ecomobility_devices'::regclass")
+  console.log("constraints:", r.rows)
+  const r2 = await c.query("select distinct device_type from public.ecomobility_devices")
+  console.log("existing device_type:", r2.rows)
+  await c.end()
+})()
