@@ -34,15 +34,27 @@ export async function POST(request: NextRequest) {
 
     if (opErr) {
       console.error("[v0] password reset: query error:", opErr.message)
-      return NextResponse.json({ success: true })
+      return NextResponse.json({ error: "Errore interno, riprova piu' tardi" }, { status: 500 })
     }
     if (!operator) {
       console.error("[v0] password reset: no operator for", normEmail, "@", structure.slug)
-      return NextResponse.json({ success: true })
+      return NextResponse.json(
+        {
+          error: "not_found",
+          message: `Nessun operatore registrato con l'email ${normEmail} per ${structure.name}. Contatta l'amministratore della struttura.`,
+        },
+        { status: 404 },
+      )
     }
     if (!operator.is_active) {
       console.error("[v0] password reset: operator inactive:", operator.id)
-      return NextResponse.json({ success: true })
+      return NextResponse.json(
+        {
+          error: "inactive",
+          message: "Account disattivato. Contatta l'amministratore della struttura.",
+        },
+        { status: 403 },
+      )
     }
 
     const token = nanoid(48)

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react"
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
 export default function ForgotPasswordPage() {
@@ -15,19 +15,31 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function submit() {
     if (!email) return
     setLoading(true)
+    setError(null)
     try {
-      await fetch("/api/ecomobility/tenant/password/request", {
+      const res = await fetch("/api/ecomobility/tenant/password/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, email }),
       })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(
+          data?.message ||
+            (res.status === 404
+              ? `Nessun operatore registrato con questa email per la struttura.`
+              : "Errore durante la richiesta. Riprova."),
+        )
+        return
+      }
       setDone(true)
     } catch (e) {
-      setDone(true) // sempre done per non rivelare presenza email
+      setError("Errore di connessione. Riprova.")
     } finally {
       setLoading(false)
     }
@@ -44,11 +56,11 @@ export default function ForgotPasswordPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />
-                <span className="font-medium">Richiesta ricevuta</span>
+                <span className="font-medium">Email inviata</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Se l&apos;email è registrata, riceverai un link per reimpostare la password. Il link scade tra 24 ore.
-                Controlla anche la cartella spam.
+                Ti abbiamo mandato un link per reimpostare la password. Il link scade tra 24 ore. Controlla anche la
+                cartella spam.
               </p>
               <Link href={`/ecomobility/${slug}/admin`} className="text-sm text-primary inline-flex items-center gap-1">
                 <ArrowLeft className="h-3 w-3" /> Torna al login
@@ -59,6 +71,12 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-muted-foreground">
                 Inserisci la tua email. Ti invieremo un link per reimpostare la password.
               </p>
+              {error && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span className="leading-relaxed">{error}</span>
+                </div>
+              )}
               <div>
                 <Label>Email</Label>
                 <div className="relative">
@@ -68,7 +86,10 @@ export default function ForgotPasswordPage() {
                     placeholder="operatore@esempio.it"
                     className="pl-10"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      if (error) setError(null)
+                    }}
                     onKeyDown={(e) => e.key === "Enter" && submit()}
                   />
                 </div>
