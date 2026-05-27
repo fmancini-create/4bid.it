@@ -552,6 +552,12 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
               {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
               Accedi
             </Button>
+            <a
+              href={`/ecomobility/${structure.slug}/admin/forgot-password`}
+              className="block text-center text-sm text-muted-foreground hover:text-foreground mt-2"
+            >
+              Password dimenticata?
+            </a>
           </CardContent>
         </Card>
       </div>
@@ -572,6 +578,16 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm opacity-80">Ciao, {operatorName}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/20"
+              asChild
+            >
+              <a href={`/ecomobility/${structure.slug}/admin/devices`} title="Tracker GPS">
+                <MapPin className="h-4 w-4" />
+              </a>
+            </Button>
             <Button
               variant="ghost"
               size="sm"

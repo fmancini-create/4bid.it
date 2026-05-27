@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { sendBookingConfirmation } from "@/lib/ecomobility/notifications"
+import { sendBookingConfirmation, notifyStructureNewBooking } from "@/lib/ecomobility/notifications"
+import { createShareLink } from "@/lib/ecomobility/balin"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -103,6 +104,45 @@ export async function POST(request: NextRequest) {
           },
         })
 
+        // Crea link condivisione tracker Balin PRIMA di mandare la mail (best-effort)
+        let trackerShareUrl: string | null = null
+        try {
+          const { data: bk } = await supabase
+            .from("ecomobility_bookings")
+            .select("vehicle_id, expected_return_datetime")
+            .eq("id", bookingId)
+            .single()
+          if (bk?.vehicle_id) {
+            const { data: device } = await supabase
+              .from("ecomobility_devices")
+              .select("imei, provider")
+              .eq("vehicle_id", bk.vehicle_id)
+              .eq("provider", "balin")
+              .not("imei", "is", null)
+              .maybeSingle()
+            if (device?.imei) {
+              const baseEnd = bk.expected_return_datetime
+                ? new Date(bk.expected_return_datetime)
+                : new Date(Date.now() + 24 * 60 * 60 * 1000)
+              const expiresAt = new Date(baseEnd.getTime() + 2 * 60 * 60 * 1000)
+              const link = await createShareLink(device.imei, expiresAt)
+              if (link?.url) {
+                trackerShareUrl = link.url
+                await supabase
+                  .from("ecomobility_bookings")
+                  .update({
+                    tracker_share_url: link.url,
+                    tracker_share_id: link.id || null,
+                    tracker_share_expires_at: expiresAt.toISOString(),
+                  })
+                  .eq("id", bookingId)
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[v0] balin createShareLink error:", e)
+        }
+
         // Email di conferma (best-effort, non blocca)
         try {
           const { data: booking } = await supabase
@@ -132,11 +172,21 @@ export async function POST(request: NextRequest) {
                 vehicleName,
                 pickupDateFmt,
                 s?.name || "",
+                trackerShareUrl,
               )
             }
           }
         } catch (e) {
           console.error("[v0] sendBookingConfirmation error:", e)
+        }
+
+        // Notifica reception struttura
+        try {
+          if (session.metadata.structure_id) {
+            await notifyStructureNewBooking(session.metadata.structure_id, bookingId)
+          }
+        } catch (e) {
+          console.error("[v0] notifyStructureNewBooking error:", e)
         }
 
         break

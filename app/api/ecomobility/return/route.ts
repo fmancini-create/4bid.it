@@ -3,6 +3,7 @@ import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { calculateRentalAmount } from "@/lib/ecomobility/pricing"
 import { sendReturnConfirmation } from "@/lib/ecomobility/notifications"
+import { deleteShareLink } from "@/lib/ecomobility/balin"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -194,6 +195,18 @@ export async function POST(request: NextRequest) {
         finalAmount,
         booking.structure?.name || "",
       ).catch((e) => console.error("[v0] sendReturnConfirmation error:", e))
+    }
+
+    // Cancella link condivisione tracker (best-effort)
+    if (booking.tracker_share_id) {
+      deleteShareLink(booking.tracker_share_id)
+        .then(() =>
+          supabase
+            .from("ecomobility_bookings")
+            .update({ tracker_share_url: null, tracker_share_id: null })
+            .eq("id", bookingId),
+        )
+        .catch((e) => console.error("[v0] balin deleteShareLink error:", e))
     }
 
     return NextResponse.json({
