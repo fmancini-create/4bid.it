@@ -39,7 +39,8 @@ interface Structure {
 
 interface Vehicle {
   id: string
-  internal_code: string
+  code?: string | null
+  internal_code?: string | null
   brand: string | null
   model: string | null
   vehicle_type?: { name: string } | null
@@ -352,7 +353,7 @@ export function DevicesDashboard({
                                 <SelectItem value="none">— Non associato —</SelectItem>
                                 {vehicles.map((v) => (
                                   <SelectItem key={v.id} value={v.id}>
-                                    {v.internal_code}
+                                    {v.code || v.internal_code || v.id.slice(0, 8)}
                                     {v.brand || v.model
                                       ? ` · ${[v.brand, v.model].filter(Boolean).join(" ")}`
                                       : ""}

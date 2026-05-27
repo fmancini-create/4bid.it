@@ -17,9 +17,9 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
 
   const { data: vehicles } = await supabase
     .from("ecomobility_vehicles")
-    .select("id, internal_code, brand, model, vehicle_type:ecomobility_vehicle_types(name)")
+    .select("id, code, brand, model, vehicle_type:ecomobility_vehicle_types(name)")
     .eq("structure_id", structure.id)
-    .order("internal_code")
+    .order("code")
 
   return <DevicesDashboard structure={structure} vehicles={(vehicles || []) as any} />
 }
