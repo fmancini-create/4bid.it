@@ -207,8 +207,23 @@ export async function sendBookingConfirmation(
   vehicleName: string,
   pickupDate: string,
   structureName: string,
+  trackerShareUrl?: string | null,
 ) {
   const logoUrl = "https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75"
+
+  const trackerBlock = trackerShareUrl
+    ? `
+        <div style="background-color: #ecfdf5; border-left: 4px solid #16a34a; border-radius: 6px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; color: #065f46; font-weight: 600;">Tracking GPS in tempo reale</p>
+          <p style="margin: 0 0 12px 0; color: #047857; font-size: 14px;">
+            Una volta ritirato il veicolo potrai vederlo sulla mappa al link sottostante. Il link sara&apos; attivo per tutta la durata del noleggio.
+          </p>
+          <a href="${trackerShareUrl}" style="background-color: #16a34a; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
+            Apri tracker live
+          </a>
+        </div>
+      `
+    : ""
 
   const html = `
     <!DOCTYPE html>
@@ -235,11 +250,12 @@ export async function sendBookingConfirmation(
           <p style="margin: 0 0 10px 0;"><strong>Veicolo:</strong> ${vehicleName}</p>
           <p style="margin: 0;"><strong>Data Ritiro:</strong> ${pickupDate}</p>
         </div>
-        
+        ${trackerBlock}
+
         <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">
           Presenta questo codice al momento del ritiro del veicolo.
         </p>
-        
+
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
         
         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
