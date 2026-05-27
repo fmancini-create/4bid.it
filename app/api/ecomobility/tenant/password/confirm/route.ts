@@ -67,12 +67,18 @@ export async function GET(request: NextRequest) {
   if (!token) return NextResponse.json({ valid: false }, { status: 400 })
 
   const supabase = createAdminClient()
-  const { data: tokenRow } = await supabase
+  const { data: tokenRow, error: tokenErr } = await supabase
     .from("ecomobility_operator_password_tokens")
-    .select("token, type, expires_at, used_at, operator:ecomobility_operators(email, first_name, structure:ecomobility_structures(name))")
+    .select(
+      "token, type, expires_at, used_at, operator:ecomobility_operators(email, name, structure:ecomobility_structures(name))",
+    )
     .eq("token", token)
     .maybeSingle()
 
+  if (tokenErr) {
+    console.error("[v0] password confirm GET query error:", tokenErr.message)
+    return NextResponse.json({ valid: false, reason: "error" })
+  }
   if (!tokenRow) return NextResponse.json({ valid: false, reason: "not_found" })
   if (tokenRow.used_at) return NextResponse.json({ valid: false, reason: "used" })
   if (new Date(tokenRow.expires_at).getTime() < Date.now()) {
@@ -85,7 +91,7 @@ export async function GET(request: NextRequest) {
     type: tokenRow.type,
     operator: {
       email: op?.email,
-      first_name: op?.first_name,
+      name: op?.name,
       structure_name: op?.structure?.name,
     },
   })

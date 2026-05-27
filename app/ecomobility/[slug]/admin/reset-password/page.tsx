@@ -10,7 +10,7 @@ import { Lock, AlertCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
 type TokenInfo =
-  | { valid: true; type: "invite" | "reset"; operator: { email: string; first_name?: string; structure_name?: string } }
+  | { valid: true; type: "invite" | "reset"; operator: { email: string; name?: string; structure_name?: string } }
   | { valid: false; reason?: string }
 
 export default function ResetPasswordPage() {
@@ -125,7 +125,7 @@ export default function ResetPasswordPage() {
           ) : (
             <>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Ciao {info.operator.first_name || info.operator.email}, scegli una nuova password per accedere a{" "}
+                Ciao {info.operator.name || info.operator.email}, scegli una nuova password per accedere a{" "}
                 <strong>{info.operator.structure_name}</strong>.
               </p>
               <div>
