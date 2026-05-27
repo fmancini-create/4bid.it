@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { error } = await supabase.from("ecomobility_devices").insert({
         imei,
+        serial_number: imei,
         vehicle_id: vehicleId || null,
         structure_id: structureId,
         provider: "balin",
