@@ -582,6 +582,16 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
               variant="ghost"
               size="sm"
               className="text-white hover:bg-white/20"
+              asChild
+            >
+              <a href={`/ecomobility/${structure.slug}/admin/devices`} title="Tracker GPS">
+                <MapPin className="h-4 w-4" />
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/20"
               onClick={loadData}
               disabled={isLoading}
             >
