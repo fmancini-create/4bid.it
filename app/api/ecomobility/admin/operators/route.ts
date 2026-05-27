@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("ecomobility_operators")
-    .select("id, email, first_name, last_name, role, is_active, created_at, last_login_at")
+    .select("id, email, name, role, is_active, created_at")
     .eq("structure_id", structureId)
     .order("created_at", { ascending: false })
 
@@ -21,15 +21,17 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/ecomobility/admin/operators
-// body: { structureId, email, first_name, last_name, role }
+// body: { structureId, email, name, role }
 // Crea operatore con password placeholder + invia invito via email
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { structureId, email, first_name, last_name, role } = body
+    const { structureId, email, name, first_name, last_name, role } = body
     if (!structureId || !email) {
       return NextResponse.json({ error: "structureId ed email obbligatori" }, { status: 400 })
     }
+    const fullName =
+      name?.trim() || `${first_name || ""} ${last_name || ""}`.trim() || null
 
     const supabase = createAdminClient()
     const { data: structure } = await supabase
@@ -47,13 +49,12 @@ export async function POST(request: NextRequest) {
       .insert({
         structure_id: structureId,
         email: email.toLowerCase().trim(),
-        first_name: first_name || null,
-        last_name: last_name || null,
+        name: fullName,
         role: role || "operator",
         password_hash: placeholderHash,
         is_active: true,
       })
-      .select("id, email, first_name, last_name")
+      .select("id, email, name")
       .single()
 
     if (error) {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const emailRes = await sendOperatorPasswordEmail({
       to: operator.email,
-      operatorName: `${operator.first_name || ""} ${operator.last_name || ""}`.trim() || operator.email,
+      operatorName: operator.name || operator.email,
       structureName: structure.name,
       structureSlug: structure.slug,
       token,

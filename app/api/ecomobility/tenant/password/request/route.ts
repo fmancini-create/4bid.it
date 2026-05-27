@@ -14,39 +14,63 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
-    const { data: structure } = await supabase
+    const { data: structure, error: structErr } = await supabase
       .from("ecomobility_structures")
       .select("id, name, slug")
       .eq("slug", slug)
       .single()
-    if (!structure) return NextResponse.json({ success: true })
+    if (structErr || !structure) {
+      console.error("[v0] password reset: structure not found for slug:", slug, structErr?.message)
+      return NextResponse.json({ success: true })
+    }
 
-    const { data: operator } = await supabase
+    const normEmail = String(email).toLowerCase().trim()
+    const { data: operator, error: opErr } = await supabase
       .from("ecomobility_operators")
-      .select("id, email, first_name, last_name, is_active")
+      .select("id, email, name, is_active")
       .eq("structure_id", structure.id)
-      .eq("email", String(email).toLowerCase().trim())
+      .eq("email", normEmail)
       .maybeSingle()
 
-    if (!operator || !operator.is_active) return NextResponse.json({ success: true })
+    if (opErr) {
+      console.error("[v0] password reset: query error:", opErr.message)
+      return NextResponse.json({ success: true })
+    }
+    if (!operator) {
+      console.error("[v0] password reset: no operator for", normEmail, "@", structure.slug)
+      return NextResponse.json({ success: true })
+    }
+    if (!operator.is_active) {
+      console.error("[v0] password reset: operator inactive:", operator.id)
+      return NextResponse.json({ success: true })
+    }
 
     const token = nanoid(48)
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    await supabase.from("ecomobility_operator_password_tokens").insert({
+    const { error: tokErr } = await supabase.from("ecomobility_operator_password_tokens").insert({
       token,
       operator_id: operator.id,
       type: "reset",
       expires_at: expiresAt,
     })
+    if (tokErr) {
+      console.error("[v0] password reset: token insert error:", tokErr.message)
+      return NextResponse.json({ success: true })
+    }
 
-    await sendOperatorPasswordEmail({
+    const emailRes = await sendOperatorPasswordEmail({
       to: operator.email,
-      operatorName: `${operator.first_name || ""} ${operator.last_name || ""}`.trim() || operator.email,
+      operatorName: operator.name || operator.email,
       structureName: structure.name,
       structureSlug: structure.slug,
       token,
       type: "reset",
     })
+    if (!emailRes.success) {
+      console.error("[v0] password reset: email send failed:", emailRes.error)
+    } else {
+      console.log("[v0] password reset email sent to", operator.email)
+    }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
