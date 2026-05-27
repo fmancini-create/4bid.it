@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         vehicle_id: vehicleId || null,
         structure_id: structureId,
         provider: "balin",
-        device_type: "tracker",
+        device_type: "gps_tracker",
         manufacturer: "Balin.app",
         model: model || null,
         status: "active",
