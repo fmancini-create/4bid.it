@@ -1,0 +1,11 @@
+const fs = require("fs")
+const { Client } = require("pg")
+;(async () => {
+  const c = new Client({ connectionString: process.env.SUPABASE_POSTGRES_URL_NON_POOLING, ssl: { rejectUnauthorized: false } })
+  await c.connect()
+  const sql = fs.readFileSync("scripts/055_ecomobility_vehicle_type_gallery.sql", "utf8")
+  await c.query(sql)
+  const r = await c.query("select id,name,image_url,image_urls from ecomobility_vehicle_types order by name")
+  console.log(JSON.stringify(r.rows, null, 2))
+  await c.end()
+})().catch(e => { console.error("ERR", e.message); process.exit(1) })
