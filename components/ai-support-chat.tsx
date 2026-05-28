@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
 import { MessageCircle, X, Send, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,11 +42,17 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [leadState, setLeadState] = useState<LeadState | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  // Hide chat on the public ecomobility booking pages
+  if (pathname?.startsWith("/ecomobility")) {
+    return null
+  }
 
   // Hide chat for free users
   if (accountType === "free") {
