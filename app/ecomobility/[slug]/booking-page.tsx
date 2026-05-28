@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/ecomobility/i18n/provider"
+import { LanguageSwitcher } from "@/components/ecomobility/language-switcher"
 import {
   Bike,
   Zap,
@@ -128,7 +130,7 @@ interface Props {
 
 type Step = "select" | "datetime" | "details" | "documents" | "payment" | "confirmation"
 
-const DAY_LABELS = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"]
+type TFn = (path: string, vars?: Record<string, string | number>) => string
 
 // Validates a chosen pickup date+time against opening hours and blocked slots.
 // Returns an error message (string) when not bookable, or null when OK.
@@ -137,20 +139,22 @@ function getAvailabilityError(
   time: string,
   schedule: ScheduleRow[],
   blocked: BlockedSlot[],
+  t: TFn,
 ): string | null {
   if (!date || !time) return null
-  const t = time.slice(0, 5)
+  const hhmm = time.slice(0, 5)
   const dow = new Date(`${date}T00:00:00`).getDay()
+  const dayName = t(`booking.days.${dow}`)
 
   const day = schedule.find((s) => s.day_of_week === dow)
   if (day) {
     if (!day.is_open) {
-      return `La reception è chiusa di ${DAY_LABELS[dow]}. Seleziona un altro giorno.`
+      return t("booking.availability.closedDay", { day: dayName })
     }
     const open = day.open_time?.slice(0, 5)
     const close = day.close_time?.slice(0, 5)
-    if (open && close && (t < open || t > close)) {
-      return `Orario non disponibile: la reception è aperta dalle ${open} alle ${close}.`
+    if (open && close && (hhmm < open || hhmm > close)) {
+      return t("booking.availability.outsideHours", { open, close })
     }
   }
 
@@ -158,15 +162,15 @@ function getAvailabilityError(
     if (b.date !== date) continue
     if (b.all_day) {
       return b.reason
-        ? `Data non disponibile (${b.reason}). Seleziona un'altra data.`
-        : "Data non disponibile per il ritiro. Seleziona un'altra data."
+        ? t("booking.availability.dateBlockedReason", { reason: b.reason })
+        : t("booking.availability.dateBlocked")
     }
     const from = b.start_time?.slice(0, 5)
     const to = b.end_time?.slice(0, 5)
-    if (from && to && t >= from && t < to) {
+    if (from && to && hhmm >= from && hhmm < to) {
       return b.reason
-        ? `Fascia oraria non disponibile (${b.reason}). Scegli un altro orario.`
-        : "Fascia oraria non disponibile. Scegli un altro orario."
+        ? t("booking.availability.slotBlockedReason", { reason: b.reason })
+        : t("booking.availability.slotBlocked")
     }
   }
 
@@ -183,6 +187,7 @@ function getTypeImages(type?: VehicleType | null): string[] {
 
 // Small image carousel used in the vehicle selection grid
 function TypeImageCarousel({ images, name }: { images: string[]; name: string }) {
+  const { t } = useLanguage()
   const [index, setIndex] = useState(0)
   if (images.length === 0) {
     return <Bike className="h-10 w-10 text-gray-400" />
@@ -205,7 +210,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
               e.stopPropagation()
               setIndex((current - 1 + images.length) % images.length)
             }}
-            aria-label="Foto precedente"
+            aria-label={t("booking.a11y.prevPhoto")}
             className="absolute left-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
@@ -216,7 +221,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
               e.stopPropagation()
               setIndex((current + 1) % images.length)
             }}
-            aria-label="Foto successiva"
+            aria-label={t("booking.a11y.nextPhoto")}
             className="absolute right-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
           >
             <ChevronRight className="h-3.5 w-3.5" />
@@ -237,6 +242,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
 
 const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule = [], blockedSlots = [] }: Props) => {
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [currentStep, setCurrentStep] = useState<Step>("select")
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [selectedPricing, setSelectedPricing] = useState<Pricing | null>(null)
@@ -292,7 +298,9 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
       return {
         icon: <BatteryCharging className="h-4 w-4 text-yellow-500" />,
-        text: timeRemaining ? `In carica (${Math.floor(timeRemaining / 60)}h ${timeRemaining % 60}min)` : "In carica",
+        text: timeRemaining
+          ? t("booking.battery.chargingTime", { h: Math.floor(timeRemaining / 60), m: timeRemaining % 60 })
+          : t("booking.battery.charging"),
         color: "text-yellow-600",
         bgColor: "bg-yellow-50",
       }
@@ -301,7 +309,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
     if (status === "low_battery" || (level !== null && level < minBatteryThreshold)) {
       return {
         icon: <BatteryLow className="h-4 w-4 text-red-500" />,
-        text: `${level}% - Batteria scarica`,
+        text: t("booking.battery.low", { level: level ?? 0 }),
         color: "text-red-600",
         bgColor: "bg-red-50",
       }
@@ -310,7 +318,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
     if (status === "unavailable" || level === null) {
       return {
         icon: <Battery className="h-4 w-4 text-gray-400" />,
-        text: "Non disponibile",
+        text: t("booking.battery.unavailable"),
         color: "text-gray-500",
         bgColor: "bg-gray-50",
       }
@@ -346,9 +354,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
   const handleSelectVehicle = (vehicle: Vehicle, vehiclePricing: Pricing | undefined) => {
     if (!isVehicleBookable(vehicle)) {
       toast({
-        title: "Veicolo non disponibile",
-        description:
-          "Questo veicolo non è attualmente prenotabile. Potrebbe essere in ricarica o con batteria insufficiente.",
+        title: t("booking.toast.vehicleUnavailableTitle"),
+        description: t("booking.toast.vehicleUnavailableDesc"),
         variant: "destructive",
       })
       return
@@ -360,12 +367,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDateTimeNext = () => {
     if (!pickupDate || !pickupTime) {
-      toast({ title: "Seleziona data e ora di ritiro", variant: "destructive" })
+      toast({ title: t("booking.toast.selectDateTime"), variant: "destructive" })
       return
     }
-    const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
+    const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots, t)
     if (availabilityError) {
-      toast({ title: "Orario non disponibile", description: availabilityError, variant: "destructive" })
+      toast({ title: t("booking.toast.timeUnavailable"), description: availabilityError, variant: "destructive" })
       return
     }
     setCurrentStep("details")
@@ -373,7 +380,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDetailsNext = () => {
     if (!customerData.firstName || !customerData.lastName || !customerData.email || !customerData.phone) {
-      toast({ title: "Compila tutti i campi obbligatori", variant: "destructive" })
+      toast({ title: t("booking.toast.fillRequired"), variant: "destructive" })
       return
     }
     setCurrentStep("documents")
@@ -381,15 +388,15 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDocumentsNext = () => {
     if (!licenseFront || !idFront) {
-      toast({ title: "Carica i documenti richiesti", variant: "destructive" })
+      toast({ title: t("booking.toast.uploadDocs"), variant: "destructive" })
       return
     }
     if (!termsAccepted) {
-      toast({ title: "Accetta le condizioni di noleggio", variant: "destructive" })
+      toast({ title: t("booking.toast.acceptTerms"), variant: "destructive" })
       return
     }
     if (!batteryAutonomyAccepted) {
-      toast({ title: "Accetta la dichiarazione sull'autonomia della batteria", variant: "destructive" })
+      toast({ title: t("booking.toast.acceptBattery"), variant: "destructive" })
       return
     }
     setCurrentStep("payment")
@@ -415,7 +422,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         }),
       })
 
-      if (!response.ok) throw new Error("Errore nella prenotazione")
+      if (!response.ok) throw new Error(t("booking.toast.bookingError"))
 
       const bookingData = await response.json()
 
@@ -435,34 +442,38 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
       })
 
       const checkoutData = await checkoutRes.json()
-      if (!checkoutRes.ok) throw new Error(checkoutData.error || "Errore nel pagamento")
+      if (!checkoutRes.ok) throw new Error(checkoutData.error || t("booking.toast.paymentError"))
 
       // 3. Redirect a Stripe Checkout
       if (checkoutData.url) {
         window.location.href = checkoutData.url
       } else {
-        throw new Error("Errore nella creazione del pagamento")
+        throw new Error(t("booking.toast.paymentCreateError"))
       }
     } catch (error: any) {
-      toast({ title: "Errore", description: error.message || "Errore durante il pagamento", variant: "destructive" })
+      toast({
+        title: t("booking.toast.errorTitle"),
+        description: error.message || t("booking.toast.paymentError"),
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   const steps: { key: Step; label: string; icon: React.ReactNode }[] = [
-    { key: "select", label: "Veicolo", icon: <Bike className="h-4 w-4" /> },
-    { key: "datetime", label: "Data/Ora", icon: <Calendar className="h-4 w-4" /> },
-    { key: "details", label: "Dati", icon: <FileText className="h-4 w-4" /> },
-    { key: "documents", label: "Documenti", icon: <Upload className="h-4 w-4" /> },
-    { key: "payment", label: "Pagamento", icon: <CreditCard className="h-4 w-4" /> },
+    { key: "select", label: t("booking.steps.vehicle"), icon: <Bike className="h-4 w-4" /> },
+    { key: "datetime", label: t("booking.steps.datetime"), icon: <Calendar className="h-4 w-4" /> },
+    { key: "details", label: t("booking.steps.details"), icon: <FileText className="h-4 w-4" /> },
+    { key: "documents", label: t("booking.steps.documents"), icon: <Upload className="h-4 w-4" /> },
+    { key: "payment", label: t("booking.steps.payment"), icon: <CreditCard className="h-4 w-4" /> },
   ]
 
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep)
 
   const primaryColor = structure.primary_color || "#f97316"
 
-  const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
+  const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots, t)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -489,6 +500,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             <h1 className="font-semibold text-sm">{structure.name}</h1>
             <p className="text-xs text-muted-foreground">4BID Ecomobility</p>
           </div>
+          <LanguageSwitcher />
           <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={48} height={48} />
         </div>
       </header>
@@ -535,15 +547,15 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="h-5 w-5" />
-                <span className="text-sm font-medium">Più usi, meno paghi!</span>
+                <span className="text-sm font-medium">{t("booking.hero.badge")}</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Noleggia un veicolo elettrico</h2>
-              <p className="text-sm opacity-90">Esplora {structure.city} in modo eco-sostenibile</p>
+              <h2 className="text-xl font-bold mb-1">{t("booking.hero.title")}</h2>
+              <p className="text-sm opacity-90">{t("booking.hero.subtitle", { city: structure.city })}</p>
             </div>
 
             {/* Vehicle Types */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Scegli il tuo veicolo</h3>
+              <h3 className="font-semibold text-lg">{t("booking.select.title")}</h3>
 
               {Object.values(vehiclesByType).map(({ type, vehicles: typeVehicles, pricing: typePricing }) => {
                 const availableCount = typeVehicles.filter(isVehicleBookable).length
