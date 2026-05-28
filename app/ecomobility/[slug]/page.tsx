@@ -74,7 +74,28 @@ export default async function EcomobilityStructurePage({ params }: Props) {
     .limit(1)
     .single()
 
+  // Carica orari di apertura
+  const { data: schedule } = await supabase
+    .from("ecomobility_schedule")
+    .select("day_of_week, is_open, open_time, close_time")
+    .eq("structure_id", structure.id)
+
+  // Carica blocchi date/fasce orarie futuri
+  const today = new Date().toISOString().split("T")[0]
+  const { data: blockedSlots } = await supabase
+    .from("ecomobility_blocked_slots")
+    .select("date, start_time, end_time, all_day, reason")
+    .eq("structure_id", structure.id)
+    .gte("date", today)
+
   return (
-    <EcomobilityBookingPage structure={structure} vehicles={vehicles || []} pricing={pricing || []} terms={terms} />
+    <EcomobilityBookingPage
+      structure={structure}
+      vehicles={vehicles || []}
+      pricing={pricing || []}
+      terms={terms}
+      schedule={schedule || []}
+      blockedSlots={blockedSlots || []}
+    />
   )
 }

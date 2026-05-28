@@ -30,6 +30,7 @@ import {
   Battery,
   BatteryLow,
   BatteryCharging,
+  AlertCircle,
 } from "lucide-react"
 
 interface Structure {
@@ -101,14 +102,76 @@ interface Terms {
   content: string
 }
 
+interface ScheduleRow {
+  day_of_week: number
+  is_open: boolean
+  open_time: string | null
+  close_time: string | null
+}
+
+interface BlockedSlot {
+  date: string
+  start_time: string | null
+  end_time: string | null
+  all_day: boolean
+  reason?: string | null
+}
+
 interface Props {
   structure: Structure
   vehicles: Vehicle[]
   pricing: Pricing[]
   terms: Terms | null
+  schedule?: ScheduleRow[]
+  blockedSlots?: BlockedSlot[]
 }
 
 type Step = "select" | "datetime" | "details" | "documents" | "payment" | "confirmation"
+
+const DAY_LABELS = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"]
+
+// Validates a chosen pickup date+time against opening hours and blocked slots.
+// Returns an error message (string) when not bookable, or null when OK.
+function getAvailabilityError(
+  date: string,
+  time: string,
+  schedule: ScheduleRow[],
+  blocked: BlockedSlot[],
+): string | null {
+  if (!date || !time) return null
+  const t = time.slice(0, 5)
+  const dow = new Date(`${date}T00:00:00`).getDay()
+
+  const day = schedule.find((s) => s.day_of_week === dow)
+  if (day) {
+    if (!day.is_open) {
+      return `La reception è chiusa di ${DAY_LABELS[dow]}. Seleziona un altro giorno.`
+    }
+    const open = day.open_time?.slice(0, 5)
+    const close = day.close_time?.slice(0, 5)
+    if (open && close && (t < open || t > close)) {
+      return `Orario non disponibile: la reception è aperta dalle ${open} alle ${close}.`
+    }
+  }
+
+  for (const b of blocked) {
+    if (b.date !== date) continue
+    if (b.all_day) {
+      return b.reason
+        ? `Data non disponibile (${b.reason}). Seleziona un'altra data.`
+        : "Data non disponibile per il ritiro. Seleziona un'altra data."
+    }
+    const from = b.start_time?.slice(0, 5)
+    const to = b.end_time?.slice(0, 5)
+    if (from && to && t >= from && t < to) {
+      return b.reason
+        ? `Fascia oraria non disponibile (${b.reason}). Scegli un altro orario.`
+        : "Fascia oraria non disponibile. Scegli un altro orario."
+    }
+  }
+
+  return null
+}
 
 // Returns all photos for a type (gallery first, falls back to legacy single image_url)
 function getTypeImages(type?: VehicleType | null): string[] {
@@ -172,7 +235,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
   )
 }
 
-const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) => {
+const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule = [], blockedSlots = [] }: Props) => {
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState<Step>("select")
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -300,6 +363,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
       toast({ title: "Seleziona data e ora di ritiro", variant: "destructive" })
       return
     }
+    const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
+    if (availabilityError) {
+      toast({ title: "Orario non disponibile", description: availabilityError, variant: "destructive" })
+      return
+    }
     setCurrentStep("details")
   }
 
@@ -393,6 +461,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep)
 
   const primaryColor = structure.primary_color || "#f97316"
+
+  const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -623,6 +693,25 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                     className="mt-1"
                   />
                 </div>
+                {(() => {
+                  if (!pickupDate) return null
+                  const dow = new Date(`${pickupDate}T00:00:00`).getDay()
+                  const day = schedule.find((s) => s.day_of_week === dow)
+                  if (day && day.is_open && day.open_time && day.close_time) {
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        Reception aperta {DAY_LABELS[dow]}: {day.open_time.slice(0, 5)} - {day.close_time.slice(0, 5)}
+                      </p>
+                    )
+                  }
+                  return null
+                })()}
+                {availabilityError && (
+                  <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 p-3">
+                    <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-red-700">{availabilityError}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -715,7 +804,13 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
               </Card>
             )}
 
-            <Button className="w-full" size="lg" onClick={handleDateTimeNext} style={{ backgroundColor: primaryColor }}>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleDateTimeNext}
+              disabled={!!availabilityError}
+              style={{ backgroundColor: primaryColor }}
+            >
               Continua <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>

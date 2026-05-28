@@ -170,6 +170,12 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
   const [timeSlotsDialogOpen, setTimeSlotsDialogOpen] = useState(false)
   const [blockedSlots, setBlockedSlots] = useState<{ day: number; slots: string[] }[]>([])
 
+  // Opening hours (schedule) - keyed by day_of_week (0=Domenica .. 6=Sabato, JS getDay convention)
+  const [schedule, setSchedule] = useState<
+    Record<number, { is_open: boolean; open_time: string; close_time: string }>
+  >({})
+  const [savingSchedule, setSavingSchedule] = useState(false)
+
   useEffect(() => {
     const auth = sessionStorage.getItem(`ecomobility_auth_${structure.id}`)
     if (auth) {
@@ -242,10 +248,61 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
       const today = new Date().toISOString().split("T")[0]
       const todayFiltered = allBookings.filter((b: Booking) => b.pickup_date === today || b.status === "picked_up")
       setTodayBookings(todayFiltered)
+
+      // Load opening hours
+      const availRes = await fetch(`/api/ecomobility/admin/availability?structureId=${structure.id}`)
+      const availData = await availRes.json()
+      const scheduleMap: Record<number, { is_open: boolean; open_time: string; close_time: string }> = {}
+      for (let dow = 0; dow <= 6; dow++) {
+        const row = (availData.schedule || []).find((s: any) => s.day_of_week === dow)
+        scheduleMap[dow] = row
+          ? {
+              is_open: row.is_open,
+              open_time: (row.open_time || "08:00").slice(0, 5),
+              close_time: (row.close_time || "20:00").slice(0, 5),
+            }
+          : { is_open: true, open_time: "08:00", close_time: "20:00" }
+      }
+      setSchedule(scheduleMap)
     } catch (error) {
       toast({ title: "Errore caricamento dati", variant: "destructive" })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const saveSchedule = async () => {
+    setSavingSchedule(true)
+    try {
+      for (let dow = 0; dow <= 6; dow++) {
+        const day = schedule[dow]
+        if (!day) continue
+        const res = await fetch("/api/ecomobility/admin/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "schedule",
+            structureId: structure.id,
+            day_of_week: dow,
+            is_open: day.is_open,
+            open_time: day.open_time,
+            close_time: day.close_time,
+          }),
+        })
+        if (!res.ok) {
+          const d = await res.json()
+          throw new Error(d.error || "Errore salvataggio")
+        }
+      }
+      toast({ title: "Orari salvati" })
+    } catch (error) {
+      toast({
+        title: "Errore salvataggio orari",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      })
+    } finally {
+      setSavingSchedule(false)
     }
   }
 
@@ -1022,20 +1079,66 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi", "Sabato", "Domenica"].map((day, index) => (
-                    <div key={day} className="flex items-center justify-between border-b pb-3">
-                      <span className="font-medium w-28">{day}</span>
-                      <div className="flex items-center gap-2">
-                        <Input type="time" defaultValue="08:00" className="w-28" />
-                        <span>-</span>
-                        <Input type="time" defaultValue="20:00" className="w-28" />
-                        <Switch defaultChecked />
+                  {[
+                    { label: "Lunedi", dow: 1 },
+                    { label: "Martedi", dow: 2 },
+                    { label: "Mercoledi", dow: 3 },
+                    { label: "Giovedi", dow: 4 },
+                    { label: "Venerdi", dow: 5 },
+                    { label: "Sabato", dow: 6 },
+                    { label: "Domenica", dow: 0 },
+                  ].map(({ label, dow }) => {
+                    const day = schedule[dow] || { is_open: true, open_time: "08:00", close_time: "20:00" }
+                    return (
+                      <div key={dow} className="flex items-center justify-between border-b pb-3">
+                        <span className="font-medium w-28">{label}</span>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="time"
+                            value={day.open_time}
+                            disabled={!day.is_open}
+                            onChange={(e) =>
+                              setSchedule((prev) => ({
+                                ...prev,
+                                [dow]: { ...day, open_time: e.target.value },
+                              }))
+                            }
+                            className="w-28"
+                          />
+                          <span>-</span>
+                          <Input
+                            type="time"
+                            value={day.close_time}
+                            disabled={!day.is_open}
+                            onChange={(e) =>
+                              setSchedule((prev) => ({
+                                ...prev,
+                                [dow]: { ...day, close_time: e.target.value },
+                              }))
+                            }
+                            className="w-28"
+                          />
+                          <Switch
+                            checked={day.is_open}
+                            onCheckedChange={(checked) =>
+                              setSchedule((prev) => ({
+                                ...prev,
+                                [dow]: { ...day, is_open: checked },
+                              }))
+                            }
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-                <Button className="mt-4" style={{ backgroundColor: structure.primary_color }}>
-                  Salva Orari
+                <Button
+                  className="mt-4"
+                  onClick={saveSchedule}
+                  disabled={savingSchedule}
+                  style={{ backgroundColor: structure.primary_color }}
+                >
+                  {savingSchedule ? "Salvataggio..." : "Salva Orari"}
                 </Button>
               </CardContent>
             </Card>
