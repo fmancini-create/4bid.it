@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/ecomobility/i18n/provider"
+import { LanguageSwitcher } from "@/components/ecomobility/language-switcher"
 import {
   Camera,
   CheckCircle2,
@@ -29,6 +31,7 @@ type PhotoType = "front" | "back" | "left" | "right"
 
 const ReturnPage = ({ structure, booking }: Props) => {
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [photos, setPhotos] = useState<Record<PhotoType, File | null>>({
     front: null,
     back: null,
@@ -63,7 +66,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
 
   const handleSubmit = async () => {
     if (!allPhotosUploaded) {
-      toast({ title: "Carica tutte le 4 foto richieste", variant: "destructive" })
+      toast({ title: t("return.toastUploadAll"), variant: "destructive" })
       return
     }
 
@@ -95,7 +98,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
       })
       setIsCompleted(true)
     } catch (error) {
-      toast({ title: "Errore durante la riconsegna", variant: "destructive" })
+      toast({ title: t("return.errorReturn"), variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -112,10 +115,10 @@ const ReturnPage = ({ structure, booking }: Props) => {
   const remainingMinutes = elapsedMinutes % 60
 
   const photoLabels: Record<PhotoType, string> = {
-    front: "Fronte",
-    back: "Retro",
-    left: "Lato sinistro",
-    right: "Lato destro",
+    front: t("return.photoFront"),
+    back: t("return.photoBack"),
+    left: t("return.photoLeft"),
+    right: t("return.photoRight"),
   }
 
   if (isCompleted) {
@@ -133,6 +136,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
               <h1 className="font-semibold text-sm">{structure.name}</h1>
               <p className="text-xs text-muted-foreground">4BID Ecomobility</p>
             </div>
+            <LanguageSwitcher />
           </div>
         </header>
 
@@ -145,26 +149,26 @@ const ReturnPage = ({ structure, booking }: Props) => {
               <CheckCircle2 className="h-10 w-10" style={{ color: primaryColor }} />
             </div>
 
-            <h2 className="text-2xl font-bold mb-2">Riconsegna completata!</h2>
-            <p className="text-muted-foreground mb-6">Grazie per aver noleggiato con noi.</p>
+            <h2 className="text-2xl font-bold mb-2">{t("return.completedTitle")}</h2>
+            <p className="text-muted-foreground mb-6">{t("return.completedSubtitle")}</p>
 
             <Card className="text-left mb-6">
               <CardContent className="p-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Tempo di utilizzo</span>
+                  <span className="text-muted-foreground">{t("return.usageTime")}</span>
                   <span className="font-medium">
                     {elapsedHours}h {remainingMinutes}min
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Batteria alla riconsegna</span>
+                  <span className="text-muted-foreground">{t("return.batteryAtReturn")}</span>
                   <span className="font-medium flex items-center gap-1">
                     {getBatteryIcon(batteryLevelReturn)}
                     {batteryLevelReturn}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-lg">
-                  <span className="font-medium">Importo finale</span>
+                  <span className="font-medium">{t("return.finalAmount")}</span>
                   <span className="font-bold" style={{ color: primaryColor }}>
                     €{finalAmount?.toFixed(2)}
                   </span>
@@ -178,15 +182,17 @@ const ReturnPage = ({ structure, booking }: Props) => {
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium text-yellow-800">Veicolo in ricarica</p>
+                      <p className="font-medium text-yellow-800">{t("return.vehicleChargingTitle")}</p>
                       <p className="text-yellow-700">
-                        Il livello batteria è sotto la soglia minima ({minBatteryThreshold}%). Il veicolo verrà messo in
-                        ricarica.
+                        {t("return.vehicleChargingBody", { threshold: minBatteryThreshold })}
                         {vehiclePostStatus.estimatedAvailableTime && (
                           <>
                             {" "}
-                            Disponibilità stimata:{" "}
-                            {new Date(vehiclePostStatus.estimatedAvailableTime).toLocaleString("it-IT")}
+                            {t("return.estimatedAvailability", {
+                              time: new Date(vehiclePostStatus.estimatedAvailableTime).toLocaleString(
+                                t("success.localeTag"),
+                              ),
+                            })}
                           </>
                         )}
                       </p>

@@ -1168,7 +1168,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("booking.datetime.dateLabel")}</span>
-                  <span>{t("booking.confirmation.dateAt", { date: pickupDate, time: pickupTime })}</span>
+                  <span>{t("booking.confirmation.dateAtTime", { date: pickupDate, time: pickupTime })}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("booking.confirmation.place")}</span>

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Calendar, Clock, Bike, MapPin, Download, QrCode, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useLanguage } from "@/lib/ecomobility/i18n/provider"
+import { LanguageSwitcher } from "@/components/ecomobility/language-switcher"
 
 interface BookingSuccessPageProps {
   structure: any
@@ -14,6 +16,7 @@ interface BookingSuccessPageProps {
 }
 
 const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => {
+  const { t } = useLanguage()
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
 
   useEffect(() => {
@@ -30,8 +33,10 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
     }
   }, [booking, structure.slug])
 
+  const localeTag = t("success.localeTag")
+
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("it-IT", {
+    return new Date(date).toLocaleDateString(localeTag, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -40,7 +45,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
   }
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString("it-IT", {
+    return new Date(date).toLocaleTimeString(localeTag, {
       hour: "2-digit",
       minute: "2-digit",
     })
@@ -56,7 +61,10 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
           <Link href={`/ecomobility/${structure.slug}`}>
             <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={120} height={60} />
           </Link>
-          <span className="font-semibold" style={{ color: primaryColor }}>{structure.name}</span>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold" style={{ color: primaryColor }}>{structure.name}</span>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -69,10 +77,8 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
           >
             <CheckCircle className="h-10 w-10" style={{ color: primaryColor }} />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Prenotazione Confermata!</h1>
-          <p className="text-muted-foreground">
-            Il tuo pagamento è stato ricevuto. Ecco il tuo voucher digitale.
-          </p>
+          <h1 className="text-3xl font-bold mb-2">{t("success.confirmedTitle")}</h1>
+          <p className="text-muted-foreground">{t("success.confirmedSubtitle")}</p>
         </div>
 
         {booking ? (
@@ -81,15 +87,15 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
             <Card className="mb-6 overflow-hidden">
               <div className="h-2" style={{ backgroundColor: primaryColor }} />
               <CardHeader className="text-center pb-2">
-                <CardTitle className="text-lg">Voucher Noleggio</CardTitle>
-                <CardDescription>Mostra questo QR code al momento del ritiro</CardDescription>
+                <CardTitle className="text-lg">{t("success.voucherTitle")}</CardTitle>
+                <CardDescription>{t("success.voucherSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* QR Code */}
                 <div className="flex justify-center">
                   {qrCodeUrl ? (
                     <div className="p-4 bg-white border rounded-lg shadow-sm">
-                      <img src={qrCodeUrl || "/placeholder.svg"} alt="QR Code Voucher" className="w-48 h-48" />
+                      <img src={qrCodeUrl || "/placeholder.svg"} alt={t("success.qrAlt")} className="w-48 h-48" />
                     </div>
                   ) : (
                     <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -100,7 +106,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
 
                 {/* Booking Code */}
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Codice Prenotazione</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("success.bookingCode")}</p>
                   <p className="text-3xl font-mono font-bold tracking-wider" style={{ color: primaryColor }}>
                     {booking.booking_code}
                   </p>
@@ -111,21 +117,21 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Data Ritiro</p>
+                      <p className="text-sm text-muted-foreground">{t("success.pickupDate")}</p>
                       <p className="font-medium">{formatDate(booking.pickup_datetime)}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Ora Ritiro</p>
+                      <p className="text-sm text-muted-foreground">{t("success.pickupTime")}</p>
                       <p className="font-medium">{formatTime(booking.pickup_datetime)}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Bike className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Veicolo</p>
+                      <p className="text-sm text-muted-foreground">{t("success.vehicle")}</p>
                       <p className="font-medium">{booking.vehicle?.name}</p>
                       <p className="text-xs text-muted-foreground">{booking.vehicle?.vehicle_type?.name}</p>
                     </div>
@@ -133,7 +139,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Luogo</p>
+                      <p className="text-sm text-muted-foreground">{t("success.place")}</p>
                       <p className="font-medium">{structure.name}</p>
                       <p className="text-xs text-muted-foreground">{structure.city}</p>
                     </div>
@@ -142,7 +148,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
 
                 {/* Customer Info */}
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Intestato a</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t("success.heldBy")}</p>
                   <p className="font-medium">{booking.customer?.first_name} {booking.customer?.last_name}</p>
                   <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -161,19 +167,19 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
                 {/* Amount */}
                 <div className="pt-4 border-t flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-muted-foreground">Totale pagato</p>
+                    <p className="text-sm text-muted-foreground">{t("success.totalPaid")}</p>
                     <p className="text-2xl font-bold" style={{ color: primaryColor }}>
                       €{((booking.estimated_amount || 0) + (booking.deposit_amount || 0)).toFixed(2)}
                     </p>
                     {booking.deposit_amount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Include cauzione €{booking.deposit_amount.toFixed(2)} (rimborsabile)
+                        {t("success.includesDeposit", { amount: booking.deposit_amount.toFixed(2) })}
                       </p>
                     )}
                   </div>
                   <Badge variant="outline" className="text-green-600 border-green-600">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Pagato
+                    {t("success.paid")}
                   </Badge>
                 </div>
               </CardContent>
@@ -183,11 +189,11 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => window.print()}>
                 <Download className="h-4 w-4 mr-2" />
-                Salva PDF
+                {t("success.savePdf")}
               </Button>
               <Link href={`/ecomobility/${structure.slug}`} className="flex-1">
                 <Button variant="outline" className="w-full bg-transparent">
-                  Nuova prenotazione
+                  {t("success.newBooking")}
                 </Button>
               </Link>
             </div>
@@ -195,12 +201,12 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
             {/* Info */}
             <Card className="mt-6 bg-blue-50 border-blue-200">
               <CardContent className="p-4">
-                <h3 className="font-medium mb-2">Cosa fare al ritiro</h3>
+                <h3 className="font-medium mb-2">{t("success.whatToDoTitle")}</h3>
                 <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Presentati alla reception con questo voucher</li>
-                  <li>Mostra il QR code o comunica il codice prenotazione</li>
-                  <li>L'operatore verificherà i tuoi documenti</li>
-                  <li>Riceverai le chiavi e le istruzioni del veicolo</li>
+                  <li>{t("success.whatToDo1")}</li>
+                  <li>{t("success.whatToDo2")}</li>
+                  <li>{t("success.whatToDo3")}</li>
+                  <li>{t("success.whatToDo4")}</li>
                 </ol>
               </CardContent>
             </Card>
@@ -209,13 +215,11 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
           <Card>
             <CardContent className="p-8 text-center">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Pagamento ricevuto!</h2>
-              <p className="text-muted-foreground mb-4">
-                Riceverai una email di conferma con il tuo voucher digitale e il QR code per il ritiro.
-              </p>
+              <h2 className="text-xl font-semibold mb-2">{t("success.paymentReceivedTitle")}</h2>
+              <p className="text-muted-foreground mb-4">{t("success.paymentReceivedSubtitle")}</p>
               <Link href={`/ecomobility/${structure.slug}`}>
                 <Button style={{ backgroundColor: primaryColor }}>
-                  Torna alla homepage
+                  {t("success.backHome")}
                 </Button>
               </Link>
             </CardContent>
@@ -224,7 +228,7 @@ const BookingSuccessPage = ({ structure, booking }: BookingSuccessPageProps) => 
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>Hai bisogno di assistenza?</p>
+          <p>{t("success.needHelp")}</p>
           <p>
             {structure.email && <a href={`mailto:${structure.email}`} className="underline">{structure.email}</a>}
             {structure.phone && <> | <a href={`tel:${structure.phone}`} className="underline">{structure.phone}</a></>}
