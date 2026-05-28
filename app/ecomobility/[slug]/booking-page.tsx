@@ -55,6 +55,7 @@ interface VehicleType {
   description: string
   icon: string
   image_url?: string | null
+  image_urls?: string[] | null
   max_speed_kmh: number
   avg_range_km: number
   requires_license: boolean
@@ -108,6 +109,68 @@ interface Props {
 }
 
 type Step = "select" | "datetime" | "details" | "documents" | "payment" | "confirmation"
+
+// Returns all photos for a type (gallery first, falls back to legacy single image_url)
+function getTypeImages(type?: VehicleType | null): string[] {
+  if (!type) return []
+  if (type.image_urls && type.image_urls.length > 0) return type.image_urls
+  if (type.image_url) return [type.image_url]
+  return []
+}
+
+// Small image carousel used in the vehicle selection grid
+function TypeImageCarousel({ images, name }: { images: string[]; name: string }) {
+  const [index, setIndex] = useState(0)
+  if (images.length === 0) {
+    return <Bike className="h-10 w-10 text-gray-400" />
+  }
+  const current = Math.min(index, images.length - 1)
+  return (
+    <div className="relative w-full h-full">
+      <Image
+        src={images[current] || "/placeholder.svg"}
+        alt={`${name} ${current + 1}`}
+        fill
+        sizes="112px"
+        className="object-cover"
+      />
+      {images.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIndex((current - 1 + images.length) % images.length)
+            }}
+            aria-label="Foto precedente"
+            className="absolute left-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIndex((current + 1) % images.length)
+            }}
+            aria-label="Foto successiva"
+            className="absolute right-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-1.5 rounded-full ${i === current ? "bg-white" : "bg-white/50"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) => {
   const { toast } = useToast()
@@ -420,18 +483,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                 return (
                   <Card key={type.id} className="overflow-hidden">
                     <div className="flex">
-                      <div className="w-28 h-28 bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        {type.image_url ? (
-                          <Image
-                            src={type.image_url || "/placeholder.svg"}
-                            alt={type.name}
-                            width={80}
-                            height={80}
-                            className="object-contain"
-                          />
-                        ) : (
-                          <Bike className="h-10 w-10 text-gray-400" />
-                        )}
+                      <div className="w-28 h-28 bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <TypeImageCarousel images={getTypeImages(type)} name={type.name} />
                       </div>
                       <div className="flex-1 p-4">
                         <div className="flex items-start justify-between mb-1">
@@ -577,8 +630,18 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
             <Card className="bg-gray-50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center">
-                    <Bike className="h-8 w-8 text-gray-400" />
+                  <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {getTypeImages(selectedVehicle.vehicle_type)[0] ? (
+                      <Image
+                        src={getTypeImages(selectedVehicle.vehicle_type)[0] || "/placeholder.svg"}
+                        alt={selectedVehicle.vehicle_type?.name || "Veicolo"}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Bike className="h-8 w-8 text-gray-400" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{selectedVehicle.vehicle_type?.name}</p>
@@ -898,8 +961,18 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 pb-4 border-b">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Bike className="h-8 w-8 text-gray-400" />
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {getTypeImages(selectedVehicle.vehicle_type)[0] ? (
+                      <Image
+                        src={getTypeImages(selectedVehicle.vehicle_type)[0] || "/placeholder.svg"}
+                        alt={selectedVehicle.vehicle_type?.name || "Veicolo"}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Bike className="h-8 w-8 text-gray-400" />
+                    )}
                   </div>
                   <div>
                     <p className="font-medium">{selectedVehicle.vehicle_type?.name}</p>
