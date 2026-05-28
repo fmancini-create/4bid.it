@@ -202,9 +202,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
               </Card>
             )}
 
-            <p className="text-sm text-muted-foreground">
-              Riceverai un'email con il riepilogo del noleggio. La cauzione sarà sbloccata entro 5-7 giorni lavorativi.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("return.emailSummary")}</p>
           </div>
         </main>
       </div>
@@ -223,8 +221,9 @@ const ReturnPage = ({ structure, booking }: Props) => {
           </div>
           <div className="flex-1">
             <h1 className="font-semibold text-sm">{structure.name}</h1>
-            <p className="text-xs text-muted-foreground">Riconsegna veicolo</p>
+            <p className="text-xs text-muted-foreground">{t("return.headerSubtitle")}</p>
           </div>
+          <LanguageSwitcher />
         </div>
       </header>
 
@@ -235,7 +234,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5" style={{ color: primaryColor }} />
-                <span className="font-medium">Tempo di utilizzo</span>
+                <span className="font-medium">{t("return.usageTime")}</span>
               </div>
               <span className="text-xl font-bold" style={{ color: primaryColor }}>
                 {elapsedHours}h {remainingMinutes}min
@@ -256,11 +255,13 @@ const ReturnPage = ({ structure, booking }: Props) => {
                 <p className="text-sm text-muted-foreground">
                   {booking.vehicle?.brand} {booking.vehicle?.model}
                 </p>
-                <p className="text-xs text-muted-foreground">Codice: {booking.booking_code}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("return.codeLabel")}: {booking.booking_code}
+                </p>
                 {booking.battery_level_pickup && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                     <Battery className="h-3 w-3" />
-                    Batteria al ritiro: {booking.battery_level_pickup}%
+                    {t("return.batteryAtPickup", { level: booking.battery_level_pickup })}
                   </p>
                 )}
               </div>
@@ -272,9 +273,9 @@ const ReturnPage = ({ structure, booking }: Props) => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Battery className="h-5 w-5" />
-              Livello batteria
+              {t("return.batteryLevelTitle")}
             </CardTitle>
-            <CardDescription>Indica il livello di carica attuale del veicolo</CardDescription>
+            <CardDescription>{t("return.batteryLevelDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -304,10 +305,10 @@ const ReturnPage = ({ structure, booking }: Props) => {
             {/* Battery level ranges */}
             <div className="grid grid-cols-4 gap-2 text-xs text-center">
               {[
-                { range: "0-25%", label: "Quasi scarico", color: "text-red-600 bg-red-50" },
-                { range: "25-50%", label: "Basso", color: "text-yellow-600 bg-yellow-50" },
-                { range: "50-75%", label: "Medio", color: "text-green-600 bg-green-50" },
-                { range: "75-100%", label: "Alto", color: "text-green-600 bg-green-50" },
+                { range: "0-25%", label: t("return.rangeAlmostEmpty"), color: "text-red-600 bg-red-50" },
+                { range: "25-50%", label: t("return.rangeLow"), color: "text-yellow-600 bg-yellow-50" },
+                { range: "50-75%", label: t("return.rangeMedium"), color: "text-green-600 bg-green-50" },
+                { range: "75-100%", label: t("return.rangeHigh"), color: "text-green-600 bg-green-50" },
               ].map((item, i) => (
                 <button
                   key={item.range}
@@ -326,8 +327,7 @@ const ReturnPage = ({ structure, booking }: Props) => {
               <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <p className="text-yellow-700">
-                  Il livello batteria è sotto la soglia minima ({minBatteryThreshold}%). Il veicolo verrà
-                  automaticamente messo in ricarica dopo la riconsegna.
+                  {t("return.belowThresholdWarn", { threshold: minBatteryThreshold })}
                 </p>
               </div>
             )}
@@ -339,9 +339,9 @@ const ReturnPage = ({ structure, booking }: Props) => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Camera className="h-5 w-5" />
-              Foto del veicolo
+              {t("return.photosTitle")}
             </CardTitle>
-            <CardDescription>Scatta 4 foto del veicolo da ogni lato prima di riconsegnarlo</CardDescription>
+            <CardDescription>{t("return.photosDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
@@ -381,13 +381,13 @@ const ReturnPage = ({ structure, booking }: Props) => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              Segnalazione danni
+              {t("return.damageTitle")}
             </CardTitle>
-            <CardDescription>Segnala eventuali danni o anomalie riscontrate (opzionale)</CardDescription>
+            <CardDescription>{t("return.damageDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
-              placeholder="Descrivi eventuali danni o problemi..."
+              placeholder={t("return.damagePlaceholder")}
               value={damageNotes}
               onChange={(e) => setDamageNotes(e.target.value)}
               rows={3}
@@ -404,19 +404,16 @@ const ReturnPage = ({ structure, booking }: Props) => {
           style={{ backgroundColor: primaryColor }}
         >
           {isSubmitting ? (
-            "Elaborazione..."
+            t("return.processing")
           ) : (
             <>
               <Upload className="h-4 w-4 mr-2" />
-              Completa riconsegna
+              {t("return.completeReturn")}
             </>
           )}
         </Button>
 
-        <p className="text-xs text-center text-muted-foreground">
-          Una volta completata la riconsegna, l'importo finale sarà calcolato automaticamente in base al tempo effettivo
-          di utilizzo.
-        </p>
+        <p className="text-xs text-center text-muted-foreground">{t("return.footerNote")}</p>
       </main>
     </div>
   )
