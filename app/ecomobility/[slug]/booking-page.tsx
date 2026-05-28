@@ -573,11 +573,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                           <h4 className="font-semibold">{type.name}</h4>
                           <div className="flex flex-col items-end gap-1">
                             <Badge variant={availableCount > 0 ? "default" : "secondary"} className="text-xs">
-                              {availableCount} disponibili
+                              {t("booking.select.available", { count: availableCount })}
                             </Badge>
                             {chargingCount > 0 && (
                               <span className="text-xs text-yellow-600 flex items-center gap-1">
-                                <BatteryCharging className="h-3 w-3" /> {chargingCount} in carica
+                                <BatteryCharging className="h-3 w-3" /> {t("booking.select.charging", { count: chargingCount })}
                               </span>
                             )}
                           </div>
@@ -592,7 +592,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                           )}
                           {type.requires_license && type.license_type && (
                             <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> Pat. {type.license_type}
+                              <Shield className="h-3 w-3" /> {t("booking.select.license", { type: type.license_type })}
                             </span>
                           )}
                         </div>
@@ -603,9 +603,9 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                               <span className="text-lg font-bold" style={{ color: primaryColor }}>
                                 €{typePricing.hour_1}
                               </span>
-                              <span className="text-xs text-muted-foreground">/1ª ora</span>
+                              <span className="text-xs text-muted-foreground">{t("booking.select.perFirstHour")}</span>
                               <span className="text-xs text-muted-foreground ml-2">
-                                max €{typePricing.daily_cap}/giorno
+                                {t("booking.select.maxPerDay", { cap: typePricing.daily_cap })}
                               </span>
                             </div>
                             <Button
@@ -620,7 +620,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                               style={{ backgroundColor: primaryColor }}
                               className="hover:opacity-90"
                             >
-                              Prenota
+                              {t("booking.select.book")}
                             </Button>
                           </div>
                         )}
@@ -633,7 +633,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               {Object.keys(vehiclesByType).length === 0 && (
                 <Card className="p-8 text-center">
                   <Bike className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-muted-foreground">Nessun veicolo disponibile al momento</p>
+                  <p className="text-muted-foreground">{t("booking.select.empty")}</p>
                 </Card>
               )}
             </div>
@@ -644,11 +644,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-orange-800 mb-1">Come funziona il pricing?</p>
-                    <p className="text-orange-700">
-                      Più a lungo noleggi, meno paghi all'ora. Il prezzo massimo giornaliero ti protegge: non pagherai
-                      mai più di quello!
-                    </p>
+                    <p className="font-medium text-orange-800 mb-1">{t("booking.select.pricingTitle")}</p>
+                    <p className="text-orange-700">{t("booking.select.pricingBody")}</p>
                   </div>
                 </div>
               </CardContent>
@@ -659,11 +656,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                 <div className="flex items-start gap-3">
                   <Battery className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-green-800 mb-1">Veicoli sempre carichi</p>
-                    <p className="text-green-700">
-                      I nostri veicoli sono disponibili solo con batteria superiore al {minBatteryThreshold}%.
-                      L'autonomia effettiva può variare in base allo stile di guida e al percorso.
-                    </p>
+                    <p className="font-medium text-green-800 mb-1">{t("booking.select.batteryTitle")}</p>
+                    <p className="text-green-700">{t("booking.select.batteryBody", { threshold: minBatteryThreshold })}</p>
                   </div>
                 </div>
               </CardContent>
@@ -675,17 +669,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "datetime" && selectedVehicle && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("select")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quando vuoi ritirare?</CardTitle>
-                <CardDescription>Seleziona data e ora del ritiro presso la reception</CardDescription>
+                <CardTitle className="text-lg">{t("booking.datetime.title")}</CardTitle>
+                <CardDescription>{t("booking.datetime.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="pickupDate">Data ritiro</Label>
+                  <Label htmlFor="pickupDate">{t("booking.datetime.dateLabel")}</Label>
                   <Input
                     id="pickupDate"
                     type="date"
@@ -696,7 +690,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="pickupTime">Ora ritiro</Label>
+                  <Label htmlFor="pickupTime">{t("booking.datetime.timeLabel")}</Label>
                   <Input
                     id="pickupTime"
                     type="time"
@@ -712,7 +706,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   if (day && day.is_open && day.open_time && day.close_time) {
                     return (
                       <p className="text-xs text-muted-foreground">
-                        Reception aperta {DAY_LABELS[dow]}: {day.open_time.slice(0, 5)} - {day.close_time.slice(0, 5)}
+                        {t("booking.datetime.openHint", {
+                          day: t(`booking.days.${dow}`),
+                          open: day.open_time.slice(0, 5),
+                          close: day.close_time.slice(0, 5),
+                        })}
                       </p>
                     )
                   }
@@ -758,7 +756,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                             {batteryDisplay.text}
                             {selectedVehicle.estimated_range_km && (
                               <span className="text-muted-foreground">
-                                ({selectedVehicle.estimated_range_km} km autonomia)
+                                {t("booking.battery.rangeAutonomy", { km: selectedVehicle.estimated_range_km })}
                               </span>
                             )}
                           </span>
@@ -774,41 +772,41 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             {selectedPricing && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Riepilogo tariffe</CardTitle>
+                  <CardTitle className="text-base">{t("booking.datetime.ratesSummary")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>1ª ora</span>
+                      <span>{t("booking.rates.hour1")}</span>
                       <span className="font-medium">€{selectedPricing.hour_1}</span>
                     </div>
                     {selectedPricing.hour_2 && (
                       <div className="flex justify-between">
-                        <span>2ª ora</span>
+                        <span>{t("booking.rates.hour2")}</span>
                         <span className="font-medium">€{selectedPricing.hour_2}</span>
                       </div>
                     )}
                     {selectedPricing.hour_3 && (
                       <div className="flex justify-between">
-                        <span>3ª ora</span>
+                        <span>{t("booking.rates.hour3")}</span>
                         <span className="font-medium">€{selectedPricing.hour_3}</span>
                       </div>
                     )}
                     {selectedPricing.hour_8_plus && (
                       <div className="flex justify-between">
-                        <span>Ore successive</span>
-                        <span className="font-medium">€{selectedPricing.hour_8_plus}/ora</span>
+                        <span>{t("booking.rates.additional")}</span>
+                        <span className="font-medium">{t("booking.rates.additionalUnit", { price: selectedPricing.hour_8_plus })}</span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between text-base">
-                      <span className="font-medium">Max giornaliero</span>
+                      <span className="font-medium">{t("booking.rates.dailyMax")}</span>
                       <span className="font-bold" style={{ color: primaryColor }}>
                         €{selectedPricing.daily_cap}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Cauzione</span>
+                      <span>{t("booking.rates.deposit")}</span>
                       <span>€{selectedPricing.deposit}</span>
                     </div>
                   </div>
@@ -823,7 +821,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               disabled={!!availabilityError}
               style={{ backgroundColor: primaryColor }}
             >
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -832,18 +830,18 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "details" && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("datetime")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">I tuoi dati</CardTitle>
-                <CardDescription>Inserisci i dati per la prenotazione</CardDescription>
+                <CardTitle className="text-lg">{t("booking.details.title")}</CardTitle>
+                <CardDescription>{t("booking.details.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="firstName">Nome *</Label>
+                    <Label htmlFor="firstName">{t("booking.details.firstName")}</Label>
                     <Input
                       id="firstName"
                       value={customerData.firstName}
@@ -852,7 +850,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Cognome *</Label>
+                    <Label htmlFor="lastName">{t("booking.details.lastName")}</Label>
                     <Input
                       id="lastName"
                       value={customerData.lastName}
@@ -862,7 +860,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t("booking.details.email")}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -872,7 +870,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefono *</Label>
+                  <Label htmlFor="phone">{t("booking.details.phone")}</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -882,7 +880,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dateOfBirth">Data di nascita</Label>
+                  <Label htmlFor="dateOfBirth">{t("booking.details.dob")}</Label>
                   <Input
                     id="dateOfBirth"
                     type="date"
@@ -892,7 +890,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fiscalCode">Codice fiscale</Label>
+                  <Label htmlFor="fiscalCode">{t("booking.details.fiscalCode")}</Label>
                   <Input
                     id="fiscalCode"
                     value={customerData.fiscalCode}
@@ -904,7 +902,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             </Card>
 
             <Button className="w-full" size="lg" onClick={handleDetailsNext} style={{ backgroundColor: primaryColor }}>
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -913,17 +911,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "documents" && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("details")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Documenti</CardTitle>
-                <CardDescription>Carica i documenti richiesti per il noleggio</CardDescription>
+                <CardTitle className="text-lg">{t("booking.documents.title")}</CardTitle>
+                <CardDescription>{t("booking.documents.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Patente (fronte) *</Label>
+                  <Label>{t("booking.documents.licenseFront")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       licenseFront ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -944,14 +942,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
                 </div>
 
                 <div>
-                  <Label>Patente (retro)</Label>
+                  <Label>{t("booking.documents.licenseBack")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       licenseBack ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -972,14 +970,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
                 </div>
 
                 <div>
-                  <Label>Documento identità (fronte) *</Label>
+                  <Label>{t("booking.documents.idFront")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       idFront ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -1000,7 +998,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
@@ -1018,11 +1016,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
                   />
                   <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    Dichiaro di aver letto e accettato le{" "}
+                    {t("booking.documents.termsPrefix")}{" "}
                     <span className="underline" style={{ color: primaryColor }}>
-                      condizioni generali di noleggio
+                      {t("booking.documents.termsLink")}
                     </span>{" "}
-                    e l'informativa sulla privacy.
+                    {t("booking.documents.termsSuffix")}
                   </label>
                 </div>
 
@@ -1033,11 +1031,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     onCheckedChange={(checked) => setBatteryAutonomyAccepted(checked as boolean)}
                   />
                   <label htmlFor="batteryAutonomy" className="text-sm leading-relaxed cursor-pointer">
-                    <span className="font-medium">Dichiaro di essere consapevole che:</span>
+                    <span className="font-medium">{t("booking.documents.batteryAck")}</span>
                     <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                      <li>L'autonomia indicata ({selectedVehicle?.estimated_range_km || "–"} km) è stimata</li>
-                      <li>L'autonomia reale può variare in base a stile di guida, percorso e condizioni</li>
-                      <li>Batteria al ritiro: {selectedVehicle?.battery_level || "–"}%</li>
+                      <li>{t("booking.documents.batteryLi1", { km: selectedVehicle?.estimated_range_km ?? "–" })}</li>
+                      <li>{t("booking.documents.batteryLi2")}</li>
+                      <li>{t("booking.documents.batteryLi3", { level: selectedVehicle?.battery_level ?? "–" })}</li>
                     </ul>
                   </label>
                 </div>
@@ -1050,7 +1048,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               onClick={handleDocumentsNext}
               style={{ backgroundColor: primaryColor }}
             >
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -1059,12 +1057,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "payment" && selectedVehicle && selectedPricing && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("documents")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Riepilogo prenotazione</CardTitle>
+                <CardTitle className="text-lg">{t("booking.payment.title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 pb-4 border-b">
@@ -1088,22 +1086,25 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <Battery className="h-3 w-3" />
-                      Batteria: {selectedVehicle.battery_level}% ({selectedVehicle.estimated_range_km} km)
+                      {t("booking.payment.battery", {
+                        level: selectedVehicle.battery_level ?? "–",
+                        km: selectedVehicle.estimated_range_km ?? "–",
+                      })}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Data ritiro</span>
+                    <span className="text-muted-foreground">{t("booking.datetime.dateLabel")}</span>
                     <span>{pickupDate}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ora ritiro</span>
+                    <span className="text-muted-foreground">{t("booking.datetime.timeLabel")}</span>
                     <span>{pickupTime}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="text-muted-foreground">{t("booking.payment.customer")}</span>
                     <span>
                       {customerData.firstName} {customerData.lastName}
                     </span>
@@ -1114,26 +1115,23 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Prezzo minimo</span>
+                    <span>{t("booking.payment.minPrice")}</span>
                     <span>€{selectedPricing.minimum_charge}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Cauzione</span>
+                    <span>{t("booking.rates.deposit")}</span>
                     <span>€{selectedPricing.deposit}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-medium">
-                    <span>Da pagare ora</span>
+                    <span>{t("booking.payment.payNow")}</span>
                     <span style={{ color: primaryColor }}>
                       €{(selectedPricing.minimum_charge || 0) + (selectedPricing.deposit || 0)}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  L'importo finale sarà calcolato in base al tempo effettivo di utilizzo. La cauzione sarà sbloccata
-                  dopo la verifica del veicolo.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("booking.payment.note")}</p>
               </CardContent>
             </Card>
 
@@ -1144,7 +1142,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               disabled={isLoading}
               style={{ backgroundColor: primaryColor }}
             >
-              {isLoading ? "Elaborazione..." : "Paga e conferma"}
+              {isLoading ? t("booking.payment.processing") : t("booking.payment.payConfirm")}
             </Button>
           </div>
         )}
@@ -1159,29 +1157,25 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               <CheckCircle2 className="h-10 w-10" style={{ color: primaryColor }} />
             </div>
 
-            <h2 className="text-2xl font-bold mb-2">Prenotazione confermata!</h2>
-            <p className="text-muted-foreground mb-6">
-              Riceverai un'email con il voucher e tutte le istruzioni per il ritiro.
-            </p>
+            <h2 className="text-2xl font-bold mb-2">{t("booking.confirmation.title")}</h2>
+            <p className="text-muted-foreground mb-6">{t("booking.confirmation.subtitle")}</p>
 
             <Card className="text-left">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Veicolo</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.vehicle")}</span>
                   <span className="font-medium">{selectedVehicle?.vehicle_type?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Data ritiro</span>
-                  <span>
-                    {pickupDate} alle {pickupTime}
-                  </span>
+                  <span className="text-muted-foreground">{t("booking.datetime.dateLabel")}</span>
+                  <span>{t("booking.confirmation.dateAt", { date: pickupDate, time: pickupTime })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Luogo</span>
-                  <span>Reception {structure.name}</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.place")}</span>
+                  <span>{t("booking.confirmation.reception", { name: structure.name })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Batteria al ritiro</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.batteryAtPickup")}</span>
                   <span className="flex items-center gap-1">
                     <Battery className="h-4 w-4 text-green-500" />
                     {selectedVehicle?.battery_level}%
