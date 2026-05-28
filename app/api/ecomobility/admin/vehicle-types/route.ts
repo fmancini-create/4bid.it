@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
   const body = await request.json()
 
-  const { structure_id, name, description, icon, max_speed_kmh, avg_range_km, requires_license, max_passengers } = body
+  const { structure_id, name, description, icon, max_speed_kmh, avg_range_km, requires_license, max_passengers, image_url } = body
 
   if (!structure_id || !name) {
     return NextResponse.json({ error: "structure_id e name richiesti" }, { status: 400 })
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       avg_range_km: avg_range_km || 50,
       requires_license: requires_license || false,
       max_passengers: max_passengers || 1,
+      image_url: image_url || null,
     })
     .select()
     .single()
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest) {
   const supabase = createAdminClient()
   const body = await request.json()
 
-  const { id, name, description, icon, max_speed_kmh, avg_range_km, requires_license, max_passengers } = body
+  const { id, name, description, icon, max_speed_kmh, avg_range_km, requires_license, max_passengers, image_url } = body
 
   if (!id) {
     return NextResponse.json({ error: "id richiesto" }, { status: 400 })
@@ -76,6 +77,7 @@ export async function PUT(request: NextRequest) {
       avg_range_km,
       requires_license,
       max_passengers,
+      image_url: image_url ?? null,
     })
     .eq("id", id)
     .select()

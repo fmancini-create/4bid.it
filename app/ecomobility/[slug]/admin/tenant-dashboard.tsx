@@ -61,6 +61,7 @@ interface VehicleType {
   name: string
   description?: string
   icon?: string
+  image_url?: string | null
   requires_license: boolean
   max_passengers: number
 }
@@ -160,7 +161,9 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
     description: "",
     requires_license: false,
     max_passengers: 1,
+    image_url: "" as string,
   })
+  const [uploadingTypeImage, setUploadingTypeImage] = useState(false)
 
   // Time slots dialog
   const [timeSlotsDialogOpen, setTimeSlotsDialogOpen] = useState(false)
@@ -351,6 +354,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
         description: type.description || "",
         requires_license: type.requires_license,
         max_passengers: type.max_passengers,
+        image_url: type.image_url || "",
       })
     } else {
       setEditingVehicleType(null)
@@ -359,9 +363,35 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
         description: "",
         requires_license: false,
         max_passengers: 1,
+        image_url: "",
       })
     }
     setVehicleTypeDialogOpen(true)
+  }
+
+  const handleTypeImageUpload = async (file: File) => {
+    setUploadingTypeImage(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", `ecomobility/${structure.slug}/types`)
+      const res = await fetch("/api/ecomobility/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Upload fallito")
+      setVehicleTypeForm((prev) => ({ ...prev, image_url: data.url }))
+      toast({ title: "Immagine caricata" })
+    } catch (error) {
+      toast({
+        title: "Errore caricamento",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingTypeImage(false)
+    }
   }
 
   const saveVehicleType = async () => {
@@ -1171,6 +1201,68 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
                 onChange={(e) => setVehicleTypeForm({ ...vehicleTypeForm, description: e.target.value })}
                 placeholder="Bicicletta elettrica con pedalata assistita..."
               />
+            </div>
+            <div>
+              <Label>Foto tipologia</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Mostrata ai clienti nella pagina di prenotazione. JPG, PNG o WEBP (max 5MB).
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-20 h-20 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {vehicleTypeForm.image_url ? (
+                    <Image
+                      src={vehicleTypeForm.image_url || "/placeholder.svg"}
+                      alt="Anteprima"
+                      width={80}
+                      height={80}
+                      className="object-contain w-full h-full"
+                    />
+                  ) : (
+                    <Bike className="h-7 w-7 text-gray-400" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    id="vehicle-type-image"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleTypeImageUpload(file)
+                      e.target.value = ""
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingTypeImage}
+                    onClick={() => document.getElementById("vehicle-type-image")?.click()}
+                  >
+                    {uploadingTypeImage ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Caricamento...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" /> {vehicleTypeForm.image_url ? "Cambia foto" : "Carica foto"}
+                      </>
+                    )}
+                  </Button>
+                  {vehicleTypeForm.image_url && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600"
+                      onClick={() => setVehicleTypeForm({ ...vehicleTypeForm, image_url: "" })}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Rimuovi
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
             <div>
               <Label>Max Passeggeri</Label>
