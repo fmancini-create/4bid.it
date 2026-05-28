@@ -570,15 +570,13 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
       <header className="text-white p-4" style={{ backgroundColor: structure.primary_color }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg p-1.5 shadow-sm shrink-0">
-              <Image
-                src="/ecomobility-logo.png"
-                alt="4BID Ecomobility"
-                width={56}
-                height={56}
-                className="h-14 w-14 object-contain"
-              />
-            </div>
+            <Image
+              src="/ecomobility-logo.png"
+              alt="4BID Ecomobility"
+              width={88}
+              height={88}
+              className="h-20 w-20 object-contain shrink-0"
+            />
             <div>
               <h1 className="font-bold">{structure.name}</h1>
               <p className="text-sm opacity-80">Dashboard Gestore</p>
