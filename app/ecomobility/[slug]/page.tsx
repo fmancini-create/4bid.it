@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import { notFound } from "next/navigation"
 import { EcomobilityBookingPage } from "./booking-page"
 
+// Always render fresh so opening hours / blocked slots are never served stale from cache
+export const dynamic = "force-dynamic"
+
 interface Props {
   params: Promise<{ slug: string }>
 }
