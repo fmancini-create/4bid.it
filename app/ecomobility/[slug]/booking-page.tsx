@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/lib/ecomobility/i18n/provider"
+import { LanguageSwitcher } from "@/components/ecomobility/language-switcher"
 import {
   Bike,
   Zap,
@@ -128,7 +130,7 @@ interface Props {
 
 type Step = "select" | "datetime" | "details" | "documents" | "payment" | "confirmation"
 
-const DAY_LABELS = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"]
+type TFn = (path: string, vars?: Record<string, string | number>) => string
 
 // Validates a chosen pickup date+time against opening hours and blocked slots.
 // Returns an error message (string) when not bookable, or null when OK.
@@ -137,20 +139,22 @@ function getAvailabilityError(
   time: string,
   schedule: ScheduleRow[],
   blocked: BlockedSlot[],
+  t: TFn,
 ): string | null {
   if (!date || !time) return null
-  const t = time.slice(0, 5)
+  const hhmm = time.slice(0, 5)
   const dow = new Date(`${date}T00:00:00`).getDay()
+  const dayName = t(`booking.days.${dow}`)
 
   const day = schedule.find((s) => s.day_of_week === dow)
   if (day) {
     if (!day.is_open) {
-      return `La reception è chiusa di ${DAY_LABELS[dow]}. Seleziona un altro giorno.`
+      return t("booking.availability.closedDay", { day: dayName })
     }
     const open = day.open_time?.slice(0, 5)
     const close = day.close_time?.slice(0, 5)
-    if (open && close && (t < open || t > close)) {
-      return `Orario non disponibile: la reception è aperta dalle ${open} alle ${close}.`
+    if (open && close && (hhmm < open || hhmm > close)) {
+      return t("booking.availability.outsideHours", { open, close })
     }
   }
 
@@ -158,15 +162,15 @@ function getAvailabilityError(
     if (b.date !== date) continue
     if (b.all_day) {
       return b.reason
-        ? `Data non disponibile (${b.reason}). Seleziona un'altra data.`
-        : "Data non disponibile per il ritiro. Seleziona un'altra data."
+        ? t("booking.availability.dateBlockedReason", { reason: b.reason })
+        : t("booking.availability.dateBlocked")
     }
     const from = b.start_time?.slice(0, 5)
     const to = b.end_time?.slice(0, 5)
-    if (from && to && t >= from && t < to) {
+    if (from && to && hhmm >= from && hhmm < to) {
       return b.reason
-        ? `Fascia oraria non disponibile (${b.reason}). Scegli un altro orario.`
-        : "Fascia oraria non disponibile. Scegli un altro orario."
+        ? t("booking.availability.slotBlockedReason", { reason: b.reason })
+        : t("booking.availability.slotBlocked")
     }
   }
 
@@ -183,6 +187,7 @@ function getTypeImages(type?: VehicleType | null): string[] {
 
 // Small image carousel used in the vehicle selection grid
 function TypeImageCarousel({ images, name }: { images: string[]; name: string }) {
+  const { t } = useLanguage()
   const [index, setIndex] = useState(0)
   if (images.length === 0) {
     return <Bike className="h-10 w-10 text-gray-400" />
@@ -205,7 +210,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
               e.stopPropagation()
               setIndex((current - 1 + images.length) % images.length)
             }}
-            aria-label="Foto precedente"
+            aria-label={t("booking.a11y.prevPhoto")}
             className="absolute left-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
@@ -216,7 +221,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
               e.stopPropagation()
               setIndex((current + 1) % images.length)
             }}
-            aria-label="Foto successiva"
+            aria-label={t("booking.a11y.nextPhoto")}
             className="absolute right-0.5 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-0.5"
           >
             <ChevronRight className="h-3.5 w-3.5" />
@@ -237,6 +242,7 @@ function TypeImageCarousel({ images, name }: { images: string[]; name: string })
 
 const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule = [], blockedSlots = [] }: Props) => {
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [currentStep, setCurrentStep] = useState<Step>("select")
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [selectedPricing, setSelectedPricing] = useState<Pricing | null>(null)
@@ -292,7 +298,9 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
       return {
         icon: <BatteryCharging className="h-4 w-4 text-yellow-500" />,
-        text: timeRemaining ? `In carica (${Math.floor(timeRemaining / 60)}h ${timeRemaining % 60}min)` : "In carica",
+        text: timeRemaining
+          ? t("booking.battery.chargingTime", { h: Math.floor(timeRemaining / 60), m: timeRemaining % 60 })
+          : t("booking.battery.charging"),
         color: "text-yellow-600",
         bgColor: "bg-yellow-50",
       }
@@ -301,7 +309,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
     if (status === "low_battery" || (level !== null && level < minBatteryThreshold)) {
       return {
         icon: <BatteryLow className="h-4 w-4 text-red-500" />,
-        text: `${level}% - Batteria scarica`,
+        text: t("booking.battery.low", { level: level ?? 0 }),
         color: "text-red-600",
         bgColor: "bg-red-50",
       }
@@ -310,7 +318,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
     if (status === "unavailable" || level === null) {
       return {
         icon: <Battery className="h-4 w-4 text-gray-400" />,
-        text: "Non disponibile",
+        text: t("booking.battery.unavailable"),
         color: "text-gray-500",
         bgColor: "bg-gray-50",
       }
@@ -346,9 +354,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
   const handleSelectVehicle = (vehicle: Vehicle, vehiclePricing: Pricing | undefined) => {
     if (!isVehicleBookable(vehicle)) {
       toast({
-        title: "Veicolo non disponibile",
-        description:
-          "Questo veicolo non è attualmente prenotabile. Potrebbe essere in ricarica o con batteria insufficiente.",
+        title: t("booking.toast.vehicleUnavailableTitle"),
+        description: t("booking.toast.vehicleUnavailableDesc"),
         variant: "destructive",
       })
       return
@@ -360,12 +367,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDateTimeNext = () => {
     if (!pickupDate || !pickupTime) {
-      toast({ title: "Seleziona data e ora di ritiro", variant: "destructive" })
+      toast({ title: t("booking.toast.selectDateTime"), variant: "destructive" })
       return
     }
-    const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
+    const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots, t)
     if (availabilityError) {
-      toast({ title: "Orario non disponibile", description: availabilityError, variant: "destructive" })
+      toast({ title: t("booking.toast.timeUnavailable"), description: availabilityError, variant: "destructive" })
       return
     }
     setCurrentStep("details")
@@ -373,7 +380,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDetailsNext = () => {
     if (!customerData.firstName || !customerData.lastName || !customerData.email || !customerData.phone) {
-      toast({ title: "Compila tutti i campi obbligatori", variant: "destructive" })
+      toast({ title: t("booking.toast.fillRequired"), variant: "destructive" })
       return
     }
     setCurrentStep("documents")
@@ -381,15 +388,15 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
   const handleDocumentsNext = () => {
     if (!licenseFront || !idFront) {
-      toast({ title: "Carica i documenti richiesti", variant: "destructive" })
+      toast({ title: t("booking.toast.uploadDocs"), variant: "destructive" })
       return
     }
     if (!termsAccepted) {
-      toast({ title: "Accetta le condizioni di noleggio", variant: "destructive" })
+      toast({ title: t("booking.toast.acceptTerms"), variant: "destructive" })
       return
     }
     if (!batteryAutonomyAccepted) {
-      toast({ title: "Accetta la dichiarazione sull'autonomia della batteria", variant: "destructive" })
+      toast({ title: t("booking.toast.acceptBattery"), variant: "destructive" })
       return
     }
     setCurrentStep("payment")
@@ -415,7 +422,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         }),
       })
 
-      if (!response.ok) throw new Error("Errore nella prenotazione")
+      if (!response.ok) throw new Error(t("booking.toast.bookingError"))
 
       const bookingData = await response.json()
 
@@ -435,34 +442,38 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
       })
 
       const checkoutData = await checkoutRes.json()
-      if (!checkoutRes.ok) throw new Error(checkoutData.error || "Errore nel pagamento")
+      if (!checkoutRes.ok) throw new Error(checkoutData.error || t("booking.toast.paymentError"))
 
       // 3. Redirect a Stripe Checkout
       if (checkoutData.url) {
         window.location.href = checkoutData.url
       } else {
-        throw new Error("Errore nella creazione del pagamento")
+        throw new Error(t("booking.toast.paymentCreateError"))
       }
     } catch (error: any) {
-      toast({ title: "Errore", description: error.message || "Errore durante il pagamento", variant: "destructive" })
+      toast({
+        title: t("booking.toast.errorTitle"),
+        description: error.message || t("booking.toast.paymentError"),
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   const steps: { key: Step; label: string; icon: React.ReactNode }[] = [
-    { key: "select", label: "Veicolo", icon: <Bike className="h-4 w-4" /> },
-    { key: "datetime", label: "Data/Ora", icon: <Calendar className="h-4 w-4" /> },
-    { key: "details", label: "Dati", icon: <FileText className="h-4 w-4" /> },
-    { key: "documents", label: "Documenti", icon: <Upload className="h-4 w-4" /> },
-    { key: "payment", label: "Pagamento", icon: <CreditCard className="h-4 w-4" /> },
+    { key: "select", label: t("booking.steps.vehicle"), icon: <Bike className="h-4 w-4" /> },
+    { key: "datetime", label: t("booking.steps.datetime"), icon: <Calendar className="h-4 w-4" /> },
+    { key: "details", label: t("booking.steps.details"), icon: <FileText className="h-4 w-4" /> },
+    { key: "documents", label: t("booking.steps.documents"), icon: <Upload className="h-4 w-4" /> },
+    { key: "payment", label: t("booking.steps.payment"), icon: <CreditCard className="h-4 w-4" /> },
   ]
 
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep)
 
   const primaryColor = structure.primary_color || "#f97316"
 
-  const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots)
+  const availabilityError = getAvailabilityError(pickupDate, pickupTime, schedule, blockedSlots, t)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -489,6 +500,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             <h1 className="font-semibold text-sm">{structure.name}</h1>
             <p className="text-xs text-muted-foreground">4BID Ecomobility</p>
           </div>
+          <LanguageSwitcher />
           <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={48} height={48} />
         </div>
       </header>
@@ -535,15 +547,15 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="h-5 w-5" />
-                <span className="text-sm font-medium">Più usi, meno paghi!</span>
+                <span className="text-sm font-medium">{t("booking.hero.badge")}</span>
               </div>
-              <h2 className="text-xl font-bold mb-1">Noleggia un veicolo elettrico</h2>
-              <p className="text-sm opacity-90">Esplora {structure.city} in modo eco-sostenibile</p>
+              <h2 className="text-xl font-bold mb-1">{t("booking.hero.title")}</h2>
+              <p className="text-sm opacity-90">{t("booking.hero.subtitle", { city: structure.city })}</p>
             </div>
 
             {/* Vehicle Types */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Scegli il tuo veicolo</h3>
+              <h3 className="font-semibold text-lg">{t("booking.select.title")}</h3>
 
               {Object.values(vehiclesByType).map(({ type, vehicles: typeVehicles, pricing: typePricing }) => {
                 const availableCount = typeVehicles.filter(isVehicleBookable).length
@@ -561,11 +573,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                           <h4 className="font-semibold">{type.name}</h4>
                           <div className="flex flex-col items-end gap-1">
                             <Badge variant={availableCount > 0 ? "default" : "secondary"} className="text-xs">
-                              {availableCount} disponibili
+                              {t("booking.select.available", { count: availableCount })}
                             </Badge>
                             {chargingCount > 0 && (
                               <span className="text-xs text-yellow-600 flex items-center gap-1">
-                                <BatteryCharging className="h-3 w-3" /> {chargingCount} in carica
+                                <BatteryCharging className="h-3 w-3" /> {t("booking.select.charging", { count: chargingCount })}
                               </span>
                             )}
                           </div>
@@ -580,7 +592,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                           )}
                           {type.requires_license && type.license_type && (
                             <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" /> Pat. {type.license_type}
+                              <Shield className="h-3 w-3" /> {t("booking.select.license", { type: type.license_type })}
                             </span>
                           )}
                         </div>
@@ -591,9 +603,9 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                               <span className="text-lg font-bold" style={{ color: primaryColor }}>
                                 €{typePricing.hour_1}
                               </span>
-                              <span className="text-xs text-muted-foreground">/1ª ora</span>
+                              <span className="text-xs text-muted-foreground">{t("booking.select.perFirstHour")}</span>
                               <span className="text-xs text-muted-foreground ml-2">
-                                max €{typePricing.daily_cap}/giorno
+                                {t("booking.select.maxPerDay", { cap: typePricing.daily_cap })}
                               </span>
                             </div>
                             <Button
@@ -608,7 +620,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                               style={{ backgroundColor: primaryColor }}
                               className="hover:opacity-90"
                             >
-                              Prenota
+                              {t("booking.select.book")}
                             </Button>
                           </div>
                         )}
@@ -621,7 +633,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               {Object.keys(vehiclesByType).length === 0 && (
                 <Card className="p-8 text-center">
                   <Bike className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-muted-foreground">Nessun veicolo disponibile al momento</p>
+                  <p className="text-muted-foreground">{t("booking.select.empty")}</p>
                 </Card>
               )}
             </div>
@@ -632,11 +644,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-orange-800 mb-1">Come funziona il pricing?</p>
-                    <p className="text-orange-700">
-                      Più a lungo noleggi, meno paghi all'ora. Il prezzo massimo giornaliero ti protegge: non pagherai
-                      mai più di quello!
-                    </p>
+                    <p className="font-medium text-orange-800 mb-1">{t("booking.select.pricingTitle")}</p>
+                    <p className="text-orange-700">{t("booking.select.pricingBody")}</p>
                   </div>
                 </div>
               </CardContent>
@@ -647,11 +656,8 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                 <div className="flex items-start gap-3">
                   <Battery className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-green-800 mb-1">Veicoli sempre carichi</p>
-                    <p className="text-green-700">
-                      I nostri veicoli sono disponibili solo con batteria superiore al {minBatteryThreshold}%.
-                      L'autonomia effettiva può variare in base allo stile di guida e al percorso.
-                    </p>
+                    <p className="font-medium text-green-800 mb-1">{t("booking.select.batteryTitle")}</p>
+                    <p className="text-green-700">{t("booking.select.batteryBody", { threshold: minBatteryThreshold })}</p>
                   </div>
                 </div>
               </CardContent>
@@ -663,17 +669,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "datetime" && selectedVehicle && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("select")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quando vuoi ritirare?</CardTitle>
-                <CardDescription>Seleziona data e ora del ritiro presso la reception</CardDescription>
+                <CardTitle className="text-lg">{t("booking.datetime.title")}</CardTitle>
+                <CardDescription>{t("booking.datetime.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="pickupDate">Data ritiro</Label>
+                  <Label htmlFor="pickupDate">{t("booking.datetime.dateLabel")}</Label>
                   <Input
                     id="pickupDate"
                     type="date"
@@ -684,7 +690,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="pickupTime">Ora ritiro</Label>
+                  <Label htmlFor="pickupTime">{t("booking.datetime.timeLabel")}</Label>
                   <Input
                     id="pickupTime"
                     type="time"
@@ -700,7 +706,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   if (day && day.is_open && day.open_time && day.close_time) {
                     return (
                       <p className="text-xs text-muted-foreground">
-                        Reception aperta {DAY_LABELS[dow]}: {day.open_time.slice(0, 5)} - {day.close_time.slice(0, 5)}
+                        {t("booking.datetime.openHint", {
+                          day: t(`booking.days.${dow}`),
+                          open: day.open_time.slice(0, 5),
+                          close: day.close_time.slice(0, 5),
+                        })}
                       </p>
                     )
                   }
@@ -746,7 +756,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                             {batteryDisplay.text}
                             {selectedVehicle.estimated_range_km && (
                               <span className="text-muted-foreground">
-                                ({selectedVehicle.estimated_range_km} km autonomia)
+                                {t("booking.battery.rangeAutonomy", { km: selectedVehicle.estimated_range_km })}
                               </span>
                             )}
                           </span>
@@ -762,41 +772,41 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             {selectedPricing && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Riepilogo tariffe</CardTitle>
+                  <CardTitle className="text-base">{t("booking.datetime.ratesSummary")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>1ª ora</span>
+                      <span>{t("booking.rates.hour1")}</span>
                       <span className="font-medium">€{selectedPricing.hour_1}</span>
                     </div>
                     {selectedPricing.hour_2 && (
                       <div className="flex justify-between">
-                        <span>2ª ora</span>
+                        <span>{t("booking.rates.hour2")}</span>
                         <span className="font-medium">€{selectedPricing.hour_2}</span>
                       </div>
                     )}
                     {selectedPricing.hour_3 && (
                       <div className="flex justify-between">
-                        <span>3ª ora</span>
+                        <span>{t("booking.rates.hour3")}</span>
                         <span className="font-medium">€{selectedPricing.hour_3}</span>
                       </div>
                     )}
                     {selectedPricing.hour_8_plus && (
                       <div className="flex justify-between">
-                        <span>Ore successive</span>
-                        <span className="font-medium">€{selectedPricing.hour_8_plus}/ora</span>
+                        <span>{t("booking.rates.additional")}</span>
+                        <span className="font-medium">{t("booking.rates.additionalUnit", { price: selectedPricing.hour_8_plus })}</span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between text-base">
-                      <span className="font-medium">Max giornaliero</span>
+                      <span className="font-medium">{t("booking.rates.dailyMax")}</span>
                       <span className="font-bold" style={{ color: primaryColor }}>
                         €{selectedPricing.daily_cap}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Cauzione</span>
+                      <span>{t("booking.rates.deposit")}</span>
                       <span>€{selectedPricing.deposit}</span>
                     </div>
                   </div>
@@ -811,7 +821,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               disabled={!!availabilityError}
               style={{ backgroundColor: primaryColor }}
             >
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -820,18 +830,18 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "details" && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("datetime")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">I tuoi dati</CardTitle>
-                <CardDescription>Inserisci i dati per la prenotazione</CardDescription>
+                <CardTitle className="text-lg">{t("booking.details.title")}</CardTitle>
+                <CardDescription>{t("booking.details.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="firstName">Nome *</Label>
+                    <Label htmlFor="firstName">{t("booking.details.firstName")}</Label>
                     <Input
                       id="firstName"
                       value={customerData.firstName}
@@ -840,7 +850,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Cognome *</Label>
+                    <Label htmlFor="lastName">{t("booking.details.lastName")}</Label>
                     <Input
                       id="lastName"
                       value={customerData.lastName}
@@ -850,7 +860,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t("booking.details.email")}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -860,7 +870,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefono *</Label>
+                  <Label htmlFor="phone">{t("booking.details.phone")}</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -870,7 +880,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dateOfBirth">Data di nascita</Label>
+                  <Label htmlFor="dateOfBirth">{t("booking.details.dob")}</Label>
                   <Input
                     id="dateOfBirth"
                     type="date"
@@ -880,7 +890,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fiscalCode">Codice fiscale</Label>
+                  <Label htmlFor="fiscalCode">{t("booking.details.fiscalCode")}</Label>
                   <Input
                     id="fiscalCode"
                     value={customerData.fiscalCode}
@@ -892,7 +902,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
             </Card>
 
             <Button className="w-full" size="lg" onClick={handleDetailsNext} style={{ backgroundColor: primaryColor }}>
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -901,17 +911,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "documents" && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("details")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Documenti</CardTitle>
-                <CardDescription>Carica i documenti richiesti per il noleggio</CardDescription>
+                <CardTitle className="text-lg">{t("booking.documents.title")}</CardTitle>
+                <CardDescription>{t("booking.documents.subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Patente (fronte) *</Label>
+                  <Label>{t("booking.documents.licenseFront")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       licenseFront ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -932,14 +942,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
                 </div>
 
                 <div>
-                  <Label>Patente (retro)</Label>
+                  <Label>{t("booking.documents.licenseBack")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       licenseBack ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -960,14 +970,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
                 </div>
 
                 <div>
-                  <Label>Documento identità (fronte) *</Label>
+                  <Label>{t("booking.documents.idFront")}</Label>
                   <label
                     className={`flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer mt-1 transition-colors ${
                       idFront ? "border-green-500 bg-green-50" : "border-gray-300 hover:bg-gray-50"
@@ -988,7 +998,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     ) : (
                       <div className="text-center">
                         <Camera className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-muted-foreground">Tocca per caricare</p>
+                        <p className="text-xs text-muted-foreground">{t("booking.documents.tapToUpload")}</p>
                       </div>
                     )}
                   </label>
@@ -1006,11 +1016,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
                   />
                   <label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    Dichiaro di aver letto e accettato le{" "}
+                    {t("booking.documents.termsPrefix")}{" "}
                     <span className="underline" style={{ color: primaryColor }}>
-                      condizioni generali di noleggio
+                      {t("booking.documents.termsLink")}
                     </span>{" "}
-                    e l'informativa sulla privacy.
+                    {t("booking.documents.termsSuffix")}
                   </label>
                 </div>
 
@@ -1021,11 +1031,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     onCheckedChange={(checked) => setBatteryAutonomyAccepted(checked as boolean)}
                   />
                   <label htmlFor="batteryAutonomy" className="text-sm leading-relaxed cursor-pointer">
-                    <span className="font-medium">Dichiaro di essere consapevole che:</span>
+                    <span className="font-medium">{t("booking.documents.batteryAck")}</span>
                     <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                      <li>L'autonomia indicata ({selectedVehicle?.estimated_range_km || "–"} km) è stimata</li>
-                      <li>L'autonomia reale può variare in base a stile di guida, percorso e condizioni</li>
-                      <li>Batteria al ritiro: {selectedVehicle?.battery_level || "–"}%</li>
+                      <li>{t("booking.documents.batteryLi1", { km: selectedVehicle?.estimated_range_km ?? "–" })}</li>
+                      <li>{t("booking.documents.batteryLi2")}</li>
+                      <li>{t("booking.documents.batteryLi3", { level: selectedVehicle?.battery_level ?? "–" })}</li>
                     </ul>
                   </label>
                 </div>
@@ -1038,7 +1048,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               onClick={handleDocumentsNext}
               style={{ backgroundColor: primaryColor }}
             >
-              Continua <ChevronRight className="h-4 w-4 ml-1" />
+              {t("common.next")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
@@ -1047,12 +1057,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
         {currentStep === "payment" && selectedVehicle && selectedPricing && (
           <div className="space-y-6">
             <Button variant="ghost" size="sm" onClick={() => setCurrentStep("documents")} className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Indietro
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("common.back")}
             </Button>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Riepilogo prenotazione</CardTitle>
+                <CardTitle className="text-lg">{t("booking.payment.title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 pb-4 border-b">
@@ -1076,22 +1086,25 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
                     </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <Battery className="h-3 w-3" />
-                      Batteria: {selectedVehicle.battery_level}% ({selectedVehicle.estimated_range_km} km)
+                      {t("booking.payment.battery", {
+                        level: selectedVehicle.battery_level ?? "–",
+                        km: selectedVehicle.estimated_range_km ?? "–",
+                      })}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Data ritiro</span>
+                    <span className="text-muted-foreground">{t("booking.datetime.dateLabel")}</span>
                     <span>{pickupDate}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ora ritiro</span>
+                    <span className="text-muted-foreground">{t("booking.datetime.timeLabel")}</span>
                     <span>{pickupTime}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="text-muted-foreground">{t("booking.payment.customer")}</span>
                     <span>
                       {customerData.firstName} {customerData.lastName}
                     </span>
@@ -1102,26 +1115,23 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Prezzo minimo</span>
+                    <span>{t("booking.payment.minPrice")}</span>
                     <span>€{selectedPricing.minimum_charge}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Cauzione</span>
+                    <span>{t("booking.rates.deposit")}</span>
                     <span>€{selectedPricing.deposit}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-medium">
-                    <span>Da pagare ora</span>
+                    <span>{t("booking.payment.payNow")}</span>
                     <span style={{ color: primaryColor }}>
                       €{(selectedPricing.minimum_charge || 0) + (selectedPricing.deposit || 0)}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  L'importo finale sarà calcolato in base al tempo effettivo di utilizzo. La cauzione sarà sbloccata
-                  dopo la verifica del veicolo.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("booking.payment.note")}</p>
               </CardContent>
             </Card>
 
@@ -1132,7 +1142,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               disabled={isLoading}
               style={{ backgroundColor: primaryColor }}
             >
-              {isLoading ? "Elaborazione..." : "Paga e conferma"}
+              {isLoading ? t("booking.payment.processing") : t("booking.payment.payConfirm")}
             </Button>
           </div>
         )}
@@ -1147,29 +1157,25 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms, schedule 
               <CheckCircle2 className="h-10 w-10" style={{ color: primaryColor }} />
             </div>
 
-            <h2 className="text-2xl font-bold mb-2">Prenotazione confermata!</h2>
-            <p className="text-muted-foreground mb-6">
-              Riceverai un'email con il voucher e tutte le istruzioni per il ritiro.
-            </p>
+            <h2 className="text-2xl font-bold mb-2">{t("booking.confirmation.title")}</h2>
+            <p className="text-muted-foreground mb-6">{t("booking.confirmation.subtitle")}</p>
 
             <Card className="text-left">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Veicolo</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.vehicle")}</span>
                   <span className="font-medium">{selectedVehicle?.vehicle_type?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Data ritiro</span>
-                  <span>
-                    {pickupDate} alle {pickupTime}
-                  </span>
+                  <span className="text-muted-foreground">{t("booking.datetime.dateLabel")}</span>
+                  <span>{t("booking.confirmation.dateAtTime", { date: pickupDate, time: pickupTime })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Luogo</span>
-                  <span>Reception {structure.name}</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.place")}</span>
+                  <span>{t("booking.confirmation.reception", { name: structure.name })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Batteria al ritiro</span>
+                  <span className="text-muted-foreground">{t("booking.confirmation.batteryAtPickup")}</span>
                   <span className="flex items-center gap-1">
                     <Battery className="h-4 w-4 text-green-500" />
                     {selectedVehicle?.battery_level}%

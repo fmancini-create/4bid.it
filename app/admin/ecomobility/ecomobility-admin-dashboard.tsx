@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
+import { OperatorsManager } from "@/components/ecomobility/operators-manager"
 import {
   Bike,
   Building2,
@@ -1865,6 +1866,11 @@ const handleSaveVehicle = async () => {
                   </div>
                 </CardContent>
               </Card>
+
+              <OperatorsManager
+                structureId={selectedStructure.id}
+                primaryColor={selectedStructure.primary_color || "#f97316"}
+              />
 
               <Card>
                 <CardHeader>

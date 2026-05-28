@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
+import { OperatorsManager } from "@/components/ecomobility/operators-manager"
 import Image from "next/image"
 import {
   Bike,
@@ -121,6 +122,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
   const [loginForm, setLoginForm] = useState({ email: "", password: "" })
   const [loginError, setLoginError] = useState("")
   const [operatorName, setOperatorName] = useState("")
+  const [operatorRole, setOperatorRole] = useState("")
 
   // Data states
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -181,6 +183,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
     if (auth) {
       const operator = JSON.parse(auth)
       setOperatorName(operator.name || "Operatore")
+      setOperatorRole(operator.role || "operator")
       setIsAuthenticated(true)
       loadData()
     }
@@ -210,6 +213,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
 
       sessionStorage.setItem(`ecomobility_auth_${structure.id}`, JSON.stringify(data.operator))
       setOperatorName(data.operator.name || "Operatore")
+      setOperatorRole(data.operator.role || "operator")
       setIsAuthenticated(true)
       loadData()
     } catch (error) {
@@ -1164,6 +1168,10 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
                 </div>
               </CardContent>
             </Card>
+
+            {operatorRole === "admin" && (
+              <OperatorsManager structureId={structure.id} primaryColor={structure.primary_color} />
+            )}
 
             <Card>
               <CardHeader>
