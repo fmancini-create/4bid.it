@@ -62,6 +62,7 @@ interface VehicleType {
   description?: string
   icon?: string
   image_url?: string | null
+  image_urls?: string[] | null
   requires_license: boolean
   max_passengers: number
 }
@@ -161,7 +162,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
     description: "",
     requires_license: false,
     max_passengers: 1,
-    image_url: "" as string,
+    image_urls: [] as string[],
   })
   const [uploadingTypeImage, setUploadingTypeImage] = useState(false)
 
@@ -354,7 +355,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
         description: type.description || "",
         requires_license: type.requires_license,
         max_passengers: type.max_passengers,
-        image_url: type.image_url || "",
+        image_urls: type.image_urls && type.image_urls.length > 0 ? type.image_urls : type.image_url ? [type.image_url] : [],
       })
     } else {
       setEditingVehicleType(null)
@@ -363,26 +364,30 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
         description: "",
         requires_license: false,
         max_passengers: 1,
-        image_url: "",
+        image_urls: [],
       })
     }
     setVehicleTypeDialogOpen(true)
   }
 
-  const handleTypeImageUpload = async (file: File) => {
+  const handleTypeImageUpload = async (files: FileList) => {
     setUploadingTypeImage(true)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("folder", `ecomobility/${structure.slug}/types`)
-      const res = await fetch("/api/ecomobility/admin/upload-image", {
-        method: "POST",
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Upload fallito")
-      setVehicleTypeForm((prev) => ({ ...prev, image_url: data.url }))
-      toast({ title: "Immagine caricata" })
+      const uploaded: string[] = []
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("folder", `ecomobility/${structure.slug}/types`)
+        const res = await fetch("/api/ecomobility/admin/upload-image", {
+          method: "POST",
+          body: formData,
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Upload fallito")
+        uploaded.push(data.url)
+      }
+      setVehicleTypeForm((prev) => ({ ...prev, image_urls: [...prev.image_urls, ...uploaded] }))
+      toast({ title: uploaded.length > 1 ? `${uploaded.length} immagini caricate` : "Immagine caricata" })
     } catch (error) {
       toast({
         title: "Errore caricamento",
@@ -392,6 +397,20 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
     } finally {
       setUploadingTypeImage(false)
     }
+  }
+
+  const removeTypeImage = (url: string) => {
+    setVehicleTypeForm((prev) => ({ ...prev, image_urls: prev.image_urls.filter((u) => u !== url) }))
+  }
+
+  const moveTypeImage = (index: number, dir: -1 | 1) => {
+    setVehicleTypeForm((prev) => {
+      const arr = [...prev.image_urls]
+      const target = index + dir
+      if (target < 0 || target >= arr.length) return prev
+      ;[arr[index], arr[target]] = [arr[target], arr[index]]
+      return { ...prev, image_urls: arr }
+    })
   }
 
   const saveVehicleType = async () => {
@@ -1205,64 +1224,89 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
             <div>
               <Label>Foto tipologia</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Mostrata ai clienti nella pagina di prenotazione. JPG, PNG o WEBP (max 5MB).
+                Mostrate ai clienti nella pagina di prenotazione. Puoi caricarne più di una. La prima è la copertina. JPG,
+                PNG o WEBP (max 5MB ciascuna).
               </p>
-              <div className="flex items-center gap-3">
-                <div className="w-20 h-20 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {vehicleTypeForm.image_url ? (
-                    <Image
-                      src={vehicleTypeForm.image_url || "/placeholder.svg"}
-                      alt="Anteprima"
-                      width={80}
-                      height={80}
-                      className="object-contain w-full h-full"
-                    />
-                  ) : (
-                    <Bike className="h-7 w-7 text-gray-400" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <input
-                    id="vehicle-type-image"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) handleTypeImageUpload(file)
-                      e.target.value = ""
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={uploadingTypeImage}
-                    onClick={() => document.getElementById("vehicle-type-image")?.click()}
-                  >
-                    {uploadingTypeImage ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Caricamento...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" /> {vehicleTypeForm.image_url ? "Cambia foto" : "Carica foto"}
-                      </>
-                    )}
-                  </Button>
-                  {vehicleTypeForm.image_url && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600"
-                      onClick={() => setVehicleTypeForm({ ...vehicleTypeForm, image_url: "" })}
+              {vehicleTypeForm.image_urls.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+                  {vehicleTypeForm.image_urls.map((url, index) => (
+                    <div
+                      key={url}
+                      className="relative group aspect-square rounded-lg border bg-gray-50 overflow-hidden"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" /> Rimuovi
-                    </Button>
-                  )}
+                      <Image
+                        src={url || "/placeholder.svg"}
+                        alt={`Foto ${index + 1}`}
+                        fill
+                        sizes="120px"
+                        className="object-cover"
+                      />
+                      {index === 0 && (
+                        <span className="absolute top-1 left-1 bg-black/65 text-white text-[10px] px-1.5 py-0.5 rounded">
+                          Copertina
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeTypeImage(url)}
+                        aria-label="Rimuovi foto"
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                      <div className="absolute bottom-1 left-1 right-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => moveTypeImage(index, -1)}
+                          disabled={index === 0}
+                          aria-label="Sposta a sinistra"
+                          className="bg-black/60 text-white rounded p-0.5 disabled:opacity-30"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTypeImage(index, 1)}
+                          disabled={index === vehicleTypeForm.image_urls.length - 1}
+                          aria-label="Sposta a destra"
+                          className="bg-black/60 text-white rounded p-0.5 disabled:opacity-30"
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
+              <input
+                id="vehicle-type-image"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) handleTypeImageUpload(e.target.files)
+                  e.target.value = ""
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploadingTypeImage}
+                onClick={() => document.getElementById("vehicle-type-image")?.click()}
+              >
+                {uploadingTypeImage ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Caricamento...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {vehicleTypeForm.image_urls.length > 0 ? "Aggiungi foto" : "Carica foto"}
+                  </>
+                )}
+              </Button>
             </div>
             <div>
               <Label>Max Passeggeri</Label>
