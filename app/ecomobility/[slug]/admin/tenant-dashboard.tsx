@@ -571,7 +571,7 @@ export function TenantDashboard({ structure, vehicleTypes: initialVehicleTypes }
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="/ecomobility-logo.png"
+              src="/ecomobility-logo-white.png"
               alt="4BID Ecomobility"
               width={88}
               height={88}
