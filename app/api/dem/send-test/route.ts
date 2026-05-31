@@ -18,6 +18,25 @@ function personalizeTemplate(
     .replace(/\{\{email\}\}/gi, recipient.email || "")
 }
 
+function addTracking(
+  html: string,
+  campaignId: string,
+  recipientId: string,
+  baseUrl: string
+): string {
+  const trackingPixel = `<img src="${baseUrl}/api/dem/track?t=open&c=${campaignId}&r=${recipientId}" width="1" height="1" style="display:none" alt="" />`
+
+  const trackedHtml = html.replace(/href="(https?:\/\/[^"]+)"/gi, (match, url) => {
+    const trackedUrl = `${baseUrl}/api/dem/track?t=click&c=${campaignId}&r=${recipientId}&u=${encodeURIComponent(url)}`
+    return `href="${trackedUrl}"`
+  })
+
+  if (trackedHtml.includes("</body>")) {
+    return trackedHtml.replace("</body>", `${trackingPixel}</body>`)
+  }
+  return trackedHtml + trackingPixel
+}
+
 interface ParsedAttachment {
   path: string
   filename: string
@@ -70,6 +89,7 @@ export async function POST(request: NextRequest) {
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return NextResponse.json({ error: "Email di prova non valida" }, { status: 400 })
     }
+    const testEmail = email.trim().toLowerCase()
 
     // Get campaign
     const { data: campaign, error: campaignError } = await supabase
@@ -82,12 +102,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 })
     }
 
-    // Determine base URL (used only to resolve attachment paths)
+    // Determine base URL (used for attachments AND tracking)
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.VERCEL_PROJECT_PRODUCTION_URL
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : request.headers.get("origin") || "https://www.4bid.it")
+
+    // Create or reuse a test recipient so opens/clicks can be tracked and shown in stats.
+    // Reset its counters for a clean test. It is flagged tipo_contatto='test' and
+    // marked as 'sent' so the real "Invia" (which only targets pending) won't resend it.
+    const { data: existing } = await supabase
+      .from("dem_recipients")
+      .select("id")
+      .eq("campaign_id", campaign_id)
+      .eq("email", testEmail)
+      .maybeSingle()
+
+    let recipientId: string
+    const baseFields = {
+      nome: "Mario",
+      cognome: "Rossi",
+      nome_azienda: "Redazione di Prova",
+      tipo_contatto: "test",
+      send_status: "sent",
+      sent_at: new Date().toISOString(),
+      error_message: null,
+      open_count: 0,
+      click_count: 0,
+      first_open_at: null,
+      last_open_at: null,
+      first_click_at: null,
+    }
+
+    if (existing) {
+      recipientId = existing.id
+      await supabase.from("dem_recipients").update(baseFields).eq("id", recipientId)
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from("dem_recipients")
+        .insert({ campaign_id, email: testEmail, ...baseFields })
+        .select("id")
+        .single()
+      if (insertError || !inserted) {
+        return NextResponse.json(
+          { error: insertError?.message || "Impossibile creare il contatto di prova" },
+          { status: 500 }
+        )
+      }
+      recipientId = inserted.id
+    }
 
     // Strip attachment markers and resolve the files
     const { html: templateWithoutMarkers, attachments: attachmentRefs } = extractAttachments(
@@ -99,30 +163,27 @@ export async function POST(request: NextRequest) {
       if (file) resolvedAttachments.push(file)
     }
 
-    // Personalize with placeholder data so the test mail looks realistic.
-    // No tracking pixel/links and nothing is saved to the database.
+    // Personalize + add tracking pixel/links tied to the test recipient
     const personalizedHtml = personalizeTemplate(templateWithoutMarkers, {
-      nome: "Mario",
-      cognome: "Rossi",
-      nome_azienda: "Redazione di Prova",
-      email,
+      nome: baseFields.nome,
+      cognome: baseFields.cognome,
+      nome_azienda: baseFields.nome_azienda,
+      email: testEmail,
     })
+    const trackedHtml = addTracking(personalizedHtml, campaign_id, recipientId, baseUrl)
 
     const result = await sendEmail({
-      to: email,
+      to: testEmail,
       subject: `[PROVA] ${campaign.subject}`,
-      html: personalizedHtml,
+      html: trackedHtml,
       attachments: resolvedAttachments.length > 0 ? resolvedAttachments : undefined,
     })
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Invio di prova fallito" },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: result.error || "Invio di prova fallito" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, to: email })
+    return NextResponse.json({ success: true, to: testEmail, tracked: true })
   } catch (error) {
     console.error("DEM send-test error:", error)
     return NextResponse.json(

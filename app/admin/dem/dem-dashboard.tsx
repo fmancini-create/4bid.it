@@ -507,8 +507,9 @@ export default function DemDashboard({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Errore nell'invio di prova")
-      showMessage(`Email di prova inviata a ${data.to}`)
+      showMessage(`Email di prova (tracciata) inviata a ${data.to}. Apri la mail e clicca un link, poi premi Aggiorna.`)
       setShowTestSend(false)
+      fetchStats(selectedCampaign.id)
     } catch (err) {
       showMessage(err instanceof Error ? err.message : "Errore", true)
     } finally {
@@ -606,9 +607,11 @@ export default function DemDashboard({
                   <DialogHeader>
                     <DialogTitle>Invia email di prova</DialogTitle>
                     <DialogDescription>
-                      Invia il comunicato (allegato compreso) a un indirizzo di prova. Non viene
-                      registrato nessun destinatario e non viene tracciata l&apos;apertura. L&apos;oggetto
-                      avr&agrave; il prefisso [PROVA].
+                      Invia il comunicato (allegato compreso) a un indirizzo di prova, con
+                      tracciamento attivo. Viene creato un contatto di prova (etichettato
+                      &quot;test&quot;) cos&igrave; puoi verificare apertura e click nelle statistiche.
+                      L&apos;oggetto avr&agrave; il prefisso [PROVA]. Potrai eliminare il contatto di
+                      prova al termine.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-2">
