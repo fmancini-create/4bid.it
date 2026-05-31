@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +40,11 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Search,
+  X,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -324,6 +329,7 @@ interface CampaignStats {
   recipients: Recipient[]
   recipientsPage?: number
   recipientsPageSize?: number
+  recipientsFilteredTotal?: number
   events: TrackingEvent[]
   summary: {
     total: number
@@ -361,6 +367,13 @@ export default function DemDashboard({
   const [togglingAuto, setTogglingAuto] = useState(false)
   const [resuming, setResuming] = useState(false)
   const [recipientsPage, setRecipientsPage] = useState(0)
+  // Filtri/ordinamento lista destinatari (applicati lato server)
+  const [searchInput, setSearchInput] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [sortColumn, setSortColumn] = useState("created_at")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  // Fonte di verita' dei parametri di query (evita closure stale in fetchStats)
+  const queryRef = useRef({ page: 0, search: "", status: "all", sort: "created_at", dir: "asc" as "asc" | "desc" })
   const [showTestSend, setShowTestSend] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [sendingTest, setSendingTest] = useState(false)
@@ -421,21 +434,105 @@ export default function DemDashboard({
     }, 5000)
   }, [])
 
-  const fetchStats = useCallback(async (campaignId: string, page = 0) => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/dem/stats?c=${campaignId}&page=${page}`)
-      if (!res.ok) throw new Error("Errore nel caricamento statistiche")
-      const data = await res.json()
-      setStats(data)
-      setRecipientsPage(data.recipientsPage ?? page)
-      setSelectedCampaign(data.campaign)
-    } catch (err) {
-      showMessage(err instanceof Error ? err.message : "Errore", true)
-    } finally {
-      setLoading(false)
-    }
-  }, [showMessage])
+  const fetchStats = useCallback(
+    async (
+      campaignId: string,
+      opts?: Partial<{ page: number; search: string; status: string; sort: string; dir: "asc" | "desc" }>
+    ) => {
+      const q = { ...queryRef.current, ...opts }
+      queryRef.current = q
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({
+          c: campaignId,
+          page: String(q.page),
+          sort: q.sort,
+          dir: q.dir,
+        })
+        if (q.search) params.set("search", q.search)
+        if (q.status && q.status !== "all") params.set("status", q.status)
+        const res = await fetch(`/api/dem/stats?${params.toString()}`)
+        if (!res.ok) throw new Error("Errore nel caricamento statistiche")
+        const data = await res.json()
+        setStats(data)
+        setRecipientsPage(data.recipientsPage ?? q.page)
+        setSelectedCampaign(data.campaign)
+      } catch (err) {
+        showMessage(err instanceof Error ? err.message : "Errore", true)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [showMessage]
+  )
+
+  // Applica la ricerca testuale (resetta alla prima pagina)
+  const applySearch = () => {
+    if (!selectedCampaign) return
+    fetchStats(selectedCampaign.id, { search: searchInput.trim(), page: 0 })
+  }
+
+  // Cambia il filtro di stato
+  const changeStatusFilter = (value: string) => {
+    setStatusFilter(value)
+    if (selectedCampaign) fetchStats(selectedCampaign.id, { status: value, page: 0 })
+  }
+
+  // Ordina per colonna: stesso click inverte la direzione
+  const toggleSort = (column: string) => {
+    if (!selectedCampaign) return
+    const nextDir: "asc" | "desc" = sortColumn === column && sortDir === "asc" ? "desc" : "asc"
+    setSortColumn(column)
+    setSortDir(nextDir)
+    fetchStats(selectedCampaign.id, { sort: column, dir: nextDir, page: 0 })
+  }
+
+  // Azzera tutti i filtri/ordinamento
+  const clearFilters = () => {
+    setSearchInput("")
+    setStatusFilter("all")
+    setSortColumn("created_at")
+    setSortDir("asc")
+    if (selectedCampaign)
+      fetchStats(selectedCampaign.id, { search: "", status: "all", sort: "created_at", dir: "asc", page: 0 })
+  }
+
+  // Intestazione di colonna ordinabile
+  const SortHeader = ({
+    column,
+    label,
+    align = "left",
+    className = "",
+  }: {
+    column: string
+    label: string
+    align?: "left" | "center" | "right"
+    className?: string
+  }) => {
+    const active = sortColumn === column
+    const justify = align === "center" ? "justify-center" : align === "right" ? "justify-end" : "justify-start"
+    return (
+      <th className={`py-2 px-3 text-muted-foreground font-medium ${className}`}>
+        <button
+          type="button"
+          onClick={() => toggleSort(column)}
+          className={`flex items-center gap-1 w-full ${justify} hover:text-foreground transition-colors ${active ? "text-foreground" : ""}`}
+          title={`Ordina per ${label}`}
+        >
+          <span>{label}</span>
+          {active ? (
+            sortDir === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+          )}
+        </button>
+      </th>
+    )
+  }
 
   const loadSantaddeoPreset = () => {
     setNewName(SANTADDEO_PRESET.name)
@@ -1146,36 +1243,93 @@ export default function DemDashboard({
           )}
 
           {/* Recipients table */}
-          {stats && stats.recipients.length > 0 && (
+          {stats && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Destinatari ({stats.summary.total.toLocaleString("it-IT")})</CardTitle>
                 {(() => {
+                  const filteredTotal = stats.recipientsFilteredTotal ?? stats.summary.total
+                  const filtersActive = statusFilter !== "all" || queryRef.current.search.length > 0
                   const pageSize = stats.recipientsPageSize ?? 500
                   const start = recipientsPage * pageSize
-                  if (stats.summary.total <= stats.recipients.length && recipientsPage === 0) return null
                   return (
-                    <p className="text-xs text-muted-foreground">
-                      {(start + 1).toLocaleString("it-IT")}–
-                      {(start + stats.recipients.length).toLocaleString("it-IT")} di{" "}
-                      {stats.summary.total.toLocaleString("it-IT")}
-                    </p>
+                    <>
+                      <CardTitle className="text-lg">
+                        Destinatari ({filteredTotal.toLocaleString("it-IT")}
+                        {filtersActive ? ` di ${stats.summary.total.toLocaleString("it-IT")}` : ""})
+                      </CardTitle>
+                      {stats.recipients.length > 0 && filteredTotal > stats.recipients.length && (
+                        <p className="text-xs text-muted-foreground">
+                          {(start + 1).toLocaleString("it-IT")}–
+                          {(start + stats.recipients.length).toLocaleString("it-IT")} di{" "}
+                          {filteredTotal.toLocaleString("it-IT")}
+                        </p>
+                      )}
+                    </>
                   )
                 })()}
+
+                {/* Filtro: ricerca + stato */}
+                <div className="flex flex-col gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                        placeholder="Cerca per email, nome o azienda..."
+                        className="pl-9"
+                      />
+                    </div>
+                    <Button variant="default" size="sm" onClick={applySearch} disabled={loading}>
+                      <Search className="h-4 w-4 mr-1" />
+                      Cerca
+                    </Button>
+                    {(statusFilter !== "all" || queryRef.current.search.length > 0) && (
+                      <Button variant="outline" size="sm" onClick={clearFilters} disabled={loading}>
+                        <X className="h-4 w-4 mr-1" />
+                        Azzera
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: "all", label: "Tutti", count: stats.summary.total },
+                      { value: "pending", label: "In attesa", count: stats.summary.pending },
+                      { value: "sent", label: "Inviati", count: stats.summary.sent },
+                      { value: "failed", label: "Falliti", count: stats.summary.failed },
+                      { value: "paused", label: "In pausa", count: stats.summary.paused || 0 },
+                    ].map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={statusFilter === opt.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => changeStatusFilter(opt.value)}
+                        disabled={loading}
+                      >
+                        {opt.label} ({opt.count.toLocaleString("it-IT")})
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Stato</th>
-                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Email</th>
-                        <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden sm:table-cell">Nome</th>
-                        <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Azienda</th>
-                        <th className="text-center py-2 px-3 text-muted-foreground font-medium">Aperture</th>
-                        <th className="text-center py-2 px-3 text-muted-foreground font-medium">Click</th>
+                        <SortHeader column="send_status" label="Stato" />
+                        <SortHeader column="email" label="Email" />
+                        <SortHeader column="nome" label="Nome" className="hidden sm:table-cell" />
+                        <SortHeader column="nome_azienda" label="Azienda" className="hidden md:table-cell" />
+                        <SortHeader column="open_count" label="Aperture" align="center" />
+                        <SortHeader column="click_count" label="Click" align="center" />
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Link cliccato</th>
-                        <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Errore</th>
+                        <SortHeader
+                          column="error_message"
+                          label="Errore"
+                          className="hidden lg:table-cell"
+                        />
                         {canEditRecipients && (
                           <th className="text-right py-2 px-3 text-muted-foreground font-medium">Azioni</th>
                         )}
@@ -1242,12 +1396,23 @@ export default function DemDashboard({
                           )}
                         </tr>
                       ))}
+                      {stats.recipients.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={canEditRecipients ? 9 : 8}
+                            className="py-8 text-center text-muted-foreground"
+                          >
+                            Nessun destinatario corrisponde ai filtri selezionati.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
                 {(() => {
                   const pageSize = stats.recipientsPageSize ?? 500
-                  const totalPages = Math.max(1, Math.ceil(stats.summary.total / pageSize))
+                  const filteredTotal = stats.recipientsFilteredTotal ?? stats.summary.total
+                  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize))
                   if (totalPages <= 1) return null
                   return (
                     <div className="flex items-center justify-between gap-3 pt-4">
@@ -1256,7 +1421,7 @@ export default function DemDashboard({
                         size="sm"
                         disabled={recipientsPage <= 0 || loading}
                         onClick={() =>
-                          selectedCampaign && fetchStats(selectedCampaign.id, recipientsPage - 1)
+                          selectedCampaign && fetchStats(selectedCampaign.id, { page: recipientsPage - 1 })
                         }
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
@@ -1270,7 +1435,7 @@ export default function DemDashboard({
                         size="sm"
                         disabled={recipientsPage >= totalPages - 1 || loading}
                         onClick={() =>
-                          selectedCampaign && fetchStats(selectedCampaign.id, recipientsPage + 1)
+                          selectedCampaign && fetchStats(selectedCampaign.id, { page: recipientsPage + 1 })
                         }
                       >
                         Successiva
@@ -1518,7 +1683,17 @@ export default function DemDashboard({
                       className="flex-1 min-w-0"
                       onClick={() => {
                         setSelectedCampaign(campaign)
-                        fetchStats(campaign.id)
+                        setSearchInput("")
+                        setStatusFilter("all")
+                        setSortColumn("created_at")
+                        setSortDir("asc")
+                        fetchStats(campaign.id, {
+                          search: "",
+                          status: "all",
+                          sort: "created_at",
+                          dir: "asc",
+                          page: 0,
+                        })
                       }}
                     >
                       <div className="flex items-center gap-2 mb-1">

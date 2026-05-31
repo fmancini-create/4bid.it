@@ -44,20 +44,62 @@ export async function GET(request: NextRequest) {
       countByStatus("paused"),
     ])
 
+    // Filters: free-text search (email/nome/cognome/azienda) + status filter.
+    const search = (searchParams.get("search") || "").trim()
+    const statusFilter = (searchParams.get("status") || "").trim()
+
+    // Sorting: only allow known columns to avoid injection; default created_at asc.
+    const SORTABLE: Record<string, string> = {
+      send_status: "send_status",
+      email: "email",
+      nome: "nome",
+      nome_azienda: "nome_azienda",
+      open_count: "open_count",
+      click_count: "click_count",
+      error_message: "error_message",
+      created_at: "created_at",
+    }
+    const sortColumn = SORTABLE[searchParams.get("sort") || ""] || "created_at"
+    const sortAsc = (searchParams.get("dir") || "asc") !== "desc"
+
+    // Applies the active filters to any query builder (used for both count and rows).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const applyFilters = (q: any) => {
+      let query = q.eq("campaign_id", campaignId)
+      if (statusFilter && statusFilter !== "all") {
+        query = query.eq("send_status", statusFilter)
+      }
+      if (search) {
+        // Strip PostgREST or() reserved chars (comma/parens) from the user term.
+        const safe = search.replace(/[(),]/g, " ").trim()
+        if (safe) {
+          query = query.or(
+            `email.ilike.%${safe}%,nome.ilike.%${safe}%,cognome.ilike.%${safe}%,nome_azienda.ilike.%${safe}%`
+          )
+        }
+      }
+      return query
+    }
+
+    // Count matching the active filters, used to drive pagination.
+    const { count: filteredCount } = await applyFilters(
+      supabase.from("dem_recipients").select("*", { count: "exact", head: true })
+    )
+    const filteredTotal = filteredCount || 0
+
     // Recipients are paginated: the full list can be ~30k rows, so we fetch one
     // page at a time with .range() and let the UI navigate with prev/next buttons.
     const PAGE_SIZE = 500
     const requestedPage = Math.max(0, Number.parseInt(searchParams.get("page") || "0", 10) || 0)
-    const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
+    const lastPage = Math.max(0, Math.ceil(filteredTotal / PAGE_SIZE) - 1)
     const page = Math.min(requestedPage, lastPage)
     const from = page * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const { data: recipients, error: recipientsError } = await supabase
-      .from("dem_recipients")
-      .select("*")
-      .eq("campaign_id", campaignId)
-      .order("created_at", { ascending: true })
+    const { data: recipients, error: recipientsError } = await applyFilters(
+      supabase.from("dem_recipients").select("*")
+    )
+      .order(sortColumn, { ascending: sortAsc, nullsFirst: false })
       .range(from, to)
 
     if (recipientsError) {
@@ -77,6 +119,7 @@ export async function GET(request: NextRequest) {
       recipients: recipients || [],
       recipientsPage: page,
       recipientsPageSize: PAGE_SIZE,
+      recipientsFilteredTotal: filteredTotal,
       events: events || [],
       summary: {
         total,
