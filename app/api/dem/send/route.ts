@@ -49,6 +49,46 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+interface ParsedAttachment {
+  path: string
+  filename: string
+}
+
+// Extract attachment markers like:
+// <!--ATTACH:/dem/file.pdf|Nome Visualizzato.pdf-->
+// and return the cleaned html plus the list of attachments.
+function extractAttachments(html: string): { html: string; attachments: ParsedAttachment[] } {
+  const attachments: ParsedAttachment[] = []
+  const cleaned = html.replace(/<!--\s*ATTACH:([^|>]+)\|([^>]+?)\s*-->/gi, (_m, path, filename) => {
+    attachments.push({ path: String(path).trim(), filename: String(filename).trim() })
+    return ""
+  })
+  return { html: cleaned, attachments }
+}
+
+async function fetchAttachment(
+  baseUrl: string,
+  att: ParsedAttachment
+): Promise<{ filename: string; content: Buffer; contentType?: string } | null> {
+  try {
+    const url = att.path.startsWith("http") ? att.path : `${baseUrl}${att.path.startsWith("/") ? "" : "/"}${att.path}`
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.error(`[v0] Allegato non scaricabile (${res.status}):`, url)
+      return null
+    }
+    const arrayBuffer = await res.arrayBuffer()
+    return {
+      filename: att.filename,
+      content: Buffer.from(arrayBuffer),
+      contentType: res.headers.get("content-type") || undefined,
+    }
+  } catch (err) {
+    console.error("[v0] Errore download allegato:", err)
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
@@ -102,11 +142,22 @@ export async function POST(request: NextRequest) {
     let sentCount = campaign.sent_count || 0
     let failedCount = campaign.failed_count || 0
 
+    // Extract attachment markers from the template once, then download the files once
+    const { html: templateWithoutMarkers, attachments: attachmentRefs } = extractAttachments(
+      campaign.html_template
+    )
+
+    const resolvedAttachments: { filename: string; content: Buffer; contentType?: string }[] = []
+    for (const ref of attachmentRefs) {
+      const file = await fetchAttachment(baseUrl, ref)
+      if (file) resolvedAttachments.push(file)
+    }
+
     // Send emails with throttling
     for (const recipient of recipients) {
       try {
-        // Personalize template
-        const personalizedHtml = personalizeTemplate(campaign.html_template, recipient)
+        // Personalize template (markers already stripped)
+        const personalizedHtml = personalizeTemplate(templateWithoutMarkers, recipient)
 
         // Add tracking
         const trackedHtml = addTracking(personalizedHtml, campaign_id, recipient.id, baseUrl)
@@ -116,6 +167,7 @@ export async function POST(request: NextRequest) {
           to: recipient.email,
           subject: campaign.subject,
           html: trackedHtml,
+          attachments: resolvedAttachments.length > 0 ? resolvedAttachments : undefined,
         })
 
         if (result.success) {

@@ -1,13 +1,20 @@
 import nodemailer from "nodemailer"
 
+interface EmailAttachment {
+  filename: string
+  content: Buffer
+  contentType?: string
+}
+
 interface EmailOptions {
   to: string
   subject: string
   html: string
   replyTo?: string
+  attachments?: EmailAttachment[]
 }
 
-export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
+export async function sendEmail({ to, subject, html, replyTo, attachments }: EmailOptions) {
   console.log("[v0] sendEmail called - to:", to, "subject:", subject)
 
   try {
@@ -54,6 +61,7 @@ export async function sendEmail({ to, subject, html, replyTo }: EmailOptions) {
       subject,
       html,
       replyTo: replyTo || process.env.SMTP_FROM || process.env.SMTP_USER,
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
     })
 
     console.log("[v0] Email sent successfully via SMTP:", info.messageId)
