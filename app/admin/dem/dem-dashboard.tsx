@@ -169,6 +169,9 @@ export default function DemDashboard({
   const [stats, setStats] = useState<CampaignStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [showTestSend, setShowTestSend] = useState(false)
+  const [testEmail, setTestEmail] = useState("")
+  const [sendingTest, setSendingTest] = useState(false)
   const [showNewCampaign, setShowNewCampaign] = useState(false)
   const [showAddRecipients, setShowAddRecipients] = useState(false)
   const [showAddManual, setShowAddManual] = useState(false)
@@ -489,6 +492,30 @@ export default function DemDashboard({
     }
   }
 
+  const sendTestEmail = async () => {
+    if (!selectedCampaign) return
+    if (!testEmail || !testEmail.includes("@")) {
+      showMessage("Inserisci un'email valida per la prova", true)
+      return
+    }
+    setSendingTest(true)
+    try {
+      const res = await fetch("/api/dem/send-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: selectedCampaign.id, email: testEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Errore nell'invio di prova")
+      showMessage(`Email di prova inviata a ${data.to}`)
+      setShowTestSend(false)
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setSendingTest(false)
+    }
+  }
+
   const statusBadge = (status: string) => {
     switch (status) {
       case "draft":
@@ -567,6 +594,44 @@ export default function DemDashboard({
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                 Aggiorna
               </Button>
+
+              <Dialog open={showTestSend} onOpenChange={setShowTestSend}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Send className="h-4 w-4 mr-2" />
+                    Invia prova
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invia email di prova</DialogTitle>
+                    <DialogDescription>
+                      Invia il comunicato (allegato compreso) a un indirizzo di prova. Non viene
+                      registrato nessun destinatario e non viene tracciata l&apos;apertura. L&apos;oggetto
+                      avr&agrave; il prefisso [PROVA].
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-2">
+                    <Label htmlFor="test-email">Email destinatario di prova</Label>
+                    <Input
+                      id="test-email"
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder="tua.email@esempio.it"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowTestSend(false)} disabled={sendingTest}>
+                      Annulla
+                    </Button>
+                    <Button onClick={sendTestEmail} disabled={sendingTest}>
+                      {sendingTest ? "Invio..." : "Invia prova"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               {(selectedCampaign.status === "draft" || selectedCampaign.status === "failed") && (
                 <>
                   <Dialog open={showAddManual} onOpenChange={setShowAddManual}>
