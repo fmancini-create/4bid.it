@@ -37,6 +37,7 @@ import {
   Download,
   Pencil,
   Zap,
+  Play,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -325,6 +326,7 @@ interface CampaignStats {
     sent: number
     failed: number
     pending: number
+    paused?: number
     opens: number
     unique_opens: number
     clicks: number
@@ -353,6 +355,7 @@ export default function DemDashboard({
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [togglingAuto, setTogglingAuto] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [showTestSend, setShowTestSend] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [sendingTest, setSendingTest] = useState(false)
@@ -750,6 +753,52 @@ export default function DemDashboard({
     }
   }
 
+  const resumeQueue = async () => {
+    if (!selectedCampaign || !stats) return
+    const pausedCount = stats.summary.paused || 0
+    if (pausedCount === 0) return
+    if (
+      !confirm(
+        `Riprendere l'invio di "${selectedCampaign.name}"?\n\n${pausedCount.toLocaleString("it-IT")} contatti in pausa torneranno in coda e l'invio automatico a scaglioni (warm-up, ogni giorno 9:00-18:00) riprendera' da solo. Non dovrai premere "Invia".`
+      )
+    )
+      return
+    setResuming(true)
+    setError(null)
+    try {
+      // 1) Riporta i contatti in pausa -> in coda (pending)
+      const resumeRes = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ queue_action: "resume" }),
+      })
+      const resumeData = await resumeRes.json()
+      if (!resumeRes.ok) throw new Error(resumeData.error || "Errore nella ripresa")
+
+      // 2) Riattiva l'invio automatico a scaglioni cosi prosegue da solo
+      const autoRes = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_send: true }),
+      })
+      const autoData = await autoRes.json()
+      if (!autoRes.ok) throw new Error(autoData.error || "Errore nell'attivazione automatica")
+
+      setSelectedCampaign((prev) => (prev ? { ...prev, ...autoData.campaign } : prev))
+      setCampaigns((prev) =>
+        prev.map((c) => (c.id === autoData.campaign.id ? { ...c, ...autoData.campaign } : c))
+      )
+      showMessage(
+        `Invio ripreso: ${(resumeData.queueMoved || pausedCount).toLocaleString("it-IT")} contatti di nuovo in coda. Il warm-up automatico partira' nella prossima finestra (9:00-18:00).`
+      )
+      fetchStats(selectedCampaign.id)
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setResuming(false)
+    }
+  }
+
   const sendTestEmail = async () => {
     if (!selectedCampaign) return
     if (!testEmail || !testEmail.includes("@")) {
@@ -979,6 +1028,21 @@ export default function DemDashboard({
                     </DialogContent>
                   </Dialog>
 
+                  {stats && (stats.summary.paused || 0) > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={resumeQueue}
+                      disabled={resuming}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-foreground"
+                      title="Rimette in coda i contatti in pausa e riprende l'invio automatico a scaglioni"
+                    >
+                      <Play className={`h-4 w-4 mr-2 ${resuming ? "animate-pulse" : ""}`} />
+                      {resuming
+                        ? "Ripresa in corso..."
+                        : `Riprendi (${(stats.summary.paused || 0).toLocaleString("it-IT")})`}
+                    </Button>
+                  )}
+
                   <Button
                     size="sm"
                     variant={selectedCampaign.auto_send ? "default" : "outline"}
@@ -1013,9 +1077,15 @@ export default function DemDashboard({
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Destinatari</span>
                   </div>
-                  <p className="text-2xl font-bold text-foreground">{stats.summary.total}</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats.summary.total.toLocaleString("it-IT")}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {stats.summary.sent} inviati, {stats.summary.pending} in attesa
+                    {stats.summary.sent.toLocaleString("it-IT")} inviati,{" "}
+                    {stats.summary.pending.toLocaleString("it-IT")} in attesa
+                    {(stats.summary.paused || 0) > 0 && (
+                      <>, {(stats.summary.paused || 0).toLocaleString("it-IT")} in pausa</>
+                    )}
                   </p>
                 </CardContent>
               </Card>
