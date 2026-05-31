@@ -60,6 +60,19 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Encode an email as base64url so it travels cleanly inside the unsubscribe URL.
+function encodeEmail(email: string): string {
+  return Buffer.from(email, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "")
+}
+
+function buildUnsubscribeUrl(baseUrl: string, email: string, campaignId: string): string {
+  return `${baseUrl}/api/dem/unsubscribe?e=${encodeEmail(email)}&c=${campaignId}`
+}
+
 interface ParsedAttachment {
   path: string
   filename: string
@@ -179,21 +192,55 @@ export async function POST(request: NextRequest) {
       if (file) resolvedAttachments.push(file)
     }
 
+    // Load the global suppression list so we never email anyone who unsubscribed.
+    const batchEmails = recipients.map((r) => r.email).filter(Boolean)
+    const unsubscribedSet = new Set<string>()
+    if (batchEmails.length > 0) {
+      const { data: unsubRows } = await supabase
+        .from("dem_unsubscribes")
+        .select("email")
+        .in("email", batchEmails)
+      for (const row of unsubRows || []) {
+        if (row.email) unsubscribedSet.add(String(row.email).toLowerCase())
+      }
+    }
+
+    let skippedCount = 0
+
     // Send emails with throttling
     for (const recipient of recipients) {
       try {
+        // Skip and flag anyone on the suppression list (they unsubscribed).
+        if (recipient.email && unsubscribedSet.has(String(recipient.email).toLowerCase())) {
+          skippedCount++
+          await supabase
+            .from("dem_recipients")
+            .update({ send_status: "unsubscribed" })
+            .eq("id", recipient.id)
+          continue
+        }
         // Personalize template (markers already stripped)
         const personalizedHtml = personalizeTemplate(templateWithoutMarkers, recipient)
 
-        // Add tracking
+        // Add tracking (rewrites only http(s) links, so the {{unsubscribe}} token
+        // is left untouched and replaced afterwards with the real, untracked URL).
         const trackedHtml = addTracking(personalizedHtml, campaign_id, recipient.id, baseUrl)
 
-        // Send email
+        // Build the per-recipient unsubscribe URL and inject it into the footer link.
+        const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, recipient.email, campaign_id)
+        const finalHtml = trackedHtml.replace(/\{\{\s*unsubscribe\s*\}\}/gi, unsubscribeUrl)
+
+        // Send email with one-click unsubscribe headers (RFC 8058). Mail clients
+        // (Gmail, Apple Mail, Outlook) show a native "Unsubscribe" button.
         const result = await sendEmail({
           to: recipient.email,
           subject: campaign.subject,
-          html: trackedHtml,
+          html: finalHtml,
           attachments: resolvedAttachments.length > 0 ? resolvedAttachments : undefined,
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>, <mailto:clienti@4bid.it?subject=unsubscribe>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         })
 
         if (result.success) {
@@ -249,8 +296,12 @@ export async function POST(request: NextRequest) {
     let finalStatus: string
     if (remaining > 0) {
       finalStatus = "draft"
+    } else if (sentCount === 0 && failedCount > 0) {
+      // Nothing delivered and at least one hard failure -> failed.
+      finalStatus = "failed"
     } else {
-      finalStatus = sentCount === 0 ? "failed" : "sent"
+      // Completed (even if some were skipped because unsubscribed).
+      finalStatus = "sent"
     }
 
     await supabase
@@ -268,6 +319,7 @@ export async function POST(request: NextRequest) {
       success: true,
       sent: sentCount,
       failed: failedCount,
+      skipped: skippedCount,
       batch: recipients.length,
       remaining,
       done: remaining === 0,

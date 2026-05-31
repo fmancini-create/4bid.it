@@ -97,7 +97,7 @@ const SANTADDEO_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione. Per non ricevere ulteriori comunicati rispondi a questa email con oggetto "CANCELLAMI".</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione.<br />Non vuoi più ricevere i nostri comunicati? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
@@ -188,7 +188,7 @@ const HOTEL_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva. Se non desideri ricevere altre comunicazioni, rispondi a questa email con oggetto "CANCELLAMI" e verrai rimosso immediatamente.</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.<br />Non vuoi più ricevere le nostre comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
@@ -256,7 +256,7 @@ const DEMO_SANTADDEO_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva. Se non desideri ricevere altre comunicazioni, rispondi a questa email con oggetto "CANCELLAMI" e verrai rimosso immediatamente.</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.<br />Non vuoi più ricevere le nostre comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
