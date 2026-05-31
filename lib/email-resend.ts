@@ -35,7 +35,9 @@ function getClient(): Resend | null {
 function resolveFrom(): string {
   const from = process.env.RESEND_FROM?.trim()
   if (from) return from
-  return "4BID.IT <onboarding@resend.dev>"
+  // Default sender on the verified subdomain mrk.4bid.it.
+  // NOTE: works only once the domain is "Verified" on Resend.
+  return "4BID SRL <noreply@mrk.4bid.it>"
 }
 
 export async function sendEmail({ to, subject, html, replyTo, attachments }: EmailOptions) {
