@@ -97,7 +97,7 @@ const SANTADDEO_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione. Per non ricevere ulteriori comunicati rispondi a questa email con oggetto "CANCELLAMI".</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione.<br />Non vuoi più ricevere i nostri comunicati? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
@@ -188,7 +188,7 @@ const HOTEL_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva. Se non desideri ricevere altre comunicazioni, rispondi a questa email con oggetto "CANCELLAMI" e verrai rimosso immediatamente.</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.<br />Non vuoi più ricevere le nostre comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
@@ -220,10 +220,8 @@ const DEMO_SANTADDEO_PRESET = {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Header -->
           <tr>
-            <td align="center" style="background-color:#1b2a4a;padding:28px 32px 20px;">
-              <img src="https://www.4bid.it/dem/santaddeo-demo-header.png" alt="Santaddeo" width="96" style="display:block;width:96px;height:auto;border:0;margin:0 auto 12px;" />
-              <p style="margin:0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
-              <p style="margin:4px 0 0;color:#c8a45c;font-size:13px;letter-spacing:1px;">Revenue Management per Hotel · by 4 Bid</p>
+            <td align="center" style="background-color:#ffffff;padding:32px 32px 24px;border-bottom:3px solid #2bb3a3;">
+              <img src="https://www.4bid.it/santaddeo-logo.png" alt="Santaddeo - Hotel Accelerator" width="320" style="display:block;width:320px;max-width:80%;height:auto;border:0;margin:0 auto;" />
             </td>
           </tr>
           <!-- Body -->
@@ -237,7 +235,7 @@ const DEMO_SANTADDEO_PRESET = {
           <!-- CTA -->
           <tr>
             <td align="center" style="padding:14px 32px 10px;">
-              <a href="https://www.4bid.it/software-revenue-management-santaddeo" style="display:inline-block;background-color:#c8a45c;color:#1b2a4a;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">Prenota la demo gratuita</a>
+              <a href="https://www.santaddeo.com" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">Prenota la demo gratuita</a>
             </td>
           </tr>
           <tr>
@@ -258,7 +256,7 @@ const DEMO_SANTADDEO_PRESET = {
           <!-- Footer -->
           <tr>
             <td style="padding:20px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva. Se non desideri ricevere altre comunicazioni, rispondi a questa email con oggetto "CANCELLAMI" e verrai rimosso immediatamente.</p>
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.<br />Non vuoi più ricevere le nostre comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>

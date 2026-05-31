@@ -12,6 +12,7 @@ interface EmailOptions {
   html: string
   replyTo?: string
   attachments?: EmailAttachment[]
+  headers?: Record<string, string>
 }
 
 // Lazily create the client so the module can be imported even if the key is
@@ -41,7 +42,7 @@ function resolveFrom(): string {
   return "4BID SRL <marketing@mrk.4bid.it>"
 }
 
-export async function sendEmail({ to, subject, html, replyTo, attachments }: EmailOptions) {
+export async function sendEmail({ to, subject, html, replyTo, attachments, headers }: EmailOptions) {
   const client = getClient()
   if (!client) {
     console.error("[v0] RESEND_API_KEY non configurata")
@@ -56,6 +57,7 @@ export async function sendEmail({ to, subject, html, replyTo, attachments }: Ema
       html,
       // Replies go to a monitored mailbox. Order: explicit arg > env override > default.
       replyTo: replyTo || process.env.RESEND_REPLY_TO || process.env.SMTP_FROM || "clienti@4bid.it",
+      headers,
       attachments:
         attachments && attachments.length > 0
           ? attachments.map((a) => ({
