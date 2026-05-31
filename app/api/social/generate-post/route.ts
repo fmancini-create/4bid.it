@@ -51,7 +51,7 @@ ${includeHashtags ? `- Aggiungi 3-5 hashtag pertinenti alla fine, includi: ${def
 Rispondi SOLO con il testo del post, senza introduzioni o spiegazioni.`
 
     const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: "openai/gpt-4o-mini",
       prompt,
       maxTokens: 500,
     })
