@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -144,9 +144,20 @@ interface Recipient {
   created_at: string
 }
 
+interface TrackingEvent {
+  id: string
+  campaign_id: string
+  recipient_id: string
+  email: string
+  event_type: string
+  url: string | null
+  created_at: string
+}
+
 interface CampaignStats {
   campaign: Campaign
   recipients: Recipient[]
+  events: TrackingEvent[]
   summary: {
     total: number
     sent: number
@@ -156,6 +167,16 @@ interface CampaignStats {
     unique_opens: number
     clicks: number
     unique_clicks: number
+  }
+}
+
+// Map a clicked URL to a short, human-friendly label (e.g. "santaddeo.com")
+function siteLabelFromUrl(rawUrl: string): string {
+  try {
+    const host = new URL(rawUrl).hostname.replace(/^www\./, "")
+    return host
+  } catch {
+    return rawUrl
   }
 }
 
@@ -195,6 +216,25 @@ export default function DemDashboard({
   const [editNome, setEditNome] = useState("")
   const [editCognome, setEditCognome] = useState("")
   const [editAzienda, setEditAzienda] = useState("")
+
+  // Build a map: recipientId -> [{ label, count }] of the sites they clicked
+  const clicksByRecipient = useMemo(() => {
+    const map = new Map<string, { label: string; count: number }[]>()
+    if (!stats?.events) return map
+    for (const ev of stats.events) {
+      if (ev.event_type !== "click" || !ev.url) continue
+      const label = siteLabelFromUrl(ev.url)
+      const list = map.get(ev.recipient_id) || []
+      const existing = list.find((x) => x.label === label)
+      if (existing) {
+        existing.count += 1
+      } else {
+        list.push({ label, count: 1 })
+      }
+      map.set(ev.recipient_id, list)
+    }
+    return map
+  }, [stats?.events])
 
   const showMessage = useCallback((msg: string, isError = false) => {
     if (isError) {
@@ -816,6 +856,7 @@ export default function DemDashboard({
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Azienda</th>
                         <th className="text-center py-2 px-3 text-muted-foreground font-medium">Aperture</th>
                         <th className="text-center py-2 px-3 text-muted-foreground font-medium">Click</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Link cliccato</th>
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Errore</th>
                         {canEditRecipients && (
                           <th className="text-right py-2 px-3 text-muted-foreground font-medium">Azioni</th>
@@ -833,6 +874,27 @@ export default function DemDashboard({
                           <td className="py-2 px-3 text-foreground hidden md:table-cell">{r.nome_azienda || "-"}</td>
                           <td className="py-2 px-3 text-center text-foreground">{r.open_count || 0}</td>
                           <td className="py-2 px-3 text-center text-foreground">{r.click_count || 0}</td>
+                          <td className="py-2 px-3 hidden md:table-cell">
+                            {(() => {
+                              const clicks = clicksByRecipient.get(r.id)
+                              if (!clicks || clicks.length === 0) {
+                                return <span className="text-muted-foreground">-</span>
+                              }
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {clicks.map((c) => (
+                                    <span
+                                      key={c.label}
+                                      className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-foreground"
+                                    >
+                                      {c.label}
+                                      {c.count > 1 ? ` ×${c.count}` : ""}
+                                    </span>
+                                  ))}
+                                </div>
+                              )
+                            })()}
+                          </td>
                           <td className="py-2 px-3 text-destructive text-xs hidden lg:table-cell max-w-48 truncate">
                             {r.error_message || "-"}
                           </td>
