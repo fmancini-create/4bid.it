@@ -72,6 +72,24 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const updates: Record<string, unknown> = {}
 
+    // Azioni sulla coda destinatari:
+    //  - "resume": riprende l'invio (paused -> pending), cosi i contatti tornano inviabili
+    //  - "pause":  mette in pausa la coda (pending -> paused), blocca ogni nuovo invio
+    if (body.queue_action === "resume" || body.queue_action === "pause") {
+      const from = body.queue_action === "resume" ? "paused" : "pending"
+      const to = body.queue_action === "resume" ? "pending" : "paused"
+      const { count, error: queueError } = await supabase
+        .from("dem_recipients")
+        .update({ send_status: to }, { count: "exact" })
+        .eq("campaign_id", id)
+        .eq("send_status", from)
+
+      if (queueError) {
+        return NextResponse.json({ error: queueError.message }, { status: 500 })
+      }
+      updates.queueMoved = count || 0
+    }
+
     // Toggle invio automatico a scaglioni (warm-up gestito dal cron dem-auto-send).
     if (typeof body.auto_send === "boolean") {
       updates.auto_send = body.auto_send
@@ -81,8 +99,18 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    // Estrae i campi non-colonna prima di aggiornare la tabella campagne.
+    const queueMoved = (updates.queueMoved as number | undefined) ?? undefined
+    delete updates.queueMoved
+
+    if (Object.keys(updates).length === 0 && queueMoved === undefined) {
       return NextResponse.json({ error: "Nessun campo aggiornabile" }, { status: 400 })
+    }
+
+    // Se c'e' solo l'azione coda (nessun campo campagna), ritorna senza toccare dem_campaigns.
+    if (Object.keys(updates).length === 0) {
+      const { data: campaign } = await supabase.from("dem_campaigns").select("*").eq("id", id).single()
+      return NextResponse.json({ campaign, queueMoved })
     }
 
     updates.updated_at = new Date().toISOString()
@@ -98,7 +126,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ campaign })
+    return NextResponse.json({ campaign, queueMoved })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Errore interno" },

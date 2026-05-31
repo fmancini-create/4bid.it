@@ -36,11 +36,12 @@ export async function GET(request: NextRequest) {
       return count || 0
     }
 
-    const [total, sent, failed, pending] = await Promise.all([
+    const [total, sent, failed, pending, paused] = await Promise.all([
       countByStatus(),
       countByStatus("sent"),
       countByStatus("failed"),
       countByStatus("pending"),
+      countByStatus("paused"),
     ])
 
     // Recipients list is only a preview for the table (full list can be huge).
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
         sent,
         failed,
         pending,
+        paused,
         opens: campaign.open_count || 0,
         unique_opens: campaign.unique_opens || 0,
         clicks: campaign.click_count || 0,
