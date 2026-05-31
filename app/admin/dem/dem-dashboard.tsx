@@ -600,7 +600,7 @@ export default function DemDashboard({
     if (!selectedCampaign) return
     if (
       !confirm(
-        `Stai per inviare la campagna "${selectedCampaign.name}". L'invio avviene a lotti (max 120 email per volta) per non superare i limiti del server email: se i destinatari sono di piu', dovrai premere "Invia" piu' volte. Continuare?`
+        `Stai per inviare la campagna "${selectedCampaign.name}". L'invio avviene a lotti (max 250 email per volta) per non superare i limiti del server email: se i destinatari sono di piu', dovrai premere "Invia" piu' volte. Continuare?`
       )
     )
       return
