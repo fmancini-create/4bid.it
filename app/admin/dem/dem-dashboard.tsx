@@ -1150,6 +1150,12 @@ export default function DemDashboard({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <a href="/admin/dem/contatti">
+                <FileText className="h-4 w-4 mr-2" />
+                Contatti Hotel
+              </a>
+            </Button>
             <Button size="sm" variant="outline" onClick={loadSantaddeoPreset}>
               <FileText className="h-4 w-4 mr-2" />
               Comunicato Santaddeo
