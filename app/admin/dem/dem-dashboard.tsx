@@ -36,6 +36,7 @@ import {
   FileText,
   Download,
   Pencil,
+  Zap,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -282,6 +283,8 @@ interface Campaign {
   sent_at: string | null
   created_at: string
   updated_at: string
+  auto_send?: boolean
+  auto_started_on?: string | null
 }
 
 interface Recipient {
@@ -349,6 +352,7 @@ export default function DemDashboard({
   const [stats, setStats] = useState<CampaignStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [togglingAuto, setTogglingAuto] = useState(false)
   const [showTestSend, setShowTestSend] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [sendingTest, setSendingTest] = useState(false)
@@ -711,6 +715,41 @@ export default function DemDashboard({
     }
   }
 
+  const toggleAutoSend = async () => {
+    if (!selectedCampaign) return
+    const enabling = !selectedCampaign.auto_send
+    if (enabling) {
+      if (
+        !confirm(
+          `Attivare l'invio automatico per "${selectedCampaign.name}"?\n\nLa campagna verra' inviata da sola a scaglioni, ogni giorno dalle 9:00 alle 18:00, con volume crescente per proteggere la reputazione del mittente (giorno 1: 200, giorno 2: 400, giorno 3: 800, giorno 4: 1500, poi 2500/giorno) finche' la lista non e' esaurita. Non dovrai premere "Invia".`
+        )
+      )
+        return
+    }
+    setTogglingAuto(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_send: enabling }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Errore aggiornamento")
+      setSelectedCampaign((prev) => (prev ? { ...prev, ...data.campaign } : prev))
+      setCampaigns((prev) => prev.map((c) => (c.id === data.campaign.id ? { ...c, ...data.campaign } : c)))
+      showMessage(
+        enabling
+          ? "Invio automatico attivato: la campagna partira' a scaglioni nella prossima finestra (9:00-18:00)."
+          : "Invio automatico disattivato."
+      )
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setTogglingAuto(false)
+    }
+  }
+
   const sendTestEmail = async () => {
     if (!selectedCampaign) return
     if (!testEmail || !testEmail.includes("@")) {
@@ -939,6 +978,18 @@ export default function DemDashboard({
                       </div>
                     </DialogContent>
                   </Dialog>
+
+                  <Button
+                    size="sm"
+                    variant={selectedCampaign.auto_send ? "default" : "outline"}
+                    onClick={toggleAutoSend}
+                    disabled={togglingAuto || (!selectedCampaign.auto_send && (!stats || stats.summary.pending === 0))}
+                    className={selectedCampaign.auto_send ? "bg-emerald-600 hover:bg-emerald-700 text-foreground" : ""}
+                    title="Invia da solo a scaglioni, ogni giorno 9:00-18:00, con volume crescente (warm-up)"
+                  >
+                    <Zap className={`h-4 w-4 mr-2 ${togglingAuto ? "animate-pulse" : ""}`} />
+                    {selectedCampaign.auto_send ? "Auto attivo" : "Invio automatico"}
+                  </Button>
 
                   <Button
                     size="sm"
