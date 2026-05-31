@@ -502,7 +502,7 @@ export default function DemDashboard({
     if (!selectedCampaign) return
     if (
       !confirm(
-        `Stai per inviare la campagna "${selectedCampaign.name}" a tutti i destinatari in attesa. Continuare?`
+        `Stai per inviare la campagna "${selectedCampaign.name}". L'invio avviene a lotti (max 120 email per volta) per non superare i limiti del server email: se i destinatari sono di piu', dovrai premere "Invia" piu' volte. Continuare?`
       )
     )
       return
@@ -517,7 +517,13 @@ export default function DemDashboard({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Errore nell'invio")
-      showMessage(`Invio completato: ${data.sent} inviate, ${data.failed} fallite`)
+      if (data.done) {
+        showMessage(`Invio completato. Totale inviate: ${data.sent}, fallite: ${data.failed}.`)
+      } else {
+        showMessage(
+          `Lotto inviato (${data.batch} email). Restano ${data.remaining} destinatari in attesa: premi di nuovo "Invia" per il prossimo lotto (rispetta i limiti giornalieri del tuo provider email).`
+        )
+      }
       fetchStats(selectedCampaign.id)
       // Refresh campaigns list
       const campaignsRes = await fetch("/api/dem/campaigns")
