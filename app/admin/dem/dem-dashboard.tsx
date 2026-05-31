@@ -33,7 +33,146 @@ import {
   BarChart3,
   UserPlus,
   Trash2,
+  FileText,
+  Download,
 } from "lucide-react"
+
+const SANTADDEO_PRESET = {
+  name: "Comunicato stampa - Lancio Santaddeo",
+  subject: "Comunicato stampa: nasce Santaddeo, la piattaforma italiana di revenue management per l'hotellerie",
+  html: `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comunicato stampa - Santaddeo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#2d2d2d;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1b2a4a;padding:28px 32px;">
+              <p style="margin:0;color:#c8a45c;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Comunicato stampa</p>
+              <p style="margin:6px 0 0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
+              <p style="margin:2px 0 0;color:#aeb7c7;font-size:13px;">Revenue intelligence per l'hotellerie · by 4 Bid</p>
+            </td>
+          </tr>
+          <!-- Date -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <p style="margin:0;color:#7a7a7a;font-size:13px;">San Casciano in Val di Pesa, 31 maggio 2026</p>
+            </td>
+          </tr>
+          <!-- Title -->
+          <tr>
+            <td style="padding:12px 32px 0;">
+              <h1 style="margin:0;color:#1b2a4a;font-size:22px;line-height:1.3;font-weight:bold;">Nasce Santaddeo, la piattaforma italiana di revenue management nata dall'esperienza di 4 Bid nel settore alberghiero</h1>
+            </td>
+          </tr>
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:20px 32px 0;">
+              <p style="margin:0;font-size:15px;line-height:1.6;">Gentile Redazione di {{nome_azienda}},</p>
+              <p style="margin:12px 0 0;font-size:15px;line-height:1.6;">vi inviamo il comunicato stampa relativo al lancio di <strong>Santaddeo</strong>, con preghiera di pubblicazione e diffusione.</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:20px 32px 0;font-size:15px;line-height:1.65;color:#2d2d2d;">
+              <p style="margin:0 0 14px;">Nasce <strong>Santaddeo</strong>, la piattaforma italiana di revenue intelligence dedicata al mondo dell'hotellerie, pensata per aiutare hotel, resort, consulenti e revenue manager a prendere decisioni tariffarie piu' consapevoli, rapide e personalizzate.</p>
+              <p style="margin:0 0 14px;">Il nome richiama <strong>San Taddeo</strong>, tradizionalmente considerato il protettore delle cause difficili: per molti albergatori individuare ogni giorno il prezzo giusto di vendita di una camera e' davvero una delle sfide piu' complesse. Troppe variabili, troppi dati, troppe decisioni da prendere rapidamente.</p>
+              <p style="margin:0 0 14px;">Santaddeo nasce per trasformare quella che spesso sembra un'impresa impossibile in un processo piu' chiaro, misurabile e governabile. Non un algoritmo rigido che decide al posto del revenue manager, ma uno strumento che permette di pesare le variabili piu' importanti e costruire una strategia tariffaria coerente con la propria struttura, il proprio mercato e i propri obiettivi.</p>
+              <p style="margin:0 0 14px;">La piattaforma e' frutto di <strong>20 anni di lavoro sul campo</strong> e dell'esperienza diretta di 4 Bid, societa' che negli anni ha affiancato numerose strutture ricettive nella consulenza revenue, nello sviluppo delle strategie tariffarie e nell'analisi delle performance commerciali. Non un'idea astratta nata in laboratorio, ma l'evoluzione digitale di un metodo gia' applicato sul campo.</p>
+              <p style="margin:0 0 14px;">Uno degli elementi distintivi e' la possibilita' di <strong>personalizzare le variabili</strong> che concorrono alla determinazione del prezzo: occupazione, stagionalita', andamento della domanda, eventi, meteo, anticipo di prenotazione, storico, pressione commerciale, comportamento dei competitor e altri indicatori strategici.</p>
+            </td>
+          </tr>
+          <!-- Quote -->
+          <tr>
+            <td style="padding:8px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #c8a45c;background-color:#faf7f0;border-radius:0 6px 6px 0;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0;font-size:15px;line-height:1.6;font-style:italic;color:#3a3a3a;">"Santaddeo nasce da anni di lavoro reale con gli hotel. Il punto non e' sostituire il revenue manager, ma dargli uno strumento piu' intelligente, veloce e personalizzabile. Ogni struttura ha dinamiche diverse: per questo il sistema deve permettere di scegliere quali variabili incidono sul prezzo e con quale peso."</p>
+                    <p style="margin:10px 0 0;font-size:13px;font-weight:bold;color:#1b2a4a;">Filippo Mancini, fondatore di 4 Bid</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Features -->
+          <tr>
+            <td style="padding:20px 32px 0;font-size:15px;line-height:1.65;">
+              <p style="margin:0 0 10px;font-weight:bold;color:#1b2a4a;">Tra le principali funzioni previste da Santaddeo:</p>
+              <ul style="margin:0;padding-left:20px;color:#2d2d2d;">
+                <li style="margin-bottom:6px;">analisi dell'evoluzione tariffaria e dell'occupazione;</li>
+                <li style="margin-bottom:6px;">monitoraggio delle performance commerciali;</li>
+                <li style="margin-bottom:6px;">lettura dei dati provenienti dal PMS;</li>
+                <li style="margin-bottom:6px;">individuazione di sottoprezzi, anomalie e opportunita' di ricavo;</li>
+                <li style="margin-bottom:6px;">personalizzazione delle variabili che influenzano il prezzo;</li>
+                <li style="margin-bottom:6px;">supporto operativo al revenue manager;</li>
+                <li style="margin-bottom:0;">dashboard pensate per hotel singoli, resort, gruppi e consulenti.</li>
+              </ul>
+            </td>
+          </tr>
+          <!-- Commercial model -->
+          <tr>
+            <td style="padding:20px 32px 0;font-size:15px;line-height:1.65;">
+              <p style="margin:0 0 14px;">Un altro elemento centrale del progetto e' il <strong>modello commerciale</strong>. Santaddeo prevede anche un <strong>piano a commissione</strong>, pensato per ridurre a zero il rischio economico iniziale dell'albergatore piu' scettico: la struttura puo' utilizzare il sistema senza un costo fisso iniziale elevato, collegando il compenso ai risultati generati.</p>
+            </td>
+          </tr>
+          <!-- Quote 2 -->
+          <tr>
+            <td style="padding:8px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #c8a45c;background-color:#faf7f0;border-radius:0 6px 6px 0;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0;font-size:15px;line-height:1.6;font-style:italic;color:#3a3a3a;">"Molti albergatori sono diffidenti verso nuovi software e nuovi costi fissi. Per questo abbiamo previsto un modello a commissione: se il sistema aiuta davvero a migliorare i risultati, allora viene remunerato. E' un modo concreto per abbattere la barriera d'ingresso e dimostrare valore sul campo."</p>
+                    <p style="margin:10px 0 0;font-size:13px;font-weight:bold;color:#1b2a4a;">Filippo Mancini, fondatore di 4 Bid</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Closing -->
+          <tr>
+            <td style="padding:20px 32px 0;font-size:15px;line-height:1.65;">
+              <p style="margin:0;">Santaddeo si rivolge in particolare a hotel indipendenti, boutique hotel, resort, piccoli gruppi alberghieri e professionisti del revenue management che cercano uno strumento flessibile, personalizzabile e costruito intorno alla realta' operativa delle strutture ricettive.</p>
+            </td>
+          </tr>
+          <!-- CTA -->
+          <tr>
+            <td align="center" style="padding:28px 32px 8px;">
+              <a href="https://www.santaddeo.com" style="display:inline-block;background-color:#1b2a4a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:14px 32px;border-radius:6px;">Scopri Santaddeo</a>
+            </td>
+          </tr>
+          <!-- Contacts -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
+              <p style="margin:0 0 4px;font-size:13px;font-weight:bold;color:#1b2a4a;">Contatti per informazioni, demo o richieste di collaborazione</p>
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
+                Ufficio Stampa - 4 Bid s.r.l.<br />
+                Sito: <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a><br />
+                Email: <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px 28px;">
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione. Per non ricevere ulteriori comunicati rispondi a questa email con oggetto "CANCELLAMI".</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+}
 
 interface Campaign {
   id: string
@@ -141,6 +280,13 @@ export default function DemDashboard({
       setLoading(false)
     }
   }, [showMessage])
+
+  const loadSantaddeoPreset = () => {
+    setNewName(SANTADDEO_PRESET.name)
+    setNewSubject(SANTADDEO_PRESET.subject)
+    setNewTemplate(SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
 
   const createCampaign = async () => {
     if (!newName || !newSubject || !newTemplate) {
@@ -683,13 +829,18 @@ export default function DemDashboard({
               </p>
             </div>
           </div>
-          <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={loadSantaddeoPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Comunicato Santaddeo
+            </Button>
+            <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuova
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Nuova Campagna DEM</DialogTitle>
@@ -737,7 +888,21 @@ export default function DemDashboard({
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Add CSV download hint */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Download className="h-3.5 w-3.5" />
+          <span>Lista testate pronta da importare:</span>
+          <a
+            href="/dem/comunicato-stampa-testate.csv"
+            download
+            className="underline hover:text-foreground"
+          >
+            comunicato-stampa-testate.csv
+          </a>
         </div>
 
         {/* Campaigns list */}
