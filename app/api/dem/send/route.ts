@@ -7,6 +7,11 @@ export const maxDuration = 300
 
 const THROTTLE_DELAY_MS = 2000 // 2 seconds between emails to avoid SMTP rate limits
 
+// Max emails per single invocation. With a 2s throttle and a 300s function timeout
+// (~150 theoretical max), we keep a safe margin so the function never times out and
+// leaves the campaign stuck in "sending". Large lists are sent over multiple clicks.
+const DEFAULT_BATCH_LIMIT = 120
+
 function personalizeTemplate(
   template: string,
   recipient: {
@@ -97,11 +102,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { campaign_id } = body
+    const { campaign_id, batch_size } = body
 
     if (!campaign_id) {
       return NextResponse.json({ error: "Missing campaign_id" }, { status: 400 })
     }
+
+    // Clamp the batch size to a safe range (never above the timeout-safe default)
+    const batchLimit = Math.min(
+      Math.max(1, Number(batch_size) || DEFAULT_BATCH_LIMIT),
+      DEFAULT_BATCH_LIMIT
+    )
 
     // Get campaign
     const { data: campaign, error: campaignError } = await supabase
@@ -118,12 +129,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campagna gia' in fase di invio" }, { status: 400 })
     }
 
-    // Get pending recipients
+    // Count how many recipients are still pending (the whole queue)
+    const { count: pendingTotal } = await supabase
+      .from("dem_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign_id)
+      .eq("send_status", "pending")
+
+    // Get only the next batch of pending recipients (ordered for deterministic progress)
     const { data: recipients, error: recipientsError } = await supabase
       .from("dem_recipients")
       .select("*")
       .eq("campaign_id", campaign_id)
       .eq("send_status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(batchLimit)
 
     if (recipientsError || !recipients || recipients.length === 0) {
       return NextResponse.json({ error: "Nessun destinatario in attesa" }, { status: 400 })
@@ -217,11 +237,23 @@ export async function POST(request: NextRequest) {
       await sleep(THROTTLE_DELAY_MS)
     }
 
-    // Finalize campaign
+    // How many recipients are still pending after this batch
+    const remaining = Math.max(0, (pendingTotal || recipients.length) - recipients.length)
+
+    // If there are still pending recipients, keep the campaign resumable (draft) so
+    // the operator can send the next batch later (e.g. the next day for SMTP limits).
+    // Otherwise the campaign is complete.
+    let finalStatus: string
+    if (remaining > 0) {
+      finalStatus = "draft"
+    } else {
+      finalStatus = sentCount === 0 ? "failed" : "sent"
+    }
+
     await supabase
       .from("dem_campaigns")
       .update({
-        status: failedCount === recipients.length ? "failed" : "sent",
+        status: finalStatus,
         sent_count: sentCount,
         failed_count: failedCount,
         sent_at: new Date().toISOString(),
@@ -233,7 +265,9 @@ export async function POST(request: NextRequest) {
       success: true,
       sent: sentCount,
       failed: failedCount,
-      total: recipients.length,
+      batch: recipients.length,
+      remaining,
+      done: remaining === 0,
     })
   } catch (error) {
     console.error("DEM send error:", error)
