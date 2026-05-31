@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
     const baseFields = {
       nome: "Mario",
       cognome: "Rossi",
-      nome_azienda: "Redazione di Prova",
-      tipo_contatto: "test",
+      nome_azienda: "Redazione di Prova (PROVA)",
+      tipo_contatto: null,
       send_status: "sent",
       sent_at: new Date().toISOString(),
       error_message: null,
