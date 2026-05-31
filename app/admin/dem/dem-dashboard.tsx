@@ -35,6 +35,7 @@ import {
   Trash2,
   FileText,
   Download,
+  Pencil,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -185,6 +186,13 @@ export default function DemDashboard({
   const [manualCognome, setManualCognome] = useState("")
   const [manualAzienda, setManualAzienda] = useState("")
 
+  // Edit recipient form
+  const [editRecipient, setEditRecipient] = useState<Recipient | null>(null)
+  const [editEmail, setEditEmail] = useState("")
+  const [editNome, setEditNome] = useState("")
+  const [editCognome, setEditCognome] = useState("")
+  const [editAzienda, setEditAzienda] = useState("")
+
   const showMessage = useCallback((msg: string, isError = false) => {
     if (isError) {
       setError(msg)
@@ -312,6 +320,70 @@ export default function DemDashboard({
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Errore sconosciuto"
       showMessage(`ERRORE nel salvataggio: ${msg}`, true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const startEditRecipient = (r: Recipient) => {
+    setEditRecipient(r)
+    setEditEmail(r.email)
+    setEditNome(r.nome || "")
+    setEditCognome(r.cognome || "")
+    setEditAzienda(r.nome_azienda || "")
+  }
+
+  const saveEditRecipient = async () => {
+    if (!editRecipient || !selectedCampaign) return
+    if (!editEmail || !editEmail.includes("@")) {
+      showMessage("Inserisci un'email valida", true)
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch("/api/dem/recipients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editRecipient.id,
+          email: editEmail,
+          nome: editNome || null,
+          cognome: editCognome || null,
+          nome_azienda: editAzienda || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || `Errore HTTP ${res.status}`)
+      }
+      setEditRecipient(null)
+      showMessage("Contatto aggiornato con successo")
+      fetchStats(selectedCampaign.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Errore sconosciuto"
+      showMessage(`ERRORE nella modifica: ${msg}`, true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteRecipient = async (r: Recipient) => {
+    if (!selectedCampaign) return
+    if (!confirm(`Eliminare il contatto ${r.email}?`)) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/dem/recipients?id=${encodeURIComponent(r.id)}`, {
+        method: "DELETE",
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || `Errore HTTP ${res.status}`)
+      }
+      showMessage("Contatto eliminato")
+      fetchStats(selectedCampaign.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Errore sconosciuto"
+      showMessage(`ERRORE nell'eliminazione: ${msg}`, true)
     } finally {
       setLoading(false)
     }
@@ -447,6 +519,8 @@ export default function DemDashboard({
 
   // Detail view
   if (selectedCampaign) {
+    const canEditRecipients =
+      selectedCampaign.status === "draft" || selectedCampaign.status === "failed"
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
@@ -675,6 +749,9 @@ export default function DemDashboard({
                         <th className="text-center py-2 px-3 text-muted-foreground font-medium">Aperture</th>
                         <th className="text-center py-2 px-3 text-muted-foreground font-medium">Click</th>
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Errore</th>
+                        {canEditRecipients && (
+                          <th className="text-right py-2 px-3 text-muted-foreground font-medium">Azioni</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -691,6 +768,30 @@ export default function DemDashboard({
                           <td className="py-2 px-3 text-destructive text-xs hidden lg:table-cell max-w-48 truncate">
                             {r.error_message || "-"}
                           </td>
+                          {canEditRecipients && (
+                            <td className="py-2 px-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => startEditRecipient(r)}
+                                  aria-label={`Modifica ${r.email}`}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => deleteRecipient(r)}
+                                  aria-label={`Elimina ${r.email}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -699,6 +800,58 @@ export default function DemDashboard({
               </CardContent>
             </Card>
           )}
+
+          {/* Edit recipient dialog */}
+          <Dialog open={editRecipient !== null} onOpenChange={(open) => !open && setEditRecipient(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Modifica Contatto</DialogTitle>
+                <DialogDescription>Aggiorna i dati del destinatario.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                <div>
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="email@esempio.it"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="edit-nome">Nome</Label>
+                    <Input id="edit-nome" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-cognome">Cognome</Label>
+                    <Input
+                      id="edit-cognome"
+                      value={editCognome}
+                      onChange={(e) => setEditCognome(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-azienda">Azienda</Label>
+                  <Input
+                    id="edit-azienda"
+                    value={editAzienda}
+                    onChange={(e) => setEditAzienda(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditRecipient(null)} disabled={loading}>
+                  Annulla
+                </Button>
+                <Button onClick={saveEditRecipient} disabled={loading}>
+                  {loading ? "Salvataggio..." : "Salva"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* No stats yet */}
           {!stats && !loading && (
