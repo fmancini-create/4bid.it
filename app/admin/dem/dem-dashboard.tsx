@@ -108,6 +108,97 @@ const SANTADDEO_PRESET = {
 </html>`,
 }
 
+const HOTEL_PRESET = {
+  name: "Hotel - Presentazione Santaddeo",
+  subject: "{{nome_azienda}}: il prezzo giusto delle camere, ogni giorno — con Santaddeo",
+  html: `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Santaddeo per il tuo hotel</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#2d2d2d;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1b2a4a;padding:28px 32px;">
+              <p style="margin:0;color:#c8a45c;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Revenue management</p>
+              <p style="margin:6px 0 0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
+              <p style="margin:2px 0 0;color:#aeb7c7;font-size:13px;">Il prezzo giusto delle tue camere, ogni giorno · by 4 Bid</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#2d2d2d;">
+              <p style="margin:0 0 16px;">Gentile {{nome_azienda}},</p>
+              <p style="margin:0 0 16px;">decidere ogni giorno il prezzo giusto di vendita di una camera è una delle sfide più complesse per un albergatore: troppe variabili, troppi dati, troppe decisioni da prendere in poco tempo.</p>
+              <p style="margin:0 0 16px;"><strong>Santaddeo</strong> è la piattaforma italiana di revenue management nata da 20 anni di lavoro sul campo di <strong>4 Bid</strong> a fianco delle strutture ricettive. Non un algoritmo rigido che decide al posto tuo, ma uno strumento che ti aiuta a costruire una strategia tariffaria chiara, misurabile e su misura per il tuo hotel.</p>
+            </td>
+          </tr>
+          <!-- Bullets -->
+          <tr>
+            <td style="padding:4px 32px 0;font-size:15px;line-height:1.65;">
+              <p style="margin:0 0 10px;font-weight:bold;color:#1b2a4a;">Con Santaddeo puoi:</p>
+              <ul style="margin:0;padding-left:20px;color:#2d2d2d;">
+                <li style="margin-bottom:6px;">analizzare occupazione, tariffe e performance commerciali in un colpo d'occhio;</li>
+                <li style="margin-bottom:6px;">leggere i dati del tuo PMS e individuare sottoprezzi e opportunità di ricavo;</li>
+                <li style="margin-bottom:6px;">personalizzare le variabili che incidono sul prezzo (stagionalità, domanda, eventi, anticipo, competitor…);</li>
+                <li style="margin-bottom:0;">avere un supporto concreto al lavoro quotidiano del revenue.</li>
+              </ul>
+            </td>
+          </tr>
+          <!-- Risk zero -->
+          <tr>
+            <td style="padding:18px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #c8a45c;background-color:#faf7f0;border-radius:0 6px 6px 0;">
+                <tr>
+                  <td style="padding:16px 20px;font-size:15px;line-height:1.6;color:#3a3a3a;">
+                    <strong style="color:#1b2a4a;">Rischio iniziale zero:</strong> è disponibile anche un <strong>piano a commissione</strong>, legato ai risultati generati. Se il sistema aiuta davvero a migliorare i tuoi ricavi, allora viene remunerato.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- CTA -->
+          <tr>
+            <td align="center" style="padding:28px 32px 8px;">
+              <a href="https://www.santaddeo.com" style="display:inline-block;background-color:#1b2a4a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:14px 32px;border-radius:6px;">Richiedi una demo gratuita</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 32px 8px;font-size:13px;color:#5a5a5a;">
+              Oppure rispondi a questa email: ti ricontattiamo noi.
+            </td>
+          </tr>
+          <!-- Contacts -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
+                4 Bid s.r.l.<br />
+                Sito: <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a><br />
+                Email: <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;">
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva. Se non desideri ricevere altre comunicazioni, rispondi a questa email con oggetto "CANCELLAMI" e verrai rimosso immediatamente.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+}
+
 interface Campaign {
   id: string
   name: string
@@ -269,6 +360,13 @@ export default function DemDashboard({
     setNewName(SANTADDEO_PRESET.name)
     setNewSubject(SANTADDEO_PRESET.subject)
     setNewTemplate(SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
+
+  const loadHotelPreset = () => {
+    setNewName(HOTEL_PRESET.name)
+    setNewSubject(HOTEL_PRESET.subject)
+    setNewTemplate(HOTEL_PRESET.html)
     setShowNewCampaign(true)
   }
 
@@ -1051,10 +1149,14 @@ export default function DemDashboard({
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={loadSantaddeoPreset}>
               <FileText className="h-4 w-4 mr-2" />
               Comunicato Santaddeo
+            </Button>
+            <Button size="sm" variant="outline" onClick={loadHotelPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Messaggio Hotel
             </Button>
             <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
               <DialogTrigger asChild>
