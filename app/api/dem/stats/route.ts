@@ -23,12 +23,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
-    // Get recipients with their statuses
+    // Accurate counts via head:true count queries. Plain .select() is capped at
+    // 1000 rows by PostgREST, so counting the returned array undercounts large
+    // campaigns (we have ~30k recipients). Counts below are exact regardless of size.
+    const countByStatus = async (status?: string) => {
+      let q = supabase
+        .from("dem_recipients")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaignId)
+      if (status) q = q.eq("send_status", status)
+      const { count } = await q
+      return count || 0
+    }
+
+    const [total, sent, failed, pending] = await Promise.all([
+      countByStatus(),
+      countByStatus("sent"),
+      countByStatus("failed"),
+      countByStatus("pending"),
+    ])
+
+    // Recipients list is only a preview for the table (full list can be huge).
+    const RECIPIENTS_PREVIEW_LIMIT = 500
     const { data: recipients, error: recipientsError } = await supabase
       .from("dem_recipients")
       .select("*")
       .eq("campaign_id", campaignId)
       .order("created_at", { ascending: true })
+      .limit(RECIPIENTS_PREVIEW_LIMIT)
 
     if (recipientsError) {
       return NextResponse.json({ error: "Error fetching recipients" }, { status: 500 })
@@ -45,12 +67,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       campaign,
       recipients: recipients || [],
+      recipientsPreviewLimit: RECIPIENTS_PREVIEW_LIMIT,
       events: events || [],
       summary: {
-        total: recipients?.length || 0,
-        sent: recipients?.filter((r) => r.send_status === "sent").length || 0,
-        failed: recipients?.filter((r) => r.send_status === "failed").length || 0,
-        pending: recipients?.filter((r) => r.send_status === "pending").length || 0,
+        total,
+        sent,
+        failed,
+        pending,
         opens: campaign.open_count || 0,
         unique_opens: campaign.unique_opens || 0,
         clicks: campaign.click_count || 0,

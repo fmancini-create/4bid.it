@@ -1073,7 +1073,12 @@ export default function DemDashboard({
           {stats && stats.recipients.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Destinatari ({stats.recipients.length})</CardTitle>
+                <CardTitle className="text-lg">Destinatari ({stats.summary.total.toLocaleString("it-IT")})</CardTitle>
+                {stats.summary.total > stats.recipients.length && (
+                  <p className="text-xs text-muted-foreground">
+                    Anteprima dei primi {stats.recipients.length} (totale {stats.summary.total.toLocaleString("it-IT")})
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
