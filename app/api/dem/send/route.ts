@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-smtp"
 
+// Allow long-running sends: 2s throttle x many recipients can exceed the default timeout.
+export const maxDuration = 300
+
 const THROTTLE_DELAY_MS = 2000 // 2 seconds between emails to avoid SMTP rate limits
 
 function personalizeTemplate(
