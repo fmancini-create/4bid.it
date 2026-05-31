@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
-import { sendEmail } from "@/lib/email-smtp"
+import { sendEmail } from "@/lib/email-resend"
 
-// Allow long-running sends: 2s throttle x many recipients can exceed the default timeout.
+// Allow long-running sends: throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
 
-const THROTTLE_DELAY_MS = 2000 // 2 seconds between emails to avoid SMTP rate limits
+// 600ms between emails: well under Resend's ~10 req/s limit, but gentle for
+// cold-contact deliverability (no aggressive bursts).
+const THROTTLE_DELAY_MS = 600
 
-// Max emails per single invocation. With a 2s throttle and a 300s function timeout
-// (~150 theoretical max), we keep a safe margin so the function never times out and
-// leaves the campaign stuck in "sending". Large lists are sent over multiple clicks.
-const DEFAULT_BATCH_LIMIT = 120
+// Max emails per single invocation. With a 600ms throttle and a 300s function
+// timeout (~500 theoretical max), we keep a safe margin so the function never
+// times out and leaves the campaign stuck in "sending". For cold lists we also
+// recommend sending a few hundred per day and ramping up gradually (warm-up).
+const DEFAULT_BATCH_LIMIT = 250
 
 function personalizeTemplate(
   template: string,

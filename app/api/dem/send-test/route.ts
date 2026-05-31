@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
-import { sendEmail } from "@/lib/email-smtp"
+import { sendEmail } from "@/lib/email-resend"
 
 function personalizeTemplate(
   template: string,
