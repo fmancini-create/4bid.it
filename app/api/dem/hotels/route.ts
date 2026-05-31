@@ -8,13 +8,29 @@ const CSV_PATH = path.join(process.cwd(), "public", "dem", "hotels-italia.csv")
 
 interface HotelContact {
   email: string
-  nome: string
-  cognome: string
   nome_azienda: string
+  referente_nome: string
+  referente_cognome: string
+  stelle: string
+  categoria: string
+  indirizzo: string
+  cap: string
+  citta: string
+  provincia: string
+  regione: string
+  telefono: string
+  sito: string
 }
 
-// Module-scoped cache so we don't re-parse the 1.3MB CSV on every request
-let cache: { mtimeMs: number; rows: HotelContact[]; withName: number } | null = null
+interface Stats {
+  withName: number
+  withRegione: number
+  withCitta: number
+  withTelefono: number
+  withIndirizzo: number
+}
+
+let cache: { mtimeMs: number; rows: HotelContact[]; stats: Stats; regioni: string[] } | null = null
 
 function parseCsvLine(line: string): string[] {
   const out: string[] = []
@@ -46,32 +62,53 @@ function parseCsvLine(line: string): string[] {
   return out
 }
 
-function loadContacts(): { rows: HotelContact[]; withName: number } {
+function loadContacts(): { rows: HotelContact[]; stats: Stats; regioni: string[] } {
   const stat = fs.statSync(CSV_PATH)
   if (cache && cache.mtimeMs === stat.mtimeMs) {
-    return { rows: cache.rows, withName: cache.withName }
+    return { rows: cache.rows, stats: cache.stats, regioni: cache.regioni }
   }
 
   const content = fs.readFileSync(CSV_PATH, "utf8")
   const lines = content.split(/\r?\n/)
   const rows: HotelContact[] = []
-  let withName = 0
-  // skip header (line 0)
+  const stats: Stats = { withName: 0, withRegione: 0, withCitta: 0, withTelefono: 0, withIndirizzo: 0 }
+  const regioniSet = new Set<string>()
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i]
     if (!line.trim()) continue
-    const cols = parseCsvLine(line)
-    const email = (cols[0] || "").trim()
+    const c = parseCsvLine(line)
+    const email = (c[0] || "").trim()
     if (!email) continue
-    const nome = (cols[1] || "").trim()
-    const cognome = (cols[2] || "").trim()
-    const nome_azienda = (cols[3] || "").trim()
-    if (nome_azienda) withName++
-    rows.push({ email, nome, cognome, nome_azienda })
+    const row: HotelContact = {
+      email,
+      nome_azienda: (c[1] || "").trim(),
+      referente_nome: (c[2] || "").trim(),
+      referente_cognome: (c[3] || "").trim(),
+      stelle: (c[4] || "").trim(),
+      categoria: (c[5] || "").trim(),
+      indirizzo: (c[6] || "").trim(),
+      cap: (c[7] || "").trim(),
+      citta: (c[8] || "").trim(),
+      provincia: (c[9] || "").trim(),
+      regione: (c[10] || "").trim(),
+      telefono: (c[11] || "").trim(),
+      sito: (c[12] || "").trim(),
+    }
+    if (row.nome_azienda) stats.withName++
+    if (row.regione) {
+      stats.withRegione++
+      regioniSet.add(row.regione)
+    }
+    if (row.citta) stats.withCitta++
+    if (row.telefono) stats.withTelefono++
+    if (row.indirizzo) stats.withIndirizzo++
+    rows.push(row)
   }
 
-  cache = { mtimeMs: stat.mtimeMs, rows, withName }
-  return { rows, withName }
+  const regioni = Array.from(regioniSet).sort((a, b) => a.localeCompare(b, "it"))
+  cache = { mtimeMs: stat.mtimeMs, rows, stats, regioni }
+  return { rows, stats, regioni }
 }
 
 export async function GET(request: NextRequest) {
@@ -87,16 +124,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const q = (searchParams.get("q") || "").trim().toLowerCase()
+    const regione = (searchParams.get("regione") || "").trim()
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
     const pageSize = Math.min(200, Math.max(10, parseInt(searchParams.get("pageSize") || "50", 10) || 50))
 
-    const { rows, withName } = loadContacts()
+    const { rows, stats, regioni } = loadContacts()
 
-    const filtered = q
-      ? rows.filter(
-          (r) => r.email.toLowerCase().includes(q) || r.nome_azienda.toLowerCase().includes(q)
-        )
-      : rows
+    let filtered = rows
+    if (regione) filtered = filtered.filter((r) => r.regione === regione)
+    if (q) {
+      filtered = filtered.filter(
+        (r) =>
+          r.email.toLowerCase().includes(q) ||
+          r.nome_azienda.toLowerCase().includes(q) ||
+          r.citta.toLowerCase().includes(q)
+      )
+    }
 
     const total = filtered.length
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -108,8 +151,15 @@ export async function GET(request: NextRequest) {
       rows: pageRows,
       total,
       totalAll: rows.length,
-      withName,
-      withoutName: rows.length - withName,
+      stats: {
+        withName: stats.withName,
+        withoutName: rows.length - stats.withName,
+        withRegione: stats.withRegione,
+        withCitta: stats.withCitta,
+        withTelefono: stats.withTelefono,
+        withIndirizzo: stats.withIndirizzo,
+      },
+      regioni,
       page: safePage,
       pageSize,
       totalPages,
