@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
-import { sendEmail } from "@/lib/email-smtp"
+import { sendEmail } from "@/lib/email-resend"
 
 // Allow long-running sends: 2s throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
