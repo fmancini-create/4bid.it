@@ -116,7 +116,7 @@ export async function generatePostText(rule: CampaignRule, knowledgeContext: str
   const linkInstr = rule.link_url ? `- Includi un invito a visitare ${rule.link_url}` : ""
 
   const { text } = await generateText({
-    model: "anthropic/claude-sonnet-4-20250514",
+    model: "openai/gpt-4o-mini",
     prompt: `Sei il social media manager esperto di 4BID, holding italiana che sviluppa software gestionali e di Revenue Management per il turismo (santaddeo.com, hotelprofitai.com, manubot.it, hotelaccelerator.com).
 
 ${knowledgeContext ? `Contesto interno (da knowledge base):\n${knowledgeContext}\n\n` : ""}Genera un post per social media (Facebook + LinkedIn) sull'argomento della campagna:
