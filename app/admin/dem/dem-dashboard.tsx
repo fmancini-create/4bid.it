@@ -38,6 +38,8 @@ import {
   Pencil,
   Zap,
   Play,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -320,6 +322,8 @@ interface TrackingEvent {
 interface CampaignStats {
   campaign: Campaign
   recipients: Recipient[]
+  recipientsPage?: number
+  recipientsPageSize?: number
   events: TrackingEvent[]
   summary: {
     total: number
@@ -356,6 +360,7 @@ export default function DemDashboard({
   const [sending, setSending] = useState(false)
   const [togglingAuto, setTogglingAuto] = useState(false)
   const [resuming, setResuming] = useState(false)
+  const [recipientsPage, setRecipientsPage] = useState(0)
   const [showTestSend, setShowTestSend] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [sendingTest, setSendingTest] = useState(false)
@@ -416,13 +421,14 @@ export default function DemDashboard({
     }, 5000)
   }, [])
 
-  const fetchStats = useCallback(async (campaignId: string) => {
+  const fetchStats = useCallback(async (campaignId: string, page = 0) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/dem/stats?c=${campaignId}`)
+      const res = await fetch(`/api/dem/stats?c=${campaignId}&page=${page}`)
       if (!res.ok) throw new Error("Errore nel caricamento statistiche")
       const data = await res.json()
       setStats(data)
+      setRecipientsPage(data.recipientsPage ?? page)
       setSelectedCampaign(data.campaign)
     } catch (err) {
       showMessage(err instanceof Error ? err.message : "Errore", true)
@@ -1144,11 +1150,18 @@ export default function DemDashboard({
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Destinatari ({stats.summary.total.toLocaleString("it-IT")})</CardTitle>
-                {stats.summary.total > stats.recipients.length && (
-                  <p className="text-xs text-muted-foreground">
-                    Anteprima dei primi {stats.recipients.length} (totale {stats.summary.total.toLocaleString("it-IT")})
-                  </p>
-                )}
+                {(() => {
+                  const pageSize = stats.recipientsPageSize ?? 500
+                  const start = recipientsPage * pageSize
+                  if (stats.summary.total <= stats.recipients.length && recipientsPage === 0) return null
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      {(start + 1).toLocaleString("it-IT")}–
+                      {(start + stats.recipients.length).toLocaleString("it-IT")} di{" "}
+                      {stats.summary.total.toLocaleString("it-IT")}
+                    </p>
+                  )
+                })()}
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -1232,6 +1245,40 @@ export default function DemDashboard({
                     </tbody>
                   </table>
                 </div>
+                {(() => {
+                  const pageSize = stats.recipientsPageSize ?? 500
+                  const totalPages = Math.max(1, Math.ceil(stats.summary.total / pageSize))
+                  if (totalPages <= 1) return null
+                  return (
+                    <div className="flex items-center justify-between gap-3 pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={recipientsPage <= 0 || loading}
+                        onClick={() =>
+                          selectedCampaign && fetchStats(selectedCampaign.id, recipientsPage - 1)
+                        }
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Precedente
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Pagina {recipientsPage + 1} di {totalPages.toLocaleString("it-IT")}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={recipientsPage >= totalPages - 1 || loading}
+                        onClick={() =>
+                          selectedCampaign && fetchStats(selectedCampaign.id, recipientsPage + 1)
+                        }
+                      >
+                        Successiva
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           )}

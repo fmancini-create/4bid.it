@@ -44,14 +44,21 @@ export async function GET(request: NextRequest) {
       countByStatus("paused"),
     ])
 
-    // Recipients list is only a preview for the table (full list can be huge).
-    const RECIPIENTS_PREVIEW_LIMIT = 500
+    // Recipients are paginated: the full list can be ~30k rows, so we fetch one
+    // page at a time with .range() and let the UI navigate with prev/next buttons.
+    const PAGE_SIZE = 500
+    const requestedPage = Math.max(0, Number.parseInt(searchParams.get("page") || "0", 10) || 0)
+    const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
+    const page = Math.min(requestedPage, lastPage)
+    const from = page * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
     const { data: recipients, error: recipientsError } = await supabase
       .from("dem_recipients")
       .select("*")
       .eq("campaign_id", campaignId)
       .order("created_at", { ascending: true })
-      .limit(RECIPIENTS_PREVIEW_LIMIT)
+      .range(from, to)
 
     if (recipientsError) {
       return NextResponse.json({ error: "Error fetching recipients" }, { status: 500 })
@@ -68,7 +75,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       campaign,
       recipients: recipients || [],
-      recipientsPreviewLimit: RECIPIENTS_PREVIEW_LIMIT,
+      recipientsPage: page,
+      recipientsPageSize: PAGE_SIZE,
       events: events || [],
       summary: {
         total,
