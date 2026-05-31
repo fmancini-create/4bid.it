@@ -36,8 +36,9 @@ function resolveFrom(): string {
   const from = process.env.RESEND_FROM?.trim()
   if (from) return from
   // Default sender on the verified subdomain mrk.4bid.it.
+  // A monitored mailbox (not no-reply) improves deliverability and trust.
   // NOTE: works only once the domain is "Verified" on Resend.
-  return "4BID SRL <noreply@mrk.4bid.it>"
+  return "4BID SRL <marketing@mrk.4bid.it>"
 }
 
 export async function sendEmail({ to, subject, html, replyTo, attachments }: EmailOptions) {
