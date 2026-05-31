@@ -59,6 +59,54 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  const supabase = createAdminClient()
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get("id")
+
+  if (!id) {
+    return NextResponse.json({ error: "ID campagna mancante" }, { status: 400 })
+  }
+
+  try {
+    const body = await request.json()
+    const updates: Record<string, unknown> = {}
+
+    // Toggle invio automatico a scaglioni (warm-up gestito dal cron dem-auto-send).
+    if (typeof body.auto_send === "boolean") {
+      updates.auto_send = body.auto_send
+      // Riattivando da zero, azzera la data di avvio warm-up (riparte dal giorno 1).
+      if (body.auto_send === true) {
+        updates.auto_started_on = null
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "Nessun campo aggiornabile" }, { status: 400 })
+    }
+
+    updates.updated_at = new Date().toISOString()
+
+    const { data: campaign, error } = await supabase
+      .from("dem_campaigns")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ campaign })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Errore interno" },
+      { status: 500 }
+    )
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const supabase = createAdminClient()
   const { searchParams } = new URL(request.url)
