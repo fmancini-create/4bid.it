@@ -33,7 +33,79 @@ import {
   BarChart3,
   UserPlus,
   Trash2,
+  FileText,
+  Download,
 } from "lucide-react"
+
+const SANTADDEO_PRESET = {
+  name: "Comunicato stampa - Lancio Santaddeo",
+  subject: "Comunicato stampa: nasce Santaddeo, la piattaforma italiana di revenue management per l'hotellerie",
+  html: `<!--ATTACH:/dem/comunicato-stampa-santaddeo.pdf|Comunicato Stampa Santaddeo - 31 Maggio 2026.pdf-->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comunicato stampa - Santaddeo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#2d2d2d;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1b2a4a;padding:28px 32px;">
+              <p style="margin:0;color:#c8a45c;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Comunicato stampa</p>
+              <p style="margin:6px 0 0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
+              <p style="margin:2px 0 0;color:#aeb7c7;font-size:13px;">Revenue intelligence per l'hotellerie · by 4 Bid</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#2d2d2d;">
+              <p style="margin:0 0 16px;">Gentile Redazione di {{nome_azienda}},</p>
+              <p style="margin:0 0 16px;">in allegato trovate il <strong>comunicato stampa</strong> relativo al lancio di <strong>Santaddeo</strong>, la nuova piattaforma italiana di revenue management per l'hotellerie nata dall'esperienza di 4 Bid.</p>
+              <p style="margin:0 0 16px;">Vi saremmo grati se voleste darne <strong>diffusione e pubblicazione</strong> sulle vostre testate. Restiamo a disposizione per interviste, approfondimenti o materiale aggiuntivo.</p>
+              <p style="margin:0;">Cordiali saluti,<br />Ufficio Stampa - 4 Bid s.r.l.</p>
+            </td>
+          </tr>
+          <!-- Attachment note -->
+          <tr>
+            <td style="padding:8px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f0;border:1px solid #ece5d6;border-radius:6px;">
+                <tr>
+                  <td style="padding:14px 18px;font-size:13px;color:#5a5a5a;">
+                    📎 In allegato: <strong style="color:#1b2a4a;">Comunicato Stampa Santaddeo - 31 Maggio 2026 (PDF)</strong>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Contacts -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
+                Ufficio Stampa - 4 Bid s.r.l.<br />
+                Sito: <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a><br />
+                Email: <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;">
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email in quanto contatto di redazione. Per non ricevere ulteriori comunicati rispondi a questa email con oggetto "CANCELLAMI".</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+}
 
 interface Campaign {
   id: string
@@ -141,6 +213,13 @@ export default function DemDashboard({
       setLoading(false)
     }
   }, [showMessage])
+
+  const loadSantaddeoPreset = () => {
+    setNewName(SANTADDEO_PRESET.name)
+    setNewSubject(SANTADDEO_PRESET.subject)
+    setNewTemplate(SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
 
   const createCampaign = async () => {
     if (!newName || !newSubject || !newTemplate) {
@@ -683,14 +762,19 @@ export default function DemDashboard({
               </p>
             </div>
           </div>
-          <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={loadSantaddeoPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Comunicato Santaddeo
+            </Button>
+            <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuova
+                </Button>
+              </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nuova Campagna DEM</DialogTitle>
                 <DialogDescription>Crea una nuova campagna email. Potrai aggiungere i destinatari dopo la creazione.</DialogDescription>
@@ -726,6 +810,9 @@ export default function DemDashboard({
                   <p className="text-xs text-muted-foreground mt-1">
                     {"Variabili disponibili: {{nome}}, {{cognome}}, {{nome_azienda}}, {{email}}"}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {"Allegato: aggiungi nel template un marker <!--ATTACH:/percorso/file.pdf|Nome visualizzato.pdf--> (verra' rimosso dal corpo e allegato all'email)."}
+                  </p>
                 </div>
               </div>
               <DialogFooter>
@@ -737,7 +824,21 @@ export default function DemDashboard({
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Add CSV download hint */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Download className="h-3.5 w-3.5" />
+          <span>Lista testate pronta da importare:</span>
+          <a
+            href="/dem/comunicato-stampa-testate.csv"
+            download
+            className="underline hover:text-foreground"
+          >
+            comunicato-stampa-testate.csv
+          </a>
         </div>
 
         {/* Campaigns list */}
