@@ -201,7 +201,7 @@ const HOTEL_PRESET = {
 
 const DEMO_SANTADDEO_PRESET = {
   name: "Hotel - Invito Demo Santaddeo",
-  subject: "{{nome_azienda}}, ti mostriamo Santaddeo dal vivo? Una demo pensata per te",
+  subject: "Stai vendendo le camere al prezzo giusto?",
   html: `<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -212,77 +212,46 @@ const DEMO_SANTADDEO_PRESET = {
 <body style="margin:0;padding:0;background-color:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#2d2d2d;">
   <!-- Preheader (hidden preview text) -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f4f4f2;">
-    15 minuti insieme per scoprire come dare ogni giorno il prezzo giusto alle tue camere.
+    In 15 minuti ti mostriamo dove puoi migliorare prezzi, occupazione e ricavi.
   </div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
-          <!-- Hero image -->
+          <!-- Header -->
           <tr>
-            <td style="padding:0;">
-              <img src="https://www.4bid.it/dem/santaddeo-demo-header.png" alt="Santaddeo - revenue management per hotel" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
-            </td>
-          </tr>
-          <!-- Brand bar -->
-          <tr>
-            <td style="background-color:#1b2a4a;padding:18px 32px;">
-              <p style="margin:0;color:#c8a45c;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Demo gratuita</p>
-              <p style="margin:4px 0 0;color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
-              <p style="margin:2px 0 0;color:#aeb7c7;font-size:13px;">The Human Revenue Manager · by 4 Bid</p>
+            <td align="center" style="background-color:#1b2a4a;padding:28px 32px 20px;">
+              <img src="https://www.4bid.it/dem/santaddeo-demo-header.png" alt="Santaddeo" width="96" style="display:block;width:96px;height:auto;border:0;margin:0 auto 12px;" />
+              <p style="margin:0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
+              <p style="margin:4px 0 0;color:#c8a45c;font-size:13px;letter-spacing:1px;">Revenue Management per Hotel · by 4 Bid</p>
             </td>
           </tr>
           <!-- Body -->
           <tr>
-            <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#2d2d2d;">
-              <p style="margin:0 0 16px;">Gentile {{nome_azienda}},</p>
-              <p style="margin:0 0 16px;">sappiamo bene quanto sia impegnativo decidere, ogni mattina, il prezzo giusto delle camere: domanda che cambia, eventi, anticipo di prenotazione, competitor. Tante variabili, poco tempo.</p>
-              <p style="margin:0 0 16px;">Per questo ci piacerebbe <strong>mostrarti Santaddeo dal vivo</strong>: non una presentazione commerciale, ma una chiacchierata pratica di 15 minuti in cui guardiamo insieme i numeri della tua struttura e capiamo dove ci sono margini di ricavo.</p>
-            </td>
-          </tr>
-          <!-- Bullets -->
-          <tr>
-            <td style="padding:4px 32px 0;font-size:15px;line-height:1.65;">
-              <p style="margin:0 0 10px;font-weight:bold;color:#1b2a4a;">Nella demo vedrai, sui tuoi dati:</p>
-              <ul style="margin:0;padding-left:20px;color:#2d2d2d;">
-                <li style="margin-bottom:6px;">dove stai lasciando ricavi sul tavolo (sottoprezzi e date deboli);</li>
-                <li style="margin-bottom:6px;">come Santaddeo legge il tuo PMS e suggerisce le tariffe, spiegando <em>perché</em>;</li>
-                <li style="margin-bottom:6px;">come personalizzare le variabili che contano per il tuo hotel;</li>
-                <li style="margin-bottom:0;">quanto tempo puoi risparmiare ogni giorno.</li>
-              </ul>
-            </td>
-          </tr>
-          <!-- Reassurance -->
-          <tr>
-            <td style="padding:18px 32px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #c8a45c;background-color:#faf7f0;border-radius:0 6px 6px 0;">
-                <tr>
-                  <td style="padding:16px 20px;font-size:15px;line-height:1.6;color:#3a3a3a;">
-                    <strong style="color:#1b2a4a;">Nessun impegno.</strong> La demo è gratuita e senza vincoli. È disponibile anche un <strong>piano a commissione</strong> legato ai risultati: se Santaddeo migliora davvero i tuoi ricavi, allora viene remunerato.
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#2d2d2d;">
+              <p style="margin:0 0 18px;">Buongiorno,</p>
+              <p style="margin:0 0 18px;font-size:18px;font-weight:bold;color:#1b2a4a;line-height:1.5;">stai vendendo le camere al prezzo giusto o stai lasciando ricavi sul tavolo?</p>
+              <p style="margin:0 0 18px;">Con Santaddeo ti mostriamo in 15 minuti dove puoi migliorare prezzi, occupazione e ricavi, con un sistema personalizzabile nato dall'esperienza di 4 Bid con tante strutture ricettive.</p>
             </td>
           </tr>
           <!-- CTA -->
           <tr>
-            <td align="center" style="padding:28px 32px 6px;">
-              <a href="https://www.4bid.it/software-revenue-management-santaddeo" style="display:inline-block;background-color:#c8a45c;color:#1b2a4a;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 36px;border-radius:6px;">Prenota la tua demo gratuita</a>
+            <td align="center" style="padding:14px 32px 10px;">
+              <a href="https://www.4bid.it/software-revenue-management-santaddeo" style="display:inline-block;background-color:#c8a45c;color:#1b2a4a;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">Prenota la demo gratuita</a>
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:0 32px 8px;font-size:13px;color:#5a5a5a;">
-              Preferisci che ti chiamiamo noi? Rispondi a questa email: ci pensiamo noi.
+            <td align="center" style="padding:0 32px 24px;font-size:15px;color:#5a5a5a;line-height:1.6;">
+              Oppure rispondi a questa email e ti richiamiamo noi.
             </td>
           </tr>
           <!-- Contacts -->
           <tr>
-            <td style="padding:24px 32px 0;">
+            <td style="padding:0 32px;">
               <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
               <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
                 4 Bid s.r.l.<br />
-                Sito: <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a><br />
-                Email: <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
+                <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
               </p>
             </td>
           </tr>
