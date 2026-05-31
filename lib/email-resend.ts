@@ -54,7 +54,8 @@ export async function sendEmail({ to, subject, html, replyTo, attachments }: Ema
       to,
       subject,
       html,
-      replyTo: replyTo || process.env.RESEND_REPLY_TO || process.env.SMTP_FROM || undefined,
+      // Replies go to a monitored mailbox. Order: explicit arg > env override > default.
+      replyTo: replyTo || process.env.RESEND_REPLY_TO || process.env.SMTP_FROM || "clienti@4bid.it",
       attachments:
         attachments && attachments.length > 0
           ? attachments.map((a) => ({
