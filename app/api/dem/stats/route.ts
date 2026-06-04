@@ -36,12 +36,13 @@ export async function GET(request: NextRequest) {
       return count || 0
     }
 
-    const [total, sent, failed, pending, paused] = await Promise.all([
+    const [total, sent, failed, pending, paused, unsubscribed] = await Promise.all([
       countByStatus(),
       countByStatus("sent"),
       countByStatus("failed"),
       countByStatus("pending"),
       countByStatus("paused"),
+      countByStatus("unsubscribed"),
     ])
 
     // Filters: free-text search (email/nome/cognome/azienda) + status filter.
@@ -127,6 +128,7 @@ export async function GET(request: NextRequest) {
         failed,
         pending,
         paused,
+        unsubscribed,
         opens: campaign.open_count || 0,
         unique_opens: campaign.unique_opens || 0,
         clicks: campaign.click_count || 0,

@@ -45,6 +45,8 @@ import {
   ArrowUpDown,
   Search,
   X,
+  Ban,
+  ShieldOff,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -337,6 +339,7 @@ interface CampaignStats {
     failed: number
     pending: number
     paused?: number
+    unsubscribed?: number
     opens: number
     unique_opens: number
     clicks: number
@@ -950,6 +953,10 @@ export default function DemDashboard({
         return <XCircle className="h-4 w-4 text-destructive" />
       case "pending":
         return <Clock className="h-4 w-4 text-muted-foreground" />
+      case "paused":
+        return <Clock className="h-4 w-4 text-amber-500" />
+      case "unsubscribed":
+        return <Ban className="h-4 w-4 text-orange-500" />
       default:
         return null
     }
@@ -1299,6 +1306,7 @@ export default function DemDashboard({
                       { value: "sent", label: "Inviati", count: stats.summary.sent },
                       { value: "failed", label: "Falliti", count: stats.summary.failed },
                       { value: "paused", label: "In pausa", count: stats.summary.paused || 0 },
+                      { value: "unsubscribed", label: "Disiscritti", count: stats.summary.unsubscribed || 0 },
                     ].map((opt) => (
                       <Button
                         key={opt.value}
@@ -1567,6 +1575,12 @@ export default function DemDashboard({
               <a href="/admin/dem/contatti">
                 <FileText className="h-4 w-4 mr-2" />
                 Contatti Hotel
+              </a>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <a href="/admin/dem/disiscrizioni">
+                <ShieldOff className="h-4 w-4 mr-2" />
+                Disiscrizioni
               </a>
             </Button>
             <Button size="sm" variant="outline" onClick={loadSantaddeoPreset}>
