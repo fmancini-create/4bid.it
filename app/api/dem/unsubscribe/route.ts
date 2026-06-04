@@ -22,9 +22,11 @@ async function recordUnsubscribe(email: string, campaignId: string | null, sourc
   const supabase = createAdminClient()
 
   // Add to the global suppression list (idempotent on email).
+  // NB: the column is `reason` (not `source`); writing the wrong column made the
+  // upsert fail in production.
   await supabase
     .from("dem_unsubscribes")
-    .upsert({ email, campaign_id: campaignId, source }, { onConflict: "email" })
+    .upsert({ email, campaign_id: campaignId, reason: source }, { onConflict: "email" })
 
   // Also flag any pending recipient rows for this email so the current/next
   // batch skips them immediately.
