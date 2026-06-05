@@ -305,6 +305,9 @@ interface Recipient {
   cognome: string | null
   nome_azienda: string | null
   tipo_contatto: string | null
+  citta?: string | null
+  provincia?: string | null
+  regione?: string | null
   send_status: string
   error_message: string | null
   sent_at: string | null
@@ -1330,6 +1333,7 @@ export default function DemDashboard({
                         <SortHeader column="email" label="Email" />
                         <SortHeader column="nome" label="Nome" className="hidden sm:table-cell" />
                         <SortHeader column="nome_azienda" label="Azienda" className="hidden md:table-cell" />
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Località</th>
                         <SortHeader column="open_count" label="Aperture" align="center" />
                         <SortHeader column="click_count" label="Click" align="center" />
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Link cliccato</th>
@@ -1352,6 +1356,9 @@ export default function DemDashboard({
                             {[r.nome, r.cognome].filter(Boolean).join(" ") || "-"}
                           </td>
                           <td className="py-2 px-3 text-foreground hidden md:table-cell">{r.nome_azienda || "-"}</td>
+                          <td className="py-2 px-3 text-foreground hidden lg:table-cell">
+                            {r.citta ? (r.provincia ? `${r.citta} (${r.provincia})` : r.citta) : "-"}
+                          </td>
                           <td className="py-2 px-3 text-center text-foreground">{r.open_count || 0}</td>
                           <td className="py-2 px-3 text-center text-foreground">{r.click_count || 0}</td>
                           <td className="py-2 px-3 hidden md:table-cell">
@@ -1407,7 +1414,7 @@ export default function DemDashboard({
                       {stats.recipients.length === 0 && (
                         <tr>
                           <td
-                            colSpan={canEditRecipients ? 9 : 8}
+                            colSpan={canEditRecipients ? 10 : 9}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nessun destinatario corrisponde ai filtri selezionati.
