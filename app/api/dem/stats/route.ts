@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { getLocationByEmail } from "@/lib/dem/hotels-csv"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -107,6 +108,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Error fetching recipients" }, { status: 500 })
     }
 
+    // Enrich recipients with the hotel location from the source CSV (matched by
+    // email). The DEM table doesn't store the city, so we join it at query time.
+    const locationByEmail = getLocationByEmail()
+    const enrichedRecipients = (recipients || []).map((r: Record<string, unknown>) => {
+      const loc = r.email ? locationByEmail.get(String(r.email).toLowerCase()) : undefined
+      return {
+        ...r,
+        citta: loc?.citta || null,
+        provincia: loc?.provincia || null,
+        regione: loc?.regione || null,
+      }
+    })
+
     // Get tracking events
     const { data: events } = await supabase
       .from("dem_tracking_events")
@@ -117,7 +131,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       campaign,
-      recipients: recipients || [],
+      recipients: enrichedRecipients,
       recipientsPage: page,
       recipientsPageSize: PAGE_SIZE,
       recipientsFilteredTotal: filteredTotal,
