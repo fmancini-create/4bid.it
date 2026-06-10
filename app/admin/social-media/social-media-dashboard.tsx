@@ -1529,11 +1529,11 @@ export default function SocialMediaDashboard({
               Conferma Pubblicazione
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-4 pt-2">
+              <div className="space-y-4 pt-2 min-w-0">
                 <p className="text-sm text-muted-foreground">Stai per pubblicare questo post. Verifica i dettagli:</p>
 
                 {publishConfirmPost && (
-                  <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+                  <div className="space-y-3 rounded-lg border p-3 bg-muted/30 min-w-0">
                     {/* Content preview */}
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Contenuto:</p>
@@ -1568,9 +1568,9 @@ export default function SocialMediaDashboard({
 
                     {/* Link */}
                     {publishConfirmPost.link_url && (
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-medium text-muted-foreground mb-1">Link:</p>
-                        <p className="text-xs text-blue-600 truncate">{publishConfirmPost.link_url}</p>
+                        <p className="text-xs text-blue-600 truncate max-w-full">{publishConfirmPost.link_url}</p>
                       </div>
                     )}
 
