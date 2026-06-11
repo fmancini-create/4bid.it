@@ -24,6 +24,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
+    // Global suppression list = the source of truth for "disiscritti".
+    // Unsubscribes live in `dem_unsubscribes`, NOT in recipients.send_status:
+    // a recipient who already received the email keeps status 'sent' even after
+    // unsubscribing, so counting send_status='unsubscribed' returns 0 while the
+    // suppression list has entries. We therefore derive the count/filter by
+    // matching recipient emails against the suppression list.
+    const { data: unsubRows } = await supabase.from("dem_unsubscribes").select("email").range(0, 9999)
+    const unsubEmails = (unsubRows || [])
+      .map((r: { email: string | null }) => (r.email || "").toLowerCase())
+      .filter(Boolean)
+    // Sentinel so `.in()` matches nothing when the suppression list is empty
+    // (PostgREST chokes on an empty IN list).
+    const unsubFilterValues = unsubEmails.length > 0 ? unsubEmails : ["__no_match__"]
+
     // Accurate counts via head:true count queries. Plain .select() is capped at
     // 1000 rows by PostgREST, so counting the returned array undercounts large
     // campaigns (we have ~30k recipients). Counts below are exact regardless of size.
@@ -32,7 +46,12 @@ export async function GET(request: NextRequest) {
         .from("dem_recipients")
         .select("*", { count: "exact", head: true })
         .eq("campaign_id", campaignId)
-      if (status) q = q.eq("send_status", status)
+      if (status === "unsubscribed") {
+        // Recipients of this campaign whose email is in the suppression list.
+        q = q.in("email", unsubFilterValues)
+      } else if (status) {
+        q = q.eq("send_status", status)
+      }
       const { count } = await q
       return count || 0
     }
@@ -69,7 +88,12 @@ export async function GET(request: NextRequest) {
     const applyFilters = (q: any) => {
       let query = q.eq("campaign_id", campaignId)
       if (statusFilter && statusFilter !== "all") {
-        query = query.eq("send_status", statusFilter)
+        if (statusFilter === "unsubscribed") {
+          // Match the suppression list (truth for disiscritti), not send_status.
+          query = query.in("email", unsubFilterValues)
+        } else {
+          query = query.eq("send_status", statusFilter)
+        }
       }
       if (search) {
         // Strip PostgREST or() reserved chars (comma/parens) from the user term.
@@ -110,14 +134,19 @@ export async function GET(request: NextRequest) {
 
     // Enrich recipients with the hotel location from the source CSV (matched by
     // email). The DEM table doesn't store the city, so we join it at query time.
+    // Also flag rows present in the global suppression list so the UI can mark
+    // them as unsubscribed even when their send_status is still 'sent'.
     const locationByEmail = getLocationByEmail()
+    const unsubSet = new Set(unsubEmails)
     const enrichedRecipients = (recipients || []).map((r: Record<string, unknown>) => {
-      const loc = r.email ? locationByEmail.get(String(r.email).toLowerCase()) : undefined
+      const emailKey = r.email ? String(r.email).toLowerCase() : ""
+      const loc = emailKey ? locationByEmail.get(emailKey) : undefined
       return {
         ...r,
         citta: loc?.citta || null,
         provincia: loc?.provincia || null,
         regione: loc?.regione || null,
+        is_unsubscribed: emailKey ? unsubSet.has(emailKey) : false,
       }
     })
 

@@ -308,6 +308,7 @@ interface Recipient {
   citta?: string | null
   provincia?: string | null
   regione?: string | null
+  is_unsubscribed?: boolean
   send_status: string
   error_message: string | null
   sent_at: string | null
@@ -1350,7 +1351,16 @@ export default function DemDashboard({
                     <tbody>
                       {stats.recipients.map((r) => (
                         <tr key={r.id} className="border-b border-border/50 hover:bg-muted/50">
-                          <td className="py-2 px-3">{sendStatusIcon(r.send_status)}</td>
+                          <td className="py-2 px-3">
+                            <span className="flex items-center gap-1">
+                              {sendStatusIcon(r.send_status)}
+                              {r.is_unsubscribed && (
+                                <span title="Disiscritto">
+                                  <Ban className="h-4 w-4 text-orange-500" />
+                                </span>
+                              )}
+                            </span>
+                          </td>
                           <td className="py-2 px-3 text-foreground">{r.email}</td>
                           <td className="py-2 px-3 text-foreground hidden sm:table-cell">
                             {[r.nome, r.cognome].filter(Boolean).join(" ") || "-"}
