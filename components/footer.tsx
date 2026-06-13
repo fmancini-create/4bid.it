@@ -99,6 +99,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/parlano-di-noi" title="Parlano di noi" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Parlano di noi
+                </Link>
+              </li>
+              <li>
                 <Link href="/#about" title="Chi Siamo" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Chi Siamo
                 </Link>
