@@ -298,12 +298,32 @@ export async function PATCH(request: NextRequest) {
     // 2) Aggiornamento di uno step.
     if (body.step && body.step.id) {
       const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-      for (const f of ["enabled", "subject", "preheader", "html_template", "cta_url", "delay_days"]) {
-        if (body.step[f] !== undefined) updates[f] = body.step[f]
+
+      // 2a) Rigenerazione della grafica di default: il template HTML viene
+      // CONGELATO nel DB alla creazione, quindi le modifiche a lib/dem/warm.ts
+      // non si propagano agli step esistenti. Questa azione ri-applica il
+      // template di default (logo + tagline + footer) mantenendo il link CTA.
+      if (body.step.regenerate) {
+        const { data: cur } = await supabase
+          .from("dem_followup_steps")
+          .select("step_number, cta_url")
+          .eq("id", body.step.id)
+          .single()
+        if (!cur) return NextResponse.json({ error: "Step non trovato" }, { status: 404 })
+        const content = defaultStepContent(cur.step_number, cur.cta_url || DEFAULT_CALENDAR_URL)
+        updates.subject = content.subject
+        updates.preheader = content.preheader
+        updates.html_template = content.html
+        updates.cta_url = content.cta_url
+      } else {
+        for (const f of ["enabled", "subject", "preheader", "html_template", "cta_url", "delay_days"]) {
+          if (body.step[f] !== undefined) updates[f] = body.step[f]
+        }
       }
+
       const { error } = await supabase.from("dem_followup_steps").update(updates).eq("id", body.step.id)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      result.step = "updated"
+      result.step = body.step.regenerate ? "regenerated" : "updated"
     }
 
     // 3) Aggiornamento del follow-up (config pubblico, priorita', stato, schedule).

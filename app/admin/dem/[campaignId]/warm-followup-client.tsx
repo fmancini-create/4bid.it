@@ -819,6 +819,30 @@ function StepEditor({
     }
   }
 
+  const regenerate = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch("/api/dem/warm", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: { id: step.id, regenerate: true } }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        toast({ title: "Errore", description: payload.error, variant: "destructive" })
+        return
+      }
+      toast({
+        title: "Grafica rigenerata",
+        description: "Template aggiornato con logo e impaginazione piu' recenti.",
+      })
+      setOpen(false)
+      onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const sendTest = async () => {
     if (!testEmail) return
     setTesting(true)
@@ -902,7 +926,21 @@ function StepEditor({
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`html-${step.id}`}>Contenuto HTML</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor={`html-${step.id}`}>Contenuto HTML</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={regenerate}
+                  disabled={busy}
+                  title="Ri-applica il template grafico di default (logo Santaddeo, tagline, footer 4bid) mantenendo il link CTA"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Rigenera grafica
+                </Button>
+              </div>
               <Textarea
                 id={`html-${step.id}`}
                 value={html}
