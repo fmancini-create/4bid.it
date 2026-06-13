@@ -149,7 +149,7 @@ export async function proxy(request: NextRequest) {
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' https://fonts.gstatic.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://mc.yandex.ru https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
-      "frame-src 'self' https://www.youtube.com https://player.vimeo.com",
+      "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://calendar.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
