@@ -19,12 +19,12 @@ export const metadata: Metadata = {
     title: "MANUBOT - Sistema Smart di Gestione Manutenzioni",
     description: "Il sistema di gestione manutenzioni che parla la lingua di tutti: WhatsApp e Telegram",
     type: "website",
-    url: "https://4bid.it/progetti/manubot",
+    url: "https://www.4bid.it/progetti/manubot",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/manubot-logo.jpg",
+        url: "https://www.4bid.it/manubot-logo.jpg",
         width: 1200,
         height: 630,
         alt: "MANUBOT Logo",
@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MANUBOT - Sistema Smart di Gestione Manutenzioni",
     description: "Gestione manutenzioni via WhatsApp e Telegram con dashboard completa",
-    images: ["https://4bid.it/manubot-logo.jpg"],
+    images: ["https://www.4bid.it/manubot-logo.jpg"],
   },
   alternates: {
-    canonical: "https://4bid.it/progetti/manubot",
+    canonical: "https://www.4bid.it/progetti/manubot",
   },
   robots: {
     index: true,
@@ -60,8 +60,8 @@ export default function ManubotPage() {
         type="Service"
         title="MANUBOT - Sistema Gestione Manutenzioni"
         description="Sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram per hotel e strutture ricettive"
-        url="https://4bid.it/progetti/manubot"
-        image="https://4bid.it/manubot-logo.jpg"
+        url="https://www.4bid.it/progetti/manubot"
+        image="https://www.4bid.it/manubot-logo.jpg"
       />
 
       <LandingPageTracker slug="progetti/manubot" />

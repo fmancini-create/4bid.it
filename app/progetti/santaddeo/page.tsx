@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     title: "SANTADDEO - The Human Revenue Manager",
     description: "Il primo sistema di Revenue Management Intelligente e Umano",
     type: "website",
-    url: "https://4bid.it/progetti/santaddeo",
+    url: "https://www.4bid.it/progetti/santaddeo",
     locale: "it_IT",
     siteName: "4BID.IT",
   },
   alternates: {
-    canonical: "https://4bid.it/progetti/santaddeo",
+    canonical: "https://www.4bid.it/progetti/santaddeo",
   },
 }
 
@@ -34,8 +34,8 @@ export default function SantaddeoPage() {
         type="Service"
         title="SANTADDEO - The Human Revenue Manager"
         description="Il primo sistema di Revenue Management Intelligente e Umano che spiega le proprie decisioni"
-        url="https://4bid.it/progetti/santaddeo"
-        image="https://4bid.it/santaddeo-logo.png"
+        url="https://www.4bid.it/progetti/santaddeo"
+        image="https://www.4bid.it/santaddeo-logo.png"
       />
 
       <LandingPageTracker slug="progetti/santaddeo" />

@@ -17,22 +17,22 @@ export const metadata: Metadata = {
   keywords:
     "dynamic pricing hotel, prezzi dinamici hotel automatici, pricing dinamico real-time, ottimizzazione tariffe automatica, algoritmo pricing hotel, revenue optimization AI",
   alternates: {
-    canonical: "https://4bid.it/dynamic-pricing-hotel",
+    canonical: "https://www.4bid.it/dynamic-pricing-hotel",
   },
   openGraph: {
     title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
     description: "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale.",
-    url: "https://4bid.it/dynamic-pricing-hotel",
+    url: "https://www.4bid.it/dynamic-pricing-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
-    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Dynamic Pricing" }],
+    images: [{ url: "https://www.4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Dynamic Pricing" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI",
     description: "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {
     index: true,
@@ -66,11 +66,11 @@ export default function DynamicPricingPage() {
         type="Service"
         title="Dynamic Pricing Hotel Automatico"
         description="Servizio di dynamic pricing automatizzato per hotel con algoritmi AI che ottimizzano le tariffe in tempo reale su tutti i canali di vendita."
-        url="https://4bid.it/dynamic-pricing-hotel"
+        url="https://www.4bid.it/dynamic-pricing-hotel"
         faqs={faqs}
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Dynamic Pricing Hotel", url: "https://4bid.it/dynamic-pricing-hotel" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Dynamic Pricing Hotel", url: "https://www.4bid.it/dynamic-pricing-hotel" },
         ]}
       />
       <LandingPageTracker slug="dynamic-pricing-hotel" />

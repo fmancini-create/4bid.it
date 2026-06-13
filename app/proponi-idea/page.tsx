@@ -23,12 +23,12 @@ export const metadata: Metadata = {
     description:
       "Trasforma la tua idea in realtà. Risposta entro 24h con fattibilità, costi e tempi di realizzazione. Anche con revenue share senza costi iniziali.",
     type: "website",
-    url: "https://4bid.it/proponi-idea",
+    url: "https://www.4bid.it/proponi-idea",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://www.4bid.it/4bid-colorful-logo.jpg",
         width: 1200,
         height: 630,
         alt: "4BID.IT - Proponi la Tua Idea",
@@ -39,10 +39,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Proponi la Tua Idea - 4BID.IT",
     description: "Trasforma la tua idea in realtà. Risposta entro 24h con fattibilità e costi",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   alternates: {
-    canonical: "https://4bid.it/proponi-idea",
+    canonical: "https://www.4bid.it/proponi-idea",
   },
   robots: {
     index: true,
@@ -64,7 +64,7 @@ export default function ProponiIdeaPage() {
         type="Service"
         title="Proponi la Tua Idea - Sviluppo Software"
         description="Servizio di valutazione idee e sviluppo software con risposta in 24 ore. Revenue share disponibile per progetti selezionati."
-        url="https://4bid.it/proponi-idea"
+        url="https://www.4bid.it/proponi-idea"
       />
 
       <LandingPageTracker slug="proponi-idea" />

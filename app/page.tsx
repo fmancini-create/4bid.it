@@ -22,12 +22,12 @@ export const metadata: Metadata = {
     description:
       "L'ecosistema 4BID: una suite completa di software per il mondo HORECA — Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator e 4BID Ecomobility — più progetti verticali in altri settori.",
     type: "website",
-    url: "https://4bid.it",
+    url: "https://www.4bid.it",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/og-image-4bid.jpg",
+        url: "https://www.4bid.it/og-image-4bid.jpg",
         width: 1200,
         height: 630,
         alt: "4BID SRL - Holding di software e tool per il turismo",
@@ -38,10 +38,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "4BID.IT - Holding di software per il turismo",
     description: "Suite HORECA: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator, 4BID Ecomobility",
-    images: ["https://4bid.it/og-image-4bid.jpg"],
+    images: ["https://www.4bid.it/og-image-4bid.jpg"],
   },
   alternates: {
-    canonical: "https://4bid.it",
+    canonical: "https://www.4bid.it",
   },
 }
 
@@ -52,7 +52,7 @@ export default function Home() {
         type="Organization"
         title="4BID.IT - Innovazione e Tecnologia"
         description="4BID offre consulenza revenue management, software innovativi e soluzioni tecnologiche per hotel e aziende"
-        url="https://4bid.it"
+        url="https://www.4bid.it"
       />
 
       <LandingPageTracker slug="home" />

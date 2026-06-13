@@ -19,23 +19,23 @@ export const metadata: Metadata = {
   keywords:
     "piattaforma ecomobility, software noleggio veicoli hotel, gestionale mobilità elettrica, saas noleggio e-bike, software noleggio scooter elettrici, white label mobility",
   alternates: {
-    canonical: "https://4bid.it/ecomobility/piattaforma-ecomobility",
+    canonical: "https://www.4bid.it/ecomobility/piattaforma-ecomobility",
     languages: {
-      "it": "https://4bid.it/ecomobility/piattaforma-ecomobility",
-      "en": "https://4bid.it/ecomobility/ecomobility-platform",
+      "it": "https://www.4bid.it/ecomobility/piattaforma-ecomobility",
+      "en": "https://www.4bid.it/ecomobility/ecomobility-platform",
     },
   },
   openGraph: {
     title: "Piattaforma Ecomobility per Strutture Ricettive | 4BID",
     description:
       "Software SaaS per gestire il noleggio di mobilità elettrica. Prenotazioni automatiche, pagamenti, documenti, gestione batteria. Multi-tenant e white-label.",
-    url: "https://4bid.it/ecomobility/piattaforma-ecomobility",
+    url: "https://www.4bid.it/ecomobility/piattaforma-ecomobility",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
     images: [
       {
-        url: "https://4bid.it/ecomobility-logo.png",
+        url: "https://www.4bid.it/ecomobility-logo.png",
         width: 1200,
         height: 630,
         alt: "4BID Ecomobility Platform",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Piattaforma Ecomobility per Strutture Ricettive | 4BID",
     description: "Software SaaS per gestire il noleggio di mobilità elettrica. Multi-tenant e white-label.",
-    images: ["https://4bid.it/ecomobility-logo.png"],
+    images: ["https://www.4bid.it/ecomobility-logo.png"],
   },
   robots: {
     index: true,
@@ -101,7 +101,7 @@ export default function PiattaformaEcomobilityPage() {
         type="SoftwareApplication"
         title="4BID Ecomobility - Piattaforma per Noleggio Mobilità Elettrica"
         description="Software SaaS per gestire il noleggio di mobilità elettrica in hotel e strutture turistiche."
-        url="https://4bid.it/ecomobility/piattaforma-ecomobility"
+        url="https://www.4bid.it/ecomobility/piattaforma-ecomobility"
       />
 
       <LandingPageTracker slug="ecomobility-piattaforma" />

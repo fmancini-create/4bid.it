@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     follow: false,
   },
   alternates: {
-    canonical: "https://4bid.it/admin/login",
+    canonical: "https://www.4bid.it/admin/login",
   },
 }
 

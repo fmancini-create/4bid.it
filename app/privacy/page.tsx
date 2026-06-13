@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy | 4BID SRL",
   description: "Informativa sulla privacy e trattamento dei dati personali di 4BID SRL",
   alternates: {
-    canonical: "https://4bid.it/privacy",
+    canonical: "https://www.4bid.it/privacy",
   },
 }
 
@@ -21,10 +21,10 @@ export default function PrivacyPage() {
         type="WebPage"
         title="Privacy Policy"
         description="Informativa sulla privacy e trattamento dei dati personali di 4BID SRL"
-        url="https://4bid.it/privacy"
+        url="https://www.4bid.it/privacy"
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Privacy Policy", url: "https://4bid.it/privacy" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Privacy Policy", url: "https://www.4bid.it/privacy" },
         ]}
       />
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />

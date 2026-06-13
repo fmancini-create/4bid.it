@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/api/", "/_next/static/", "/_next/image"],
       },
     ],
-    sitemap: "https://4bid.it/sitemap.xml",
-    host: "https://4bid.it",
+    sitemap: "https://www.4bid.it/sitemap.xml",
+    host: "https://www.4bid.it",
   }
 }

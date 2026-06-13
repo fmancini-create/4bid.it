@@ -13,7 +13,7 @@ export const metadata = {
   keywords:
     "strategie pricing hotel, BAR strategy hotel, dynamic pricing strategico, price fencing alberghiero, length of stay restrictions, strategie tariffe hotel avanzate, pricing optimization",
   alternates: {
-    canonical: "https://4bid.it/strategie-pricing-hotel",
+    canonical: "https://www.4bid.it/strategie-pricing-hotel",
   },
 }
 
@@ -24,10 +24,10 @@ export default function StrategiePricingHotelPage() {
         type="Article"
         title="Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS"
         description="Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente."
-        url="https://4bid.it/strategie-pricing-hotel"
+        url="https://www.4bid.it/strategie-pricing-hotel"
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Strategie Pricing Hotel", url: "https://4bid.it/strategie-pricing-hotel" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Strategie Pricing Hotel", url: "https://www.4bid.it/strategie-pricing-hotel" },
         ]}
         keywords={["strategie pricing hotel", "BAR strategy", "dynamic pricing", "LOS restrictions", "price fencing"]}
       />

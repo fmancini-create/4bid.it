@@ -28,19 +28,19 @@ export const metadata: Metadata = {
   keywords:
     "cos'è revenue management, cosa significa revenue management, revenue management spiegazione semplice, revenue management definizione hotel, guida revenue management completa, revenue management come funziona",
   alternates: {
-    canonical: "https://4bid.it/cose-il-revenue-management",
+    canonical: "https://www.4bid.it/cose-il-revenue-management",
   },
   openGraph: {
     title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
     description:
       "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
-    url: "https://4bid.it/cose-il-revenue-management",
+    url: "https://www.4bid.it/cose-il-revenue-management",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "article",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://www.4bid.it/4bid-colorful-logo.jpg",
         width: 1200,
         height: 630,
         alt: "4BID.IT Revenue Management",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
     description: "Guida semplice e completa al Revenue Management per hotel e strutture ricettive.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {
     index: true,
@@ -73,7 +73,7 @@ export default function CoseIlRevenueManagementPage() {
         type="Article"
         title="Cos'è il Revenue Management Hotel? Guida Completa"
         description="Guida completa per comprendere cos'è il Revenue Management Hotel, dove si applica e perché è fondamentale per massimizzare i ricavi."
-        url="https://4bid.it/cose-il-revenue-management"
+        url="https://www.4bid.it/cose-il-revenue-management"
       />
 
       <LandingPageTracker slug="cose-il-revenue-management" />

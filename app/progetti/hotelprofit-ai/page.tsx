@@ -19,12 +19,12 @@ export const metadata: Metadata = {
     title: "HotelProfitAI - Controllo di Gestione Intelligente",
     description: "Massimizza i profitti del tuo hotel con intelligenza artificiale e competenza umana",
     type: "website",
-    url: "https://4bid.it/progetti/hotelprofit-ai",
+    url: "https://www.4bid.it/progetti/hotelprofit-ai",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/hotelprofit-ai-logo.png",
+        url: "https://www.4bid.it/hotelprofit-ai-logo.png",
         width: 1200,
         height: 630,
         alt: "HotelProfitAI Logo",
@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "HotelProfitAI - Controllo di Gestione Intelligente",
     description: "Analisi real-time e forecasting per massimizzare i profitti",
-    images: ["https://4bid.it/hotelprofit-ai-logo.png"],
+    images: ["https://www.4bid.it/hotelprofit-ai-logo.png"],
   },
   alternates: {
-    canonical: "https://4bid.it/progetti/hotelprofit-ai",
+    canonical: "https://www.4bid.it/progetti/hotelprofit-ai",
   },
   robots: {
     index: true,
@@ -53,8 +53,8 @@ export default function HotelProfitAiPage() {
         type="Service"
         title="HotelProfitAI - Controllo di Gestione Intelligente"
         description="Piattaforma di controllo di gestione per hotel con AI e team di commercialisti specializzati"
-        url="https://4bid.it/progetti/hotelprofit-ai"
-        image="https://4bid.it/hotelprofit-ai-logo.png"
+        url="https://www.4bid.it/progetti/hotelprofit-ai"
+        image="https://www.4bid.it/hotelprofit-ai-logo.png"
       />
 
       <LandingPageTracker slug="progetti/hotelprofit-ai" />

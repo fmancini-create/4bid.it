@@ -15,23 +15,23 @@ export const metadata: Metadata = {
   keywords:
     "noleggio mobilità elettrica hotel, e-bike hotel, scooter elettrici strutture turistiche, mobilità sostenibile resort, noleggio biciclette elettriche agriturismo, veicoli elettrici ospiti hotel",
   alternates: {
-    canonical: "https://4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
+    canonical: "https://www.4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
     languages: {
-      "it": "https://4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
-      "en": "https://4bid.it/ecomobility/electric-mobility-rental-hotels",
+      "it": "https://www.4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
+      "en": "https://www.4bid.it/ecomobility/electric-mobility-rental-hotels",
     },
   },
   openGraph: {
     title: "Noleggio Mobilità Elettrica per Hotel e Strutture Turistiche | 4BID Ecomobility",
     description:
       "Offri ai tuoi ospiti e-bike, scooter elettrici e veicoli green. Piattaforma completa per hotel, resort e agriturismi. Gestione automatizzata, zero pensieri.",
-    url: "https://4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
+    url: "https://www.4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
     images: [
       {
-        url: "https://4bid.it/ecomobility-logo.png",
+        url: "https://www.4bid.it/ecomobility-logo.png",
         width: 1200,
         height: 630,
         alt: "4BID Ecomobility - Mobilità Elettrica per Hotel",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Noleggio Mobilità Elettrica per Hotel | 4BID Ecomobility",
     description: "E-bike, scooter elettrici e veicoli green per i tuoi ospiti. Gestione automatizzata, zero pensieri.",
-    images: ["https://4bid.it/ecomobility-logo.png"],
+    images: ["https://www.4bid.it/ecomobility-logo.png"],
   },
   robots: {
     index: true,
@@ -64,7 +64,7 @@ export default function NoleggioMobilitaElettricaHotelPage() {
         type="Service"
         title="Noleggio Mobilità Elettrica per Hotel"
         description="Servizio di noleggio mobilità elettrica per hotel, resort e strutture turistiche. E-bike, scooter elettrici e veicoli green per gli ospiti."
-        url="https://4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel"
+        url="https://www.4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel"
       />
 
       <LandingPageTracker slug="ecomobility-noleggio-mobilita-elettrica-hotel" />

@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     title: "HOTEL ACCELERATOR - Il Software Gestionale Completo per Hotel",
     description: "CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione per strutture ricettive",
     type: "website",
-    url: "https://4bid.it/progetti/hotel-accelerator",
+    url: "https://www.4bid.it/progetti/hotel-accelerator",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/hotel-accelerator-logo.jpg",
+        url: "https://www.4bid.it/hotel-accelerator-logo.jpg",
         width: 1200,
         height: 630,
         alt: "Hotel Accelerator Logo",
@@ -34,10 +34,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "HOTEL ACCELERATOR - Il Software Gestionale Completo per Hotel",
     description: "CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione",
-    images: ["https://4bid.it/hotel-accelerator-logo.jpg"],
+    images: ["https://www.4bid.it/hotel-accelerator-logo.jpg"],
   },
   alternates: {
-    canonical: "https://4bid.it/progetti/hotel-accelerator",
+    canonical: "https://www.4bid.it/progetti/hotel-accelerator",
   },
   robots: {
     index: true,
@@ -114,8 +114,8 @@ export default function HotelAcceleratorPage() {
         type="Service"
         title="HOTEL ACCELERATOR - Il Software Gestionale Completo per Hotel"
         description="Piattaforma SaaS per strutture ricettive: CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione"
-        url="https://4bid.it/progetti/hotel-accelerator"
-        image="https://4bid.it/hotel-accelerator-logo.jpg"
+        url="https://www.4bid.it/progetti/hotel-accelerator"
+        image="https://www.4bid.it/hotel-accelerator-logo.jpg"
       />
 
       <LandingPageTracker slug="progetti/hotel-accelerator" />
