@@ -38,9 +38,9 @@ interface StructuredDataProps {
 const companyData = {
   name: "4BID SRL",
   legalName: "4BID SRL",
-  url: "https://4bid.it",
-  logo: "https://4bid.it/logo.png",
-  image: "https://4bid.it/4bid-colorful-logo.jpg",
+  url: "https://www.4bid.it",
+  logo: "https://www.4bid.it/logo.png",
+  image: "https://www.4bid.it/4bid-colorful-logo.jpg",
   email: "info@4bid.it",
   vatID: "IT06241710489",
   foundingDate: "2020",
@@ -68,7 +68,7 @@ export function StructuredData({
   title,
   description,
   url,
-  image = "https://4bid.it/4bid-colorful-logo.jpg",
+  image = "https://www.4bid.it/4bid-colorful-logo.jpg",
   datePublished,
   dateModified,
   price,
@@ -221,7 +221,7 @@ export function StructuredData({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "4BID.IT",
-    url: "https://4bid.it",
+    url: "https://www.4bid.it",
     description:
       "Innovazione e Tecnologia per il Tuo Business - Revenue Management Hotel, Software e Soluzioni Tecnologiche",
     publisher: {
@@ -302,7 +302,7 @@ export function PageSEO({
       url={url}
       faqs={faqs}
       breadcrumbs={[
-        { name: "Home", url: "https://4bid.it" },
+        { name: "Home", url: "https://www.4bid.it" },
         { name: title, url },
       ]}
     />

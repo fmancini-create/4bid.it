@@ -113,8 +113,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/proponi-idea`,
       lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/parlano-di-noi`,
