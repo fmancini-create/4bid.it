@@ -1,8 +1,23 @@
 import type { MetadataRoute } from "next"
+import { getAllPosts } from "@/lib/blog/posts"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://www.4bid.it"
   const lastModified = new Date()
+
+  // Blog: indice + articoli
+  const blogIndex = {
+    url: `${baseUrl}/blog`,
+    lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }
+  const blogPosts = getAllPosts().map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.dateModified),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }))
 
   // Homepage
   const homepage = {
@@ -115,5 +130,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  return [homepage, ...guidePages, ...landingPages, ...progetti, ...otherPages]
+  return [homepage, blogIndex, ...blogPosts, ...guidePages, ...landingPages, ...progetti, ...otherPages]
 }
