@@ -76,7 +76,7 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center" title="4bid - Home">
             <Image src="/logo.png" alt="4bid Logo" width={80} height={50} style={{ width: 'auto', height: 'auto' }} priority />
           </Link>
 
@@ -86,6 +86,7 @@ export function Header() {
               <Link
                 key={item.label}
                 href={item.href}
+                title={item.label}
                 className="text-sm font-medium text-gray-600 hover:text-[#5B9BD5] transition-colors border-b-2 border-transparent hover:border-[#F4B942] pb-1"
               >
                 {item.label}
@@ -135,6 +136,7 @@ export function Header() {
               <Link
                 key={item.label}
                 href={item.href}
+                title={item.label}
                 className="block py-3 text-sm font-medium text-gray-600 hover:text-[#5B9BD5] transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >

@@ -51,18 +51,23 @@ export default function Hero() {
             src={slide.image || "/placeholder.svg"}
             alt={slide.text}
             fill
+            sizes="100vw"
             className="object-cover"
             priority={index === 0}
+            loading={index === 0 ? "eager" : "lazy"}
           />
 
           <div className="absolute inset-0 bg-[#6B9DBD]/40" />
         </div>
       ))}
 
-      <div className="relative z-20 h-full flex items-center justify-center px-4">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-white text-center max-w-4xl">
-          {slides[currentSlide].text}
+      <div className="relative z-20 h-full flex flex-col items-center justify-center px-4 text-center">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white max-w-4xl text-balance">
+          Revenue Management e software per il settore turismo e HORECA
         </h1>
+        <p className="mt-4 text-xl md:text-2xl lg:text-3xl font-light text-white/90 max-w-3xl text-pretty">
+          {slides[currentSlide].text}
+        </p>
       </div>
 
       <Button
@@ -70,6 +75,8 @@ export default function Hero() {
         size="icon"
         className="absolute left-4 top-1/2 -translate-y-1/2 z-30 text-white hover:bg-white/20"
         onClick={prevSlide}
+        title="Slide precedente"
+        aria-label="Slide precedente"
       >
         <ChevronLeft className="h-8 w-8" />
       </Button>
@@ -78,6 +85,8 @@ export default function Hero() {
         size="icon"
         className="absolute right-4 top-1/2 -translate-y-1/2 z-30 text-white hover:bg-white/20"
         onClick={nextSlide}
+        title="Slide successiva"
+        aria-label="Slide successiva"
       >
         <ChevronRight className="h-8 w-8" />
       </Button>
@@ -88,6 +97,8 @@ export default function Hero() {
             key={index}
             className={`w-3 h-3 rounded-full transition-all ${index === currentSlide ? "bg-white w-8" : "bg-white/50"}`}
             onClick={() => setCurrentSlide(index)}
+            title={`Vai alla slide ${index + 1}`}
+            aria-label={`Vai alla slide ${index + 1}`}
           />
         ))}
       </div>
