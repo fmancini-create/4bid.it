@@ -139,7 +139,8 @@ export async function GET(request: NextRequest) {
       // lo stato commerciale del contatto. Non blocca mai il redirect.
       try {
         const decoded = decodeURIComponent(url)
-        const isCalendarLink = /calendar\.google\.com|calendly\.com|cal\.com|\/prenota/i.test(decoded)
+        const isCalendarLink =
+          /calendar\.app\.google|calendar\.google\.com|calendly\.com|cal\.com|\/prenota/i.test(decoded)
         if (isCalendarLink) {
           const { data: child } = await supabase
             .from("dem_campaigns")

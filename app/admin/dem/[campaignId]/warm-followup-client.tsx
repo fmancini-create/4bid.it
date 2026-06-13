@@ -336,9 +336,7 @@ function CreateFollowupButton({
   const [open, setOpen] = useState(false)
   const [minClicks, setMinClicks] = useState(1)
   const [recencyDays, setRecencyDays] = useState<string>("0")
-  const [ctaUrl, setCtaUrl] = useState(
-    "https://calendar.google.com/calendar/u/0/appointments/schedules"
-  )
+  const [ctaUrl, setCtaUrl] = useState("https://calendar.app.google/9dgtQgkiDtMMTJ5d7")
   const [submitting, setSubmitting] = useState(false)
 
   const recencyParam = recencyDays === "0" ? "" : `&recency_days=${recencyDays}`
@@ -431,7 +429,7 @@ function CreateFollowupButton({
               id="cta-url"
               value={ctaUrl}
               onChange={(e) => setCtaUrl(e.target.value)}
-              placeholder="https://calendar.google.com/..."
+                placeholder="https://calendar.app.google/..."
             />
             <p className="text-xs text-muted-foreground">
               I click su questo link vengono tracciati come interesse alla demo.

@@ -62,10 +62,10 @@ export const FUNNEL_EVENT_BY_STATUS: Record<string, string> = {
   cliente: "customer_acquired",
 }
 
-// Link prenotazione di default (EDITABILE in UI). Deve contenere calendar.google.com
-// affinche' il tracking del click venga riconosciuto come "click calendario".
-export const DEFAULT_CALENDAR_URL =
-  "https://calendar.google.com/calendar/u/0/appointments/schedules"
+// Link prenotazione di default (EDITABILE in UI). E' lo short-link ufficiale
+// di Google Appointment Scheduling (calendar.app.google); il tracking del click
+// lo riconosce come "click calendario" (vedi regex in /api/dem/track).
+export const DEFAULT_CALENDAR_URL = "https://calendar.app.google/9dgtQgkiDtMMTJ5d7"
 
 export interface AudienceConfig {
   min_clicks?: number
@@ -96,9 +96,9 @@ function buildFollowupHtml(opts: {
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <tr>
-            <td style="background-color:#1b2a4a;padding:24px 32px;">
-              <p style="margin:0;color:#c8a45c;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Revenue management</p>
-              <p style="margin:6px 0 0;color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:1px;">Santaddeo</p>
+            <td align="center" style="background-color:#ffffff;padding:30px 32px 20px;border-bottom:3px solid #c8a45c;">
+              <img src="https://www.4bid.it/santaddeo-logo.png" alt="Santaddeo · Hotel Accelerator" width="250" style="display:block;width:250px;max-width:82%;height:auto;margin:0 auto;border:0;" />
+              <p style="margin:18px 0 0;color:#2bb3a3;font-size:16px;font-weight:bold;font-style:italic;letter-spacing:.3px;">L'RMS che paghi solo se funziona!</p>
             </td>
           </tr>
           <tr>
@@ -116,9 +116,17 @@ function buildFollowupHtml(opts: {
           <tr>
             <td style="padding:0 32px 8px;">
               <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
-              <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
-                4 Bid s.r.l. · <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
-              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;font-size:13px;line-height:1.6;color:#5a5a5a;">
+                    <strong style="color:#1b2a4a;">4 Bid s.r.l.</strong><br />
+                    <a href="https://www.santaddeo.com" style="color:#1b2a4a;text-decoration:none;">www.santaddeo.com</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;text-decoration:none;">clienti@4bid.it</a>
+                  </td>
+                  <td align="right" style="vertical-align:middle;width:96px;">
+                    <img src="https://www.4bid.it/4bid-colorful-logo-white.jpg" alt="4 Bid" width="84" style="display:block;width:84px;height:auto;border:0;margin-left:auto;" />
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
