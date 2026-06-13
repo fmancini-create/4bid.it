@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { toast } from "sonner"
-import { Check, X, Trash2, ExternalLink, RefreshCw, Eye, EyeOff } from "lucide-react"
+import { Check, X, Trash2, ExternalLink, RefreshCw, Eye, EyeOff, Plus } from "lucide-react"
 
 export type PressMention = {
   id: string
@@ -40,6 +40,9 @@ export function PressMentionsManager({ initialPending, initialApproved, initialR
   const [rejected, setRejected] = useState(initialRejected)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [showManual, setShowManual] = useState(false)
+  const [savingManual, setSavingManual] = useState(false)
+  const [manual, setManual] = useState({ title: "", url: "", source: "" })
 
   function removeFromAll(id: string): PressMention | undefined {
     let found: PressMention | undefined
@@ -103,6 +106,31 @@ export function PressMentionsManager({ initialPending, initialApproved, initialR
       toast.error(e instanceof Error ? e.message : "Errore durante la ricerca")
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  async function saveManual() {
+    if (!manual.title.trim() || !manual.url.trim()) {
+      toast.error("Titolo e URL sono obbligatori")
+      return
+    }
+    setSavingManual(true)
+    try {
+      const res = await fetch("/api/admin/press-mentions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(manual),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || "Errore")
+      toast.success("Notizia aggiunta e pubblicata")
+      setManual({ title: "", url: "", source: "" })
+      setShowManual(false)
+      setTimeout(() => window.location.reload(), 600)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore durante il salvataggio")
+    } finally {
+      setSavingManual(false)
     }
   }
 
@@ -207,11 +235,58 @@ export function PressMentionsManager({ initialPending, initialApproved, initialR
           Le notizie trovate dal cron giornaliero appaiono in <strong>In attesa</strong>. Approva quelle pertinenti per
           pubblicarle su <span className="font-mono text-xs">/parlano-di-noi</span>.
         </p>
-        <Button onClick={runFetchNow} disabled={refreshing} variant="outline" className="shrink-0 bg-transparent">
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          <span className="ml-2">Cerca ora</span>
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button onClick={() => setShowManual((v) => !v)} variant="outline" className="bg-transparent">
+            <Plus className="h-4 w-4" />
+            <span className="ml-2">Aggiungi manualmente</span>
+          </Button>
+          <Button onClick={runFetchNow} disabled={refreshing} variant="outline" className="bg-transparent">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            <span className="ml-2">Cerca ora</span>
+          </Button>
+        </div>
       </div>
+
+      {showManual && (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <h3 className="mb-1 text-sm font-semibold text-[#2C3E50]">Aggiungi una menzione manualmente</h3>
+          <p className="mb-3 text-xs text-gray-500">
+            Per fonti che il monitoraggio automatico non trova (Capterra, Facebook, LinkedIn, recensioni). Viene
+            pubblicata subito.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              type="text"
+              placeholder="Titolo della notizia *"
+              value={manual.title}
+              onChange={(e) => setManual((m) => ({ ...m, title: e.target.value }))}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#5B9BD5] focus:outline-none md:col-span-2"
+            />
+            <input
+              type="url"
+              placeholder="URL (https://...) *"
+              value={manual.url}
+              onChange={(e) => setManual((m) => ({ ...m, url: e.target.value }))}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#5B9BD5] focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="Fonte (es. Capterra)"
+              value={manual.source}
+              onChange={(e) => setManual((m) => ({ ...m, source: e.target.value }))}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#5B9BD5] focus:outline-none"
+            />
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowManual(false)} disabled={savingManual}>
+              Annulla
+            </Button>
+            <Button size="sm" onClick={saveManual} disabled={savingManual} className="bg-[#5B9BD5] hover:bg-[#4A8AC4]">
+              {savingManual ? "Salvataggio..." : "Aggiungi e pubblica"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="pending">
         <TabsList>

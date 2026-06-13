@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { fetchAllNews, hashUrl } from "@/lib/press/google-news"
+import { fetchAllNews, pressDedupHash } from "@/lib/press/google-news"
 import { sendEmail } from "@/lib/email-resend"
 
 const NOTIFY_EMAIL = process.env.PRESS_NOTIFY_EMAIL || "f.mancini@4bid.it"
@@ -95,7 +95,7 @@ async function handler(request: Request) {
     const seen = new Set<string>()
 
     for (const item of items) {
-      const url_hash = hashUrl(item.url)
+      const url_hash = pressDedupHash(item.title, item.source)
       if (seen.has(url_hash)) continue
       seen.add(url_hash)
 
