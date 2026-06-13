@@ -72,6 +72,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Altre pagine
   const otherPages = [
     {
+      url: `${baseUrl}/prenota-demo`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    },
+    {
       url: `${baseUrl}/volantino`,
       lastModified,
       changeFrequency: "monthly" as const,
