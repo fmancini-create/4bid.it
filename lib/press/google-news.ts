@@ -68,13 +68,22 @@ const BRAND_TOKENS = [
 const JUNK_TITLE_RE = /(archivi$|^categoria:|il giornale del|^home$|cookie policy|privacy policy)/i
 
 /**
- * Tiene solo le notizie che citano davvero un nostro brand nel titolo o snippet.
- * Senza questo filtro le query `site:` porterebbero in coda decine di articoli
- * non pertinenti (es. "Alitalia", "Falkensteiner").
+ * URL "spazzatura": pagine tag/categoria/elenco/paginazione, NON articoli.
+ * Le query `site:` le restituiscono spesso con lo stesso titolo dell'articolo
+ * reale, quindi vanno scartate per non salvare un link a una pagina-archivio.
  */
-export function isRelevant(item: { title: string; snippet: string | null }): boolean {
+const JUNK_URL_RE = /\/(tag|tags|categoria|categorie|category|aziende|author|autore|page)\/|[?&]url|[?&]_gl/i
+
+/**
+ * Tiene solo le notizie che citano davvero un nostro brand nel titolo o snippet
+ * E che puntano a un articolo reale (non a pagine tag/archivio/elenco).
+ * Senza questo filtro le query `site:` porterebbero in coda decine di articoli
+ * non pertinenti (es. "Alitalia", "Falkensteiner") o pagine-archivio.
+ */
+export function isRelevant(item: { title: string; snippet: string | null; url?: string }): boolean {
   const hay = `${item.title} ${item.snippet || ""}`.toLowerCase().replace(/\s+/g, " ")
   if (JUNK_TITLE_RE.test(item.title.trim())) return false
+  if (item.url && JUNK_URL_RE.test(item.url)) return false
   return BRAND_TOKENS.some((t) => hay.includes(t))
 }
 
@@ -225,7 +234,6 @@ export async function fetchNewsForKeyword(kw: PressKeyword): Promise<RawNewsItem
  */
 export async function fetchAllNews(): Promise<{ items: RawNewsItem[]; errors: string[] }> {
   const errors: string[] = []
-  const byHash = new Map<string, RawNewsItem>()
 
   // Tutte le query: per brand + per testata di settore.
   const queries: PressKeyword[] = [...PRESS_KEYWORDS]
@@ -234,35 +242,54 @@ export async function fetchAllNews(): Promise<{ items: RawNewsItem[]; errors: st
     queries.push({ query: `${brandGroup} site:${site}`, label: `site:${site}` })
   }
 
+  // 1) Raccoglie tutti i risultati e filtra per rilevanza (titolo/snippet).
+  //    Qui l'URL è ancora il redirect Google, quindi NON filtriamo per URL.
+  const candidates: RawNewsItem[] = []
   for (const kw of queries) {
     try {
       const found = await fetchNewsForKeyword(kw)
       for (const item of found) {
-        if (!isRelevant(item)) continue
-        const h = pressDedupHash(item.title, item.source)
-        // tiene il primo match; preferisce una label di brand a una label site:
-        const existing = byHash.get(h)
-        if (!existing) {
-          byHash.set(h, item)
-        } else if (existing.keyword.startsWith("site:") && !item.keyword.startsWith("site:")) {
-          byHash.set(h, item)
-        }
+        if (isRelevant({ title: item.title, snippet: item.snippet })) candidates.push(item)
       }
     } catch (e: any) {
       errors.push(e.message || String(e))
     }
   }
 
-  // Risolve gli URL di redirect di Google News negli URL reali degli articoli.
+  // 2) Risolve gli URL di redirect negli URL reali (una sola volta per redirect).
+  const resolveCache = new Map<string, string>()
   const resolved = await Promise.all(
-    [...byHash.values()].map(async (item) => {
+    candidates.map(async (item) => {
       if (!isGoogleNewsRedirect(item.url)) return item
-      const real = await resolveGoogleNewsUrl(item.url)
-      return real ? { ...item, url: real } : item
+      if (!resolveCache.has(item.url)) {
+        const real = await resolveGoogleNewsUrl(item.url)
+        resolveCache.set(item.url, real || item.url)
+      }
+      return { ...item, url: resolveCache.get(item.url)! }
     }),
   )
 
-  return { items: resolved, errors }
+  // 3) Ora che gli URL sono reali, scarta le pagine tag/archivio/elenco.
+  // 4) Dedup per titolo+fonte, preferendo gli URL di articolo "veri".
+  const byHash = new Map<string, RawNewsItem>()
+  for (const item of resolved) {
+    if (JUNK_URL_RE.test(item.url)) continue
+    const h = pressDedupHash(item.title, item.source)
+    const existing = byHash.get(h)
+    if (!existing) {
+      byHash.set(h, item)
+    } else if (!looksLikeArticleUrl(existing.url) && looksLikeArticleUrl(item.url)) {
+      // preferisce un URL con percorso datato (es. /2026/06/01/...) a uno generico
+      byHash.set(h, item)
+    }
+  }
+
+  return { items: [...byHash.values()], errors }
+}
+
+/** Euristica: l'URL sembra un articolo (percorso datato o slug lungo). */
+function looksLikeArticleUrl(url: string): boolean {
+  return /\/20\d\d\/\d\d\/\d\d\//.test(url) || /\/[a-z0-9-]{20,}/i.test(url)
 }
 
 /** True se l'URL è un link di redirect interno di Google News. */
