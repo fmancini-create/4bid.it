@@ -87,11 +87,21 @@ const progetti = [
     tagline: "Il primo Excel per chi non sa usare Excel.",
   },
   {
-    slug: "risparmio-compulsivo",
-    name: "Risparmio Compulsivo",
-    tagline: "App gamificata che rende il risparmio un gioco.",
+  slug: "risparmio-compulsivo",
+  name: "Risparmio Compulsivo",
+  tagline: "App gamificata che rende il risparmio un gioco.",
   },
-]
+  {
+  slug: "hotelprofit-ai",
+  name: "HotelProfitAI",
+  tagline: "Controllo di gestione intelligente per hotel.",
+  },
+  {
+  slug: "mypetsenseai",
+  name: "MyPetSenseAI",
+  tagline: "Monitoraggio AI della salute del cane.",
+  },
+  ]
 
 export const metadata: Metadata = {
   title: "Sviluppo Software e App su Misura | Anche con Revenue Share | 4BID",
