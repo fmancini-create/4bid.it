@@ -24,6 +24,19 @@ export async function GET(request: Request) {
   const status = searchParams.get("status") || "pending"
 
   const admin = createAdminClient()
+
+  // Conteggio leggero per il badge in navigazione (?count=1)
+  if (searchParams.get("count")) {
+    const { count, error } = await admin
+      .from("press_mentions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ pending: count || 0 })
+  }
+
   let query = admin
     .from("press_mentions")
     .select("id, title, url, source, snippet, keyword, published_at, status, created_at, reviewed_at")

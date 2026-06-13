@@ -27,6 +27,20 @@ interface AdminNavigationProps {
 
 export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [pendingPress, setPendingPress] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/admin/press-mentions?count=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (active && d && typeof d.pending === "number") setPendingPress(d.pending)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -162,6 +176,14 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
           >
             <Newspaper className="h-5 w-5 text-primary shrink-0" />
             <span className="font-medium text-sm sm:text-base">Parlano di noi</span>
+            {pendingPress > 0 && (
+              <span
+                className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold"
+                aria-label={`${pendingPress} notizie in attesa`}
+              >
+                {pendingPress}
+              </span>
+            )}
           </a>
 
           <a
