@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // il send lascia la campagna finche' restano destinatari pendenti.
     const { data: campaigns, error: campErr } = await supabase
       .from("dem_campaigns")
-      .select("id, name, status, auto_send, auto_started_on")
+      .select("id, name, status, auto_send, auto_started_on, daily_quota_cold")
       .eq("auto_send", true)
       .in("status", ["draft"])
 
@@ -113,7 +113,14 @@ export async function GET(request: NextRequest) {
       }
 
       const dayIndex = daysBetweenUtc(startedOn, todayStart)
-      const dailyCap = capForDayIndex(dayIndex)
+      const warmupCap = capForDayIndex(dayIndex)
+
+      // Gating quota freddi: se la campagna ha un limite freddi configurato, il
+      // tetto giornaliero e' il MINIMO tra warm-up e limite freddi. Senza quota
+      // (colonna NULL) il comportamento resta identico a prima.
+      const coldLimit = (campaign as { daily_quota_cold?: number | null }).daily_quota_cold
+      const dailyCap =
+        typeof coldLimit === "number" && coldLimit >= 0 ? Math.min(warmupCap, coldLimit) : warmupCap
 
       // Quante email gia' inviate OGGI (per rispettare il tetto giornaliero)?
       const { count: sentToday } = await supabase
