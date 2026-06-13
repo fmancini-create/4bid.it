@@ -75,35 +75,36 @@ export function Footer() {
             <h4 className="text-lg font-semibold mb-4">Link Veloci</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/" title="Home" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/#services" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/#services" title="Servizi" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Servizi
                 </Link>
               </li>
               <li>
                 <Link
                   href="/cose-il-revenue-management"
+                  title="Cos'è il Revenue Management"
                   className="text-gray-400 hover:text-white transition-colors text-sm"
                 >
                   Revenue Management
                 </Link>
               </li>
               <li>
-                <Link href="/#about" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/#about" title="Chi Siamo" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Chi Siamo
                 </Link>
               </li>
               <li>
-                <Link href="/#projects" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/#projects" title="Progetti" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Progetti
                 </Link>
               </li>
               <li>
-                <Link href="/#contact" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/#contact" title="Contatti" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Contatti
                 </Link>
               </li>
@@ -116,10 +117,10 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">© {new Date().getFullYear()} 4BID SRL. Tutti i diritti riservati.</p>
             <div className="flex gap-6">
-              <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/privacy" title="Privacy Policy" className="text-gray-400 hover:text-white transition-colors text-sm">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/terms" title="Termini e Condizioni" className="text-gray-400 hover:text-white transition-colors text-sm">
                 Termini e Condizioni
               </Link>
             </div>
