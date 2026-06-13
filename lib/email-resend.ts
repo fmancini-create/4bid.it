@@ -13,6 +13,52 @@ interface EmailOptions {
   replyTo?: string
   attachments?: EmailAttachment[]
   headers?: Record<string, string>
+  /**
+   * Controllo dell'header List-Unsubscribe (richiesto da Gmail/Yahoo per i
+   * mittenti di massa, migliora molto la deliverability):
+   * - undefined (default): viene generato automaticamente un link one-click
+   *   per il destinatario, salvo che `headers` ne contenga gia uno.
+   * - string: usa quell'URL come endpoint di disiscrizione.
+   * - false: non aggiunge alcun header (per email puramente transazionali).
+   */
+  listUnsubscribe?: string | false
+  /** Id campagna opzionale, accodato al link di disiscrizione. */
+  campaignId?: string
+}
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it").replace(/\/$/, "")
+const UNSUBSCRIBE_MAILTO = "clienti@4bid.it"
+
+/**
+ * Costruisce gli header List-Unsubscribe (+ List-Unsubscribe-Post per il
+ * one-click RFC 8058). Ritorna {} se non applicabile.
+ */
+function buildUnsubscribeHeaders(
+  to: string,
+  listUnsubscribe: string | false | undefined,
+  campaignId: string | undefined,
+  existing: Record<string, string> | undefined,
+): Record<string, string> {
+  // Disabilitato esplicitamente.
+  if (listUnsubscribe === false) return {}
+  // Chi invia ha gia impostato il proprio header (es. il sistema DEM): non tocchiamo.
+  const hasHeader = existing && Object.keys(existing).some((k) => k.toLowerCase() === "list-unsubscribe")
+  if (hasHeader) return {}
+  // Solo per destinatario singolo (il one-click deve essere per-utente).
+  if (to.includes(",")) return {}
+
+  let url: string
+  if (typeof listUnsubscribe === "string") {
+    url = listUnsubscribe
+  } else {
+    const encoded = Buffer.from(to.trim().toLowerCase()).toString("base64url")
+    url = `${SITE_URL}/api/dem/unsubscribe?e=${encoded}${campaignId ? `&c=${encodeURIComponent(campaignId)}` : ""}`
+  }
+
+  return {
+    "List-Unsubscribe": `<${url}>, <mailto:${UNSUBSCRIBE_MAILTO}?subject=unsubscribe>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  }
 }
 
 // Lazily create the client so the module can be imported even if the key is
@@ -42,11 +88,26 @@ function resolveFrom(): string {
   return "4BID SRL <marketing@mrk.4bid.it>"
 }
 
-export async function sendEmail({ to, subject, html, replyTo, attachments, headers }: EmailOptions) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  replyTo,
+  attachments,
+  headers,
+  listUnsubscribe,
+  campaignId,
+}: EmailOptions) {
   const client = getClient()
   if (!client) {
     console.error("[v0] RESEND_API_KEY non configurata")
     return { success: false, error: "RESEND_API_KEY non configurata" }
+  }
+
+  // Header List-Unsubscribe (one-click) generati in automatico se non disabilitati.
+  const mergedHeaders = {
+    ...buildUnsubscribeHeaders(to, listUnsubscribe, campaignId, headers),
+    ...headers,
   }
 
   try {
@@ -57,7 +118,7 @@ export async function sendEmail({ to, subject, html, replyTo, attachments, heade
       html,
       // Replies go to a monitored mailbox. Order: explicit arg > env override > default.
       replyTo: replyTo || process.env.RESEND_REPLY_TO || process.env.SMTP_FROM || "clienti@4bid.it",
-      headers,
+      headers: mergedHeaders,
       attachments:
         attachments && attachments.length > 0
           ? attachments.map((a) => ({
