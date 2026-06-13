@@ -122,8 +122,8 @@ function buildFollowupHtml(opts: {
                     <strong style="color:#1b2a4a;">4 Bid s.r.l.</strong><br />
                     <a href="https://www.santaddeo.com" style="color:#1b2a4a;text-decoration:none;">www.santaddeo.com</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;text-decoration:none;">clienti@4bid.it</a>
                   </td>
-                  <td align="right" style="vertical-align:middle;width:72px;">
-                    <img src="https://www.4bid.it/4bid-colorful-logo.jpg" alt="4 Bid" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:8px;border:0;margin-left:auto;" />
+                  <td align="right" style="vertical-align:middle;width:104px;">
+                    <img src="https://www.4bid.it/4bid-logo-email.png" alt="4bid" width="92" style="display:block;width:92px;height:auto;border:0;margin-left:auto;" />
                   </td>
                 </tr>
               </table>
