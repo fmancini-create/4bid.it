@@ -62,10 +62,10 @@ export const FUNNEL_EVENT_BY_STATUS: Record<string, string> = {
   cliente: "customer_acquired",
 }
 
-// Link prenotazione di default (EDITABILE in UI). Deve contenere calendar.google.com
-// affinche' il tracking del click venga riconosciuto come "click calendario".
-export const DEFAULT_CALENDAR_URL =
-  "https://calendar.google.com/calendar/u/0/appointments/schedules"
+// Link prenotazione di default (EDITABILE in UI). E' lo short-link ufficiale
+// di Google Appointment Scheduling (calendar.app.google); il tracking del click
+// lo riconosce come "click calendario" (vedi regex in /api/dem/track).
+export const DEFAULT_CALENDAR_URL = "https://calendar.app.google/9dgtQgkiDtMMTJ5d7"
 
 export interface AudienceConfig {
   min_clicks?: number
