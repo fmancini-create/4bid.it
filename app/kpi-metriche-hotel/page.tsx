@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
     description: "Guida completa ai KPI essenziali per hotel: RevPAR, ADR, occupazione, TRevPAR.",
-    url: "https://4bid.it/kpi-metriche-hotel",
+    url: "https://www.4bid.it/kpi-metriche-hotel",
     type: "article",
   },
   alternates: {
-    canonical: "https://4bid.it/kpi-metriche-hotel",
+    canonical: "https://www.4bid.it/kpi-metriche-hotel",
   },
 }
 

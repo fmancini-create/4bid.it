@@ -16,11 +16,11 @@ export const metadata = {
   openGraph: {
     title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
     description: "Strategie pratiche per far crescere la tariffa media del tuo hotel fino al +40%.",
-    url: "https://4bid.it/adr-hotel-come-aumentarlo",
+    url: "https://www.4bid.it/adr-hotel-come-aumentarlo",
     type: "article",
   },
   alternates: {
-    canonical: "https://4bid.it/adr-hotel-come-aumentarlo",
+    canonical: "https://www.4bid.it/adr-hotel-come-aumentarlo",
   },
 }
 

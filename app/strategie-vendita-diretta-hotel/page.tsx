@@ -21,7 +21,7 @@ export default function StrategieVenditaDirettaHotelPage() {
         type="Article"
         title="Strategie Vendita Diretta Hotel"
         description="Aumenta le vendite dirette del tuo hotel riducendo la dipendenza da OTA. Strategie, strumenti e tecniche di disintermediazione."
-        url="https://4bid.it/strategie-vendita-diretta-hotel"
+        url="https://www.4bid.it/strategie-vendita-diretta-hotel"
       />
       <LandingPageTracker slug="strategie-vendita-diretta-hotel" />
 

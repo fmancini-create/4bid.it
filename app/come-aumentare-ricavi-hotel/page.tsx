@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
     description: "10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%.",
-    url: "https://4bid.it/come-aumentare-ricavi-hotel",
+    url: "https://www.4bid.it/come-aumentare-ricavi-hotel",
     type: "article",
   },
   alternates: {
-    canonical: "https://4bid.it/come-aumentare-ricavi-hotel",
+    canonical: "https://www.4bid.it/come-aumentare-ricavi-hotel",
   },
 }
 

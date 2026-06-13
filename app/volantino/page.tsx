@@ -7,14 +7,14 @@ export const metadata = {
   keywords:
     "volantino 4bid, suite 4bid, software hotel, santaddeo, hotelprofit ai, manubot, hotel accelerator, brochure prodotti hotel",
   alternates: {
-    canonical: "https://4bid.it/volantino",
+    canonical: "https://www.4bid.it/volantino",
   },
   openGraph: {
     title: "Volantino Suite Prodotti 4BID",
     description:
       "La suite completa per il settore turismo: Santaddeo, HotelProfit AI, Manubot e Hotel Accelerator.",
     type: "website",
-    url: "https://4bid.it/volantino",
+    url: "https://www.4bid.it/volantino",
     locale: "it_IT",
     siteName: "4BID.IT",
   },

@@ -13,7 +13,7 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://4bid.it"),
+  metadataBase: new URL("https://www.4bid.it"),
   title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
   description:
     "4BID offre consulenza revenue management per hotel, software innovativi e soluzioni tecnologiche per ottimizzare ricavi e performance aziendali.",
@@ -36,10 +36,10 @@ export const metadata: Metadata = {
     type: "website",
     locale: "it_IT",
     siteName: "4BID.IT",
-    url: "https://4bid.it",
+    url: "https://www.4bid.it",
   },
   alternates: {
-    canonical: "https://4bid.it",
+    canonical: "https://www.4bid.it",
   },
   icons: {
     icon: "/logo.png",

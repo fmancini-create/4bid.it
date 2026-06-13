@@ -15,19 +15,19 @@ export const metadata: Metadata = {
   keywords:
     "revenue management agriturismi, prezzi agriturismi, occupazione agriturismo, gestione ricavi turismo rurale, ottimizzazione tariffe agriturismo",
   alternates: {
-    canonical: "https://4bid.it/revenue-management-agriturismo",
+    canonical: "https://www.4bid.it/revenue-management-agriturismo",
   },
   openGraph: {
     title: "Revenue Management per Agriturismi | 4BID.IT",
     description:
       "Servizi specializzati di revenue management per agriturismi. Aumenta occupazione e ricavi con strategie personalizzate.",
-    url: "https://4bid.it/revenue-management-agriturismo",
+    url: "https://www.4bid.it/revenue-management-agriturismo",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://www.4bid.it/4bid-colorful-logo.jpg",
         width: 1200,
         height: 630,
         alt: "4BID Revenue Management Agriturismi",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Revenue Management per Agriturismi | 4BID.IT",
     description: "Servizi specializzati di revenue management per agriturismi.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {
     index: true,
@@ -72,11 +72,11 @@ export default function RevenueMangementAgriturismPage() {
         type="Service"
         title="Revenue Management per Agriturismi"
         description="Servizi specializzati di revenue management per agriturismi: strategie personalizzate per il turismo rurale, ottimizzazione prezzi e gestione stagionalità."
-        url="https://4bid.it/revenue-management-agriturismo"
+        url="https://www.4bid.it/revenue-management-agriturismo"
         faqs={faqs}
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Revenue Management Agriturismi", url: "https://4bid.it/revenue-management-agriturismo" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Revenue Management Agriturismi", url: "https://www.4bid.it/revenue-management-agriturismo" },
         ]}
       />
       <LandingPageTracker slug="revenue-management-agriturismo" />

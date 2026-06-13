@@ -10,7 +10,7 @@ export const metadata = {
   description:
     "Analizza foto, monitora la salute quotidiana e ricevi consigli personalizzati dall'intelligenza artificiale per il benessere del tuo cane.",
   alternates: {
-    canonical: "https://4bid.it/progetti/mypetsenseai",
+    canonical: "https://www.4bid.it/progetti/mypetsenseai",
   },
 }
 
@@ -21,13 +21,13 @@ export default function MypetSenseAIPage() {
         type="SoftwareApplication"
         title="MyPetSenseAI - AI Health Monitoring for Dogs"
         description="Analizza foto, monitora la salute quotidiana e ricevi consigli personalizzati dall'intelligenza artificiale per il benessere del tuo cane."
-        url="https://4bid.it/progetti/mypetsenseai"
+        url="https://www.4bid.it/progetti/mypetsenseai"
         softwareCategory="HealthApplication"
         operatingSystem="Web"
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Progetti", url: "https://4bid.it/#projects" },
-          { name: "MyPetSenseAI", url: "https://4bid.it/progetti/mypetsenseai" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Progetti", url: "https://www.4bid.it/#projects" },
+          { name: "MyPetSenseAI", url: "https://www.4bid.it/progetti/mypetsenseai" },
         ]}
       />
       <LandingPageTracker slug="progetti/mypetsenseai" />

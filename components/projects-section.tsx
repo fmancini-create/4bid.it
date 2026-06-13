@@ -147,7 +147,7 @@ export default function ProjectsSection() {
     "@graph": [
       {
         "@type": "ItemList",
-        "@id": "https://4bid.it/#suite-horeca",
+        "@id": "https://www.4bid.it/#suite-horeca",
         name: "Suite HORECA 4BID",
         description:
           "Suite di software e tool 4BID dedicati al settore turismo, hotellerie e ristorazione.",
@@ -157,7 +157,7 @@ export default function ProjectsSection() {
           item: {
             "@type": "SoftwareApplication",
             name: p.name,
-            url: p.externalUrl || `https://4bid.it${p.href}`,
+            url: p.externalUrl || `https://www.4bid.it${p.href}`,
             applicationCategory: "BusinessApplication",
             operatingSystem: "Web",
             description: p.description,
@@ -167,7 +167,7 @@ export default function ProjectsSection() {
       },
       {
         "@type": "ItemList",
-        "@id": "https://4bid.it/#altri-progetti",
+        "@id": "https://www.4bid.it/#altri-progetti",
         name: "Altri progetti 4BID",
         description: "Progetti verticali extra-turismo della holding 4BID.",
         itemListElement: otherProjects.map((p, i) => ({
@@ -176,7 +176,7 @@ export default function ProjectsSection() {
           item: {
             "@type": "SoftwareApplication",
             name: p.name,
-            url: p.externalUrl || `https://4bid.it${p.href}`,
+            url: p.externalUrl || `https://www.4bid.it${p.href}`,
             applicationCategory: "BusinessApplication",
             operatingSystem: "Web",
             description: p.description,

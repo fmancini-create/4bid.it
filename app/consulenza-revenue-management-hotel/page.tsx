@@ -16,19 +16,19 @@ export const metadata: Metadata = {
   keywords:
     "consulenza revenue management hotel, revenue manager hotel, consulenza alberghiera professionale, ottimizzazione tariffe hotel, pricing hotel strategico, aumento ricavi hotel",
   alternates: {
-    canonical: "https://4bid.it/consulenza-revenue-management-hotel",
+    canonical: "https://www.4bid.it/consulenza-revenue-management-hotel",
   },
   openGraph: {
     title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
     description:
       "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati.",
-    url: "https://4bid.it/consulenza-revenue-management-hotel",
+    url: "https://www.4bid.it/consulenza-revenue-management-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
     images: [
       {
-        url: "https://4bid.it/4bid-colorful-logo.jpg",
+        url: "https://www.4bid.it/4bid-colorful-logo.jpg",
         width: 1200,
         height: 630,
         alt: "4BID.IT Revenue Management",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
     description:
       "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {
     index: true,
@@ -62,7 +62,7 @@ export default function ConsulenzaRevenueManagementPage() {
         type="Service"
         title="Consulenza Revenue Management Hotel"
         description="Servizio di consulenza Revenue Management per hotel, resort e strutture ricettive. Aumenta i ricavi del tuo hotel con strategie di pricing dinamico."
-        url="https://4bid.it/consulenza-revenue-management-hotel"
+        url="https://www.4bid.it/consulenza-revenue-management-hotel"
       />
 
       <LandingPageTracker slug="consulenza-revenue-management-hotel" />

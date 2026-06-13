@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
     description: "Ottimizza la presenza del tuo hotel sui canali OTA e aumenta le prenotazioni dirette fino al 40%.",
-    url: "https://4bid.it/gestione-canali-distribuzione-hotel",
+    url: "https://www.4bid.it/gestione-canali-distribuzione-hotel",
     type: "website",
   },
   alternates: {
-    canonical: "https://4bid.it/gestione-canali-distribuzione-hotel",
+    canonical: "https://www.4bid.it/gestione-canali-distribuzione-hotel",
   },
 }
 

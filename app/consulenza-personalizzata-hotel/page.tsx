@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Consulenza Personalizzata Hotel | Revenue Management su Misura | 4BID.IT",
     description: "Analisi su misura e piano operativo dedicato per massimizzare i ricavi della tua struttura.",
-    url: "https://4bid.it/consulenza-personalizzata-hotel",
+    url: "https://www.4bid.it/consulenza-personalizzata-hotel",
     type: "website",
   },
   alternates: {
-    canonical: "https://4bid.it/consulenza-personalizzata-hotel",
+    canonical: "https://www.4bid.it/consulenza-personalizzata-hotel",
   },
 }
 

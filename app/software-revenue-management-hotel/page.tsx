@@ -13,7 +13,7 @@ export const metadata = {
   keywords:
     "software revenue management hotel, RMS hotel, sistema revenue management, software alberghiero, dynamic pricing hotel, gestionale hotel, revenue management system",
   alternates: {
-    canonical: "https://4bid.it/software-revenue-management-hotel",
+    canonical: "https://www.4bid.it/software-revenue-management-hotel",
   },
 }
 
@@ -24,12 +24,12 @@ export default function SoftwareRevenueManagementHotelPage() {
         type="SoftwareApplication"
         title="Software Revenue Management Hotel"
         description="Software Revenue Management per hotel con AI, dynamic pricing e analytics avanzati. Ottimizza tariffe, massimizza RevPAR e aumenta i ricavi."
-        url="https://4bid.it/software-revenue-management-hotel"
+        url="https://www.4bid.it/software-revenue-management-hotel"
         softwareCategory="BusinessApplication"
         operatingSystem="Web"
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Software Revenue Management Hotel", url: "https://4bid.it/software-revenue-management-hotel" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Software Revenue Management Hotel", url: "https://www.4bid.it/software-revenue-management-hotel" },
         ]}
       />
       <LandingPageTracker slug="software-revenue-management-hotel" />

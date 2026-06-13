@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     title: "RISPARMIO COMPULSIVO - L'App che Gamifica il Risparmio",
     description: "Trasforma il risparmio in un gioco con sfide, community e reward. Save. Play. Win.",
     type: "website",
-    url: "https://4bid.it/progetti/risparmio-compulsivo",
+    url: "https://www.4bid.it/progetti/risparmio-compulsivo",
     locale: "it_IT",
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://4bid.it/risparmio-compulsivo-logo.png",
+        url: "https://www.4bid.it/risparmio-compulsivo-logo.png",
         width: 1200,
         height: 630,
         alt: "RISPARMIO COMPULSIVO Logo",
@@ -34,10 +34,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "RISPARMIO COMPULSIVO - App Gamificata per il Risparmio",
     description: "Risparmio automatico, sfide e community. Trasforma il risparmio in un gioco",
-    images: ["https://4bid.it/risparmio-compulsivo-logo.png"],
+    images: ["https://www.4bid.it/risparmio-compulsivo-logo.png"],
   },
   alternates: {
-    canonical: "https://4bid.it/progetti/risparmio-compulsivo",
+    canonical: "https://www.4bid.it/progetti/risparmio-compulsivo",
   },
   robots: {
     index: true,
@@ -59,8 +59,8 @@ export default function RisparmioCompulsivoPage() {
         type="Service"
         title="RISPARMIO COMPULSIVO - App Risparmio Gamificato"
         description="App che trasforma il risparmio personale in un gioco globale con sfide, community e reward"
-        url="https://4bid.it/progetti/risparmio-compulsivo"
-        image="https://4bid.it/risparmio-compulsivo-logo.png"
+        url="https://www.4bid.it/progetti/risparmio-compulsivo"
+        image="https://www.4bid.it/risparmio-compulsivo-logo.png"
       />
 
       <LandingPageTracker slug="progetti/risparmio-compulsivo" />

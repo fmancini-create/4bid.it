@@ -48,17 +48,6 @@ function checkRateLimit(ip: string, endpoint: string): { allowed: boolean; remai
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Canonical host redirect: www.4bid.it -> 4bid.it (301)
-  // Excludes /api to avoid breaking OAuth callbacks and DEM links registered on www.
-  const host = request.headers.get("host") || ""
-  if (host.startsWith("www.4bid.it") && !pathname.startsWith("/api/")) {
-    const url = request.nextUrl.clone()
-    url.host = "4bid.it"
-    url.protocol = "https:"
-    url.port = ""
-    return NextResponse.redirect(url, 301)
-  }
-
   // Skip static files and internal routes
   if (
     pathname.startsWith("/_next") ||

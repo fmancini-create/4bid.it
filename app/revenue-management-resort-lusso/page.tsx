@@ -21,7 +21,7 @@ export default function RevenueManagementResortLussoPage() {
         type="Service"
         title="Revenue Management Resort di Lusso"
         description="Consulenza Revenue Management specializzata per resort di lusso, hotel 5 stelle e strutture premium. Strategie esclusive per massimizzare i ricavi delle strutture luxury."
-        url="https://4bid.it/revenue-management-resort-lusso"
+        url="https://www.4bid.it/revenue-management-resort-lusso"
       />
       <LandingPageTracker slug="revenue-management-resort-lusso" />
 

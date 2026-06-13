@@ -7,13 +7,13 @@ export const metadata = {
   keywords:
     "volantino 4bid, tri-fold a4, brochure 4bid, suite hospitality, santaddeo, hotelprofit ai, manubot, hotel accelerator, stampa",
   alternates: {
-    canonical: "https://4bid.it/volantino-4",
+    canonical: "https://www.4bid.it/volantino-4",
   },
   openGraph: {
     title: "Volantino Tri-fold 4BID - Pronto Stampa",
     description: "A4 orizzontale, 6 pannelli totali: copertina, 4 prodotti e retro copertina.",
     type: "website",
-    url: "https://4bid.it/volantino-4",
+    url: "https://www.4bid.it/volantino-4",
     locale: "it_IT",
     siteName: "4BID.IT",
   },

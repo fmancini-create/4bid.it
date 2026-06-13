@@ -19,23 +19,23 @@ export const metadata: Metadata = {
   keywords:
     "come funziona ecomobility, tutorial noleggio e-bike hotel, guida prenotazione veicoli elettrici, processo noleggio mobilità sostenibile, istruzioni noleggio scooter elettrici",
   alternates: {
-    canonical: "https://4bid.it/ecomobility/come-funziona",
+    canonical: "https://www.4bid.it/ecomobility/come-funziona",
     languages: {
-      "it": "https://4bid.it/ecomobility/come-funziona",
-      "en": "https://4bid.it/ecomobility/how-it-works",
+      "it": "https://www.4bid.it/ecomobility/come-funziona",
+      "en": "https://www.4bid.it/ecomobility/how-it-works",
     },
   },
   openGraph: {
     title: "Come Funziona 4BID Ecomobility | Guida al Noleggio Veicoli Elettrici",
     description:
       "Scopri come funziona 4BID Ecomobility: dalla scelta del veicolo alla riconsegna. Prenotazione autonoma, pagamento online, ritiro e riconsegna guidata.",
-    url: "https://4bid.it/ecomobility/come-funziona",
+    url: "https://www.4bid.it/ecomobility/come-funziona",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
     images: [
       {
-        url: "https://4bid.it/ecomobility-logo.png",
+        url: "https://www.4bid.it/ecomobility-logo.png",
         width: 1200,
         height: 630,
         alt: "4BID Ecomobility - Come Funziona",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Come Funziona 4BID Ecomobility",
     description: "Guida passo passo: dalla scelta del veicolo alla riconsegna. Semplice, veloce, automatizzato.",
-    images: ["https://4bid.it/ecomobility-logo.png"],
+    images: ["https://www.4bid.it/ecomobility-logo.png"],
   },
   robots: {
     index: true,
@@ -184,7 +184,7 @@ export default function ComeFunzionaPage() {
         type="HowTo"
         title="Come Funziona 4BID Ecomobility"
         description="Guida passo passo al noleggio di veicoli elettrici con 4BID Ecomobility."
-        url="https://4bid.it/ecomobility/come-funziona"
+        url="https://www.4bid.it/ecomobility/come-funziona"
       />
 
       <LandingPageTracker slug="ecomobility-come-funziona" />

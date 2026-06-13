@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Termini e Condizioni | 4BID SRL",
   description: "Termini e condizioni di utilizzo dei servizi di 4BID SRL",
   alternates: {
-    canonical: "https://4bid.it/terms",
+    canonical: "https://www.4bid.it/terms",
   },
 }
 
@@ -21,10 +21,10 @@ export default function TermsPage() {
         type="WebPage"
         title="Termini e Condizioni"
         description="Termini e condizioni di utilizzo dei servizi di 4BID SRL"
-        url="https://4bid.it/terms"
+        url="https://www.4bid.it/terms"
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Termini e Condizioni", url: "https://4bid.it/terms" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Termini e Condizioni", url: "https://www.4bid.it/terms" },
         ]}
       />
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" strategy="afterInteractive" />

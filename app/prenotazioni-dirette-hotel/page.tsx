@@ -21,7 +21,7 @@ export default function PrenotazioniDiretteHotelPage() {
         type="Article"
         title="Prenotazioni Dirette Hotel"
         description="Guida completa per aumentare le prenotazioni dirette del tuo hotel e ridurre le commissioni OTA. Strategie, best practice e case study."
-        url="https://4bid.it/prenotazioni-dirette-hotel"
+        url="https://www.4bid.it/prenotazioni-dirette-hotel"
       />
       <LandingPageTracker slug="prenotazioni-dirette-hotel" />
 

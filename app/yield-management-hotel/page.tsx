@@ -15,23 +15,23 @@ export const metadata: Metadata = {
   keywords:
     "yield management hotel, gestione capacità hotel, ottimizzazione occupazione alberghiera, yield optimization, capacity management hotel, gestione inventario camere strategica",
   alternates: {
-    canonical: "https://4bid.it/yield-management-hotel",
+    canonical: "https://www.4bid.it/yield-management-hotel",
   },
   openGraph: {
     title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
     description:
       "Yield management professionale per hotel: gestione capacità, pricing dinamico, restrizioni LOS intelligenti.",
-    url: "https://4bid.it/yield-management-hotel",
+    url: "https://www.4bid.it/yield-management-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "website",
-    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Yield Management" }],
+    images: [{ url: "https://www.4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "4BID Yield Management" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35%",
     description: "Yield management professionale per hotel con strategie avanzate.",
-    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+    images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
   robots: {
     index: true,
@@ -65,11 +65,11 @@ export default function YieldManagementHotelPage() {
         type="Service"
         title="Yield Management Hotel"
         description="Servizio professionale di yield management per hotel: ottimizzazione capacità, pricing dinamico e strategie avanzate per massimizzare RevPAR."
-        url="https://4bid.it/yield-management-hotel"
+        url="https://www.4bid.it/yield-management-hotel"
         faqs={faqs}
         breadcrumbs={[
-          { name: "Home", url: "https://4bid.it" },
-          { name: "Yield Management Hotel", url: "https://4bid.it/yield-management-hotel" },
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Yield Management Hotel", url: "https://www.4bid.it/yield-management-hotel" },
         ]}
       />
       <LandingPageTracker slug="yield-management-hotel" />

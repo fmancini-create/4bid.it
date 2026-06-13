@@ -21,7 +21,7 @@ export default function WebMarketingHotelPrenotazioniPage() {
         type="Service"
         title="Web Marketing Hotel"
         description="Servizi di web marketing specializzati per hotel: SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette."
-        url="https://4bid.it/webmarketing-hotel-prenotazioni"
+        url="https://www.4bid.it/webmarketing-hotel-prenotazioni"
       />
       <LandingPageTracker slug="webmarketing-hotel-prenotazioni" />
 

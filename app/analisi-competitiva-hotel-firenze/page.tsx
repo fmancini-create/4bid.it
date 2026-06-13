@@ -16,11 +16,11 @@ export const metadata = {
     title: "Analisi Competitiva Hotel Firenze | Revenue Management | 4BID.IT",
     description:
       "Analisi strategica del competitive set per hotel a Firenze. Monitora la concorrenza e ottimizza il posizionamento.",
-    url: "https://4bid.it/analisi-competitiva-hotel-firenze",
+    url: "https://www.4bid.it/analisi-competitiva-hotel-firenze",
     type: "article",
   },
   alternates: {
-    canonical: "https://4bid.it/analisi-competitiva-hotel-firenze",
+    canonical: "https://www.4bid.it/analisi-competitiva-hotel-firenze",
   },
 }
 
