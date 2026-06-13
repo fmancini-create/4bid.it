@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { fetchAllNews, hashUrl } from "@/lib/press/google-news"
+import { fetchAllNews, pressDedupHash } from "@/lib/press/google-news"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -90,6 +90,51 @@ export async function PATCH(request: Request) {
   return NextResponse.json({ success: true })
 }
 
+// PUT: inserimento MANUALE di una menzione (per fonti che Google News non indicizza:
+// Capterra, Facebook, LinkedIn, recensioni...). Viene salvata già "approved".
+export async function PUT(request: Request) {
+  if (!(await assertSuperAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const body = await request.json().catch(() => null)
+  const title = (body?.title as string | undefined)?.trim()
+  const url = (body?.url as string | undefined)?.trim()
+  const source = (body?.source as string | undefined)?.trim() || null
+
+  if (!title || !url) {
+    return NextResponse.json({ error: "Titolo e URL sono obbligatori" }, { status: 400 })
+  }
+  try {
+    // valida che l'URL sia ben formato
+    new URL(url)
+  } catch {
+    return NextResponse.json({ error: "URL non valido" }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("press_mentions").insert({
+    title,
+    url,
+    source,
+    snippet: (body?.snippet as string | undefined)?.trim() || null,
+    keyword: "manuale",
+    published_at: body?.publishedAt || new Date().toISOString(),
+    status: "approved",
+    reviewed_at: new Date().toISOString(),
+    url_hash: pressDedupHash(title, source),
+  })
+
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "Questa notizia è già presente" }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+
 // POST: esegue subito la ricerca su Google News e salva i nuovi risultati come "pending"
 export async function POST() {
   if (!(await assertSuperAdmin())) {
@@ -104,7 +149,7 @@ export async function POST() {
     const seen = new Set<string>()
 
     for (const item of items) {
-      const url_hash = hashUrl(item.url)
+      const url_hash = pressDedupHash(item.title, item.source)
       if (seen.has(url_hash)) continue
       seen.add(url_hash)
 

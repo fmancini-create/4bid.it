@@ -17,18 +17,66 @@ export interface PressKeyword {
 
 /**
  * Keyword monitorate: tutti i prodotti + azienda.
- * Le frasi sono tra virgolette per forzare il match esatto su Google News.
+ *
+ * IMPORTANTE su Google News:
+ * - Una ricerca generica viene "clusterizzata": per un brand poco citato torna
+ *   spesso 1 solo risultato anche se gli articoli sono di più (es. "Santaddeo").
+ * - L'operatore `site:` aggira il clustering e fa emergere gli articoli sepolti,
+ *   ma restituisce anche TANTO rumore dell'intero sito -> serve `isRelevant()`.
+ * Per questo combiniamo: query per brand + query per testata di settore, e poi
+ * filtriamo SEMPRE i risultati con isRelevant() (titolo deve citare un brand).
  */
 export const PRESS_KEYWORDS: PressKeyword[] = [
-  { query: '"4BID SRL"', label: "4BID SRL" },
-  { query: '"4bid.it"', label: "4bid.it" },
-  { query: '"Santaddeo" revenue management', label: "Santaddeo" },
+  // --- Query per brand (broad, senza qualificatori troppo restrittivi) ---
+  { query: '"4 Bid" OR "4BID" OR "4bid.it"', label: "4BID" },
+  { query: '"Santaddeo"', label: "Santaddeo" },
   { query: '"Manubot"', label: "Manubot" },
   { query: '"HotelProfitAI" OR "HotelProfit AI"', label: "HotelProfitAI" },
   { query: '"Hotel Accelerator" 4bid', label: "Hotel Accelerator" },
-  { query: '"4BID Ecomobility"', label: "4BID Ecomobility" },
+  { query: '"4BID Ecomobility" OR "Ecomobility 4bid"', label: "4BID Ecomobility" },
   { query: '"Autoexel"', label: "Autoexel" },
 ]
+
+/**
+ * Testate di settore (turismo/hospitality) dove i nostri brand compaiono o
+ * potrebbero comparire. Le interroghiamo con `site:` per scavalcare il
+ * clustering di Google News, poi filtriamo con isRelevant().
+ */
+const OUTLET_SITES = [
+  "travelnostop.com",
+  "guidaviaggi.it",
+  "hotelmag.it",
+  "italiaatavola.net",
+  "jobintourism.it",
+  "mastermeeting.it",
+  "hospitalitynews.it",
+]
+
+/** Termini brand usati dal filtro di pertinenza (normalizzati lowercase, no spazi doppi). */
+const BRAND_TOKENS = [
+  "santaddeo",
+  "4 bid",
+  "4bid",
+  "manubot",
+  "hotelprofit",
+  "hotel accelerator",
+  "ecomobility",
+  "autoexel",
+]
+
+/** Titoli "spazzatura" di Google News (pagine archivio/categoria/tagline testata). */
+const JUNK_TITLE_RE = /(archivi$|^categoria:|il giornale del|^home$|cookie policy|privacy policy)/i
+
+/**
+ * Tiene solo le notizie che citano davvero un nostro brand nel titolo o snippet.
+ * Senza questo filtro le query `site:` porterebbero in coda decine di articoli
+ * non pertinenti (es. "Alitalia", "Falkensteiner").
+ */
+export function isRelevant(item: { title: string; snippet: string | null }): boolean {
+  const hay = `${item.title} ${item.snippet || ""}`.toLowerCase().replace(/\s+/g, " ")
+  if (JUNK_TITLE_RE.test(item.title.trim())) return false
+  return BRAND_TOKENS.some((t) => hay.includes(t))
+}
 
 export interface RawNewsItem {
   title: string
@@ -93,6 +141,26 @@ export function hashUrl(url: string): string {
   return crypto.createHash("sha256").update(normalizeUrl(url)).digest("hex")
 }
 
+/**
+ * Chiave di dedup per le menzioni stampa.
+ *
+ * NON usiamo l'URL perché Google News restituisce un link di redirect DIVERSO
+ * per ogni query (token univoco): lo stesso articolo avrebbe hash diversi.
+ * Deduplichiamo invece su titolo normalizzato + fonte, che restano costanti.
+ */
+export function pressDedupHash(title: string, source: string | null): string {
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // accenti
+      .replace(/[^a-z0-9]+/g, " ") // punteggiatura/virgolette -> spazio
+      .replace(/\s+/g, " ")
+      .trim()
+  const key = `${norm(title)}|${norm(source || "")}`
+  return crypto.createHash("sha256").update(key).digest("hex")
+}
+
 /** Parsa il body RSS in una lista di item grezzi. */
 function parseRss(xml: string, keyword: string): RawNewsItem[] {
   const items: RawNewsItem[] = []
@@ -151,17 +219,39 @@ export async function fetchNewsForKeyword(kw: PressKeyword): Promise<RawNewsItem
   return parseRss(xml, kw.label)
 }
 
-/** Interroga Google News per tutte le keyword configurate. */
+/**
+ * Interroga Google News per tutte le keyword configurate + le testate di
+ * settore (via `site:`), applica il filtro di pertinenza e deduplica per URL.
+ */
 export async function fetchAllNews(): Promise<{ items: RawNewsItem[]; errors: string[] }> {
-  const items: RawNewsItem[] = []
   const errors: string[] = []
-  for (const kw of PRESS_KEYWORDS) {
+  const byHash = new Map<string, RawNewsItem>()
+
+  // Tutte le query: per brand + per testata di settore.
+  const queries: PressKeyword[] = [...PRESS_KEYWORDS]
+  const brandGroup = '("4 Bid" OR "4bid" OR Santaddeo OR Manubot OR HotelProfitAI OR "Hotel Accelerator" OR Autoexel)'
+  for (const site of OUTLET_SITES) {
+    queries.push({ query: `${brandGroup} site:${site}`, label: `site:${site}` })
+  }
+
+  for (const kw of queries) {
     try {
       const found = await fetchNewsForKeyword(kw)
-      items.push(...found)
+      for (const item of found) {
+        if (!isRelevant(item)) continue
+        const h = pressDedupHash(item.title, item.source)
+        // tiene il primo match; preferisce una label di brand a una label site:
+        const existing = byHash.get(h)
+        if (!existing) {
+          byHash.set(h, item)
+        } else if (existing.keyword.startsWith("site:") && !item.keyword.startsWith("site:")) {
+          byHash.set(h, item)
+        }
+      }
     } catch (e: any) {
       errors.push(e.message || String(e))
     }
   }
-  return { items, errors }
+
+  return { items: [...byHash.values()], errors }
 }
