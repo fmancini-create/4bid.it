@@ -14,10 +14,11 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.4bid.it"),
-  title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
+  title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
   description:
-    "4BID offre consulenza revenue management per hotel, software innovativi e soluzioni tecnologiche per ottimizzare ricavi e performance aziendali.",
-  keywords: "4bid, revenue management, consulenza turistica, hotel management, tecnologia, innovazione",
+    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi, ottimizza prezzi e prenotazioni dirette. Scopri le soluzioni 4BID.",
+  keywords:
+    "revenue management hotel, software revenue management, aumentare ricavi hotel, dynamic pricing hotel, consulenza revenue management, prenotazioni dirette, 4bid",
   authors: [{ name: "4BID SRL" }],
   robots: {
     index: true,
@@ -31,8 +32,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "4BID.IT – Innovazione e Tecnologia per il Tuo Business",
-    description: "Consulenza revenue management, software e soluzioni tecnologiche innovative",
+    title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
+    description:
+      "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette.",
     type: "website",
     locale: "it_IT",
     siteName: "4BID.IT",
