@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "KPI Hotel Revenue Management: Monitora Performance | 4BID.IT",
     description: "I 7 KPI essenziali che ogni revenue manager deve monitorare per ottimizzare i ricavi.",
-    url: "https://www.4bid.it/kpi-hotel-revenue-management",
+    url: "https://4bid.it/kpi-hotel-revenue-management",
     type: "article",
   },
   alternates: {
-    canonical: "https://www.4bid.it/kpi-hotel-revenue-management",
+    canonical: "https://4bid.it/kpi-hotel-revenue-management",
   },
 }
 

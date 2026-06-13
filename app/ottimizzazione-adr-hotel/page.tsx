@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Ottimizzazione ADR Hotel | Come Aumentare Tariffa Media | 4BID.IT",
     description: "Aumenta l'ADR fino al +35% senza perdere occupazione con strategie di pricing strategico.",
-    url: "https://www.4bid.it/ottimizzazione-adr-hotel",
+    url: "https://4bid.it/ottimizzazione-adr-hotel",
     type: "article",
   },
   alternates: {
-    canonical: "https://www.4bid.it/ottimizzazione-adr-hotel",
+    canonical: "https://4bid.it/ottimizzazione-adr-hotel",
   },
 }
 

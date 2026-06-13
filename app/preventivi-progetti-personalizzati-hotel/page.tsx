@@ -21,7 +21,7 @@ export default function PreventiviProgettiPersonalizzatiHotelPage() {
         type="Service"
         title="Preventivi Progetti Personalizzati Hotel"
         description="Richiedi preventivo per progetti software personalizzati hotel: revenue management, app mobile, gestione manutenzioni. Risposta in 24h."
-        url="https://www.4bid.it/preventivi-progetti-personalizzati-hotel"
+        url="https://4bid.it/preventivi-progetti-personalizzati-hotel"
       />
       <LandingPageTracker slug="preventivi-progetti-personalizzati-hotel" />
 

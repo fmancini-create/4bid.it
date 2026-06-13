@@ -21,7 +21,7 @@ export default function RevenueManagerHotelToscanaPage() {
         type="Service"
         title="Revenue Manager Hotel Toscana"
         description="Revenue Manager specializzato in hotel in Toscana. Consulenza Revenue Management a Firenze, Siena, Pisa e tutta la Toscana."
-        url="https://www.4bid.it/revenue-manager-hotel-toscana"
+        url="https://4bid.it/revenue-manager-hotel-toscana"
       />
       <LandingPageTracker slug="revenue-manager-hotel-toscana" />
 

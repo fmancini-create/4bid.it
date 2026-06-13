@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
     description: "Previsioni accurate e pianificazione finanziaria strategica per il tuo hotel.",
-    url: "https://www.4bid.it/forecast-budgeting-hotel",
+    url: "https://4bid.it/forecast-budgeting-hotel",
     type: "website",
   },
   alternates: {
-    canonical: "https://www.4bid.it/forecast-budgeting-hotel",
+    canonical: "https://4bid.it/forecast-budgeting-hotel",
   },
 }
 

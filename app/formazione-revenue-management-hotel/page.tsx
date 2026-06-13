@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
     description: "Corsi pratici e training operativo per hotel manager, revenue manager e staff.",
-    url: "https://www.4bid.it/formazione-revenue-management-hotel",
+    url: "https://4bid.it/formazione-revenue-management-hotel",
     type: "website",
   },
   alternates: {
-    canonical: "https://www.4bid.it/formazione-revenue-management-hotel",
+    canonical: "https://4bid.it/formazione-revenue-management-hotel",
   },
 }
 

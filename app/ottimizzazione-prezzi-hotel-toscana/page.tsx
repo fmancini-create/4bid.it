@@ -16,11 +16,11 @@ export const metadata = {
   openGraph: {
     title: "Ottimizzazione Prezzi Hotel Toscana | Revenue Management Locale | 4BID.IT",
     description: "Esperti locali di Revenue Management per hotel toscani. +35% RevPAR medio.",
-    url: "https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana",
+    url: "https://4bid.it/ottimizzazione-prezzi-hotel-toscana",
     type: "website",
   },
   alternates: {
-    canonical: "https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana",
+    canonical: "https://4bid.it/ottimizzazione-prezzi-hotel-toscana",
   },
 }
 

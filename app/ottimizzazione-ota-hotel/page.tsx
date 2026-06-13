@@ -15,11 +15,11 @@ export const metadata = {
   openGraph: {
     title: "Ottimizzazione OTA Hotel | Riduci Commissioni | 4BID.IT",
     description: "Riduci le commissioni OTA fino al 40% e aumenta la visibilità su Booking, Expedia e altri portali.",
-    url: "https://www.4bid.it/ottimizzazione-ota-hotel",
+    url: "https://4bid.it/ottimizzazione-ota-hotel",
     type: "website",
   },
   alternates: {
-    canonical: "https://www.4bid.it/ottimizzazione-ota-hotel",
+    canonical: "https://4bid.it/ottimizzazione-ota-hotel",
   },
 }
 

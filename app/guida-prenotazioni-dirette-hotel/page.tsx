@@ -18,13 +18,13 @@ export const metadata: Metadata = {
   keywords:
     "guida prenotazioni dirette hotel, come aumentare prenotazioni dirette, ridurre commissioni OTA, direct booking hotel",
   alternates: {
-    canonical: "https://www.4bid.it/guida-prenotazioni-dirette-hotel",
+    canonical: "https://4bid.it/guida-prenotazioni-dirette-hotel",
   },
   openGraph: {
     title: "Guida alle Prenotazioni Dirette Hotel | 4BID.IT",
     description:
       "Guida completa per aumentare le prenotazioni dirette: strategie, checklist operativa, errori comuni e glossario.",
-    url: "https://www.4bid.it/guida-prenotazioni-dirette-hotel",
+    url: "https://4bid.it/guida-prenotazioni-dirette-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "article",
@@ -42,7 +42,7 @@ export default function GuidaPrenotazioniDirettePage() {
         type="Article"
         title="Guida alle Prenotazioni Dirette Hotel"
         description="Guida completa per aumentare le prenotazioni dirette: strategie, checklist operativa, errori comuni e glossario."
-        url="https://www.4bid.it/guida-prenotazioni-dirette-hotel"
+        url="https://4bid.it/guida-prenotazioni-dirette-hotel"
         keywords={["prenotazioni dirette", "direct booking", "hotel", "OTA", "commissioni"]}
       />
 

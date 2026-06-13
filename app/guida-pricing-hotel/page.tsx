@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     "Guida completa alle strategie di pricing per hotel: tariffe dinamiche, BAR, restrizioni, segmentazione. Checklist operativa e glossario.",
   keywords: "guida pricing hotel, strategie tariffarie hotel, dynamic pricing hotel, come definire prezzi hotel",
   alternates: {
-    canonical: "https://www.4bid.it/guida-pricing-hotel",
+    canonical: "https://4bid.it/guida-pricing-hotel",
   },
   openGraph: {
     title: "Guida Completa al Pricing Hotel | 4BID.IT",
     description:
       "Guida completa alle strategie di pricing per hotel: tariffe dinamiche, BAR, restrizioni, segmentazione.",
-    url: "https://www.4bid.it/guida-pricing-hotel",
+    url: "https://4bid.it/guida-pricing-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "article",
@@ -41,7 +41,7 @@ export default function GuidaPricingHotelPage() {
         type="Article"
         title="Guida Completa al Pricing Hotel"
         description="Guida completa alle strategie di pricing per hotel: tariffe dinamiche, BAR, restrizioni, segmentazione."
-        url="https://www.4bid.it/guida-pricing-hotel"
+        url="https://4bid.it/guida-pricing-hotel"
         keywords={["pricing hotel", "tariffe hotel", "dynamic pricing", "BAR", "strategie tariffarie"]}
       />
 

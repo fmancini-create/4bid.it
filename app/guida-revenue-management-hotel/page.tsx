@@ -18,13 +18,13 @@ export const metadata: Metadata = {
   keywords:
     "guida revenue management hotel, revenue management cos'è, come funziona revenue management, manuale revenue hotel",
   alternates: {
-    canonical: "https://www.4bid.it/guida-revenue-management-hotel",
+    canonical: "https://4bid.it/guida-revenue-management-hotel",
   },
   openGraph: {
     title: "Guida Completa al Revenue Management Hotel | 4BID.IT",
     description:
       "Guida completa al Revenue Management per hotel: cos'è, come funziona, checklist operativa, errori comuni e glossario.",
-    url: "https://www.4bid.it/guida-revenue-management-hotel",
+    url: "https://4bid.it/guida-revenue-management-hotel",
     siteName: "4BID.IT",
     locale: "it_IT",
     type: "article",
@@ -42,7 +42,7 @@ export default function GuidaRevenueManagementPage() {
         type="Article"
         title="Guida Completa al Revenue Management Hotel"
         description="Guida completa al Revenue Management per hotel: cos'è, come funziona, checklist operativa, errori comuni e glossario."
-        url="https://www.4bid.it/guida-revenue-management-hotel"
+        url="https://4bid.it/guida-revenue-management-hotel"
         keywords={["revenue management", "hotel", "guida", "pricing", "yield management"]}
       />
 

@@ -17,11 +17,11 @@ export const metadata = {
     title: "Prenota una Demo Gratuita | Revenue Management Hotel | 4BID.IT",
     description:
       "Scegli data e ora dal nostro calendario e prenota una demo gratuita per scoprire come aumentare i ricavi della tua struttura.",
-    url: "https://www.4bid.it/prenota-demo",
+    url: "https://4bid.it/prenota-demo",
     type: "website",
   },
   alternates: {
-    canonical: "https://www.4bid.it/prenota-demo",
+    canonical: "https://4bid.it/prenota-demo",
   },
 }
 
