@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react"
 // Google Calendar appointment scheduling page. The embeddable version is the
 // public booking URL with `?gv=true` appended.
 const CALENDAR_EMBED_URL =
-  "https://calendar.google.com/calendar/appointments/AcZssZ21kvY7_bf0xG1VfiCFPhGrlWCHAutf0aA6doc=?gv=true"
+  "https://calendar.google.com/calendar/appointments/schedules/AcZssZ21kvY7_bf0xG1VfiCFPhGrlWCHAutf0aA6doc=?gv=true"
 
 export function DemoCalendar() {
   const [isLoaded, setIsLoaded] = useState(false)
