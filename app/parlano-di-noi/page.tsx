@@ -3,7 +3,7 @@ import { Newspaper, ExternalLink, Calendar } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server-admin"
 
 export const metadata: Metadata = {
   title: "Parlano di noi - Rassegna stampa | 4BID",
@@ -46,7 +46,7 @@ function formatDate(value: string | null): string | null {
 }
 
 export default async function ParlanoDiNoiPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("press_mentions")
