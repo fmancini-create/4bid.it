@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { fetchAllNews, pressDedupHash } from "@/lib/press/google-news"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
+
+/** Rigenera la pagina pubblica così le modifiche compaiono subito. */
+function revalidatePublic() {
+  revalidatePath("/parlano-di-noi")
+}
 
 /** Verifica che la richiesta provenga dal super admin loggato. */
 async function assertSuperAdmin() {
@@ -74,6 +80,7 @@ export async function PATCH(request: Request) {
   if (action === "delete") {
     const { error } = await admin.from("press_mentions").delete().eq("id", id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    revalidatePublic()
     return NextResponse.json({ success: true })
   }
 
@@ -87,6 +94,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  revalidatePublic()
   return NextResponse.json({ success: true })
 }
 
@@ -132,6 +140,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  revalidatePublic()
   return NextResponse.json({ success: true })
 }
 

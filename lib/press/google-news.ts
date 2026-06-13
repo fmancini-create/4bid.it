@@ -253,5 +253,84 @@ export async function fetchAllNews(): Promise<{ items: RawNewsItem[]; errors: st
     }
   }
 
-  return { items: [...byHash.values()], errors }
+  // Risolve gli URL di redirect di Google News negli URL reali degli articoli.
+  const resolved = await Promise.all(
+    [...byHash.values()].map(async (item) => {
+      if (!isGoogleNewsRedirect(item.url)) return item
+      const real = await resolveGoogleNewsUrl(item.url)
+      return real ? { ...item, url: real } : item
+    }),
+  )
+
+  return { items: resolved, errors }
+}
+
+/** True se l'URL è un link di redirect interno di Google News. */
+export function isGoogleNewsRedirect(url: string): boolean {
+  return /news\.google\.com\/(rss\/)?articles\//i.test(url)
+}
+
+/**
+ * Risolve un link di redirect di Google News nell'URL reale dell'articolo.
+ *
+ * Il nuovo formato di Google News NON espone l'URL via redirect HTTP né via
+ * base64: bisogna leggere la pagina dell'articolo per estrarre signature
+ * (`data-n-a-sg`) e timestamp (`data-n-a-ts`), poi chiamare l'endpoint interno
+ * `batchexecute`. È best-effort: se qualcosa va storto ritorna null e il
+ * chiamante tiene il link originale.
+ */
+export async function resolveGoogleNewsUrl(redirectUrl: string): Promise<string | null> {
+  try {
+    const artId = redirectUrl.split("/articles/")[1]?.split("?")[0]
+    if (!artId) return null
+
+    const pageRes = await fetch(redirectUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      cache: "no-store",
+    })
+    if (!pageRes.ok) return null
+    const page = await pageRes.text()
+    const sig = page.match(/data-n-a-sg="([^"]+)"/)?.[1]
+    const ts = page.match(/data-n-a-ts="([^"]+)"/)?.[1]
+    if (!sig || !ts) return null
+
+    const inner = JSON.stringify([
+      "garturlreq",
+      [
+        ["X", "X", ["X", "X"], null, null, 1, 1, "IT:it", null, 1, null, null, null, null, null, 0, 1],
+        "X",
+        "X",
+        1,
+        [1, 1, 1],
+        1,
+        1,
+        null,
+        0,
+        0,
+        null,
+        0,
+      ],
+      artId,
+      ts,
+      sig,
+    ])
+    const reqBody = "f.req=" + encodeURIComponent(JSON.stringify([[["Fbv4je", inner, null, "generic"]]]))
+
+    const res = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      },
+      body: reqBody,
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    const txt = await res.text()
+    const urls = txt.match(/https?:\/\/[^\s\\"]+/g)
+    const real = urls?.find((u) => !u.includes("google.com"))
+    return real || null
+  } catch {
+    return null
+  }
 }
