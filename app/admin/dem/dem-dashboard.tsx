@@ -47,6 +47,7 @@ import {
   X,
   Ban,
   ShieldOff,
+  Flame,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -1750,6 +1751,18 @@ export default function DemDashboard({
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      asChild
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <a href={`/admin/dem/${campaign.id}`}>
+                        <Flame className="h-4 w-4 sm:mr-1.5" />
+                        <span className="hidden sm:inline">Solleciti caldi</span>
+                      </a>
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

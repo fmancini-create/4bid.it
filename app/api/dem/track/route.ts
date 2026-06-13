@@ -133,6 +133,59 @@ export async function GET(request: NextRequest) {
         .update(campaignUpdate)
         .eq("id", campaignId)
 
+      // --- Solleciti caldi: rilevamento click su link calendario/prenotazione ---
+      // Additivo: se la campagna e' un sollecito caldo (ha followup_id) e l'URL
+      // punta a un calendario, registro un evento "demo_booking_click" e aggiorno
+      // lo stato commerciale del contatto. Non blocca mai il redirect.
+      try {
+        const decoded = decodeURIComponent(url)
+        const isCalendarLink = /calendar\.google\.com|calendly\.com|cal\.com|\/prenota/i.test(decoded)
+        if (isCalendarLink) {
+          const { data: child } = await supabase
+            .from("dem_campaigns")
+            .select("followup_id, campaign_kind")
+            .eq("id", campaignId)
+            .single()
+          const followupId = (child as { followup_id?: string | null } | null)?.followup_id
+          const email = recipient?.email
+          if (followupId && email) {
+            await supabase.from("dem_tracking_events").insert({
+              campaign_id: campaignId,
+              recipient_id: recipientId,
+              email,
+              event_type: "demo_booking_click",
+              url: decoded,
+              ip_address: ip,
+              user_agent: userAgent,
+            })
+            const { data: fr } = await supabase
+              .from("dem_followup_recipients")
+              .select("id, calendar_clicks, commercial_status")
+              .eq("followup_id", followupId)
+              .eq("email", email)
+              .single()
+            if (fr) {
+              const nowIso = new Date().toISOString()
+              const next: Record<string, unknown> = {
+                calendar_clicks: ((fr as { calendar_clicks?: number }).calendar_clicks || 0) + 1,
+                last_calendar_click_at: nowIso,
+                updated_at: nowIso,
+              }
+              // Avanzamento "soft": chi era solo "interessato" e clicca il link
+              // mostra intento di prenotazione -> "demo_da_prenotare" (NON terminale,
+              // la sequenza prosegue). La conferma "demo_prenotata" resta MANUALE.
+              const status = (fr as { commercial_status?: string }).commercial_status
+              if (status === "interessato") {
+                next.commercial_status = "demo_da_prenotare"
+              }
+              await supabase.from("dem_followup_recipients").update(next).eq("id", (fr as { id: string }).id)
+            }
+          }
+        }
+      } catch (calErr) {
+        console.error("[v0] dem warm calendar-click tracking error:", calErr)
+      }
+
       // Redirect to the actual URL
       return NextResponse.redirect(decodeURIComponent(url))
     }

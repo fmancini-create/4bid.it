@@ -29,6 +29,10 @@
       "schedule": "0 7-16 * * *"
     },
     {
+      "path": "/api/cron/dem-warm-send",
+      "schedule": "30 7-16 * * *"
+    },
+    {
       "path": "/api/cron/fetch-press-mentions",
       "schedule": "0 8 * * *"
     }
