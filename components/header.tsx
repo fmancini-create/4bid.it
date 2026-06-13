@@ -64,6 +64,7 @@ export function Header() {
     { label: "PORTFOLIO", href: "/#portfolio" },
     { label: "REVENUE MANAGEMENT", href: "/cose-il-revenue-management" },
     { label: "BLOG", href: "/blog" },
+    { label: "PARLANO DI NOI", href: "/parlano-di-noi" },
     { label: "CHI SIAMO", href: "/#about" },
     { label: "PROGETTI IN SVILUPPO", href: "/#projects" },
     { label: "APP SVILUPPATE", href: "/#app" },
