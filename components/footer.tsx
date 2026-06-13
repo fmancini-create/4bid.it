@@ -94,6 +94,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/blog" title="Blog e Guide" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Blog e Guide
+                </Link>
+              </li>
+              <li>
                 <Link href="/#about" title="Chi Siamo" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Chi Siamo
                 </Link>

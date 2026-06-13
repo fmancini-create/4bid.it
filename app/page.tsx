@@ -12,15 +12,15 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
-  title: "4BID.IT - Holding di software e tool per il settore turismo | Suite HORECA",
+  title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
   description:
-    "4BID SRL è la holding italiana che sviluppa una suite completa di software, app e piattaforme per hotel, ristoranti e strutture ricettive: Santaddeo (revenue management), HotelProfit AI (controllo di gestione), Manubot, Hotel Accelerator e 4BID Ecomobility.",
+    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi, ottimizza prezzi e prenotazioni dirette. La suite 4BID: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator e Ecomobility.",
   keywords:
-    "4bid, 4bid srl, holding software turismo, suite horeca, santaddeo, hotelprofit ai, manubot, hotel accelerator, ecomobility, revenue management hotel, software gestionale hotel, controllo di gestione hotel, mobilità elettrica hotel",
+    "revenue management hotel, software revenue management, aumentare ricavi hotel, dynamic pricing hotel, consulenza revenue management, prenotazioni dirette hotel, software gestionale hotel, santaddeo, 4bid",
   openGraph: {
-    title: "4BID.IT - Holding di software e tool per il settore turismo",
+    title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
     description:
-      "L'ecosistema 4BID: una suite completa di software per il mondo HORECA — Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator e 4BID Ecomobility — più progetti verticali in altri settori.",
+      "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette. La suite 4BID per il mondo HORECA.",
     type: "website",
     url: "https://www.4bid.it",
     locale: "it_IT",
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "4BID.IT - Holding di software per il turismo",
-    description: "Suite HORECA: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator, 4BID Ecomobility",
+    title: "Revenue Management per Hotel e Strutture Ricettive | 4BID",
+    description: "Aumenta i ricavi del tuo hotel con consulenza e software di revenue management. La suite 4BID per il mondo HORECA.",
     images: ["https://www.4bid.it/og-image-4bid.jpg"],
   },
   alternates: {
