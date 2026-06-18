@@ -64,14 +64,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const platform of platformsToPublish) {
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-      // target_accounts è usato solo per Facebook (multi-pagina)
-      // LinkedIn e Instagram usano tutti gli account attivi della piattaforma
-      if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
-        platformAccounts = platformAccounts.filter(
+      // Se la campagna/post ha pagine di destinazione esplicite, rispettale su
+      // OGNI piattaforma (così MyPetSenseAI non finisce sulla pagina di Santaddeo
+      // e viceversa). Se nessun target è selezionato, si usano tutti gli account
+      // attivi della piattaforma (comportamento di default).
+      if (post.target_accounts && post.target_accounts.length > 0) {
+        const hasTargetForPlatform = platformAccounts.some(
           (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
         )
+        // Filtra solo se almeno una pagina di destinazione appartiene a questa
+        // piattaforma; altrimenti non applichiamo il filtro per non bloccare
+        // piattaforme che non hanno una destinazione specifica selezionata.
+        if (hasTargetForPlatform) {
+          platformAccounts = platformAccounts.filter(
+            (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
+          )
+        }
         console.log(
-          `[v0] facebook target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
+          `[v0] ${platform} target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
       }
 
