@@ -37,6 +37,7 @@ type TopicRule = {
   exclude_weekdays: number[] | null
   time_windows: Array<{ start: string; end: string }> | null
   platforms: string[] | null
+  target_accounts: string[] | null
   tone: string | null
   default_hashtags: string[] | null
   link_url: string | null
@@ -46,6 +47,15 @@ type TopicRule = {
   last_generated_at: string | null
   posts_generated_count: number
   include_hashtags: boolean | null
+}
+
+type SocialAccount = {
+  id: string
+  platform: "facebook" | "instagram" | "linkedin"
+  account_name: string
+  account_id: string | null
+  page_id?: string | null
+  is_active: boolean
 }
 
 const WEEKDAYS = [
@@ -58,6 +68,12 @@ const WEEKDAYS = [
   { v: 0, l: "Dom" },
 ]
 
+const PLATFORM_LABELS: Record<string, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+}
+
 function emptyForm(): Partial<TopicRule> {
   return {
     topic_name: "",
@@ -69,6 +85,7 @@ function emptyForm(): Partial<TopicRule> {
     exclude_weekdays: [],
     time_windows: [{ start: "09:30", end: "12:00" }],
     platforms: ["facebook", "linkedin"],
+    target_accounts: [],
     tone: "professional",
     default_hashtags: [],
     link_url: "",
@@ -79,7 +96,7 @@ function emptyForm(): Partial<TopicRule> {
   }
 }
 
-export function CampaignsManager() {
+export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[] }) {
   const { toast } = useToast()
   const [rules, setRules] = useState<TopicRule[]>([])
   const [loading, setLoading] = useState(true)
@@ -123,6 +140,7 @@ export function CampaignsManager() {
       time_windows: r.time_windows?.length ? r.time_windows : [{ start: "09:30", end: "12:00" }],
       exclude_weekdays: r.exclude_weekdays || [],
       platforms: r.platforms || ["facebook", "linkedin"],
+      target_accounts: r.target_accounts || [],
       default_hashtags: r.default_hashtags || [],
     })
     setHashtagsRaw((r.default_hashtags || []).join(" "))
@@ -207,7 +225,18 @@ export function CampaignsManager() {
     const cur = new Set(form.platforms || [])
     if (cur.has(p)) cur.delete(p)
     else cur.add(p)
-    setForm({ ...form, platforms: Array.from(cur) })
+    const nextPlatforms = Array.from(cur)
+    // Rimuovi dalle pagine selezionate quelle di piattaforme non piu' attive.
+    const validIds = new Set(accounts.filter((a) => nextPlatforms.includes(a.platform)).map((a) => a.id))
+    const nextTargets = (form.target_accounts || []).filter((id) => validIds.has(id))
+    setForm({ ...form, platforms: nextPlatforms, target_accounts: nextTargets })
+  }
+
+  function toggleAccount(id: string) {
+    const cur = new Set(form.target_accounts || [])
+    if (cur.has(id)) cur.delete(id)
+    else cur.add(id)
+    setForm({ ...form, target_accounts: Array.from(cur) })
   }
 
   function updateWindow(i: number, key: "start" | "end", val: string) {
@@ -296,6 +325,19 @@ export function CampaignsManager() {
                           </span>
                         )}
                         <span>· {r.posts_generated_count} generati</span>
+                        {(() => {
+                          const names = accounts
+                            .filter((a) => (r.target_accounts || []).includes(a.id))
+                            .map((a) => a.account_name)
+                          return (
+                            <span className="flex items-center gap-1">
+                              ·{" "}
+                              {names.length > 0
+                                ? `pagine: ${names.join(", ")}`
+                                : "tutte le pagine collegate"}
+                            </span>
+                          )
+                        })()}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -474,6 +516,75 @@ export function CampaignsManager() {
                   )
                 })}
               </div>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label>Pagine / account di destinazione</Label>
+              <p className="text-xs text-muted-foreground">
+                Scegli su quali pagine pubblicare. Se non selezioni nulla, la campagna usa tutti gli account attivi
+                delle piattaforme scelte.
+              </p>
+              {(() => {
+                const selectablePlatforms = form.platforms || []
+                const visibleAccounts = accounts.filter(
+                  (a) => a.is_active && selectablePlatforms.includes(a.platform),
+                )
+                if (selectablePlatforms.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground italic">Seleziona prima almeno una piattaforma.</p>
+                  )
+                }
+                if (visibleAccounts.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground italic">
+                      Nessuna pagina collegata per le piattaforme selezionate.
+                    </p>
+                  )
+                }
+                return (
+                  <div className="space-y-3">
+                    {selectablePlatforms.map((platform) => {
+                      const platformAccounts = visibleAccounts.filter((a) => a.platform === platform)
+                      if (platformAccounts.length === 0) return null
+                      return (
+                        <div key={platform} className="space-y-1.5">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {PLATFORM_LABELS[platform] || platform}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {platformAccounts.map((a) => {
+                              const on = (form.target_accounts || []).includes(a.id)
+                              return (
+                                <Button
+                                  key={a.id}
+                                  type="button"
+                                  size="sm"
+                                  variant={on ? "default" : "outline"}
+                                  onClick={() => toggleAccount(a.id)}
+                                  className="h-7 text-xs"
+                                >
+                                  {a.account_name}
+                                </Button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {(form.target_accounts || []).length > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs text-muted-foreground"
+                        onClick={() => setForm({ ...form, target_accounts: [] })}
+                      >
+                        Deseleziona tutte (usa tutti gli account)
+                      </Button>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -821,7 +821,7 @@ export default function SocialMediaDashboard({
             ))}
           </TabsContent>
           <TabsContent value="campaigns" className="space-y-4 mt-4">
-            <CampaignsManager />
+            <CampaignsManager accounts={accounts} />
           </TabsContent>
         </Tabs>
       </main>
