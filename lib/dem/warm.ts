@@ -466,14 +466,57 @@ export async function dispatchWarmStep(
       nome: r.nome,
       cognome: r.cognome,
       nome_azienda: r.nome_azienda,
-      tipo_contatto: "warm_followup",
+      // NB: dem_recipients ha un CHECK su tipo_contatto che ammette solo
+      // cliente/ex_cliente/potenziale/rappresentante. Sono contatti gia'
+      // toccati dalla campagna fredda -> "potenziale". (Usare un valore non
+      // ammesso faceva fallire l'insert in silenzio e la figlia restava vuota.)
+      tipo_contatto: "potenziale",
       send_status: "pending",
       open_count: 0,
       click_count: 0,
     }))
 
+  let insertedOk = 0
   for (let i = 0; i < toInsert.length; i += 100) {
-    await supabase.from("dem_recipients").insert(toInsert.slice(i, i + 100))
+    const chunk = toInsert.slice(i, i + 100)
+    const { error: insErr } = await supabase.from("dem_recipients").insert(chunk)
+    if (insErr) {
+      // Non fallire in silenzio: logga cosi' un eventuale vincolo violato e' visibile.
+      console.error("[v0] warm dispatch: insert destinatari figlia fallito:", insErr.message)
+    } else {
+      insertedOk += chunk.length
+    }
+  }
+  if (toInsert.length > 0 && insertedOk === 0) {
+    // Nessun destinatario inserito: inutile chiamare /api/dem/send (non invierebbe
+    // nulla) e soprattutto va segnalato come errore reale.
+    return {
+      childCampaignId: childId,
+      requested: 0,
+      sent: 0,
+      sendResult: { error: "insert destinatari fallito (0 inseriti)" },
+    }
+  }
+
+  // Se la figlia e' rimasta "appesa" in 'sending' (es. timeout di un lotto
+  // precedente), /api/dem/send rifiuterebbe l'invio. La sblocchiamo riportandola
+  // a 'draft' prima di rilanciare il lotto.
+  const { data: childState } = await supabase
+    .from("dem_campaigns")
+    .select("status, updated_at")
+    .eq("id", childId)
+    .single()
+  if (childState?.status === "sending") {
+    const updatedAt = childState.updated_at ? new Date(childState.updated_at as string).getTime() : 0
+    if (Date.now() - updatedAt > 15 * 60 * 1000) {
+      await supabase
+        .from("dem_campaigns")
+        .update({ status: "draft", updated_at: new Date().toISOString() })
+        .eq("id", childId)
+    } else {
+      // Lotto probabilmente in corso: riprova alla prossima esecuzione.
+      return { childCampaignId: childId, requested: 0, sent: 0, sendResult: { skipped: "sending_in_progress" } }
+    }
   }
 
   // Invio reale tramite l'endpoint collaudato.
