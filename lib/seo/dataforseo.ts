@@ -37,30 +37,39 @@ export function isDataForSeoConfigured(): boolean {
   return Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD)
 }
 
-/**
- * Idee keyword a partire da uno o più seed (es. "revenue management hotel").
- * Usa l'endpoint DataForSEO Labs "Keyword Ideas" (volumi e competizione reali).
- */
-export async function getKeywordIdeas(
-  seeds: string[],
-  opts: { locationCode?: number; languageCode?: string; limit?: number } = {},
-): Promise<KeywordIdea[]> {
-  const cleanSeeds = seeds.map((s) => s.trim()).filter(Boolean).slice(0, 20)
-  if (cleanSeeds.length === 0) return []
+function mapItem(it: Record<string, unknown>): KeywordIdea {
+  const keywordInfo = (it.keyword_info || {}) as Record<string, unknown>
+  return {
+    keyword: String(it.keyword || ""),
+    searchVolume: typeof keywordInfo.search_volume === "number" ? keywordInfo.search_volume : null,
+    competition: typeof keywordInfo.competition === "number" ? keywordInfo.competition : null,
+    competitionLevel: typeof keywordInfo.competition_level === "string" ? keywordInfo.competition_level : null,
+    cpc: typeof keywordInfo.cpc === "number" ? keywordInfo.cpc : null,
+  }
+}
 
+/** Esegue una singola chiamata "keyword_suggestions" per un seed (con retry sul rate limit). */
+async function fetchSuggestionsForSeed(
+  seed: string,
+  locationCode: number,
+  languageCode: string,
+  limit: number,
+  attempt = 0,
+): Promise<KeywordIdea[]> {
   const body = [
     {
-      keywords: cleanSeeds,
-      location_code: opts.locationCode ?? DEFAULT_LOCATION_CODE,
-      language_code: opts.languageCode ?? DEFAULT_LANGUAGE_CODE,
-      limit: Math.min(opts.limit ?? 200, 1000),
+      keyword: seed,
+      location_code: locationCode,
+      language_code: languageCode,
+      include_seed_keyword: true,
+      limit: Math.min(limit, 1000),
       order_by: ["keyword_info.search_volume,desc"],
     },
   ]
 
   let res: Response
   try {
-    res = await fetch("https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live", {
+    res = await fetch("https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_suggestions/live", {
       method: "POST",
       headers: { Authorization: authHeader(), "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -88,6 +97,11 @@ export async function getKeywordIdeas(
 
   // status_code 20000 = ok. Codici 402xx indicano problemi di credito/accesso.
   if (json.status_code && json.status_code !== 20000) {
+    // 40104 = rate limit: riprova fino a 2 volte con backoff.
+    if (json.status_code === 40104 && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)))
+      return fetchSuggestionsForSeed(seed, locationCode, languageCode, limit, attempt + 1)
+    }
     if (json.status_code >= 40200 && json.status_code < 40300) {
       throw new DataForSeoSetupError(`DataForSEO: ${json.status_message || "accesso o credito non disponibile"}.`)
     }
@@ -95,14 +109,42 @@ export async function getKeywordIdeas(
   }
 
   const items = json.tasks?.[0]?.result?.[0]?.items || []
-  return items.map((it) => {
-    const keywordInfo = (it.keyword_info || {}) as Record<string, unknown>
-    return {
-      keyword: String(it.keyword || ""),
-      searchVolume: typeof keywordInfo.search_volume === "number" ? keywordInfo.search_volume : null,
-      competition: typeof keywordInfo.competition === "number" ? keywordInfo.competition : null,
-      competitionLevel: typeof keywordInfo.competition_level === "string" ? keywordInfo.competition_level : null,
-      cpc: typeof keywordInfo.cpc === "number" ? keywordInfo.cpc : null,
+  return items.map(mapItem)
+}
+
+/**
+ * Idee keyword a partire da uno o più seed (es. "revenue management hotel").
+ * Usa l'endpoint DataForSEO Labs "Keyword Suggestions": restituisce keyword che
+ * CONTENGONO la frase seed (mirate al settore), con volumi e competizione reali.
+ * Itera su ogni seed e unisce i risultati deduplicandoli per keyword.
+ */
+export async function getKeywordIdeas(
+  seeds: string[],
+  opts: { locationCode?: number; languageCode?: string; limit?: number } = {},
+): Promise<KeywordIdea[]> {
+  const cleanSeeds = seeds.map((s) => s.trim()).filter(Boolean).slice(0, 20)
+  if (cleanSeeds.length === 0) return []
+
+  const locationCode = opts.locationCode ?? DEFAULT_LOCATION_CODE
+  const languageCode = opts.languageCode ?? DEFAULT_LANGUAGE_CODE
+  const perSeedLimit = Math.max(20, Math.floor((opts.limit ?? 200) / cleanSeeds.length))
+
+  const byKeyword = new Map<string, KeywordIdea>()
+  for (let i = 0; i < cleanSeeds.length; i++) {
+    const seed = cleanSeeds[i]
+    // piccola pausa tra i seed per non incappare nel rate limit (40104)
+    if (i > 0) await new Promise((r) => setTimeout(r, 1200))
+    const results = await fetchSuggestionsForSeed(seed, locationCode, languageCode, perSeedLimit)
+    for (const r of results) {
+      if (!r.keyword) continue
+      const key = r.keyword.toLowerCase()
+      // tieni la versione con volume più alto in caso di duplicati tra seed
+      const existing = byKeyword.get(key)
+      if (!existing || (r.searchVolume ?? -1) > (existing.searchVolume ?? -1)) {
+        byKeyword.set(key, r)
+      }
     }
-  })
+  }
+
+  return Array.from(byKeyword.values()).sort((a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1))
 }
