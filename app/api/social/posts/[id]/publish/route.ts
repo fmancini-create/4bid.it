@@ -64,25 +64,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const platform of platformsToPublish) {
       let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-      // Se la campagna/post ha pagine di destinazione esplicite, rispettale su
-      // OGNI piattaforma (così MyPetSenseAI non finisce sulla pagina di Santaddeo
-      // e viceversa). Se nessun target è selezionato, si usano tutti gli account
-      // attivi della piattaforma (comportamento di default).
+      // Se il post ha pagine di destinazione esplicite, esse sono una ALLOWLIST
+      // autorevole su TUTTE le piattaforme: si pubblica SOLO sulle pagine indicate.
+      // Se per questa piattaforma non c'è nessuna pagina target, NON si pubblica
+      // nulla su quella piattaforma (prima invece veniva spammata a tutti gli
+      // account: es. un post Santaddeo finiva sull'Instagram non correlato).
       if (post.target_accounts && post.target_accounts.length > 0) {
-        const hasTargetForPlatform = platformAccounts.some(
+        platformAccounts = platformAccounts.filter(
           (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
         )
-        // Filtra solo se almeno una pagina di destinazione appartiene a questa
-        // piattaforma; altrimenti non applichiamo il filtro per non bloccare
-        // piattaforme che non hanno una destinazione specifica selezionata.
-        if (hasTargetForPlatform) {
-          platformAccounts = platformAccounts.filter(
-            (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
-          )
-        }
         console.log(
-          `[v0] ${platform} target_accounts filter: ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
+          `[v0] ${platform} target_accounts filter (strict): ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
+        if (platformAccounts.length === 0) {
+          // Nessuna pagina target per questa piattaforma: salta senza errore.
+          console.log(`[v0] ${platform}: nessuna pagina di destinazione selezionata, skip.`)
+          continue
+        }
       }
 
       console.log(`[v0] Publishing to ${platform}, accounts:`, platformAccounts.length)
