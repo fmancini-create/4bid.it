@@ -207,33 +207,28 @@ export default function SocialMediaDashboard({
   }
 
   const generateAIImage = async () => {
-    if (!newPost.image_topic && !newPost.ai_topic) {
-      toast.error("Inserisci un argomento per l'immagine")
-      return
-    }
-
     setIsGeneratingImage(true)
     try {
       const response = await fetch("/api/social/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: newPost.image_topic || newPost.ai_topic || "hospitality, hotel, revenue management",
-          style: newPost.image_style,
+          topic: newPost.image_topic || newPost.ai_topic || "",
+          linkUrl: newPost.link_url || "",
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data?.error || "Errore nella generazione")
+        throw new Error(data?.error || "Errore nella selezione dell'immagine")
       }
 
       setNewPost((prev) => ({ ...prev, image_url: data.imageUrl }))
-      toast.success("Immagine generata con AI!")
+      toast.success("Logo del brand impostato")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Errore nella generazione dell'immagine"
-      console.error("[v0] generateAIImage error:", error)
+      const message = error instanceof Error ? error.message : "Errore nella selezione dell'immagine"
+      console.error("[v0] brand image error:", error)
       toast.error(message)
     } finally {
       setIsGeneratingImage(false)
@@ -868,47 +863,36 @@ export default function SocialMediaDashboard({
               </div>
             </div>
 
-            {/* AI Image Generation - Mobile optimized */}
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
+            {/* Brand image - usa SEMPRE un asset reale (logo), mai immagini AI */}
+            <div className="p-3 sm:p-4 bg-muted/50 rounded-lg space-y-3 border">
               <div className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                <span className="font-medium text-sm sm:text-base">Genera Immagine AI</span>
+                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <span className="font-medium text-sm sm:text-base">Immagine (logo del brand)</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Viene usato il logo reale del brand, scelto in automatico dal link o dall&apos;argomento. Nessuna
+                immagine generata dall&apos;AI.
+              </p>
               <div className="flex flex-col gap-2">
                 <Input
-                  placeholder="Descrivi l'immagine..."
+                  placeholder="Brand o argomento (es. Santaddeo, Manubot, 4BID...)"
                   value={newPost.image_topic}
                   onChange={(e) => setNewPost((prev) => ({ ...prev, image_topic: e.target.value }))}
                   className="text-sm"
                 />
-                <div className="flex gap-2">
-                  <Select
-                    value={newPost.image_style}
-                    onValueChange={(value) => setNewPost((prev) => ({ ...prev, image_style: value }))}
-                  >
-                    <SelectTrigger className="flex-1 text-sm">
-                      <SelectValue placeholder="Stile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="professional">Professionale</SelectItem>
-                      <SelectItem value="creative">Creativo</SelectItem>
-                      <SelectItem value="minimal">Minimale</SelectItem>
-                      <SelectItem value="luxury">Lusso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={generateAIImage}
-                    disabled={isGeneratingImage}
-                    variant="outline"
-                    className="shrink-0 border-purple-300 hover:bg-purple-100 dark:border-purple-700 dark:hover:bg-purple-900/50 bg-transparent"
-                  >
-                    {isGeneratingImage ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ImageIcon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  onClick={generateAIImage}
+                  disabled={isGeneratingImage}
+                  variant="outline"
+                  className="w-full bg-transparent"
+                >
+                  {isGeneratingImage ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  <span className="ml-2">Usa logo del brand</span>
+                </Button>
               </div>
 
               {newPost.image_url && (

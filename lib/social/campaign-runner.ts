@@ -1,11 +1,6 @@
 import { generateText } from "ai"
-import * as fal from "@fal-ai/serverless-client"
-import { put } from "@vercel/blob"
 import type { SupabaseClient } from "@supabase/supabase-js"
-
-if (process.env.FAL_KEY) {
-  fal.config({ credentials: process.env.FAL_KEY })
-}
+import { resolveBrandImageUrl } from "@/lib/social/brand-assets"
 
 export type CampaignRule = {
   id: string
@@ -137,85 +132,20 @@ Rispondi SOLO con il testo del post, senza prefissi tipo "Ecco il post:".`,
   return text.trim()
 }
 
-// Marchi/parole che NON devono mai finire come soggetto letterale dell'immagine:
-// "Santaddeo" contiene "Santa" e fa generare Babbo Natale; i nomi prodotto vanno
-// descritti per concetto, non come testo da disegnare.
-const IMAGE_NEGATIVE_GUARDRAILS =
-  "Important: do NOT depict any text, words, letters, captions or logos. " +
-  "Do NOT depict Santa Claus, Christmas, holidays, snow, gifts or any seasonal/festive theme. " +
-  "Do NOT try to render brand or product names literally. Photorealistic, clean, modern business aesthetic."
-
 /**
- * Costruisce un prompt immagine pulito e brand-safe a partire da topic + stile.
- * Usa l'LLM per trasformare il concetto in una scena visiva in inglese, evitando
- * di passare il nome del brand grezzo (es. "Santaddeo" -> Babbo Natale).
- * Fallback deterministico (con sanitizzazione del nome) se l'LLM fallisce.
- */
-async function buildImagePrompt(rule: CampaignRule): Promise<string> {
-  const style = rule.image_style_prompt || ""
-  try {
-    const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
-      prompt: `Sei un art director. Descrivi in INGLESE, in una sola frase (max 40 parole), una scena fotografica realistica per un post social B2B sul seguente argomento:
-"${rule.topic_name}"
-Indicazioni di stile/contesto: ${style || "professionale, tecnologico, business turismo/hotellerie"}
-
-Regole TASSATIVE:
-- NON includere testo, parole, lettere o loghi nell'immagine.
-- NON rappresentare Babbo Natale, Natale, neve, regali o temi festivi/stagionali.
-- NON disegnare il nome del brand o del prodotto come testo: descrivi il CONCETTO (es. hotel, dashboard, gestionale, manutenzione, animali domestici, fogli di calcolo) non il nome.
-- Scena concreta e professionale (persone al lavoro, hotel, tecnologia, ufficio, ecc.).
-
-Rispondi SOLO con la descrizione in inglese.`,
-      maxOutputTokens: 120,
-    })
-    const scene = text.trim().replace(/^["']|["']$/g, "")
-    if (scene) return `${scene}. ${IMAGE_NEGATIVE_GUARDRAILS} High quality, 4K, detailed.`
-  } catch (e) {
-    console.error("[v0] buildImagePrompt LLM failed, using fallback:", e instanceof Error ? e.message : e)
-  }
-  // Fallback: usa lo stile (che descrive il prodotto) e NON il topic_name grezzo.
-  return `${style || "modern business technology scene"}. ${IMAGE_NEGATIVE_GUARDRAILS} High quality, 4K, detailed.`
-}
-
-/**
- * Genera l'immagine via fal.ai e la salva su Vercel Blob (URL persistente).
- * Ritorna null se image_style_prompt e' vuoto o se la generazione fallisce.
+ * Immagine del post: SEMPRE un asset reale (logo / og-image ufficiale) scelto in
+ * base al brand della campagna. MAI immagini generate dall'AI (in passato il
+ * modello generava Babbo Natale dal nome "Santaddeo").
+ * Ritorna null solo se la campagna non prevede immagine (image_style_prompt vuoto),
+ * mantenendo cosi' la possibilita' di post solo testo/link.
  */
 export async function generatePostImage(rule: CampaignRule): Promise<string | null> {
-  if (!rule.image_style_prompt || !process.env.FAL_KEY) return null
-  try {
-    const prompt = await buildImagePrompt(rule)
-    const result = (await fal.subscribe("fal-ai/flux/schnell", {
-      input: {
-        prompt,
-        image_size: "landscape_16_9",
-        num_inference_steps: 4,
-        num_images: 1,
-      },
-    })) as { images?: { url: string }[] }
-    const url = result.images?.[0]?.url
-    if (!url) return null
-
-    if (!process.env.BLOB_READ_WRITE_TOKEN) return url
-    try {
-      const r = await fetch(url)
-      if (!r.ok) return url
-      const blob = await r.blob()
-      const out = await put(
-        `social-media/campaign-${rule.id}-${Date.now()}.jpg`,
-        blob,
-        { access: "public", contentType: "image/jpeg" },
-      )
-      return out.url
-    } catch (e) {
-      console.error("[v0] campaign image blob upload failed:", e instanceof Error ? e.message : e)
-      return url
-    }
-  } catch (e) {
-    console.error("[v0] campaign image generation failed:", e instanceof Error ? e.message : e)
-    return null
-  }
+  if (!rule.image_style_prompt) return null
+  return resolveBrandImageUrl({
+    linkUrl: rule.link_url,
+    topic: rule.topic_name,
+    notes: rule.notes,
+  })
 }
 
 /**
