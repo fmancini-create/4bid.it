@@ -18,6 +18,7 @@ import {
   Printer,
   Video,
   Newspaper,
+  Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -144,6 +145,14 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
           >
             <Share2 className="h-5 w-5 text-primary shrink-0" />
             <span className="font-medium text-sm sm:text-base">Social Media</span>
+          </a>
+
+          <a
+            href="/admin/seo"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+          >
+            <Search className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Monitor SEO</span>
           </a>
 
           <a

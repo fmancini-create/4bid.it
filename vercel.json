@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/fetch-press-mentions",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/seo-snapshot",
+      "schedule": "0 7 * * *"
     }
   ]
 }
