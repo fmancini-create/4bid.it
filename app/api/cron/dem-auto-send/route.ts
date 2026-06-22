@@ -73,11 +73,15 @@ export async function GET(request: NextRequest) {
 
     // Campagne in coda con invio automatico attivo. Lo stato 'draft' e' quello in cui
     // il send lascia la campagna finche' restano destinatari pendenti.
+    //
+    // Includiamo anche lo stato 'sending': se un lotto va in timeout (maxDuration)
+    // la campagna resta "appesa" in 'sending' e il cron non la riprenderebbe mai
+    // piu'. Recuperiamo quelle stantie (updated_at piu' vecchio di STALE_SENDING_MS).
     const { data: campaigns, error: campErr } = await supabase
       .from("dem_campaigns")
-      .select("id, name, status, auto_send, auto_started_on, daily_quota_cold")
+      .select("id, name, status, auto_send, auto_started_on, daily_quota_cold, updated_at")
       .eq("auto_send", true)
-      .in("status", ["draft"])
+      .in("status", ["draft", "sending"])
 
     if (campErr) {
       console.error("[v0] dem-auto-send: errore lettura campagne", campErr.message)
@@ -86,8 +90,27 @@ export async function GET(request: NextRequest) {
 
     const todayStart = utcStartOfToday()
     const results: Array<Record<string, unknown>> = []
+    // Un lotto reale dura al massimo ~300s: oltre i 15 minuti senza aggiornamenti
+    // la campagna 'sending' e' sicuramente bloccata (timeout) e va recuperata.
+    const STALE_SENDING_MS = 15 * 60 * 1000
 
     for (const campaign of campaigns || []) {
+      // Recupero campagne bloccate in 'sending' a causa di un timeout precedente.
+      if (campaign.status === "sending") {
+        const updatedAt = campaign.updated_at ? new Date(campaign.updated_at as string).getTime() : 0
+        const isStale = Date.now() - updatedAt > STALE_SENDING_MS
+        if (!isStale) {
+          // Un lotto e' probabilmente in corso: non interferire.
+          results.push({ campaign: campaign.id, skipped: "sending_in_progress" })
+          continue
+        }
+        // Sblocca: riporta a 'draft' cosi' il flusso normale puo' riprendere.
+        await supabase
+          .from("dem_campaigns")
+          .update({ status: "draft", updated_at: new Date().toISOString() })
+          .eq("id", campaign.id)
+        console.log(`[v0] dem-auto-send: recuperata campagna bloccata in sending: ${campaign.id}`)
+      }
       // Quanti destinatari restano in coda?
       const { count: pendingTotal } = await supabase
         .from("dem_recipients")
