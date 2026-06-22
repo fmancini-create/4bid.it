@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
@@ -388,6 +389,7 @@ export default function ComeAumentareRicaviHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="come-aumentare-ricavi-hotel" />
       <Footer />
     </div>
   )

@@ -9,6 +9,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
   title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
@@ -356,6 +357,7 @@ export default function DynamicPricingPage() {
             <p className="text-sm mt-6 opacity-75">Nessun impegno • Setup in 48 ore • ROI garantito in 90 giorni</p>
           </div>
         </section>
+        <RelatedSolutions currentSlug="dynamic-pricing-hotel" />
       </main>
       <Footer />
     </>

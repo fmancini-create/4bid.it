@@ -1,8 +1,10 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Facebook, Instagram, Linkedin, Mail, MapPin } from "lucide-react"
+import { CLUSTER_ORDER, getSolutionsByCluster } from "@/lib/seo/solutions"
 
 export function Footer() {
+  const solutionsByCluster = getSolutionsByCluster()
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="container mx-auto px-4">
@@ -119,6 +121,40 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* Soluzioni di Revenue Management - link interni per de-orfanizzare le landing */}
+        <div className="pt-8 border-t border-gray-800">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6">
+            <h4 className="text-lg font-semibold">Soluzioni di Revenue Management</h4>
+            <Link
+              href="/soluzioni-revenue-management"
+              title="Tutte le soluzioni di revenue management"
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Vedi tutte le soluzioni →
+            </Link>
+          </div>
+          <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+            {CLUSTER_ORDER.map((cluster) => (
+              <div key={cluster}>
+                <p className="text-sm font-semibold text-white mb-3">{cluster}</p>
+                <ul className="space-y-2">
+                  {solutionsByCluster[cluster].map((s) => (
+                    <li key={s.slug}>
+                      <Link
+                        href={`/${s.slug}`}
+                        title={s.title}
+                        className="text-gray-400 hover:text-white transition-colors text-sm"
+                      >
+                        {s.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
 

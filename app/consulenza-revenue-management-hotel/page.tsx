@@ -6,6 +6,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
 
@@ -351,6 +352,7 @@ export default function ConsulenzaRevenueManagementPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="consulenza-revenue-management-hotel" />
       <Footer />
     </div>
   )

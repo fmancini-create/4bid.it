@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Prenotazioni Dirette Hotel | Aumenta Direct Booking e Riduci OTA | 4BID.IT",
@@ -301,6 +302,7 @@ export default function PrenotazioniDiretteHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="prenotazioni-dirette-hotel" />
       <Footer />
     </div>
   )

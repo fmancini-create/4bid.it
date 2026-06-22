@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
@@ -374,6 +375,7 @@ export default function ForecastBudgetingHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="forecast-budgeting-hotel" />
       <Footer />
     </div>
   )

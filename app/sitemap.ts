@@ -77,12 +77,49 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // Progetti
-  const progetti = ["santaddeo", "manubot", "risparmio-compulsivo", "autoexel", "hotel-accelerator"].map((slug) => ({
+  const progetti = [
+    "santaddeo",
+    "manubot",
+    "risparmio-compulsivo",
+    "autoexel",
+    "hotel-accelerator",
+    "hotelprofit-ai",
+    "mypetsenseai",
+  ].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
+
+  // Ecomobility (linea prodotto a sé)
+  const ecomobility = [
+    "ecomobility/come-funziona",
+    "ecomobility/piattaforma-ecomobility",
+    "ecomobility/noleggio-mobilita-elettrica-hotel",
+    "ecomobility/registra-struttura",
+  ].map((slug) => ({
+    url: `${baseUrl}/${slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }))
+
+  // Hub soluzioni (pagina pilastro) + eventi
+  const hubAndEvents = [
+    {
+      url: `${baseUrl}/soluzioni-revenue-management`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/eventi/santaddeo-launch`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    },
+  ]
 
   // Altre pagine
   const otherPages = [
@@ -136,5 +173,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  return [homepage, blogIndex, ...blogPosts, ...guidePages, ...landingPages, ...progetti, ...otherPages]
+  return [
+    homepage,
+    blogIndex,
+    ...blogPosts,
+    ...guidePages,
+    ...landingPages,
+    ...progetti,
+    ...ecomobility,
+    ...hubAndEvents,
+    ...otherPages,
+  ]
 }

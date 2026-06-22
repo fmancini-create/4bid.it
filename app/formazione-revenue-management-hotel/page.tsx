@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
@@ -292,6 +293,7 @@ export default function FormazioneRevenueManagementHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="formazione-revenue-management-hotel" />
       <Footer />
     </div>
   )

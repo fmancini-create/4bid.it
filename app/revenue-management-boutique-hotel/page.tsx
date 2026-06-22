@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Revenue Management Boutique Hotel | Strategie per Hotel di Charme | 4BID.IT",
@@ -328,6 +329,7 @@ export default function RevenueManagementBoutiqueHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="revenue-management-boutique-hotel" />
       <Footer />
     </div>
   )
