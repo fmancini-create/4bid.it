@@ -50,7 +50,14 @@ export async function POST(request: NextRequest) {
 
     const styleModifier = stylePrompts[style] || stylePrompts.professional
 
-    const prompt = `${topic}, ${styleModifier}, high quality, social media post image, 4K, detailed, no text overlay, suitable for business social media`
+    // Guardrail anti-Babbo Natale / anti-testo: alcuni topic (es. il brand
+    // "Santaddeo", che contiene "Santa") inducono il modello a generare Babbo
+    // Natale o a "scrivere" il nome. Vietiamo esplicitamente testo/loghi e
+    // qualsiasi tema natalizio/festivo.
+    const guardrails =
+      "no text, no words, no letters, no logos, no Santa Claus, no Christmas, no holidays, no snow, no festive or seasonal theme"
+
+    const prompt = `${topic}, ${styleModifier}, high quality, social media post image, 4K, detailed, suitable for business social media. Important: ${guardrails}.`
 
     console.log("[v0] Generating image with prompt:", prompt)
 
