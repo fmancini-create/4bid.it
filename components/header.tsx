@@ -62,7 +62,7 @@ export function Header() {
     { label: "HOME", href: "/" },
     { label: "DOVE INTERVENIAMO", href: "/#services" },
     { label: "PORTFOLIO", href: "/#portfolio" },
-    { label: "REVENUE MANAGEMENT", href: "/cose-il-revenue-management" },
+    { label: "REVENUE MANAGEMENT", href: "/soluzioni-revenue-management" },
     { label: "BLOG", href: "/blog" },
     { label: "PARLANO DI NOI", href: "/parlano-di-noi" },
     { label: "CHI SIAMO", href: "/#about" },

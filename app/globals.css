@@ -114,6 +114,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+  /* Colori brand 4BID usati dalle landing/hero (prima non definiti nel tema v4:
+     gli hero restavano bianchi e le CTA invisibili). */
+  --color-primary-blue: #5b9bd5;
+  --color-blue-grey: #3d5a73;
+  --color-yellow: #f4b942;
 }
 
 @layer base {

@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2025 | 4BID.IT",
@@ -329,6 +330,7 @@ export default function StrategiePricingHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="strategie-pricing-hotel" />
       <Footer />
     </div>
   )

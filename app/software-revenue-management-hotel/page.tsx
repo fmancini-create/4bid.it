@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Software Revenue Management Hotel | Soluzioni RMS Professionali | 4BID.IT",
@@ -330,6 +331,7 @@ export default function SoftwareRevenueManagementHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="software-revenue-management-hotel" />
       <Footer />
     </div>
   )

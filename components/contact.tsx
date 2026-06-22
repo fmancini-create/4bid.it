@@ -34,6 +34,18 @@ export default function Contact() {
       const result = await response.json()
 
       if (response.ok) {
+        // Conversione: notifica GTM (dataLayer) e GA4 (gtag) per tracciare i lead.
+        if (typeof window !== "undefined") {
+          const w = window as unknown as {
+            dataLayer?: Array<Record<string, unknown>>
+            gtag?: (...args: unknown[]) => void
+          }
+          w.dataLayer = w.dataLayer || []
+          w.dataLayer.push({ event: "generate_lead", form: "contact", lead_source: "website_contact_form" })
+          if (typeof w.gtag === "function") {
+            w.gtag("event", "generate_lead", { form: "contact" })
+          }
+        }
         toast({
           title: "Messaggio inviato!",
           description: "Grazie per averci contattato. Ti risponderemo al più presto.",
@@ -67,6 +79,9 @@ export default function Contact() {
 
   return (
     <section id="contact" className="py-20 bg-gray-50">
+      {/* Ancora alternativa: le landing rimandano a /#contatti */}
+      <span id="contatti" aria-hidden="true" className="block -mt-20 pt-20" />
+
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-4">Contattaci</h2>

@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Revenue Management Resort di Lusso | 4BID.IT",
@@ -305,6 +306,7 @@ export default function RevenueManagementResortLussoPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="revenue-management-resort-lusso" />
       <Footer />
     </div>
   )

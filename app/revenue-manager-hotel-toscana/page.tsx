@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Revenue Manager Hotel Toscana | Consulenza Firenze, Siena, Pisa | 4BID.IT",
@@ -354,6 +355,7 @@ export default function RevenueManagerHotelToscanaPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="revenue-manager-hotel-toscana" />
       <Footer />
     </div>
   )

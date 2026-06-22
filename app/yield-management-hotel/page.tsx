@@ -7,6 +7,7 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
   title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
@@ -322,6 +323,7 @@ export default function YieldManagementHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="yield-management-hotel" />
       <Footer />
     </div>
   )

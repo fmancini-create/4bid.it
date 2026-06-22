@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
@@ -403,6 +404,7 @@ export default function ADRHotelComeAumentarloPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="adr-hotel-come-aumentarlo" />
       <Footer />
     </div>
   )

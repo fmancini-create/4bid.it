@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
@@ -329,6 +330,7 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="gestione-canali-distribuzione-hotel" />
       <Footer />
     </div>
   )

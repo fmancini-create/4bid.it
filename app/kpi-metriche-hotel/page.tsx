@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
@@ -308,6 +309,7 @@ export default function KPIMetricheHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="kpi-metriche-hotel" />
       <Footer />
     </div>
   )

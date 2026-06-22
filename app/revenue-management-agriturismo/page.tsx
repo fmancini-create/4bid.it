@@ -7,6 +7,7 @@ import { CheckCircle2, TrendingUp, Users, Calendar, PieChart, Target } from "luc
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
   title: "Revenue Management per Agriturismi | Ottimizza Prezzi e Occupazione | 4BID.IT",
@@ -373,6 +374,7 @@ export default function RevenueMangementAgriturismPage() {
             </p>
           </div>
         </section>
+        <RelatedSolutions currentSlug="revenue-management-agriturismo" />
       </main>
       <Footer />
     </>

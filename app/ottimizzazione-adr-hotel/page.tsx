@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Ottimizzazione ADR Hotel | Come Aumentare Tariffa Media | 4BID.IT",
@@ -368,6 +369,7 @@ export default function OttimizzazioneADRHotelPage() {
         </div>
       </section>
 
+      <RelatedSolutions currentSlug="ottimizzazione-adr-hotel" />
       <Footer />
     </div>
   )
