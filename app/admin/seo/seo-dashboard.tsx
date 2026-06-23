@@ -155,7 +155,11 @@ export default function SeoDashboard({
       })
       const json = await res.json()
       if (json.error) {
-        toast({ title: "Errore", description: json.error, variant: "destructive" })
+        toast({
+          title: "Errore",
+          description: json.detail ? `${json.error} (${json.detail})` : json.error,
+          variant: "destructive",
+        })
       } else {
         toast({ title: "Suggerimento generato", description: "Trovi la proposta nella tab Suggerimenti." })
         setGenOpen(false)

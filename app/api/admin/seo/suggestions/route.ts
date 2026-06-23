@@ -73,12 +73,25 @@ Rispondi SOLO con un oggetto JSON valido (nessun testo extra, nessun markdown), 
 
   let parsed: Record<string, string> = {}
   try {
-    const { text } = await generateText({ model: "openai/gpt-4o", prompt, temperature: 0.4 })
-    const jsonStr = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)
-    parsed = JSON.parse(jsonStr)
+    const { text } = await generateText({
+      model: "openai/gpt-4o",
+      prompt,
+      temperature: 0.4,
+      maxOutputTokens: 900,
+    })
+    const start = text.indexOf("{")
+    const end = text.lastIndexOf("}")
+    if (start === -1 || end === -1) {
+      throw new Error("La risposta del modello non contiene JSON valido")
+    }
+    parsed = JSON.parse(text.slice(start, end + 1))
   } catch (err) {
-    console.log("[v0] seo suggestion AI error:", err instanceof Error ? err.message : err)
-    return NextResponse.json({ error: "Generazione del suggerimento non riuscita. Riprova." }, { status: 502 })
+    const detail = err instanceof Error ? err.message : String(err)
+    console.log("[v0] seo suggestion AI error:", detail)
+    return NextResponse.json(
+      { error: "Generazione del suggerimento non riuscita.", detail },
+      { status: 502 },
+    )
   }
 
   const admin = createAdminClient()
