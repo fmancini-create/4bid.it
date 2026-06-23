@@ -7,6 +7,7 @@ import AdminInvestorInquiries from "@/components/admin-investor-inquiries"
 import AdminNavigation from "@/components/admin-navigation"
 import { Button } from "@/components/ui/button"
 import TriggerSnapshotButton from "@/components/trigger-snapshot-button"
+import AdminLogoutButton from "@/components/admin-logout-button"
 import { RefreshCw } from "lucide-react"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
@@ -112,19 +113,7 @@ export default async function AdminPage() {
                 <span className="hidden sm:inline ml-2">Aggiorna</span>
               </Button>
             </form>
-            <form
-              action={async () => {
-                "use server"
-                const supabase = await createClient()
-                await supabase.auth.signOut()
-                redirect("/admin/login")
-              }}
-            >
-              <Button type="submit" variant="destructive" size="sm" className="h-8 w-8 sm:w-auto px-0 sm:px-3">
-                <span className="hidden sm:inline">Esci</span>
-                <span className="sm:hidden text-xs">X</span>
-              </Button>
-            </form>
+            <AdminLogoutButton />
           </div>
         </div>
       </div>
