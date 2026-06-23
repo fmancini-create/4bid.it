@@ -70,7 +70,16 @@ export async function POST(request: NextRequest) {
       }))
 
     if (rows.length > 0) {
-      await admin.from("seo_keyword_research").upsert(rows, { onConflict: "keyword,location_code,language_code" })
+      const { error: upsertError } = await admin
+        .from("seo_keyword_research")
+        .upsert(rows, { onConflict: "keyword,location_code,language_code" })
+      if (upsertError) {
+        console.log("[v0] seo keywords upsert error:", upsertError.message)
+        return NextResponse.json(
+          { error: "Errore nel salvataggio delle keyword.", detail: upsertError.message },
+          { status: 500 },
+        )
+      }
     }
 
     return NextResponse.json({ configured: true, inserted: rows.length, keywords: ideas })
