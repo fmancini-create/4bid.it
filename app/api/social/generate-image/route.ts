@@ -1,115 +1,38 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
-import * as fal from "@fal-ai/serverless-client"
-import { put } from "@vercel/blob"
+import { resolveBrand, toAbsoluteAssetUrl } from "@/lib/social/brand-assets"
 
-// Aumenta il timeout: flux/schnell richiede 5-15s + upload su Blob
-export const maxDuration = 60
-
-// Configure fal client
-fal.config({
-  credentials: process.env.FAL_KEY,
-})
-
+/**
+ * "Immagine" per un post social.
+ *
+ * REGOLA: niente immagini generate dall'AI. Restituiamo SEMPRE un asset reale
+ * (logo / og-image ufficiale) scelto in base al brand indicato da topic/link.
+ * Manteniamo il contratto { imageUrl } usato dalla dashboard.
+ */
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Generate image API called")
-
-    if (!process.env.FAL_KEY) {
-      console.error("[v0] FAL_KEY env var missing")
-      return NextResponse.json(
-        { error: "Servizio AI non configurato (FAL_KEY mancante)" },
-        { status: 500 },
-      )
-    }
-
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      console.log("[v0] Generate image: user not authenticated")
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
     }
 
-    const { topic, style } = await request.json()
-    console.log("[v0] Generate image request:", { topic, style })
+    const { topic, linkUrl, notes } = await request.json()
 
-    if (!topic) {
-      return NextResponse.json({ error: "Topic richiesto" }, { status: 400 })
-    }
+    const brand = resolveBrand({ topic, linkUrl, notes })
+    const imageUrl = toAbsoluteAssetUrl(brand.asset)
 
-    // Costruisci il prompt per l'immagine in base al topic e allo stile
-    const stylePrompts: Record<string, string> = {
-      professional: "corporate, clean, modern, professional photography style, business aesthetic",
-      creative: "artistic, creative, vibrant colors, dynamic composition, eye-catching",
-      minimal: "minimalist, clean lines, simple, elegant, white space, modern design",
-      luxury: "luxurious, high-end, premium, sophisticated, elegant, refined",
-    }
+    console.log("[v0] Social image resolved to real asset:", { brand: brand.key, imageUrl })
 
-    const styleModifier = stylePrompts[style] || stylePrompts.professional
-
-    // Guardrail anti-Babbo Natale / anti-testo: alcuni topic (es. il brand
-    // "Santaddeo", che contiene "Santa") inducono il modello a generare Babbo
-    // Natale o a "scrivere" il nome. Vietiamo esplicitamente testo/loghi e
-    // qualsiasi tema natalizio/festivo.
-    const guardrails =
-      "no text, no words, no letters, no logos, no Santa Claus, no Christmas, no holidays, no snow, no festive or seasonal theme"
-
-    const prompt = `${topic}, ${styleModifier}, high quality, social media post image, 4K, detailed, suitable for business social media. Important: ${guardrails}.`
-
-    console.log("[v0] Generating image with prompt:", prompt)
-
-    // Generate image using fal schnell model
-    const result = (await fal.subscribe("fal-ai/flux/schnell", {
-      input: {
-        prompt,
-        image_size: "landscape_16_9",
-        num_inference_steps: 4,
-        num_images: 1,
-      },
-    })) as { images?: { url: string }[] }
-
-    const falImageUrl = result.images?.[0]?.url
-
-    if (!falImageUrl) {
-      console.error("[v0] Fal AI returned no image:", JSON.stringify(result))
-      return NextResponse.json(
-        { error: "Nessuna immagine generata dal modello AI" },
-        { status: 502 },
-      )
-    }
-
-    console.log("[v0] Generated image URL from fal:", falImageUrl)
-
-    // L'URL di fal e' temporaneo (CDN che scade). Salviamo su Vercel Blob per persistenza.
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      try {
-        const imgResponse = await fetch(falImageUrl)
-        if (!imgResponse.ok) {
-          throw new Error(`Fetch fal image failed: ${imgResponse.status}`)
-        }
-        const imgBlob = await imgResponse.blob()
-        const blob = await put(`social-media/${Date.now()}-${user.id}.jpg`, imgBlob, {
-          access: "public",
-          contentType: "image/jpeg",
-        })
-        console.log("[v0] Image saved to Blob:", blob.url)
-        return NextResponse.json({ imageUrl: blob.url })
-      } catch (blobError) {
-        console.error("[v0] Blob upload failed, returning fal URL:", blobError)
-        // Fallback: ritorna l'URL fal originale (anche se temporaneo)
-        return NextResponse.json({ imageUrl: falImageUrl })
-      }
-    }
-
-    return NextResponse.json({ imageUrl: falImageUrl })
+    return NextResponse.json({ imageUrl, brand: brand.key })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto"
-    console.error("[v0] Error generating image:", errorMessage, error)
+    console.error("[v0] Error resolving brand image:", errorMessage)
     return NextResponse.json(
-      { error: `Errore nella generazione dell'immagine: ${errorMessage}` },
+      { error: `Errore nella selezione dell'immagine: ${errorMessage}` },
       { status: 500 },
     )
   }
