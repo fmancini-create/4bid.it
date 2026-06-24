@@ -74,64 +74,73 @@ export interface AudienceConfig {
 
 // ---------------------------------------------------------------------------
 // Template email di default per ciascuno step (tono progressivamente piu' diretto).
-// Riusa lo stile delle DEM esistenti (navy/oro/teal). I token {{nome_azienda}} e
-// {{unsubscribe}} sono gestiti dal send. La CTA punta al link calendario.
+// DESIGN IDENTICO all'invito demo "Hotel - Invito Demo Santaddeo" (header con
+// logo 320px e bordo teal #2bb3a3, corpo 16px/1.7, blocco contatti testuale,
+// footer identico). Cambiano solo i TESTI (intro/body/CTA) da sollecito.
+// I token {{nome_azienda}} e {{unsubscribe}} sono gestiti dal send.
 // ---------------------------------------------------------------------------
 function buildFollowupHtml(opts: {
   intro: string
   body: string
   ctaLabel: string
   ctaUrl: string
+  preheader?: string
 }): string {
   return `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Santaddeo · Solleciti</title>
+<title>Santaddeo</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#2d2d2d;">
+  <!-- Preheader (hidden preview text) -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f4f4f2;">
+    ${opts.preheader || ""}
+  </div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
           <tr>
-            <td align="center" style="background-color:#ffffff;padding:30px 32px 20px;border-bottom:3px solid #c8a45c;">
-              <img src="https://www.4bid.it/santaddeo-logo.png" alt="Santaddeo · Hotel Accelerator" width="250" style="display:block;width:250px;max-width:82%;height:auto;margin:0 auto;border:0;" />
-              <p style="margin:18px 0 0;color:#2bb3a3;font-size:16px;font-weight:bold;font-style:italic;letter-spacing:.3px;">L'RMS che paghi solo se funziona!</p>
+            <td align="center" style="background-color:#ffffff;padding:32px 32px 24px;border-bottom:3px solid #2bb3a3;">
+              <img src="https://www.4bid.it/santaddeo-logo.png" alt="Santaddeo - Hotel Accelerator" width="320" style="display:block;width:320px;max-width:80%;height:auto;border:0;margin:0 auto;" />
             </td>
           </tr>
+          <!-- Body -->
           <tr>
-            <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#2d2d2d;">
-              <p style="margin:0 0 16px;">Gentile {{nome_azienda}},</p>
-              <p style="margin:0 0 16px;">${opts.intro}</p>
-              <p style="margin:0 0 24px;">${opts.body}</p>
+            <td style="padding:32px 32px 8px;font-size:16px;line-height:1.7;color:#2d2d2d;">
+              <p style="margin:0 0 18px;">Gentile {{nome_azienda}},</p>
+              <p style="margin:0 0 18px;">${opts.intro}</p>
+              <p style="margin:0 0 18px;">${opts.body}</p>
             </td>
           </tr>
+          <!-- CTA -->
           <tr>
-            <td align="center" style="padding:4px 32px 28px;">
+            <td align="center" style="padding:14px 32px 10px;">
               <a href="${opts.ctaUrl}" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">${opts.ctaLabel}</a>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 32px 8px;">
-              <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align:middle;font-size:13px;line-height:1.6;color:#5a5a5a;">
-                    <strong style="color:#1b2a4a;">4 Bid s.r.l.</strong><br />
-                    <a href="https://www.santaddeo.com" style="color:#1b2a4a;text-decoration:none;">www.santaddeo.com</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;text-decoration:none;">clienti@4bid.it</a>
-                  </td>
-                  <td align="right" style="vertical-align:middle;width:104px;">
-                    <img src="https://www.4bid.it/4bid-logo-email.png" alt="4bid" width="92" style="display:block;width:92px;height:auto;border:0;margin-left:auto;" />
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding:0 32px 24px;font-size:15px;color:#5a5a5a;line-height:1.6;">
+              Oppure rispondi a questa email e ti richiamiamo noi.
             </td>
           </tr>
+          <!-- Contacts -->
           <tr>
-            <td style="padding:8px 32px 28px;">
-              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Non vuoi piu' ricevere queste comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
+            <td style="padding:0 32px;">
+              <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
+                4 Bid s.r.l.<br />
+                <a href="https://www.santaddeo.com" style="color:#1b2a4a;">www.santaddeo.com</a> · <a href="https://www.4bid.it" style="color:#1b2a4a;">www.4bid.it</a> · <a href="mailto:clienti@4bid.it" style="color:#1b2a4a;">clienti@4bid.it</a>
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;">
+              <p style="margin:0;font-size:11px;color:#9a9a9a;line-height:1.5;">Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.<br />Non vuoi più ricevere le nostre comunicazioni? <a href="{{unsubscribe}}" style="color:#9a9a9a;text-decoration:underline;">Annulla iscrizione</a>.</p>
             </td>
           </tr>
         </table>
@@ -155,6 +164,7 @@ export function defaultStepContent(stepNumber: number, ctaUrl: string = DEFAULT_
           "Ti va di approfondire con una <strong>analisi gratuita</strong> dedicata alla tua struttura? In pochi minuti ti mostriamo dove stai lasciando margine sul tavolo.",
         ctaLabel,
         ctaUrl,
+        preheader: "Una breve analisi gratuita sul tuo revenue, senza impegno.",
       }),
       cta_url: ctaUrl,
     }
@@ -170,6 +180,7 @@ export function defaultStepContent(stepNumber: number, ctaUrl: string = DEFAULT_
           "Ho tenuto liberi alcuni slot questa settimana: scegli quello che preferisci e ti mostro tutto in una breve call.",
         ctaLabel,
         ctaUrl,
+        preheader: "Bastano 20 minuti per capire il potenziale inespresso.",
       }),
       cta_url: ctaUrl,
     }
@@ -184,6 +195,7 @@ export function defaultStepContent(stepNumber: number, ctaUrl: string = DEFAULT_
         "Prenota la tua <strong>analisi gratuita</strong> quando vuoi: bastano pochi minuti e nessun impegno. In caso contrario, non ti disturbero' oltre.",
       ctaLabel,
       ctaUrl,
+      preheader: "Se non e' il momento giusto, nessun problema.",
     }),
     cta_url: ctaUrl,
   }
