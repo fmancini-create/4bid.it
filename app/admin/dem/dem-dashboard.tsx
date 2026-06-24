@@ -247,7 +247,7 @@ const DEMO_SANTADDEO_PRESET = {
           <!-- CTA -->
           <tr>
             <td align="center" style="padding:14px 32px 10px;">
-              <a href="https://www.santaddeo.com" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">Prenota la demo gratuita</a>
+              <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 40px;border-radius:6px;">Prenota la demo gratuita</a>
             </td>
           </tr>
           <tr>
