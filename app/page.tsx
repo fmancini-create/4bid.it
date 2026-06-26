@@ -1,71 +1,23 @@
-import type { Metadata } from "next"
-import { Header } from "@/components/header"
-import Hero from "@/components/hero"
-import Services from "@/components/services"
-import Portfolio from "@/components/portfolio"
-import ProjectsSection from "@/components/projects-section"
-import AppsSection from "@/components/apps-section"
-import About from "@/components/about"
-import Contact from "@/components/contact"
-import { Footer } from "@/components/footer"
-import { LandingPageTracker } from "@/components/landing-page-tracker"
-import { StructuredData } from "@/components/seo-structured-data"
-
-export const metadata: Metadata = {
-  title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
-  description:
-    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi, ottimizza prezzi e prenotazioni dirette. La suite 4BID: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator e Ecomobility.",
-  keywords:
-    "revenue management hotel, software revenue management, aumentare ricavi hotel, dynamic pricing hotel, consulenza revenue management, prenotazioni dirette hotel, software gestionale hotel, santaddeo, 4bid",
-  openGraph: {
-    title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
-    description:
-      "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette. La suite 4BID per il mondo HORECA.",
-    type: "website",
-    url: "https://www.4bid.it",
-    locale: "it_IT",
-    siteName: "4BID.IT",
-    images: [
-      {
-        url: "https://www.4bid.it/og-image-4bid.jpg",
-        width: 1200,
-        height: 630,
-        alt: "4BID SRL - Holding di software e tool per il turismo",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Revenue Management per Hotel e Strutture Ricettive | 4BID",
-    description: "Aumenta i ricavi del tuo hotel con consulenza e software di revenue management. La suite 4BID per il mondo HORECA.",
-    images: ["https://www.4bid.it/og-image-4bid.jpg"],
-  },
-  alternates: {
-    canonical: "https://www.4bid.it",
-  },
-}
-
-export default function Home() {
+export default function Page() {
   return (
-    <div className="min-h-screen">
-      <StructuredData
-        type="Organization"
-        title="4BID.IT - Innovazione e Tecnologia"
-        description="4BID offre consulenza revenue management, software innovativi e soluzioni tecnologiche per hotel e aziende"
-        url="https://www.4bid.it"
-      />
-
-      <LandingPageTracker slug="home" />
-
-      <Header />
-      <Hero />
-      <Services />
-      <Portfolio />
-      <ProjectsSection />
-      <AppsSection />
-      <About />
-      <Contact />
-      <Footer />
-    </div>
+    <main className="relative flex min-h-screen items-center justify-center bg-[color:light-dark(#fff,#000)] text-[color:light-dark(#000,#fff)]">
+      <svg
+        aria-hidden="true"
+        className="size-20"
+        fill="none"
+        viewBox="0 0 20 20"
+        xmlns="http://www.w3.org/2000/svg"
+        stroke="currentColor"
+        strokeWidth="0.5"
+      >
+        <path
+          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <p className="absolute left-1/2 top-[calc(50%+56px)] -translate-x-1/2 whitespace-nowrap text-sm font-medium text-muted-foreground">
+        Your v0 generation will show here.
+      </p>
+    </main>
   )
 }

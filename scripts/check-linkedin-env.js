@@ -1,5 +1,0 @@
-console.log("[v0] LINKEDIN_CLIENT_ID:", process.env.LINKEDIN_CLIENT_ID)
-console.log("[v0] LINKEDIN_CLIENT_SECRET exists:", !!process.env.LINKEDIN_CLIENT_SECRET)
-console.log("[v0] LINKEDIN_CLIENT_SECRET length:", process.env.LINKEDIN_CLIENT_SECRET?.length)
-console.log("[v0] LINKEDIN_CLIENT_SECRET starts with:", process.env.LINKEDIN_CLIENT_SECRET?.substring(0, 8))
-console.log("[v0] NEXT_PUBLIC_SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL)
