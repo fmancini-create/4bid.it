@@ -58,6 +58,7 @@ export default function AdminSignupPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) throw new Error("Supabase non disponibile")
 
       const { error } = await supabase.auth.signUp({
         email,

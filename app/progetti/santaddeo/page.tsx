@@ -21,6 +21,13 @@ export const metadata: Metadata = {
     url: "https://4bid.it/progetti/santaddeo",
     locale: "it_IT",
     siteName: "4BID.IT",
+    images: [{ url: "https://4bid.it/santaddeo-logo.png", width: 1200, height: 630, alt: "SANTADDEO - The Human Revenue Manager" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SANTADDEO - The Human Revenue Manager",
+    description: "Il primo sistema di Revenue Management Intelligente e Umano",
+    images: ["https://4bid.it/santaddeo-logo.png"],
   },
   alternates: {
     canonical: "https://4bid.it/progetti/santaddeo",
@@ -82,11 +89,18 @@ export default function SantaddeoPage() {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Avanzamento</span>
-                    <span className="text-sm font-bold text-teal-600">75%</span>
+                    <span className="text-sm font-bold text-teal-600">100%</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-600 w-3/4" />
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-600 w-full" />
                   </div>
+                </div>
+                <div className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                  </span>
+                  <span className="text-sm font-semibold text-amber-700">In fase di testing</span>
                 </div>
                 <div className="pt-4 space-y-2">
                   <div className="flex items-center gap-2">
@@ -99,11 +113,11 @@ export default function SantaddeoPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-teal-600" />
-                    <span className="text-gray-700">Dashboard AI in sviluppo avanzato</span>
+                    <span className="text-gray-700">Dashboard AI completata</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
-                    <span className="text-gray-500">Integrazione PMS/OTA</span>
+                    <CheckCircle2 className="h-5 w-5 text-teal-600" />
+                    <span className="text-gray-700">Integrazione PMS/OTA</span>
                   </div>
                 </div>
               </div>

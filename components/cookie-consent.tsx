@@ -8,6 +8,7 @@ export function CookieConsent() {
 
   useEffect(() => {
     // Check if user has already made a choice
+    if (typeof window === "undefined") return
     const consent = localStorage.getItem("cookie-consent")
     if (!consent) {
       setShowBanner(true)
@@ -23,7 +24,6 @@ export function CookieConsent() {
 
     if (typeof window !== "undefined" && window.initYandexMetrika) {
       window.initYandexMetrika()
-      console.log("[v0] Cookie consent accepted - Yandex Metrika initialized")
     }
 
     setShowBanner(false)
@@ -35,8 +35,6 @@ export function CookieConsent() {
     window.gtag?.("consent", "update", {
       analytics_storage: "denied",
     })
-
-    console.log("[v0] Cookie consent declined - Analytics disabled")
 
     setShowBanner(false)
   }

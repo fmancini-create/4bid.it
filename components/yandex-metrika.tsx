@@ -17,6 +17,8 @@ export function YandexMetrika() {
   const prevSearchParamsRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
     // Build current URL
     let url = window.origin + pathname
     if (searchParams?.toString()) {
@@ -32,7 +34,6 @@ export function YandexMetrika() {
       const trackPageView = () => {
         if (typeof window !== "undefined" && window.ym) {
           window.ym(105859080, "hit", url)
-          console.log("[v0] Yandex page view tracked:", url)
         }
       }
 

@@ -2,13 +2,14 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle, Heart } from "lucide-react"
+import { ArrowRight, Rocket, PiggyBank, TrendingUp, CheckCircle, Heart, Bike, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import InvestorInquiryModal from "@/components/investor-inquiry-modal"
 
 export default function ProjectsSection() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<"all" | "horeca" | "other">("all")
 
   const projects = [
     {
@@ -23,6 +24,7 @@ export default function ProjectsSection() {
       progress: "On line",
       href: "/progetti/autoexel",
       isLive: true,
+      category: "horeca",
     },
     {
       id: "mypetsenseai",
@@ -36,6 +38,7 @@ export default function ProjectsSection() {
       progress: "On line",
       href: "/progetti/mypetsenseai",
       isLive: true,
+      category: "other",
     },
     {
       id: "santaddeo",
@@ -46,8 +49,10 @@ export default function ProjectsSection() {
       logo: "/santaddeo-logo.png",
       icon: TrendingUp,
       color: "from-teal-500 to-cyan-600",
-      progress: "75%",
+      progress: "100%",
+      status: "In fase di testing",
       href: "/progetti/santaddeo",
+      category: "horeca",
     },
     {
       id: "manubot",
@@ -60,6 +65,7 @@ export default function ProjectsSection() {
       color: "from-orange-500 to-amber-600",
       progress: "90%",
       href: "/progetti/manubot",
+      category: "horeca",
     },
     {
       id: "hotel-accelerator",
@@ -72,6 +78,20 @@ export default function ProjectsSection() {
       color: "from-blue-500 to-indigo-600",
       progress: "70%",
       href: "/progetti/hotel-accelerator",
+      category: "horeca",
+    },
+    {
+      id: "hotelprofitai",
+      name: "HOTELPROFITAI",
+      tagline: "Controllo di Gestione per Hotel",
+      description:
+        "Software SaaS di controllo di gestione con team di commercialisti specializzati Ho.Re.Ca. Monitora, analizza e ottimizza ricavi, costi e margini della tua struttura.",
+      logo: "/hotelprofitai-logo.jpg",
+      icon: BarChart3,
+      color: "from-blue-700 to-indigo-800",
+      progress: "75%",
+      href: "/progetti/hotelprofitai",
+      category: "horeca",
     },
     {
       id: "risparmio-compulsivo",
@@ -83,6 +103,19 @@ export default function ProjectsSection() {
       color: "from-green-600 to-emerald-700",
       progress: "70%",
       href: "/progetti/risparmio-compulsivo",
+      category: "other",
+    },
+    {
+      id: "ecomobility",
+      name: "ECOMOBILITY",
+      tagline: "Più usi, meno paghi",
+      description: "La piattaforma per il noleggio di mobilità elettrica nelle strutture turistiche. E-bike, scooter e monopattini con tariffe decrescenti.",
+      logo: "/ecomobility-logo.png",
+      icon: Bike,
+      color: "from-orange-500 to-amber-500",
+      progress: "85%",
+      href: "/ecomobility/noleggio-mobilita-elettrica-hotel",
+      category: "horeca",
     },
   ]
 
@@ -99,9 +132,54 @@ export default function ProjectsSection() {
           </p>
         </div>
 
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+              activeFilter === "all"
+                ? "bg-[#1a1a2e] text-white shadow-lg"
+                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-400 hover:text-gray-900"
+            }`}
+          >
+            Tutti i progetti
+          </button>
+          <button
+            onClick={() => setActiveFilter("horeca")}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+              activeFilter === "horeca"
+                ? "bg-gradient-to-r from-[#5B9BD5] to-[#4A8BC2] text-white shadow-lg"
+                : "bg-white text-gray-600 border border-gray-200 hover:border-[#5B9BD5] hover:text-[#5B9BD5]"
+            }`}
+          >
+            Suite Hospitality AI
+          </button>
+          <button
+            onClick={() => setActiveFilter("other")}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+              activeFilter === "other"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                : "bg-white text-gray-600 border border-gray-200 hover:border-purple-400 hover:text-purple-600"
+            }`}
+          >
+            Altre Idee
+          </button>
+        </div>
+
+        {/* Suite Hospitality AI banner */}
+        {activeFilter === "horeca" && (
+          <div className="mb-10 bg-gradient-to-r from-[#1a1a2e] to-[#2d2d4e] rounded-2xl p-8 text-white text-center">
+            <p className="text-[#F4B942] uppercase tracking-widest text-xs font-bold mb-2">by 4BID</p>
+            <h3 className="text-3xl md:text-4xl font-bold mb-3">Suite Hospitality AI</h3>
+            <p className="text-gray-300 max-w-2xl mx-auto text-balance">
+              L{"'"}ecosistema completo di soluzioni AI-powered per la gestione alberghiera: dal pricing dinamico al controllo di gestione, dalla manutenzione alla mobilita' sostenibile.
+            </p>
+          </div>
+        )}
+
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {projects.map((project) => {
+          {projects.filter((p) => activeFilter === "all" || (p as any).category === activeFilter).map((project) => {
             const IconComponent = project.icon
             return (
               <Link
@@ -157,7 +235,12 @@ export default function ProjectsSection() {
                       }`}
                     >
                       {project.progress}
-                    </span>
+                      </span>
+                      {(project as any).status && (
+                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                          {(project as any).status}
+                        </span>
+                      )}
                   </div>
 
                   {/* CTA Button */}

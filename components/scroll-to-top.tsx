@@ -7,6 +7,7 @@ export function ScrollToTop() {
   const pathname = usePathname()
 
   useEffect(() => {
+    if (typeof window === "undefined") return
     // Check if the URL has a hash (anchor link like #contact, #services, etc.)
     if (!window.location.hash) {
       window.scrollTo({ top: 0, behavior: "instant" })

@@ -9,6 +9,21 @@ export const metadata = {
   title: "MyPetSenseAI - AI Health Monitoring for Dogs | 4BID",
   description:
     "Analizza foto, monitora la salute quotidiana e ricevi consigli personalizzati dall'intelligenza artificiale per il benessere del tuo cane.",
+  openGraph: {
+    title: "MyPetSenseAI - AI Health Monitoring for Dogs",
+    description: "Monitora la salute del tuo cane con l'intelligenza artificiale. Analisi foto, consigli personalizzati.",
+    type: "website",
+    url: "https://4bid.it/progetti/mypetsenseai",
+    locale: "it_IT",
+    siteName: "4BID.IT",
+    images: [{ url: "https://4bid.it/4bid-colorful-logo.jpg", width: 1200, height: 630, alt: "MyPetSenseAI by 4BID" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MyPetSenseAI - AI Health Monitoring for Dogs",
+    description: "Monitora la salute del tuo cane con l'intelligenza artificiale.",
+    images: ["https://4bid.it/4bid-colorful-logo.jpg"],
+  },
   alternates: {
     canonical: "https://4bid.it/progetti/mypetsenseai",
   },

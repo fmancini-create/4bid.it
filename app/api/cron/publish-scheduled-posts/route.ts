@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
 import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
+import { publishToInstagram } from "@/lib/social/instagram"
 
 // Cron job per pubblicare i post programmati
 // Esegue ogni 5 minuti e pubblica i post con scheduled_for <= now
@@ -25,14 +26,24 @@ export async function GET(request: NextRequest) {
     const now = new Date().toISOString()
     console.log(`[v0] Cron running at ${now}`)
 
-    // Trova i post programmati che devono essere pubblicati
-    const { data: posts, error: fetchError } = await supabase
+    // Trova i post programmati (scheduled_for <= now) e approvati senza data
+    const { data: scheduledPosts } = await supabase
       .from("social_posts")
       .select("*")
       .eq("status", "scheduled")
       .lte("scheduled_for", now)
       .order("scheduled_for", { ascending: true })
       .limit(10)
+
+    const { data: approvedPosts } = await supabase
+      .from("social_posts")
+      .select("*")
+      .eq("status", "approved")
+      .order("approved_at", { ascending: true })
+      .limit(5)
+
+    const posts = [...(scheduledPosts || []), ...(approvedPosts || [])]
+    const fetchError = null
 
     if (fetchError) {
       console.error("[v0] Error fetching scheduled posts:", fetchError)
@@ -125,7 +136,31 @@ export async function GET(request: NextRequest) {
                 if (!post.image_url) {
                   errors.push("Instagram richiede un'immagine per pubblicare")
                 } else {
-                  errors.push("Instagram: pubblicazione in sviluppo")
+                  const igUserId = account.account_id
+                  if (!igUserId) {
+                    errors.push(
+                      `Instagram (${account.account_name}): ig_user_id mancante. ` +
+                      `Ricollega l'account Facebook per scoprire l'account Instagram Business.`
+                    )
+                  } else {
+                    const igResult = await publishToInstagram(
+                      igUserId,
+                      account.access_token,
+                      post.content,
+                      post.image_url,
+                    )
+
+                    if (igResult.success && igResult.postId) {
+                      platformPostIds[`instagram_${account.account_name}`] = igResult.postId
+                      console.log(`[v0] Published to Instagram ${account.account_name}: ${igResult.postId}`)
+                    } else {
+                      let errorMsg = igResult.error || "Errore sconosciuto"
+                      if (errorMsg.includes("OAuthException") || errorMsg.includes("permission")) {
+                        errorMsg += " - Verifica permessi instagram_basic + instagram_content_publish."
+                      }
+                      errors.push(`Instagram (${account.account_name}): ${errorMsg}`)
+                    }
+                  }
                 }
               } else if (platform === "linkedin") {
                 const result = await publishToLinkedInWithFallback(
@@ -133,6 +168,7 @@ export async function GET(request: NextRequest) {
                   account.account_id,
                   account.page_id,
                   post.content,
+                  post.link_url,
                   post.image_url,
                 )
 

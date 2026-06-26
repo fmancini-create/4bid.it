@@ -3,6 +3,75 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { sendEmail } from "@/lib/email-smtp"
 
+// Simple in-memory rate limiting (per IP)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
+const RATE_LIMIT_MAX = 3 // Max 3 submissions per hour per IP
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const record = rateLimitMap.get(ip)
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+    return false
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) {
+    return true
+  }
+  
+  record.count++
+  return false
+}
+
+// Check for spam patterns in text
+function isSpamContent(text: string): boolean {
+  if (!text) return false
+  
+  // Check for random string patterns (like "RxtZsoFkItRbUhnMR")
+  const randomStringPattern = /^[A-Za-z]{10,}$/
+  if (randomStringPattern.test(text.replace(/\s/g, ''))) {
+    return true
+  }
+  
+  // Check for too many consonants in a row (typical of random strings)
+  const consonantPattern = /[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]{6,}/
+  if (consonantPattern.test(text)) {
+    return true
+  }
+  
+  // Check for suspicious patterns
+  const suspiciousPatterns = [
+    /^[A-Z][a-z]+[A-Z][a-z]+[A-Z][a-z]+/, // CamelCase spam like "NGuolEHaOHoLsfySUvLg"
+    /[A-Za-z]{15,}/, // Very long words without spaces
+  ]
+  
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(text)) {
+      return true
+    }
+  }
+  
+  return false
+}
+
+// Validate email format more strictly
+function isValidEmail(email: string): boolean {
+  // Basic format check
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(email)) return false
+  
+  // Check for disposable email domains (common spam)
+  const disposableDomains = ['tempmail', 'throwaway', 'mailinator', 'guerrillamail', '10minutemail']
+  const domain = email.split('@')[1]?.toLowerCase() || ''
+  if (disposableDomains.some(d => domain.includes(d))) {
+    return false
+  }
+  
+  return true
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -25,6 +94,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // Get IP for rate limiting
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+               request.headers.get('x-real-ip') || 
+               'unknown'
+    
+    // Check rate limit
+    if (isRateLimited(ip)) {
+      console.log(`[v0] Rate limited IP: ${ip}`)
+      return NextResponse.json(
+        { error: "Troppe richieste. Riprova tra un'ora." },
+        { status: 429 },
+      )
+    }
+    
     const body = await request.json()
     const {
       name,
@@ -36,13 +119,55 @@ export async function POST(request: Request) {
       budget_range,
       timeline,
       interested_in_revenue_share,
+      // Honeypot fields - should be empty
+      website,
+      fax,
+      // Timestamp check
+      form_timestamp,
     } = body
+
+    // Honeypot check - if these fields are filled, it's a bot
+    if (website || fax) {
+      console.log(`[v0] Honeypot triggered - IP: ${ip}, website: ${website}, fax: ${fax}`)
+      // Return success to not alert the bot, but don't process
+      return NextResponse.json({ id: 'fake-id', status: 'pending' }, { status: 201 })
+    }
+    
+    // Timestamp check - form must be filled in at least 3 seconds
+    if (form_timestamp) {
+      const submissionTime = Date.now() - form_timestamp
+      if (submissionTime < 3000) { // Less than 3 seconds
+        console.log(`[v0] Form filled too fast (${submissionTime}ms) - IP: ${ip}`)
+        return NextResponse.json({ id: 'fake-id', status: 'pending' }, { status: 201 })
+      }
+    }
 
     if (!name || !email || !project_title || !project_description) {
       return NextResponse.json(
         { error: "Nome, email, titolo progetto e descrizione sono obbligatori" },
         { status: 400 },
       )
+    }
+    
+    // Validate email
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Indirizzo email non valido" },
+        { status: 400 },
+      )
+    }
+    
+    // Check for spam content in project_title
+    if (isSpamContent(project_title)) {
+      console.log(`[v0] Spam detected in project_title - IP: ${ip}, title: ${project_title}`)
+      // Return success to not alert the bot
+      return NextResponse.json({ id: 'fake-id', status: 'pending' }, { status: 201 })
+    }
+    
+    // Check for spam content in name (but be more lenient)
+    if (isSpamContent(name) && name.length > 30) {
+      console.log(`[v0] Spam detected in name - IP: ${ip}, name: ${name}`)
+      return NextResponse.json({ id: 'fake-id', status: 'pending' }, { status: 201 })
     }
 
     const supabase = createAdminClient()

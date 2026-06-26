@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,6 +15,12 @@ import { Loader2, CheckCircle2 } from "lucide-react"
 export default function ProjectIdeaForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [formTimestamp, setFormTimestamp] = useState<number>(0)
+  
+  // Honeypot fields - hidden from users but filled by bots
+  const [honeypotWebsite, setHoneypotWebsite] = useState("")
+  const [honeypotFax, setHoneypotFax] = useState("")
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,6 +32,11 @@ export default function ProjectIdeaForm() {
     timeline: "",
     interestedInRevenueShare: false,
   })
+  
+  // Set timestamp when form loads
+  useEffect(() => {
+    setFormTimestamp(Date.now())
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,6 +58,10 @@ export default function ProjectIdeaForm() {
           budget_range: formData.budgetRange,
           timeline: formData.timeline,
           interested_in_revenue_share: formData.interestedInRevenueShare,
+          // Anti-spam fields
+          website: honeypotWebsite, // Honeypot - should be empty
+          fax: honeypotFax, // Honeypot - should be empty
+          form_timestamp: formTimestamp, // Timestamp when form was loaded
         }),
       })
 
@@ -263,6 +278,30 @@ export default function ProjectIdeaForm() {
             )}
           </Button>
 
+          {/* Honeypot fields - hidden from users, filled by bots */}
+          <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
+            <label htmlFor="website">Website (leave empty)</label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={honeypotWebsite}
+              onChange={(e) => setHoneypotWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+            <label htmlFor="fax">Fax (leave empty)</label>
+            <input
+              type="text"
+              id="fax"
+              name="fax"
+              value={honeypotFax}
+              onChange={(e) => setHoneypotFax(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
+          
           <p className="text-xs text-muted-foreground text-center">
             Inviando questo form, accetti la nostra politica sulla privacy e il trattamento dei dati personali secondo
             il GDPR.

@@ -52,14 +52,12 @@ interface Structure {
 interface VehicleType {
   id: string
   name: string
-  slug: string
   description: string
-  category: string
-  image_url: string
+  icon: string
   max_speed_kmh: number
-  range_km: number
-  requires_license_type: string
-  min_age: number
+  avg_range_km: number
+  requires_license: boolean
+  max_passengers: number
 }
 
 interface Vehicle {
@@ -79,15 +77,18 @@ interface Vehicle {
 
 interface Pricing {
   id: string
-  name: string
-  description: string
-  min_price: number
-  price_first_hour: number
-  price_second_hour: number
-  price_third_hour: number
-  price_per_hour_after: number
-  max_price_day: number
-  deposit_amount: number
+  vehicle_type_id: string
+  hour_1: number
+  hour_2: number
+  hour_3: number
+  hour_4: number
+  hour_5: number
+  hour_6: number
+  hour_7: number
+  hour_8_plus: number
+  daily_cap: number
+  deposit: number
+  minimum_charge: number
   vehicle_type: VehicleType
 }
 
@@ -140,11 +141,14 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
 
   const isVehicleBookable = (vehicle: Vehicle): boolean => {
     // Must not be already rented or in maintenance
-    if (vehicle.status !== "available") return false
-    // Battery status must be 'available'
-    if (vehicle.battery_status !== "available") return false
-    // Battery level must be >= threshold
-    if (vehicle.battery_level === null || vehicle.battery_level < minBatteryThreshold) return false
+    if (vehicle.status !== "available" && vehicle.status !== "charging") return false
+    // If charging, not bookable now
+    if (vehicle.status === "charging" || vehicle.battery_status === "charging") return false
+    // If explicitly unavailable, not bookable
+    if (vehicle.battery_status === "unavailable" || vehicle.battery_status === "low_battery") return false
+    // Battery level must be >= threshold (if set)
+    if (vehicle.battery_level !== null && vehicle.battery_level < minBatteryThreshold) return false
+    // If battery_status is null/undefined but status is available, consider it bookable
     return true
   }
 
@@ -261,6 +265,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   const handlePayment = async () => {
     setIsLoading(true)
     try {
+      // 1. Crea la prenotazione
       const response = await fetch("/api/ecomobility/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,10 +284,34 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
 
       if (!response.ok) throw new Error("Errore nella prenotazione")
 
-      const data = await response.json()
-      setCurrentStep("confirmation")
-    } catch (error) {
-      toast({ title: "Errore durante il pagamento", variant: "destructive" })
+      const bookingData = await response.json()
+
+      // 2. Crea sessione Stripe Checkout
+      const checkoutRes = await fetch("/api/ecomobility/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: bookingData.booking_id,
+          structure_id: structure.id,
+          customer_email: customerData.email,
+          customer_name: `${customerData.firstName} ${customerData.lastName}`,
+          amount: selectedPricing?.minimum_charge || selectedPricing?.hour_1 || 0,
+          deposit: selectedPricing?.deposit || 0,
+          description: `${selectedVehicle?.vehicle_type?.name} - ${selectedVehicle?.brand} ${selectedVehicle?.model}`,
+        }),
+      })
+
+      const checkoutData = await checkoutRes.json()
+      if (!checkoutRes.ok) throw new Error(checkoutData.error || "Errore nel pagamento")
+
+      // 3. Redirect a Stripe Checkout
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url
+      } else {
+        throw new Error("Errore nella creazione del pagamento")
+      }
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message || "Errore durante il pagamento", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -325,7 +354,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
             <h1 className="font-semibold text-sm">{structure.name}</h1>
             <p className="text-xs text-muted-foreground">4BID Ecomobility</p>
           </div>
-          <Image src="https://www.4bid.it/_next/image?url=%2Flogo.png&w=96&q=75" alt="4BID" width={32} height={32} />
+          <Image src="/ecomobility-logo.png" alt="4BID Ecomobility" width={48} height={48} />
         </div>
       </header>
 
@@ -435,11 +464,11 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                           <div className="flex items-center justify-between">
                             <div>
                               <span className="text-lg font-bold" style={{ color: primaryColor }}>
-                                €{typePricing.price_first_hour}
+                                €{typePricing.hour_1}
                               </span>
                               <span className="text-xs text-muted-foreground">/1ª ora</span>
                               <span className="text-xs text-muted-foreground ml-2">
-                                max €{typePricing.max_price_day}/giorno
+                                max €{typePricing.daily_cap}/giorno
                               </span>
                             </div>
                             <Button
@@ -585,7 +614,7 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>1ª ora</span>
-                      <span className="font-medium">€{selectedPricing.price_first_hour}</span>
+                      <span className="font-medium">€{selectedPricing.hour_1}</span>
                     </div>
                     {selectedPricing.price_second_hour && (
                       <div className="flex justify-between">
@@ -609,12 +638,12 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                     <div className="flex justify-between text-base">
                       <span className="font-medium">Max giornaliero</span>
                       <span className="font-bold" style={{ color: primaryColor }}>
-                        €{selectedPricing.max_price_day}
+                        €{selectedPricing.daily_cap}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Cauzione</span>
-                      <span>€{selectedPricing.deposit_amount}</span>
+                      <span>€{selectedPricing.deposit}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -904,17 +933,17 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Prezzo minimo</span>
-                    <span>€{selectedPricing.min_price}</span>
+                    <span>€{selectedPricing.minimum_charge}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cauzione</span>
-                    <span>€{selectedPricing.deposit_amount}</span>
+                    <span>€{selectedPricing.deposit}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-base font-medium">
                     <span>Da pagare ora</span>
                     <span style={{ color: primaryColor }}>
-                      €{selectedPricing.min_price + selectedPricing.deposit_amount}
+                      €{(selectedPricing.minimum_charge || 0) + (selectedPricing.deposit || 0)}
                     </span>
                   </div>
                 </div>
@@ -997,4 +1026,5 @@ const EcomobilityBookingPage = ({ structure, vehicles, pricing, terms }: Props) 
   )
 }
 
+export { EcomobilityBookingPage }
 export default EcomobilityBookingPage

@@ -8,20 +8,19 @@ interface LandingPageTrackerProps {
 
 export function LandingPageTracker({ slug }: LandingPageTrackerProps) {
   useEffect(() => {
-    const trackView = async () => {
-      try {
-        await fetch("/api/landing-pages/track-view", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug }),
-        })
-      } catch (error) {
-        console.error("[v0] Failed to track view:", error)
-      }
-    }
-
-    trackView()
+    if (typeof window === "undefined") return
+    // Fire-and-forget with timeout — never throws, never blocks render
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2000)
+    fetch("/api/landing-pages/track-view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug }),
+      signal: controller.signal,
+    })
+      .catch(() => {/* non-critical */})
+      .finally(() => clearTimeout(timeout))
   }, [slug])
 
-  return null // This component doesn't render anything
+  return null
 }

@@ -83,28 +83,64 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    await supabase.from("social_accounts").delete().eq("platform", "facebook")
-
-    const pagesToInsert = pagesData.data.map((page: any) => ({
-      platform: "facebook",
+    // Upsert: aggiorna gli account esistenti (stesso page_id) e aggiunge quelli nuovi
+    // NON cancella gli account di altri login Facebook
+    const pagesToUpsert = pagesData.data.map((page: any) => ({
+      platform: "facebook" as const,
       account_name: page.name,
       account_id: page.id,
       page_id: page.id,
       access_token: page.access_token,
       token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
       is_active: true,
-      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }))
 
     console.log(
-      "[v0] Saving all pages:",
-      pagesToInsert.map((p: any) => p.account_name),
+      "[v0] Upserting pages:",
+      pagesToUpsert.map((p: any) => `${p.account_name} (${p.page_id})`),
     )
 
-    const { data: insertData, error: dbError } = await supabase.from("social_accounts").insert(pagesToInsert).select()
+    let insertData: any[] = []
+    let dbError: any = null
 
-    console.log("[v0] DB insert result:", dbError ? dbError.message : `${insertData?.length} pages saved`)
+    for (const page of pagesToUpsert) {
+      // Cerca se esiste gia' un account con stesso platform + account_id
+      const { data: existing } = await supabase
+        .from("social_accounts")
+        .select("id")
+        .eq("platform", "facebook")
+        .eq("account_id", page.account_id)
+        .limit(1)
+        .single()
+
+      if (existing) {
+        // Aggiorna token e nome
+        const { error } = await supabase
+          .from("social_accounts")
+          .update({
+            account_name: page.account_name,
+            access_token: page.access_token,
+            token_expires_at: page.token_expires_at,
+            is_active: true,
+            updated_at: page.updated_at,
+          })
+          .eq("id", existing.id)
+        if (error) dbError = error
+        console.log("[v0] Updated existing FB page:", page.account_name)
+      } else {
+        // Inserisci nuovo
+        const { data, error } = await supabase
+          .from("social_accounts")
+          .insert({ ...page, created_at: new Date().toISOString() })
+          .select()
+        if (error) dbError = error
+        if (data) insertData.push(...data)
+        console.log("[v0] Added new FB page:", page.account_name)
+      }
+    }
+
+    console.log("[v0] DB result:", dbError ? dbError.message : `${pagesToUpsert.length} pages processed`)
 
     if (dbError) throw dbError
 
@@ -132,19 +168,32 @@ export async function GET(request: NextRequest) {
 
         const igAccountData = await igAccountResponse.json()
 
-        // Delete existing Instagram account first
-        await supabase.from("social_accounts").delete().eq("platform", "instagram")
+        // Upsert: aggiorna se esiste gia' lo stesso account IG, altrimenti inserisci
+        const { data: existingIg } = await supabase
+          .from("social_accounts")
+          .select("id")
+          .eq("platform", "instagram")
+          .eq("account_id", igData.instagram_business_account.id)
+          .limit(1)
+          .single()
 
-        await supabase.from("social_accounts").insert({
-          platform: "instagram",
+        const igPayload = {
+          platform: "instagram" as const,
           account_name: igAccountData.username || "Instagram Business",
           account_id: igData.instagram_business_account.id,
           access_token: page.access_token,
           token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
           is_active: true,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
+        }
+
+        if (existingIg) {
+          await supabase.from("social_accounts").update(igPayload).eq("id", existingIg.id)
+          console.log("[v0] Updated existing IG account:", igPayload.account_name)
+        } else {
+          await supabase.from("social_accounts").insert({ ...igPayload, created_at: new Date().toISOString() })
+          console.log("[v0] Added new IG account:", igPayload.account_name)
+        }
       }
     }
 
