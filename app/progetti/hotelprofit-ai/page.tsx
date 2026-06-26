@@ -7,6 +7,8 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -47,6 +49,7 @@ export const metadata: Metadata = {
 }
 
 export default function HotelProfitAiPage() {
+  const entityLinks = entitySchemaLinks("hotelprofitai")
   return (
     <div className="min-h-screen bg-white">
       <StructuredData
@@ -55,6 +58,13 @@ export default function HotelProfitAiPage() {
         description="Piattaforma di controllo di gestione per hotel con AI e team di commercialisti specializzati"
         url="https://www.4bid.it/progetti/hotelprofit-ai"
         image="https://www.4bid.it/hotelprofit-ai-logo.png"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Progetti", url: "https://www.4bid.it/#projects" },
+          { name: "HotelProfitAI", url: "https://www.4bid.it/progetti/hotelprofit-ai" },
+        ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <LandingPageTracker slug="progetti/hotelprofit-ai" />
@@ -181,6 +191,8 @@ export default function HotelProfitAiPage() {
           </ContactButton>
         </div>
       </section>
+
+      <EntityLinks entityKey="hotelprofitai" />
 
       <Footer />
     </div>

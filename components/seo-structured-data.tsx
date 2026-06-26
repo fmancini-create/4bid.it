@@ -34,6 +34,9 @@ interface StructuredDataProps {
   keywords?: string[]
   softwareCategory?: string
   operatingSystem?: string
+  // Entity SEO: entità trattate (about) e citate (mentions), collegate via @id.
+  about?: Array<Record<string, unknown>>
+  mentions?: Array<Record<string, unknown>>
 }
 
 const companyData = {
@@ -79,8 +82,15 @@ export function StructuredData({
   keywords,
   softwareCategory,
   operatingSystem = "Web",
+  about,
+  mentions,
 }: StructuredDataProps) {
   const now = new Date().toISOString()
+
+  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO).
+  const ORG_ID = "https://www.4bid.it/#organization"
+  const PERSON_ID = "https://www.4bid.it/#person"
+  const WEBSITE_ID = "https://www.4bid.it/#website"
 
   // Schema principale
   const mainSchema: Record<string, unknown> = {
@@ -185,6 +195,19 @@ export function StructuredData({
     }
   }
 
+  // isPartOf: la pagina fa parte del sito (collega l'entità al WebSite via @id).
+  if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "Service") {
+    mainSchema.isPartOf = { "@id": WEBSITE_ID }
+  }
+
+  // about / mentions: entità trattate e citate, per rafforzare l'Entity SEO.
+  if (about && about.length > 0) {
+    mainSchema.about = about
+  }
+  if (mentions && mentions.length > 0) {
+    mainSchema.mentions = mentions
+  }
+
   // Schema FAQ separato
   const faqSchema =
     faqs && faqs.length > 0
@@ -216,11 +239,6 @@ export function StructuredData({
           })),
         }
       : null
-
-  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO)
-  const ORG_ID = "https://www.4bid.it/#organization"
-  const PERSON_ID = "https://www.4bid.it/#person"
-  const WEBSITE_ID = "https://www.4bid.it/#website"
 
   // Grafo entità sempre incluso: WebSite + Organization + Person (founder),
   // collegati via @id. Dati reali presenti sul sito (Filippo Mancini, founder).

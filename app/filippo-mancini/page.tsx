@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 
 export const metadata = {
   title: "Filippo Mancini - Fondatore di 4BID | 4BID.IT",
@@ -66,6 +68,7 @@ const faqData = [
 ]
 
 export default function FilippoManciniPage() {
+  const entityLinks = entitySchemaLinks("filippo-mancini")
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -78,6 +81,8 @@ export default function FilippoManciniPage() {
           { name: "Home", url: "https://www.4bid.it" },
           { name: "Filippo Mancini", url: "https://www.4bid.it/filippo-mancini" },
         ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <Header />
@@ -293,6 +298,8 @@ export default function FilippoManciniPage() {
           </div>
         </div>
       </section>
+
+      <EntityLinks entityKey="filippo-mancini" />
 
       <Footer />
     </div>

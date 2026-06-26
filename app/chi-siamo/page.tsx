@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 
 export const metadata = {
   title: "Chi siamo - 4BID, Revenue Management e Tecnologia per l'Hospitality | 4BID.IT",
@@ -70,6 +72,7 @@ const faqData = [
 ]
 
 export default function ChiSiamoPage() {
+  const entityLinks = entitySchemaLinks("4bid")
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -82,6 +85,8 @@ export default function ChiSiamoPage() {
           { name: "Home", url: "https://www.4bid.it" },
           { name: "Chi siamo", url: "https://www.4bid.it/chi-siamo" },
         ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <Header />
@@ -319,6 +324,8 @@ export default function ChiSiamoPage() {
           </div>
         </div>
       </section>
+
+      <EntityLinks entityKey="4bid" />
 
       <Footer />
     </div>

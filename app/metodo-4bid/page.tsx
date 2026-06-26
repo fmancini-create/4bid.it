@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 
 export const metadata = {
   title: "Il Metodo 4BID - Revenue Management, Dati e AI per Hotel | 4BID.IT",
@@ -102,6 +104,7 @@ const phases = [
 ]
 
 export default function Metodo4BidPage() {
+  const entityLinks = entitySchemaLinks("metodo-4bid")
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
@@ -114,6 +117,8 @@ export default function Metodo4BidPage() {
           { name: "Home", url: "https://www.4bid.it" },
           { name: "Metodo 4BID", url: "https://www.4bid.it/metodo-4bid" },
         ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <Header />
@@ -337,6 +342,8 @@ export default function Metodo4BidPage() {
           </div>
         </div>
       </section>
+
+      <EntityLinks entityKey="metodo-4bid" />
 
       <Footer />
     </div>
