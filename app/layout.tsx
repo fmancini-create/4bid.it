@@ -39,6 +39,21 @@ export const metadata: Metadata = {
     locale: "it_IT",
     siteName: "4BID.IT",
     url: "https://www.4bid.it",
+    images: [
+      {
+        url: "/og-image-4bid.jpg",
+        width: 1024,
+        height: 1024,
+        alt: "4BID - Revenue Management per Hotel, B&B e Strutture Ricettive",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
+    description:
+      "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette.",
+    images: ["/og-image-4bid.jpg"],
   },
   alternates: {
     canonical: "https://www.4bid.it",
