@@ -106,8 +106,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#about" title="Chi Siamo" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/chi-siamo" title="Chi Siamo" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Chi Siamo
+                </Link>
+              </li>
+              <li>
+                <Link href="/metodo-4bid" title="Il Metodo 4BID" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Metodo 4BID
+                </Link>
+              </li>
+              <li>
+                <Link href="/filippo-mancini" title="Filippo Mancini, fondatore di 4BID" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Filippo Mancini
                 </Link>
               </li>
               <li>

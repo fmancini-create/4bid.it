@@ -19,6 +19,7 @@ interface StructuredDataProps {
     | "Product"
     | "FAQPage"
     | "WebPage"
+    | "AboutPage"
     | "SoftwareApplication"
   title: string
   description: string
@@ -93,7 +94,7 @@ export function StructuredData({
   }
 
   // Aggiungi date solo se fornite o per tipi che le richiedono
-  if (type === "Article" || type === "WebPage") {
+  if (type === "Article" || type === "WebPage" || type === "AboutPage") {
     mainSchema.datePublished = datePublished || now
     mainSchema.dateModified = dateModified || now
   }
@@ -161,7 +162,7 @@ export function StructuredData({
     }
   }
 
-  if (type === "WebPage" || type === "Article") {
+  if (type === "WebPage" || type === "Article" || type === "AboutPage") {
     mainSchema.mainEntityOfPage = {
       "@type": "WebPage",
       "@id": url,

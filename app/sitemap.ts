@@ -121,6 +121,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
+  // Pagine istituzionali / EEAT (autorevolezza)
+  const eeatPages = ["chi-siamo", "metodo-4bid", "filippo-mancini"].map((slug) => ({
+    url: `${baseUrl}/${slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }))
+
   // Altre pagine
   const otherPages = [
     {
@@ -182,6 +190,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...progetti,
     ...ecomobility,
     ...hubAndEvents,
+    ...eeatPages,
     ...otherPages,
   ]
 }
