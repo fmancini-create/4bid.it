@@ -216,35 +216,61 @@ export function StructuredData({
         }
       : null
 
-  // Schema WebSite per la ricerca
-  const webSiteSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "4BID.IT",
-    url: "https://www.4bid.it",
-    description:
-      "Innovazione e Tecnologia per il Tuo Business - Revenue Management Hotel, Software e Soluzioni Tecnologiche",
-    publisher: {
-      "@type": "Organization",
-      name: companyData.name,
-      logo: companyData.logo,
-    },
-  }
+  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO)
+  const ORG_ID = "https://www.4bid.it/#organization"
+  const PERSON_ID = "https://www.4bid.it/#person"
+  const WEBSITE_ID = "https://www.4bid.it/#website"
 
-  // Schema Organization sempre incluso
-  const organizationSchema = {
+  // Grafo entità sempre incluso: WebSite + Organization + Person (founder),
+  // collegati via @id. Dati reali presenti sul sito (Filippo Mancini, founder).
+  const entityGraphSchema = {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    name: companyData.name,
-    legalName: companyData.legalName,
-    url: companyData.url,
-    logo: companyData.logo,
-    email: companyData.email,
-    vatID: companyData.vatID,
-    foundingDate: companyData.foundingDate,
-    address: companyData.address,
-    sameAs: companyData.sameAs,
-    areaServed: companyData.areaServed,
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        name: "4BID.IT",
+        url: companyData.url,
+        description:
+          "Innovazione e Tecnologia per il Tuo Business - Revenue Management Hotel, Software e Soluzioni Tecnologiche",
+        inLanguage: "it-IT",
+        publisher: { "@id": ORG_ID },
+      },
+      {
+        "@type": "Organization",
+        "@id": ORG_ID,
+        name: companyData.name,
+        legalName: companyData.legalName,
+        url: companyData.url,
+        logo: {
+          "@type": "ImageObject",
+          url: companyData.logo,
+        },
+        email: companyData.email,
+        vatID: companyData.vatID,
+        foundingDate: companyData.foundingDate,
+        founder: { "@id": PERSON_ID },
+        address: companyData.address,
+        sameAs: companyData.sameAs,
+        areaServed: companyData.areaServed,
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: companyData.email,
+          contactType: "customer service",
+          areaServed: "IT",
+          availableLanguage: ["Italian", "English"],
+        },
+      },
+      {
+        "@type": "Person",
+        "@id": PERSON_ID,
+        name: "Filippo Mancini",
+        jobTitle: "Founder & CEO",
+        image: "https://www.4bid.it/filippo.jpg",
+        worksFor: { "@id": ORG_ID },
+        sameAs: ["https://www.linkedin.com/in/fimancini/"],
+      },
+    ],
   }
 
   return (
@@ -269,14 +295,9 @@ export function StructuredData({
         />
       )}
       <Script
-        id="structured-data-website"
+        id="structured-data-entities"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
-      />
-      <Script
-        id="structured-data-organization"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(entityGraphSchema) }}
       />
     </>
   )
