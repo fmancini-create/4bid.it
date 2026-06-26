@@ -10,6 +10,17 @@ interface BreadcrumbItem {
   url: string
 }
 
+interface HowToStep {
+  name: string
+  text: string
+}
+
+interface HowToData {
+  name: string
+  description?: string
+  steps: HowToStep[]
+}
+
 interface StructuredDataProps {
   type?:
     | "Article"
@@ -37,6 +48,8 @@ interface StructuredDataProps {
   // Entity SEO: entità trattate (about) e citate (mentions), collegate via @id.
   about?: Array<Record<string, unknown>>
   mentions?: Array<Record<string, unknown>>
+  // HowTo: procedura passo-passo (per pagine guida con step reali).
+  howTo?: HowToData
 }
 
 const companyData = {
@@ -84,6 +97,7 @@ export function StructuredData({
   operatingSystem = "Web",
   about,
   mentions,
+  howTo,
 }: StructuredDataProps) {
   const now = new Date().toISOString()
 
@@ -240,6 +254,23 @@ export function StructuredData({
         }
       : null
 
+  // Schema HowTo separato (procedura passo-passo con step reali della pagina).
+  const howToSchema =
+    howTo && howTo.steps.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: howTo.name,
+          description: howTo.description || description,
+          step: howTo.steps.map((s, index) => ({
+            "@type": "HowToStep",
+            position: index + 1,
+            name: s.name,
+            text: s.text,
+          })),
+        }
+      : null
+
   // Grafo entità sempre incluso: WebSite + Organization + Person (founder),
   // collegati via @id. Dati reali presenti sul sito (Filippo Mancini, founder).
   const entityGraphSchema = {
@@ -311,6 +342,13 @@ export function StructuredData({
           id="structured-data-breadcrumb"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
+      {howToSchema && (
+        <Script
+          id="structured-data-howto"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
         />
       )}
       <Script
