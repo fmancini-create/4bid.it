@@ -44,6 +44,37 @@ export default function GuidaPrenotazioniDirettePage() {
         description="Guida completa per aumentare le prenotazioni dirette: strategie, checklist operativa, errori comuni e glossario."
         url="https://www.4bid.it/guida-prenotazioni-dirette-hotel"
         keywords={["prenotazioni dirette", "direct booking", "hotel", "OTA", "commissioni"]}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Guida alle Prenotazioni Dirette", url: "https://www.4bid.it/guida-prenotazioni-dirette-hotel" },
+        ]}
+        howTo={{
+          name: "Come aumentare le prenotazioni dirette in hotel: 5 step",
+          description:
+            "I 5 passi operativi per ridurre la dipendenza dalle OTA e incrementare le prenotazioni dirette.",
+          steps: [
+            {
+              name: "Analisi del channel mix attuale",
+              text: "Mappatura di tutti i canali di prenotazione con volumi, commissioni e ricavo netto per canale.",
+            },
+            {
+              name: "Ottimizzazione del sito web",
+              text: "Miglioramento di UX, velocità, SEO e mobile experience per convertire i visitatori in prenotanti.",
+            },
+            {
+              name: "Implementazione booking engine",
+              text: "Scelta e configurazione di un motore di prenotazione integrato, veloce e ottimizzato per conversioni.",
+            },
+            {
+              name: "Strategia di marketing diretto",
+              text: "Attivazione di Google Hotel Ads, metasearch, remarketing, email marketing e programmi loyalty.",
+            },
+            {
+              name: "Misurazione e ottimizzazione",
+              text: "Tracking delle conversioni, analisi del funnel, A/B testing e miglioramento continuo.",
+            },
+          ],
+        }}
       />
 
       <LandingPageTracker slug="guida-prenotazioni-dirette-hotel" />

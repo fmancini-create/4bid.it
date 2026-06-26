@@ -10,6 +10,17 @@ interface BreadcrumbItem {
   url: string
 }
 
+interface HowToStep {
+  name: string
+  text: string
+}
+
+interface HowToData {
+  name: string
+  description?: string
+  steps: HowToStep[]
+}
+
 interface StructuredDataProps {
   type?:
     | "Article"
@@ -19,6 +30,8 @@ interface StructuredDataProps {
     | "Product"
     | "FAQPage"
     | "WebPage"
+    | "AboutPage"
+    | "CollectionPage"
     | "SoftwareApplication"
   title: string
   description: string
@@ -33,6 +46,15 @@ interface StructuredDataProps {
   keywords?: string[]
   softwareCategory?: string
   operatingSystem?: string
+  // Entity SEO: entità trattate (about) e citate (mentions), collegate via @id.
+  about?: Array<Record<string, unknown>>
+  mentions?: Array<Record<string, unknown>>
+  // HowTo: procedura passo-passo (per pagine guida con step reali).
+  howTo?: HowToData
+  // Speakable: selettori CSS dei contenuti adatti alla lettura vocale (GEO).
+  speakable?: string[]
+  // CollectionPage: elementi raccolti (es. guide di una categoria) → hasPart.
+  hasParts?: Array<{ name: string; url: string }>
 }
 
 const companyData = {
@@ -78,8 +100,18 @@ export function StructuredData({
   keywords,
   softwareCategory,
   operatingSystem = "Web",
+  about,
+  mentions,
+  howTo,
+  speakable,
+  hasParts,
 }: StructuredDataProps) {
   const now = new Date().toISOString()
+
+  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO).
+  const ORG_ID = "https://www.4bid.it/#organization"
+  const PERSON_ID = "https://www.4bid.it/#person"
+  const WEBSITE_ID = "https://www.4bid.it/#website"
 
   // Schema principale
   const mainSchema: Record<string, unknown> = {
@@ -93,7 +125,7 @@ export function StructuredData({
   }
 
   // Aggiungi date solo se fornite o per tipi che le richiedono
-  if (type === "Article" || type === "WebPage") {
+  if (type === "Article" || type === "WebPage" || type === "AboutPage" || type === "CollectionPage") {
     mainSchema.datePublished = datePublished || now
     mainSchema.dateModified = dateModified || now
   }
@@ -161,7 +193,7 @@ export function StructuredData({
     }
   }
 
-  if (type === "WebPage" || type === "Article") {
+  if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "CollectionPage") {
     mainSchema.mainEntityOfPage = {
       "@type": "WebPage",
       "@id": url,
@@ -182,6 +214,42 @@ export function StructuredData({
     if (keywords) {
       mainSchema.keywords = keywords.join(", ")
     }
+  }
+
+  // isPartOf: la pagina fa parte del sito (collega l'entità al WebSite via @id).
+  if (
+    type === "WebPage" ||
+    type === "Article" ||
+    type === "AboutPage" ||
+    type === "Service" ||
+    type === "CollectionPage"
+  ) {
+    mainSchema.isPartOf = { "@id": WEBSITE_ID }
+  }
+
+  // Speakable: porzioni della pagina adatte alla lettura vocale (assistenti, GEO).
+  if (speakable && speakable.length > 0) {
+    mainSchema.speakable = {
+      "@type": "SpeakableSpecification",
+      cssSelector: speakable,
+    }
+  }
+
+  // hasPart: elementi raccolti da una CollectionPage (es. guide di una categoria).
+  if (hasParts && hasParts.length > 0) {
+    mainSchema.hasPart = hasParts.map((p) => ({
+      "@type": "WebPage",
+      name: p.name,
+      url: p.url,
+    }))
+  }
+
+  // about / mentions: entità trattate e citate, per rafforzare l'Entity SEO.
+  if (about && about.length > 0) {
+    mainSchema.about = about
+  }
+  if (mentions && mentions.length > 0) {
+    mainSchema.mentions = mentions
   }
 
   // Schema FAQ separato
@@ -216,10 +284,22 @@ export function StructuredData({
         }
       : null
 
-  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO)
-  const ORG_ID = "https://www.4bid.it/#organization"
-  const PERSON_ID = "https://www.4bid.it/#person"
-  const WEBSITE_ID = "https://www.4bid.it/#website"
+  // Schema HowTo separato (procedura passo-passo con step reali della pagina).
+  const howToSchema =
+    howTo && howTo.steps.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: howTo.name,
+          description: howTo.description || description,
+          step: howTo.steps.map((s, index) => ({
+            "@type": "HowToStep",
+            position: index + 1,
+            name: s.name,
+            text: s.text,
+          })),
+        }
+      : null
 
   // Grafo entità sempre incluso: WebSite + Organization + Person (founder),
   // collegati via @id. Dati reali presenti sul sito (Filippo Mancini, founder).
@@ -292,6 +372,13 @@ export function StructuredData({
           id="structured-data-breadcrumb"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
+      {howToSchema && (
+        <Script
+          id="structured-data-howto"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
         />
       )}
       <Script

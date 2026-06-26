@@ -7,6 +7,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -28,6 +30,7 @@ export const metadata: Metadata = {
 }
 
 export default function SantaddeoPage() {
+  const entityLinks = entitySchemaLinks("santaddeo")
   return (
     <div className="min-h-screen bg-white">
       <StructuredData
@@ -36,6 +39,13 @@ export default function SantaddeoPage() {
         description="Il primo sistema di Revenue Management Intelligente e Umano che spiega le proprie decisioni"
         url="https://www.4bid.it/progetti/santaddeo"
         image="https://www.4bid.it/santaddeo-logo.png"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Progetti", url: "https://www.4bid.it/#projects" },
+          { name: "Santaddeo", url: "https://www.4bid.it/progetti/santaddeo" },
+        ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <LandingPageTracker slug="progetti/santaddeo" />
@@ -237,6 +247,8 @@ export default function SantaddeoPage() {
           </ContactButton>
         </div>
       </section>
+
+      <EntityLinks entityKey="santaddeo" />
 
       <Footer />
     </div>

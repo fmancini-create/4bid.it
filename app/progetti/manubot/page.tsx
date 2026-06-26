@@ -7,6 +7,8 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -54,6 +56,7 @@ export const metadata: Metadata = {
 }
 
 export default function ManubotPage() {
+  const entityLinks = entitySchemaLinks("manubot")
   return (
     <div className="min-h-screen bg-white">
       <StructuredData
@@ -62,6 +65,13 @@ export default function ManubotPage() {
         description="Sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram per hotel e strutture ricettive"
         url="https://www.4bid.it/progetti/manubot"
         image="https://www.4bid.it/manubot-logo.jpg"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Progetti", url: "https://www.4bid.it/#projects" },
+          { name: "ManuBot", url: "https://www.4bid.it/progetti/manubot" },
+        ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <LandingPageTracker slug="progetti/manubot" />
@@ -263,6 +273,8 @@ export default function ManubotPage() {
           </ContactButton>
         </div>
       </section>
+
+      <EntityLinks entityKey="manubot" />
 
       <Footer />
     </div>

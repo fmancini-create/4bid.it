@@ -44,6 +44,37 @@ export default function GuidaRevenueManagementPage() {
         description="Guida completa al Revenue Management per hotel: cos'è, come funziona, checklist operativa, errori comuni e glossario."
         url="https://www.4bid.it/guida-revenue-management-hotel"
         keywords={["revenue management", "hotel", "guida", "pricing", "yield management"]}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Guida al Revenue Management", url: "https://www.4bid.it/guida-revenue-management-hotel" },
+        ]}
+        howTo={{
+          name: "Come implementare il Revenue Management in hotel: 5 step",
+          description:
+            "I 5 passi operativi per implementare una strategia di revenue management in una struttura ricettiva.",
+          steps: [
+            {
+              name: "Raccolta dati",
+              text: "Analisi dello storico prenotazioni, tariffe passate, occupazione e ricavi per periodo. Identificazione dei pattern di domanda.",
+            },
+            {
+              name: "Analisi del mercato",
+              text: "Studio della concorrenza, eventi locali, stagionalità e fattori esterni che influenzano la domanda nella tua zona.",
+            },
+            {
+              name: "Segmentazione clientela",
+              text: "Identificazione dei diversi tipi di ospiti (business, leisure, famiglie, coppie) e delle loro sensibilità al prezzo.",
+            },
+            {
+              name: "Definizione strategia tariffaria",
+              text: "Creazione di una struttura di prezzi flessibile con tariffe base, restrizioni e regole di variazione automatica.",
+            },
+            {
+              name: "Monitoraggio e ottimizzazione",
+              text: "Controllo continuo delle performance, confronto con forecast e aggiustamento della strategia in base ai risultati.",
+            },
+          ],
+        }}
       />
 
       <LandingPageTracker slug="guida-revenue-management-hotel" />

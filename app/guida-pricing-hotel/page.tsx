@@ -43,6 +43,37 @@ export default function GuidaPricingHotelPage() {
         description="Guida completa alle strategie di pricing per hotel: tariffe dinamiche, BAR, restrizioni, segmentazione."
         url="https://www.4bid.it/guida-pricing-hotel"
         keywords={["pricing hotel", "tariffe hotel", "dynamic pricing", "BAR", "strategie tariffarie"]}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Guida al Pricing Hotel", url: "https://www.4bid.it/guida-pricing-hotel" },
+        ]}
+        howTo={{
+          name: "Come definire una strategia di pricing per hotel: 5 step",
+          description:
+            "I 5 passi operativi per costruire una strategia tariffaria efficace in una struttura ricettiva.",
+          steps: [
+            {
+              name: "Analisi dei costi",
+              text: "Calcolo del costo per camera occupata (pulizia, consumabili, utenze) per definire il floor price sotto cui non scendere.",
+            },
+            {
+              name: "Definizione della BAR",
+              text: "Creazione della Best Available Rate come tariffa di riferimento pubblico, con variazioni per stagione e tipologia camera.",
+            },
+            {
+              name: "Segmentazione tariffaria",
+              text: "Definizione di tariffe differenziate per canale, segmento clientela e condizioni (non rimborsabile, advance purchase, etc.).",
+            },
+            {
+              name: "Regole di variazione",
+              text: "Impostazione di trigger automatici o manuali per modificare i prezzi in base a occupazione, lead time e pick-up.",
+            },
+            {
+              name: "Test e ottimizzazione",
+              text: "Monitoraggio dei risultati, A/B testing su tariffe e condizioni, aggiustamento continuo della strategia.",
+            },
+          ],
+        }}
       />
 
       <LandingPageTracker slug="guida-pricing-hotel" />

@@ -6,6 +6,8 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { EntityLinks } from "@/components/entity-links"
+import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -108,6 +110,8 @@ export default function HotelAcceleratorPage() {
     },
   ]
 
+  const entityLinks = entitySchemaLinks("hotel-accelerator")
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <StructuredData
@@ -116,6 +120,13 @@ export default function HotelAcceleratorPage() {
         description="Piattaforma SaaS per strutture ricettive: CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione"
         url="https://www.4bid.it/progetti/hotel-accelerator"
         image="https://www.4bid.it/hotel-accelerator-logo.jpg"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Progetti", url: "https://www.4bid.it/#projects" },
+          { name: "Hotel Accelerator", url: "https://www.4bid.it/progetti/hotel-accelerator" },
+        ]}
+        about={entityLinks.about}
+        mentions={entityLinks.mentions}
       />
 
       <LandingPageTracker slug="progetti/hotel-accelerator" />
@@ -289,6 +300,8 @@ export default function HotelAcceleratorPage() {
           </div>
         </div>
       </section>
+
+      <EntityLinks entityKey="hotel-accelerator" variant="dark" />
 
       <Footer />
     </div>
