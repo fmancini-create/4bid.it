@@ -31,6 +31,7 @@ interface StructuredDataProps {
     | "FAQPage"
     | "WebPage"
     | "AboutPage"
+    | "CollectionPage"
     | "SoftwareApplication"
   title: string
   description: string
@@ -50,6 +51,10 @@ interface StructuredDataProps {
   mentions?: Array<Record<string, unknown>>
   // HowTo: procedura passo-passo (per pagine guida con step reali).
   howTo?: HowToData
+  // Speakable: selettori CSS dei contenuti adatti alla lettura vocale (GEO).
+  speakable?: string[]
+  // CollectionPage: elementi raccolti (es. guide di una categoria) → hasPart.
+  hasParts?: Array<{ name: string; url: string }>
 }
 
 const companyData = {
@@ -98,6 +103,8 @@ export function StructuredData({
   about,
   mentions,
   howTo,
+  speakable,
+  hasParts,
 }: StructuredDataProps) {
   const now = new Date().toISOString()
 
@@ -118,7 +125,7 @@ export function StructuredData({
   }
 
   // Aggiungi date solo se fornite o per tipi che le richiedono
-  if (type === "Article" || type === "WebPage" || type === "AboutPage") {
+  if (type === "Article" || type === "WebPage" || type === "AboutPage" || type === "CollectionPage") {
     mainSchema.datePublished = datePublished || now
     mainSchema.dateModified = dateModified || now
   }
@@ -186,7 +193,7 @@ export function StructuredData({
     }
   }
 
-  if (type === "WebPage" || type === "Article" || type === "AboutPage") {
+  if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "CollectionPage") {
     mainSchema.mainEntityOfPage = {
       "@type": "WebPage",
       "@id": url,
@@ -210,8 +217,31 @@ export function StructuredData({
   }
 
   // isPartOf: la pagina fa parte del sito (collega l'entità al WebSite via @id).
-  if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "Service") {
+  if (
+    type === "WebPage" ||
+    type === "Article" ||
+    type === "AboutPage" ||
+    type === "Service" ||
+    type === "CollectionPage"
+  ) {
     mainSchema.isPartOf = { "@id": WEBSITE_ID }
+  }
+
+  // Speakable: porzioni della pagina adatte alla lettura vocale (assistenti, GEO).
+  if (speakable && speakable.length > 0) {
+    mainSchema.speakable = {
+      "@type": "SpeakableSpecification",
+      cssSelector: speakable,
+    }
+  }
+
+  // hasPart: elementi raccolti da una CollectionPage (es. guide di una categoria).
+  if (hasParts && hasParts.length > 0) {
+    mainSchema.hasPart = hasParts.map((p) => ({
+      "@type": "WebPage",
+      name: p.name,
+      url: p.url,
+    }))
   }
 
   // about / mentions: entità trattate e citate, per rafforzare l'Entity SEO.
