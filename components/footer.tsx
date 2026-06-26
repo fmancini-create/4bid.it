@@ -101,6 +101,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/knowledge-base" title="Knowledge Base" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Knowledge Base
+                </Link>
+              </li>
+              <li>
+                <Link href="/glossario" title="Glossario del Revenue Management" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  Glossario
+                </Link>
+              </li>
+              <li>
                 <Link href="/parlano-di-noi" title="Parlano di noi" className="text-gray-400 hover:text-white transition-colors text-sm">
                   Parlano di noi
                 </Link>

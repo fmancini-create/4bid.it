@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
 import { getAllPosts } from "@/lib/blog/posts"
+import { getAllCategories, getPublishedGuides, GLOSSARY } from "@/lib/knowledge-base"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://www.4bid.it"
@@ -129,6 +130,40 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
+  // Knowledge Base: hub + categorie + guide pubblicate
+  const kbHub = {
+    url: `${baseUrl}/knowledge-base`,
+    lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }
+  const kbCategories = getAllCategories().map((c) => ({
+    url: `${baseUrl}/knowledge-base/${c.slug}`,
+    lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }))
+  const kbGuides = getPublishedGuides().map((g) => ({
+    url: `${baseUrl}/knowledge-base/${g.categorySlug}/${g.slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }))
+
+  // Glossario: hub + singoli termini
+  const glossaryHub = {
+    url: `${baseUrl}/glossario`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }
+  const glossaryTerms = GLOSSARY.map((t) => ({
+    url: `${baseUrl}/glossario/${t.slug}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }))
+
   // Altre pagine
   const otherPages = [
     {
@@ -191,6 +226,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...ecomobility,
     ...hubAndEvents,
     ...eeatPages,
+    kbHub,
+    ...kbCategories,
+    ...kbGuides,
+    glossaryHub,
+    ...glossaryTerms,
     ...otherPages,
   ]
 }

@@ -62,6 +62,8 @@ export interface GuideSection {
   id: string
   /** Titolo mostrato e voce nel TOC. */
   heading: string
+  /** Corpo testuale della sezione (auto-link glossario applicato in rendering). */
+  body?: string
 }
 
 /**
@@ -82,10 +84,12 @@ export interface KBGuide {
   keywords?: string[]
   /** Termini del glossario trattati nella guida (slug). */
   glossaryTerms?: string[]
-  /** Sezioni per il Table of Contents. */
-  sections?: GuideSection[]
+  /** Sezioni per il Table of Contents e il corpo della guida. */
+  sections: GuideSection[]
   /** FAQ specifiche della guida. */
   faqs?: { question: string; answer: string }[]
+  /** Percorso file della pagina/registro per la data reale di ultimo aggiornamento. */
+  filePath: string
   /** Procedura passo-passo (se applicabile) → schema HowTo. */
   howTo?: { name: string; description?: string; steps: GuideHowToStep[] }
   /** Guide correlate esplicite (slug). Se assenti, derivate per categoria. */
