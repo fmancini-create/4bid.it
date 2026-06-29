@@ -53,11 +53,19 @@ function verifySvixSignature(
 
 function extractEmails(data: Record<string, unknown> | undefined): string[] {
   if (!data) return []
-  const to = data.to
   const list: string[] = []
-  if (Array.isArray(to)) for (const t of to) if (typeof t === "string") list.push(t)
-  else if (typeof to === "string") list.push(to)
-  return list.map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@"))
+  // `to` puo' essere un array di stringhe oppure una singola stringa.
+  const to = data.to
+  if (Array.isArray(to)) {
+    for (const t of to) if (typeof t === "string") list.push(t)
+  } else if (typeof to === "string") {
+    list.push(to)
+  }
+  // Fallback: alcuni payload usano `email` invece di `to`.
+  if (typeof data.email === "string") list.push(data.email)
+  // Dedup + normalizzazione.
+  const normalized = list.map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@"))
+  return Array.from(new Set(normalized))
 }
 
 export async function POST(request: NextRequest) {
@@ -65,19 +73,34 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
   // 2) Verifica firma se il secret e' configurato.
-  const secret = process.env.RESEND_WEBHOOK_SECRET
+  //    Trim difensivo: se il secret viene incollato con spazi o newline finali
+  //    (errore comune), senza il trim ogni firma fallirebbe -> 401 -> Resend
+  //    disabilita il webhook. Il trim NON indebolisce la sicurezza: la verifica
+  //    HMAC resta obbligatoria quando un secret e' presente.
+  const secret = process.env.RESEND_WEBHOOK_SECRET?.trim()
   if (secret) {
+    const svixId = request.headers.get("svix-id")
+    const svixTimestamp = request.headers.get("svix-timestamp")
+    const svixSignature = request.headers.get("svix-signature")
     const ok = verifySvixSignature(
       rawBody,
-      {
-        id: request.headers.get("svix-id"),
-        timestamp: request.headers.get("svix-timestamp"),
-        signature: request.headers.get("svix-signature"),
-      },
+      { id: svixId, timestamp: svixTimestamp, signature: svixSignature },
       secret,
     )
     if (!ok) {
-      console.error("[v0] resend-webhook: firma non valida")
+      // Log diagnostico SENZA esporre il secret: aiuta a distinguere "headers
+      // mancanti" (richiesta non firmata da Resend) da "firma non combaciante"
+      // (secret sbagliato), la causa piu' frequente di disabilitazione.
+      console.error(
+        "[v0] resend-webhook: firma non valida",
+        JSON.stringify({
+          hasSvixId: Boolean(svixId),
+          hasSvixTimestamp: Boolean(svixTimestamp),
+          hasSvixSignature: Boolean(svixSignature),
+          secretPrefixOk: secret.startsWith("whsec_"),
+          secretLen: secret.length,
+        }),
+      )
       return NextResponse.json({ error: "invalid signature" }, { status: 401 })
     }
   } else {
