@@ -37,7 +37,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  decodeCredential,
   formatQuoteAmount,
+  type QuoteBillingDetails,
   type QuoteLineItem,
   type QuoteRequestedField,
   type SalesChannelQuote,
@@ -46,7 +48,8 @@ import {
 const FIELD_TYPES: { value: QuoteRequestedField["type"]; label: string }[] = [
   { value: "text", label: "Testo breve" },
   { value: "textarea", label: "Testo lungo" },
-  { value: "password", label: "Credenziale/Password" },
+  { value: "credentials", label: "Credenziale (ID + Password)" },
+  { value: "password", label: "Solo password" },
   { value: "email", label: "Email" },
   { value: "url", label: "URL / Link" },
 ]
@@ -80,17 +83,6 @@ function emptyQuote(): EditableQuote {
     currency: "eur",
     requested_fields: [],
   }
-}
-
-function slugify(label: string): string {
-  return (
-    label
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "") || `campo_${Date.now()}`
-  )
 }
 
 export default function QuotesDashboard({ initialQuotes }: { initialQuotes: SalesChannelQuote[] }) {
@@ -217,11 +209,20 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
       requested_fields: requestedFields.map((f, i) => (i === index ? { ...f, ...patch } : f)),
     })
   }
+  function newFieldKey(): string {
+    const rand =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID().slice(0, 8)
+        : Math.random().toString(36).slice(2, 10)
+    return `field_${rand}`
+  }
   function addField() {
     update({
       requested_fields: [
         ...requestedFields,
-        { key: `campo_${requestedFields.length + 1}`, label: "", type: "text", required: true },
+        // Stable, unique key. Distinct fields must never share a key or their
+        // submitted values would overwrite each other.
+        { key: newFieldKey(), label: "", type: "credentials", required: true },
       ],
     })
   }
@@ -524,12 +525,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
                         <Input
                           placeholder="Es. Codice accesso Booking.com"
                           value={f.label}
-                          onChange={(e) =>
-                            setField(i, {
-                              label: e.target.value,
-                              key: f.key?.startsWith("campo_") ? slugify(e.target.value) : f.key,
-                            })
-                          }
+                          onChange={(e) => setField(i, { label: e.target.value })}
                         />
                       </div>
                       <div className="w-40 space-y-1.5">
@@ -569,6 +565,70 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
                   </div>
                 ))}
               </section>
+
+              {/* Dati ricevuti dal cliente (sola lettura, dopo l'accettazione) */}
+              {editing.submitted_at && (
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Dati ricevuti dal cliente
+                  </h3>
+                  {(() => {
+                    const billing = (editing.billing_details as QuoteBillingDetails) || {}
+                    const hasBilling = Object.values(billing).some((v) => (v || "").toString().trim())
+                    return hasBilling ? (
+                      <div className="rounded-md border border-border p-3 text-sm space-y-0.5">
+                        <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                          Fatturazione
+                        </p>
+                        {billing.company && <p className="font-medium">{billing.company}</p>}
+                        {billing.vat && <p>P.IVA: {billing.vat}</p>}
+                        {billing.tax_code && <p>C.F.: {billing.tax_code}</p>}
+                        {(billing.address || billing.zip || billing.city || billing.province) && (
+                          <p>
+                            {[
+                              billing.address,
+                              [billing.zip, billing.city].filter(Boolean).join(" "),
+                              billing.province,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+                        {billing.sdi_code && <p>Codice SDI: {billing.sdi_code}</p>}
+                        {billing.pec && <p>PEC: {billing.pec}</p>}
+                        {billing.reference && <p>Referente: {billing.reference}</p>}
+                      </div>
+                    ) : null
+                  })()}
+                  {requestedFields.length > 0 && (
+                    <div className="rounded-md border border-border p-3 text-sm space-y-2">
+                      <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide">
+                        Campi / credenziali
+                      </p>
+                      {requestedFields.map((f) => {
+                        const raw = (editing.submitted_fields as Record<string, string>)?.[f.key]
+                        if (f.type === "credentials") {
+                          const cred = decodeCredential(raw)
+                          return (
+                            <div key={f.key}>
+                              <span className="text-muted-foreground">{f.label}:</span>{" "}
+                              <span className="font-mono">
+                                {cred.id || "—"} / {cred.password || "—"}
+                              </span>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div key={f.key}>
+                            <span className="text-muted-foreground">{f.label}:</span>{" "}
+                            <span className="font-mono break-all">{raw || "—"}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           )}
 

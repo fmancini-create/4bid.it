@@ -6,9 +6,50 @@ export interface QuoteLineItem {
 export interface QuoteRequestedField {
   key: string
   label: string
-  type: "text" | "textarea" | "password" | "email" | "url"
+  // "credentials" renders two inputs (ID/username + password) on the public page.
+  type: "text" | "textarea" | "password" | "credentials" | "email" | "url"
   required: boolean
   help?: string
+}
+
+// Billing data the client fills in on the public page, used to issue the invoice.
+export interface QuoteBillingDetails {
+  company?: string // Ragione sociale / Denominazione
+  vat?: string // Partita IVA
+  tax_code?: string // Codice Fiscale
+  address?: string // Indirizzo sede legale
+  zip?: string // CAP
+  city?: string // Città
+  province?: string // Provincia
+  sdi_code?: string // Codice destinatario SDI
+  pec?: string // PEC
+  reference?: string // Referente amministrativo
+}
+
+// Credentials (ID + password) are stored as a JSON string inside the single
+// submitted_fields entry for that field key, so submitted_fields stays a
+// Record<string, string>. Legacy "password" fields keep their plain value.
+export interface QuoteCredential {
+  id: string
+  password: string
+}
+
+export function encodeCredential(id: string, password: string): string {
+  return JSON.stringify({ id: (id || "").trim(), password: (password || "").trim() })
+}
+
+export function decodeCredential(value: string | undefined | null): QuoteCredential {
+  if (!value) return { id: "", password: "" }
+  try {
+    const parsed = JSON.parse(value)
+    if (parsed && typeof parsed === "object") {
+      return { id: String(parsed.id || ""), password: String(parsed.password || "") }
+    }
+  } catch {
+    // Legacy plain string: treat it as the password.
+    return { id: "", password: value }
+  }
+  return { id: "", password: "" }
 }
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "paid"
@@ -34,6 +75,7 @@ export interface SalesChannelQuote {
   currency: string
   requested_fields: QuoteRequestedField[]
   submitted_fields: Record<string, string>
+  billing_details: QuoteBillingDetails
   submitted_at: string | null
   accepted_at: string | null
   acceptance_name: string | null

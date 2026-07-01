@@ -10,6 +10,8 @@ import {
   ShieldCheck,
   Loader2,
   FileText,
+  Receipt,
+  KeyRound,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +19,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
+  decodeCredential,
+  encodeCredential,
   formatQuoteAmount,
+  type QuoteBillingDetails,
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
@@ -37,6 +42,23 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(
     () => (quote.submitted_fields as Record<string, string>) || {},
   )
+  // Billing details: prefill from what the client already submitted, otherwise
+  // from the rough data the admin entered on the quote.
+  const [billing, setBilling] = useState<QuoteBillingDetails>(() => {
+    const existing = (quote.billing_details as QuoteBillingDetails) || {}
+    return {
+      company: existing.company || quote.client_company || "",
+      vat: existing.vat || quote.client_vat || "",
+      tax_code: existing.tax_code || "",
+      address: existing.address || quote.client_address || "",
+      zip: existing.zip || "",
+      city: existing.city || "",
+      province: existing.province || "",
+      sdi_code: existing.sdi_code || "",
+      pec: existing.pec || "",
+      reference: existing.reference || quote.client_name || "",
+    }
+  })
   const [acceptanceName, setAcceptanceName] = useState(quote.acceptance_name || "")
   const [accepted, setAccepted] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"bonifico" | "card" | null>(
@@ -56,6 +78,17 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
     setFieldValues((prev) => ({ ...prev, [key]: value }))
   }
 
+  function setBillingField(key: keyof QuoteBillingDetails, value: string) {
+    setBilling((prev) => ({ ...prev, [key]: value }))
+  }
+
+  // Credentials are kept JSON-encoded in fieldValues[key]; update one half.
+  function setCredentialPart(key: string, part: "id" | "password", value: string) {
+    const current = decodeCredential(fieldValues[key])
+    const next = { ...current, [part]: value }
+    setField(key, encodeCredential(next.id, next.password))
+  }
+
   async function handleAccept() {
     if (!acceptanceName.trim()) {
       toast.error("Inserisci nome e cognome per accettare")
@@ -70,10 +103,36 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
       return
     }
     for (const f of requestedFields) {
-      if (f.required && !(fieldValues[f.key] || "").trim()) {
+      if (!f.required) continue
+      if (f.type === "credentials") {
+        const cred = decodeCredential(fieldValues[f.key])
+        if (!cred.id.trim() || !cred.password.trim()) {
+          toast.error(`Compila ID e password per: ${f.label}`)
+          return
+        }
+      } else if (!(fieldValues[f.key] || "").trim()) {
         toast.error(`Compila il campo obbligatorio: ${f.label}`)
         return
       }
+    }
+    // Billing data required to issue the invoice.
+    const requiredBilling: [keyof QuoteBillingDetails, string][] = [
+      ["company", "Ragione sociale"],
+      ["vat", "Partita IVA"],
+      ["address", "Indirizzo"],
+      ["zip", "CAP"],
+      ["city", "Città"],
+      ["province", "Provincia"],
+    ]
+    for (const [key, label] of requiredBilling) {
+      if (!(billing[key] || "").trim()) {
+        toast.error(`Dati di fatturazione: compila il campo "${label}"`)
+        return
+      }
+    }
+    if (!(billing.sdi_code || "").trim() && !(billing.pec || "").trim()) {
+      toast.error("Dati di fatturazione: inserisci il Codice SDI oppure la PEC")
+      return
     }
 
     setAccepting(true)
@@ -83,6 +142,7 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           submitted_fields: fieldValues,
+          billing_details: billing,
           acceptance_name: acceptanceName.trim(),
           accepted: true,
           payment_method: paymentMethod,
@@ -213,39 +273,146 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
               Compila i seguenti dati, utili allo svolgimento delle attività e alla fatturazione.
             </p>
             <div className="space-y-4">
-              {requestedFields.map((f) => (
-                <div key={f.key} className="space-y-1.5">
-                  <Label>
-                    {f.label}
-                    {f.required && <span className="text-destructive ml-1">*</span>}
-                  </Label>
-                  {f.type === "textarea" ? (
-                    <Textarea
-                      rows={3}
-                      value={fieldValues[f.key] || ""}
-                      disabled={alreadyAccepted}
-                      onChange={(e) => setField(f.key, e.target.value)}
-                    />
-                  ) : (
-                    <Input
-                      type={
-                        f.type === "password"
-                          ? "text"
-                          : f.type === "email"
-                            ? "email"
-                            : f.type === "url"
-                              ? "url"
-                              : "text"
-                      }
-                      value={fieldValues[f.key] || ""}
-                      disabled={alreadyAccepted}
-                      onChange={(e) => setField(f.key, e.target.value)}
-                    />
-                  )}
-                  {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
-                </div>
-              ))}
+              {requestedFields.map((f) => {
+                const cred = f.type === "credentials" ? decodeCredential(fieldValues[f.key]) : null
+                return (
+                  <div key={f.key} className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">
+                      {f.type === "credentials" && <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />}
+                      {f.label}
+                      {f.required && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    {f.type === "credentials" ? (
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <Input
+                          placeholder="ID / Username"
+                          autoComplete="off"
+                          value={cred?.id || ""}
+                          disabled={alreadyAccepted}
+                          onChange={(e) => setCredentialPart(f.key, "id", e.target.value)}
+                        />
+                        <Input
+                          placeholder="Password"
+                          autoComplete="off"
+                          value={cred?.password || ""}
+                          disabled={alreadyAccepted}
+                          onChange={(e) => setCredentialPart(f.key, "password", e.target.value)}
+                        />
+                      </div>
+                    ) : f.type === "textarea" ? (
+                      <Textarea
+                        rows={3}
+                        value={fieldValues[f.key] || ""}
+                        disabled={alreadyAccepted}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                      />
+                    ) : (
+                      <Input
+                        type={
+                          f.type === "email" ? "email" : f.type === "url" ? "url" : "text"
+                        }
+                        value={fieldValues[f.key] || ""}
+                        disabled={alreadyAccepted}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                      />
+                    )}
+                    {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+                  </div>
+                )
+              })}
             </div>
+          </section>
+        )}
+
+        {/* Dati di fatturazione (compilati dal cliente) */}
+        {!alreadyAccepted && !expired && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Dati di fatturazione</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Inserisci i dati con cui emettere la fattura. Verifica i campi precompilati.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Ragione sociale <span className="text-destructive">*</span></Label>
+                <Input
+                  value={billing.company || ""}
+                  onChange={(e) => setBillingField("company", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Partita IVA <span className="text-destructive">*</span></Label>
+                <Input
+                  value={billing.vat || ""}
+                  onChange={(e) => setBillingField("vat", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Codice Fiscale</Label>
+                <Input
+                  value={billing.tax_code || ""}
+                  onChange={(e) => setBillingField("tax_code", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Indirizzo (sede legale) <span className="text-destructive">*</span></Label>
+                <Input
+                  value={billing.address || ""}
+                  onChange={(e) => setBillingField("address", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>CAP <span className="text-destructive">*</span></Label>
+                <Input
+                  value={billing.zip || ""}
+                  onChange={(e) => setBillingField("zip", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Città <span className="text-destructive">*</span></Label>
+                <Input
+                  value={billing.city || ""}
+                  onChange={(e) => setBillingField("city", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Provincia <span className="text-destructive">*</span></Label>
+                <Input
+                  maxLength={2}
+                  placeholder="Es. FI"
+                  value={billing.province || ""}
+                  onChange={(e) => setBillingField("province", e.target.value.toUpperCase())}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Referente amministrativo</Label>
+                <Input
+                  value={billing.reference || ""}
+                  onChange={(e) => setBillingField("reference", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Codice destinatario (SDI)</Label>
+                <Input
+                  placeholder="7 caratteri"
+                  value={billing.sdi_code || ""}
+                  onChange={(e) => setBillingField("sdi_code", e.target.value.toUpperCase())}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>PEC</Label>
+                <Input
+                  type="email"
+                  value={billing.pec || ""}
+                  onChange={(e) => setBillingField("pec", e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Per la fatturazione elettronica indica il Codice destinatario (SDI) oppure la PEC.
+            </p>
           </section>
         )}
 
@@ -331,6 +498,31 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
               <ShieldCheck className="h-3.5 w-3.5" />
               I dati inseriti sono trattati in modo riservato.
             </p>
+          </section>
+        )}
+
+        {/* Post-accettazione: riepilogo dati di fatturazione */}
+        {alreadyAccepted && (billing.company || billing.vat) && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Receipt className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Dati di fatturazione ricevuti</h2>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-0.5">
+              {billing.company && <p className="text-foreground font-medium">{billing.company}</p>}
+              {billing.vat && <p>P.IVA: {billing.vat}</p>}
+              {billing.tax_code && <p>C.F.: {billing.tax_code}</p>}
+              {(billing.address || billing.zip || billing.city || billing.province) && (
+                <p>
+                  {[billing.address, [billing.zip, billing.city].filter(Boolean).join(" "), billing.province]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              )}
+              {billing.sdi_code && <p>Codice SDI: {billing.sdi_code}</p>}
+              {billing.pec && <p>PEC: {billing.pec}</p>}
+              {billing.reference && <p>Referente: {billing.reference}</p>}
+            </div>
           </section>
         )}
 
