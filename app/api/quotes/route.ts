@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { randomUUID } from "crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 
 export async function GET() {
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest) {
     currency: body.currency || "eur",
     requested_fields: Array.isArray(body.requested_fields) ? body.requested_fields : [],
     status: "draft",
+    // Generate the public token upfront so the quote page is reachable (for
+    // preview) immediately, even before sending. Sending reuses this token.
+    token: randomUUID(),
   }
 
   const { data, error } = await supabase.from("sales_channel_quotes").insert(insert).select().single()

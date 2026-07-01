@@ -8,6 +8,7 @@ import {
   Send,
   Trash2,
   Copy,
+  ExternalLink,
   Pencil,
   X,
   CheckCircle2,
@@ -175,12 +176,20 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
 
   function copyLink(q: SalesChannelQuote) {
     if (!q.token) {
-      toast.error("Invia prima il preventivo per generare il link")
+      toast.error("Link non disponibile: salva di nuovo il preventivo")
       return
     }
     const link = `${window.location.origin}/preventivo/${q.token}`
     navigator.clipboard.writeText(link)
     toast.success("Link copiato negli appunti")
+  }
+
+  function openPreview(q: SalesChannelQuote) {
+    if (!q.token) {
+      toast.error("Link non disponibile: salva di nuovo il preventivo")
+      return
+    }
+    window.open(`/preventivo/${q.token}`, "_blank", "noopener,noreferrer")
   }
 
   // ---- editor helpers ----
@@ -310,6 +319,9 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
                   >
                     <Send className="h-4 w-4 mr-1.5" />
                     {q.status === "draft" ? "Invia" : "Reinvia"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openPreview(q)}>
+                    <ExternalLink className="h-4 w-4 mr-1.5" /> Apri
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => copyLink(q)}>
                     <Copy className="h-4 w-4 mr-1.5" /> Copia link
