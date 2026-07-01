@@ -1,5 +1,6 @@
 import { sendEmail } from "@/lib/email-smtp"
 import { formatQuoteAmount, type SalesChannelQuote } from "./types"
+import { generateQuotePdf } from "./pdf"
 
 const LOGO_URL = "https://www.4bid.it/_next/image?url=%2Flogo.png&w=128&q=75"
 
@@ -67,9 +68,63 @@ export async function sendQuoteEmail(quote: SalesChannelQuote, link: string) {
     <p style="color:#6b7280;font-size:13px;">Se il pulsante non funziona, copia e incolla questo indirizzo nel browser:<br>${link}</p>
   `
 
+  // Allega il PDF del preventivo. Se la generazione fallisce, invia comunque
+  // l'email (senza allegato) per non bloccare il flusso.
+  let attachments: { filename: string; content: Buffer; contentType?: string }[] | undefined
+  try {
+    const pdf = await generateQuotePdf(quote)
+    const safeName = (quote.client_company || quote.client_name || "preventivo")
+      .replace(/[^a-zA-Z0-9-_ ]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .toLowerCase()
+    attachments = [
+      {
+        filename: `preventivo-4bid-${safeName || "cliente"}.pdf`,
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ]
+  } catch (err) {
+    console.error("[v0] Generazione PDF preventivo fallita, invio senza allegato:", err)
+  }
+
   return sendEmail({
     to: quote.client_email!,
     subject: `Preventivo 4BID: ${quote.title}`,
+    html: baseLayout(quote.title, inner),
+    attachments,
+  })
+}
+
+export async function sendQuoteReminderEmail(quote: SalesChannelQuote, link: string) {
+  const greetingName = quote.client_company || quote.client_name || "Gentile Cliente"
+  const totalRow =
+    quote.total_amount != null
+      ? `<p class="total">Importo: ${formatQuoteAmount(quote.total_amount, quote.currency)} ${
+          quote.vat_included ? "(IVA inclusa)" : "(IVA esclusa)"
+        }</p>`
+      : ""
+
+  const inner = `
+    <h2>${quote.title}</h2>
+    <p>Gentile ${greetingName},</p>
+    <p>le ricordiamo che il preventivo per le attività di ottimizzazione dei canali di vendita
+    è ancora in attesa di riscontro. Per procedere, la invitiamo a prendere visione dei dettagli,
+    completare i dati necessari e accettarlo tramite il link qui sotto.</p>
+    <div class="info-box">
+      ${totalRow}
+      <p style="margin:0;color:#6b7280;">Se ha già provveduto, può ignorare questo promemoria.</p>
+    </div>
+    <p style="text-align:center;">
+      <a href="${link}" class="button">Visualizza e accetta il preventivo</a>
+    </p>
+    <p style="color:#6b7280;font-size:13px;">Se il pulsante non funziona, copia e incolla questo indirizzo nel browser:<br>${link}</p>
+  `
+
+  return sendEmail({
+    to: quote.client_email!,
+    subject: `Promemoria - Preventivo 4BID: ${quote.title}`,
     html: baseLayout(quote.title, inner),
   })
 }

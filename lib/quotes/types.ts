@@ -46,6 +46,8 @@ export interface SalesChannelQuote {
   status: QuoteStatus
   sent_at: string | null
   expires_at: string | null
+  reminder_count: number
+  last_reminder_at: string | null
 }
 
 export function formatQuoteAmount(amount: number | null | undefined, currency = "eur"): string {

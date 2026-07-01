@@ -47,7 +47,11 @@ CREATE TABLE IF NOT EXISTS sales_channel_quotes (
   token uuid UNIQUE,
   status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sent','accepted','paid')),
   sent_at timestamptz,
-  expires_at timestamptz
+  expires_at timestamptz,
+
+  -- Solleciti automatici (cron) per i preventivi inviati e non ancora accettati
+  reminder_count integer NOT NULL DEFAULT 0,
+  last_reminder_at timestamptz
 );
 
 CREATE INDEX IF NOT EXISTS idx_scq_token ON sales_channel_quotes(token);
