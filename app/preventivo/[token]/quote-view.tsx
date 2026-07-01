@@ -1,0 +1,408 @@
+"use client"
+
+import { useState } from "react"
+import Image from "next/image"
+import { toast } from "sonner"
+import {
+  CheckCircle2,
+  CreditCard,
+  Banknote,
+  ShieldCheck,
+  Loader2,
+  FileText,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  formatQuoteAmount,
+  type QuoteRequestedField,
+  type SalesChannelQuote,
+} from "@/lib/quotes/types"
+
+interface Props {
+  token: string
+  quote: Partial<SalesChannelQuote>
+  expired: boolean
+  iban: string | null
+  bankHolder: string
+}
+
+export default function QuoteView({ token, quote, expired, iban, bankHolder }: Props) {
+  const alreadyPaid = quote.status === "paid"
+  const alreadyAccepted = quote.status === "accepted" || alreadyPaid
+
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>(
+    () => (quote.submitted_fields as Record<string, string>) || {},
+  )
+  const [acceptanceName, setAcceptanceName] = useState(quote.acceptance_name || "")
+  const [accepted, setAccepted] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<"bonifico" | "card" | null>(
+    (quote.payment_method as "bonifico" | "card") || null,
+  )
+  const [submitting, setSubmitting] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [confirmedMethod, setConfirmedMethod] = useState<"bonifico" | "card" | null>(
+    alreadyAccepted ? (quote.payment_method as "bonifico" | "card") || null : null,
+  )
+
+  const requestedFields = (quote.requested_fields as QuoteRequestedField[]) || []
+  const lineItems = quote.line_items || []
+  const cardAmount = quote.deposit_amount ?? quote.total_amount ?? null
+
+  function setField(key: string, value: string) {
+    setFieldValues((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleAccept() {
+    if (!acceptanceName.trim()) {
+      toast.error("Inserisci nome e cognome per accettare")
+      return
+    }
+    if (!accepted) {
+      toast.error("Devi accettare il preventivo e le condizioni")
+      return
+    }
+    if (!paymentMethod) {
+      toast.error("Scegli una modalità di pagamento")
+      return
+    }
+    for (const f of requestedFields) {
+      if (f.required && !(fieldValues[f.key] || "").trim()) {
+        toast.error(`Compila il campo obbligatorio: ${f.label}`)
+        return
+      }
+    }
+
+    setAccepting(true)
+    try {
+      const res = await fetch(`/api/quotes/shared/${token}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submitted_fields: fieldValues,
+          acceptance_name: acceptanceName.trim(),
+          accepted: true,
+          payment_method: paymentMethod,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Errore nell'accettazione")
+      setConfirmedMethod(paymentMethod)
+      toast.success("Preventivo accettato")
+      if (paymentMethod === "card") {
+        await startCardPayment()
+      }
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setAccepting(false)
+    }
+  }
+
+  async function startCardPayment() {
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/quotes/shared/${token}/checkout`, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Errore nel pagamento")
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (e: any) {
+      toast.error(e.message)
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      <header className="bg-background border-b border-border">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+          <Image src="/logo.png" alt="4BID" width={110} height={44} className="h-10 w-auto" priority />
+          <span className="text-sm text-muted-foreground">Preventivo</span>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {expired && (
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-4">
+            Questo preventivo è scaduto. Contatta 4BID per riceverne uno aggiornato.
+          </div>
+        )}
+
+        {alreadyPaid && (
+          <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5" />
+            Pagamento completato. Grazie! Procederemo con l&apos;avvio delle attività.
+          </div>
+        )}
+
+        {/* Intestazione preventivo */}
+        <section className="bg-card border border-border rounded-lg p-6">
+          <div className="flex items-center gap-2 text-primary mb-2">
+            <FileText className="h-5 w-5" />
+            <span className="text-sm font-medium uppercase tracking-wide">Preventivo</span>
+          </div>
+          <h1 className="text-2xl font-bold text-balance">{quote.title}</h1>
+          <div className="mt-4 text-sm text-muted-foreground space-y-0.5">
+            {(quote.client_company || quote.client_name) && (
+              <p className="text-foreground font-medium">
+                {quote.client_company || quote.client_name}
+              </p>
+            )}
+            {quote.client_company && quote.client_name && <p>Att.ne {quote.client_name}</p>}
+            {quote.client_vat && <p>P.IVA/CF: {quote.client_vat}</p>}
+            {quote.client_address && <p>{quote.client_address}</p>}
+          </div>
+        </section>
+
+        {/* Descrizione */}
+        {quote.description && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-semibold mb-3">Descrizione delle attività</h2>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {quote.description}
+            </p>
+          </section>
+        )}
+
+        {/* Importi */}
+        {(lineItems.length > 0 || quote.total_amount != null) && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-semibold mb-3">Dettaglio economico</h2>
+            {lineItems.length > 0 && (
+              <div className="divide-y divide-border mb-3">
+                {lineItems.map((li, i) => (
+                  <div key={i} className="flex justify-between py-2 text-sm">
+                    <span className="text-muted-foreground">{li.description}</span>
+                    <span className="font-medium">{formatQuoteAmount(li.amount, quote.currency)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-between items-baseline border-t border-border pt-3">
+              <span className="font-semibold">Totale</span>
+              <span className="text-xl font-bold">
+                {formatQuoteAmount(quote.total_amount, quote.currency)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground text-right mt-1">
+              {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}
+            </p>
+          </section>
+        )}
+
+        {/* Condizioni di pagamento */}
+        {quote.payment_terms && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-semibold mb-3">Condizioni di pagamento</h2>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {quote.payment_terms}
+            </p>
+          </section>
+        )}
+
+        {/* Dati richiesti al cliente */}
+        {requestedFields.length > 0 && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-semibold mb-1">Dati necessari per l&apos;avvio</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Compila i seguenti dati, utili allo svolgimento delle attività e alla fatturazione.
+            </p>
+            <div className="space-y-4">
+              {requestedFields.map((f) => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label>
+                    {f.label}
+                    {f.required && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                  {f.type === "textarea" ? (
+                    <Textarea
+                      rows={3}
+                      value={fieldValues[f.key] || ""}
+                      disabled={alreadyAccepted}
+                      onChange={(e) => setField(f.key, e.target.value)}
+                    />
+                  ) : (
+                    <Input
+                      type={
+                        f.type === "password"
+                          ? "text"
+                          : f.type === "email"
+                            ? "email"
+                            : f.type === "url"
+                              ? "url"
+                              : "text"
+                      }
+                      value={fieldValues[f.key] || ""}
+                      disabled={alreadyAccepted}
+                      onChange={(e) => setField(f.key, e.target.value)}
+                    />
+                  )}
+                  {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Accettazione + pagamento */}
+        {!alreadyAccepted && !expired && (
+          <section className="bg-card border border-border rounded-lg p-6 space-y-5">
+            <h2 className="font-semibold">Accettazione e pagamento</h2>
+
+            <div className="space-y-1.5">
+              <Label>Nome e cognome (firma) <span className="text-destructive">*</span></Label>
+              <Input
+                value={acceptanceName}
+                onChange={(e) => setAcceptanceName(e.target.value)}
+                placeholder="Il tuo nome e cognome"
+              />
+            </div>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={accepted}
+                onCheckedChange={(v) => setAccepted(v === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm text-muted-foreground">
+                Dichiaro di accettare il preventivo e le relative condizioni di pagamento.
+              </span>
+            </label>
+
+            <div className="space-y-2">
+              <Label>Modalità di pagamento</Label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("bonifico")}
+                  className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
+                    paymentMethod === "bonifico"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <Banknote className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Bonifico bancario</p>
+                    <p className="text-xs text-muted-foreground">Ricevi i dati per il bonifico</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("card")}
+                  className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
+                    paymentMethod === "card"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <CreditCard className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Carta di credito</p>
+                    <p className="text-xs text-muted-foreground">
+                      {cardAmount != null
+                        ? `Pagamento sicuro di ${formatQuoteAmount(cardAmount, quote.currency)}`
+                        : "Pagamento sicuro con Stripe"}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <Button className="w-full" size="lg" onClick={handleAccept} disabled={accepting || submitting}>
+              {accepting || submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Elaborazione...
+                </>
+              ) : paymentMethod === "card" ? (
+                "Accetta e paga con carta"
+              ) : (
+                "Accetta il preventivo"
+              )}
+            </Button>
+
+            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              I dati inseriti sono trattati in modo riservato.
+            </p>
+          </section>
+        )}
+
+        {/* Post-accettazione: bonifico */}
+        {alreadyAccepted && confirmedMethod === "bonifico" && !alreadyPaid && (
+          <section className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center gap-2 text-amber-700 mb-4">
+              <CheckCircle2 className="h-5 w-5" />
+              <h2 className="font-semibold">Preventivo accettato — Pagamento con bonifico</h2>
+            </div>
+            {iban ? (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+                <p>Effettua il bonifico utilizzando i seguenti dati:</p>
+                <p>
+                  <span className="text-muted-foreground">Intestatario:</span>{" "}
+                  <span className="font-medium">{bankHolder}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">IBAN:</span>{" "}
+                  <span className="font-mono font-medium">{iban}</span>
+                </p>
+                {quote.total_amount != null && (
+                  <p>
+                    <span className="text-muted-foreground">Importo:</span>{" "}
+                    <span className="font-medium">
+                      {formatQuoteAmount(quote.total_amount, quote.currency)}
+                    </span>
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  Causale: {quote.title} — {quote.client_company || quote.client_name}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Grazie per l&apos;accettazione. Ti invieremo a breve i dati per effettuare il bonifico.
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* Post-accettazione: carta non ancora pagata */}
+        {alreadyAccepted && confirmedMethod === "card" && !alreadyPaid && (
+          <section className="bg-card border border-border rounded-lg p-6 space-y-4">
+            <div className="flex items-center gap-2 text-amber-700">
+              <CheckCircle2 className="h-5 w-5" />
+              <h2 className="font-semibold">Preventivo accettato — Pagamento con carta</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Il pagamento non risulta ancora completato. Puoi procedere ora.
+            </p>
+            <Button onClick={startCardPayment} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Reindirizzamento...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Paga {cardAmount != null ? formatQuoteAmount(cardAmount, quote.currency) : "con carta"}
+                </>
+              )}
+            </Button>
+          </section>
+        )}
+      </main>
+
+      <footer className="max-w-3xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-muted-foreground">
+        <p>4BID S.r.l. — Via Sorripa, 10 — 50026 San Casciano in Val di Pesa (FI)</p>
+        <p>P.IVA: 06241710489 — clienti@4bid.it — www.4bid.it</p>
+      </footer>
+    </div>
+  )
+}
