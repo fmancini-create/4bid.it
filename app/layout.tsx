@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
+import { SonnerToasterProvider } from "@/components/ui/sonner"
 import { CookieConsent } from "@/components/cookie-consent"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import AISupportChat from "@/components/ai-support-chat"
@@ -178,6 +179,7 @@ gtag('config', 'G-S6YEEXE4C3');`,
         {children}
         {isProduction && <Analytics />}
         <Toaster />
+        <SonnerToasterProvider />
         <CookieConsent />
         <AISupportChat userEmail="" accountType="pro" />
       </body>
