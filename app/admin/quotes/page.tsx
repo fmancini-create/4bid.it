@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server-admin"
 import AdminNavigation from "@/components/admin-navigation"
 import QuotesDashboard from "./quotes-dashboard"
 import type { SalesChannelQuote } from "@/lib/quotes/types"
@@ -28,7 +29,12 @@ export default async function QuotesPage() {
     )
   }
 
-  const { data: quotes, error } = await supabase
+  // I preventivi sono protetti da RLS che consente il solo service_role
+  // (accesso pubblico via token gestito dalle route API con admin client).
+  // La dashboard e' gia' ristretta al super admin qui sopra, quindi leggiamo
+  // con l'admin client per bypassare l'RLS in sicurezza.
+  const adminClient = createAdminClient()
+  const { data: quotes, error } = await adminClient
     .from("sales_channel_quotes")
     .select("*")
     .order("created_at", { ascending: false })
