@@ -52,8 +52,13 @@ export async function sendQuoteEmail(quote: SalesChannelQuote, link: string) {
         }</p>`
       : ""
 
+  const numberLine = quote.quote_number
+    ? `<p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Preventivo N. <strong>${quote.quote_number}</strong> del ${new Date(quote.created_at).toLocaleDateString("it-IT")}</p>`
+    : ""
+
   const inner = `
     <h2>${quote.title}</h2>
+    ${numberLine}
     <p>Gentile ${greetingName},</p>
     <p>le inviamo il preventivo per le attività di ottimizzazione dei canali di vendita.
     Per prendere visione dei dettagli, completare i dati necessari all'avvio delle attività
@@ -106,8 +111,13 @@ export async function sendQuoteReminderEmail(quote: SalesChannelQuote, link: str
         }</p>`
       : ""
 
+  const numberLine = quote.quote_number
+    ? `<p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Preventivo N. <strong>${quote.quote_number}</strong> del ${new Date(quote.created_at).toLocaleDateString("it-IT")}</p>`
+    : ""
+
   const inner = `
     <h2>${quote.title}</h2>
+    ${numberLine}
     <p>Gentile ${greetingName},</p>
     <p>le ricordiamo che il preventivo per le attività di ottimizzazione dei canali di vendita
     è ancora in attesa di riscontro. Per procedere, la invitiamo a prendere visione dei dettagli,
@@ -135,6 +145,7 @@ export async function notifyAdminQuoteAccepted(quote: SalesChannelQuote, adminEm
     <p>Il cliente <strong>${quote.client_company || quote.client_name}</strong> ha accettato il preventivo
     "<strong>${quote.title}</strong>".</p>
     <div class="info-box">
+      <p><strong>Numero preventivo:</strong> ${quote.quote_number || "—"}</p>
       <p><strong>Accettato da:</strong> ${quote.acceptance_name || "—"}</p>
       <p><strong>Metodo di pagamento scelto:</strong> ${
         quote.payment_method === "card" ? "Carta (Stripe)" : quote.payment_method === "bonifico" ? "Bonifico bancario" : "—"

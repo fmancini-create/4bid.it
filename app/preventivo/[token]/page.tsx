@@ -16,7 +16,7 @@ export default async function PreventivoPage({ params }: { params: Promise<{ tok
   const { data, error } = await supabase
     .from("sales_channel_quotes")
     .select(
-      "id, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at",
+      "id, quote_number, created_at, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at",
     )
     .eq("token", token)
     .maybeSingle<Partial<SalesChannelQuote>>()
@@ -28,12 +28,6 @@ export default async function PreventivoPage({ params }: { params: Promise<{ tok
   const expired = data.expires_at ? new Date(data.expires_at) < new Date() : false
 
   return (
-    <QuoteView
-      token={token}
-      quote={data}
-      expired={expired}
-      iban={process.env.NEXT_PUBLIC_QUOTE_IBAN || null}
-      bankHolder={process.env.NEXT_PUBLIC_QUOTE_BANK_HOLDER || "4BID S.r.l."}
-    />
+    <QuoteView token={token} quote={data} expired={expired} />
   )
 }

@@ -96,7 +96,11 @@ export async function generateQuotePdf(quote: SalesChannelQuote): Promise<Buffer
   drawText("Ottimizzazione Canali di Vendita", { size: 10, color: GRAY })
   y -= 4
   drawText(sanitize(quote.title), { size: 15, font: bold })
-  drawText(`Preventivo del ${new Date(quote.created_at).toLocaleDateString("it-IT")}`, { size: 9, color: GRAY })
+  const numberLabel = quote.quote_number ? `Preventivo N. ${quote.quote_number} - del` : "Preventivo del"
+  drawText(`${numberLabel} ${new Date(quote.created_at).toLocaleDateString("it-IT")}`, {
+    size: 9,
+    color: GRAY,
+  })
   y -= 8
 
   // --- Dati intestatario ---

@@ -151,3 +151,23 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Stampa istruzioni bonifico: mostra solo la sezione #bonifico-print, pulita. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #bonifico-print,
+  #bonifico-print * {
+    visibility: visible;
+  }
+  #bonifico-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
