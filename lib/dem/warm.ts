@@ -237,7 +237,10 @@ export async function fetchWarmAudience(
     .select("id, email, nome, cognome, nome_azienda, open_count, click_count, first_click_at, last_open_at")
     .eq("campaign_id", originalCampaignId)
     .gte("click_count", minClicks)
-    .neq("send_status", "failed")
+    // Escludi chi non e' recapitabile: falliti, hard bounce e reclami (spam).
+    // Prima si escludeva solo 'failed', cosi' i 'bounced' rientravano tra i caldi
+    // e venivano ri-sollecitati ad ogni step (rimbalzando ogni volta).
+    .not("send_status", "in", "(failed,bounced,complained)")
 
   if (recencyDays && recencyDays > 0) {
     const since = new Date(Date.now() - recencyDays * 86_400_000).toISOString()
@@ -324,12 +327,22 @@ export async function fetchEligibleWarmRecipients(
     .limit(limit * 3)
   if (error) throw new Error(error.message)
 
-  // Lista soppressione globale.
+  // Lista soppressione globale + indirizzi non recapitabili (hard bounce/reclami).
   const emails = (data || []).map((r: { email: string }) => r.email).filter(Boolean)
   const unsubSet = new Set<string>()
+  const bouncedSet = new Set<string>()
   if (emails.length > 0) {
     const { data: unsubRows } = await supabase.from("dem_unsubscribes").select("email").in("email", emails)
     for (const row of unsubRows || []) if (row.email) unsubSet.add(String(row.email).toLowerCase())
+
+    // Chi ha gia' fatto bounce/complaint in QUALSIASI campagna non va piu'
+    // sollecitato (difesa se il webhook non ha ancora marcato excluded).
+    const { data: bouncedRows } = await supabase
+      .from("dem_recipients")
+      .select("email")
+      .in("email", emails)
+      .in("send_status", ["bounced", "complained"])
+    for (const row of bouncedRows || []) if (row.email) bouncedSet.add(String(row.email).toLowerCase())
   }
 
   return (data || [])
@@ -340,7 +353,10 @@ export async function fetchEligibleWarmRecipients(
       const last = r.last_followup_at as string | null
       return !last || last < gapThreshold
     })
-    .filter((r: { email: string }) => !unsubSet.has(String(r.email).toLowerCase()))
+    .filter((r: { email: string }) => {
+      const key = String(r.email).toLowerCase()
+      return !unsubSet.has(key) && !bouncedSet.has(key)
+    })
     .slice(0, limit)
     .map((r: Record<string, unknown>) => ({
       id: r.id as string,
