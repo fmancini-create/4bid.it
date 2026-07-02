@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { notifyAdminQuoteAccepted } from "@/lib/quotes/email"
-import type { QuoteRequestedField, SalesChannelQuote } from "@/lib/quotes/types"
+import {
+  decodeCredential,
+  encodeCredential,
+  type QuoteBillingDetails,
+  type QuoteRequestedField,
+  type SalesChannelQuote,
+} from "@/lib/quotes/types"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -44,11 +50,45 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const requested = (quote.requested_fields || []) as QuoteRequestedField[]
   const incoming = (body.submitted_fields || {}) as Record<string, string>
   for (const field of requested) {
+    if (field.type === "credentials") {
+      // Credentials arrive JSON-encoded ({id, password}); require both when the
+      // field is mandatory, then store the normalized JSON string.
+      const cred = decodeCredential(incoming[field.key])
+      if (field.required && (!cred.id.trim() || !cred.password.trim())) {
+        return NextResponse.json(
+          { error: `Compila ID e password per: ${field.label}` },
+          { status: 400 },
+        )
+      }
+      submitted[field.key] = encodeCredential(cred.id, cred.password)
+      continue
+    }
     const value = (incoming[field.key] ?? "").toString().trim()
     if (field.required && !value) {
       return NextResponse.json({ error: `Campo obbligatorio mancante: ${field.label}` }, { status: 400 })
     }
     submitted[field.key] = value
+  }
+
+  // Billing details (client-provided, used for invoicing). All optional here;
+  // we sanitize to a known shape to avoid storing arbitrary payloads.
+  const rawBilling = (body.billing_details || {}) as Record<string, unknown>
+  const billing: QuoteBillingDetails = {}
+  const billingKeys: (keyof QuoteBillingDetails)[] = [
+    "company",
+    "vat",
+    "tax_code",
+    "address",
+    "zip",
+    "city",
+    "province",
+    "sdi_code",
+    "pec",
+    "reference",
+  ]
+  for (const k of billingKeys) {
+    const v = (rawBilling[k] ?? "").toString().trim()
+    if (v) billing[k] = v
   }
 
   const ip =
@@ -61,6 +101,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .from("sales_channel_quotes")
     .update({
       submitted_fields: submitted,
+      billing_details: billing,
       submitted_at: nowIso,
       accepted_at: nowIso,
       acceptance_name: acceptanceName,
