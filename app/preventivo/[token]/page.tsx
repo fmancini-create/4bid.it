@@ -16,7 +16,7 @@ export default async function PreventivoPage({ params }: { params: Promise<{ tok
   const { data, error } = await supabase
     .from("sales_channel_quotes")
     .select(
-      "id, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at",
+      "id, quote_number, created_at, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at",
     )
     .eq("token", token)
     .maybeSingle<Partial<SalesChannelQuote>>()

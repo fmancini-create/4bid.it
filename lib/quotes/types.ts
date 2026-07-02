@@ -58,6 +58,7 @@ export type QuotePaymentStatus = "pending" | "awaiting_transfer" | "paid"
 
 export interface SalesChannelQuote {
   id: string
+  quote_number: string | null
   created_at: string
   updated_at: string
   client_name: string

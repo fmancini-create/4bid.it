@@ -202,9 +202,28 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
 
         {/* Intestazione preventivo */}
         <section className="bg-card border border-border rounded-lg p-6">
-          <div className="flex items-center gap-2 text-primary mb-2">
-            <FileText className="h-5 w-5" />
-            <span className="text-sm font-medium uppercase tracking-wide">Preventivo</span>
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div className="flex items-center gap-2 text-primary">
+              <FileText className="h-5 w-5" />
+              <span className="text-sm font-medium uppercase tracking-wide">Preventivo</span>
+            </div>
+            {(quote.quote_number || quote.created_at) && (
+              <div className="text-right shrink-0">
+                {quote.quote_number && (
+                  <p className="text-sm font-bold text-foreground">N. {quote.quote_number}</p>
+                )}
+                {quote.created_at && (
+                  <p className="text-xs text-muted-foreground">
+                    del{" "}
+                    {new Date(quote.created_at).toLocaleDateString("it-IT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-balance">{quote.title}</h1>
           <div className="mt-4 text-sm text-muted-foreground space-y-0.5">
