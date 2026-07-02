@@ -20,7 +20,19 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
   const body = await request.json()
 
+  // Numero preventivo progressivo annuo (Prev-2026-0500). Generato alla
+  // creazione tramite funzione DB atomica; se fallisce non blocchiamo la
+  // creazione (il numero resta null e può essere assegnato in seguito).
+  let quoteNumber: string | null = null
+  const { data: numData, error: numError } = await supabase.rpc("next_quote_number")
+  if (numError) {
+    console.error("[v0] next_quote_number error:", numError)
+  } else if (typeof numData === "string") {
+    quoteNumber = numData
+  }
+
   const insert = {
+    quote_number: quoteNumber,
     client_name: body.client_name ?? "",
     client_company: body.client_company ?? null,
     client_email: body.client_email ?? null,

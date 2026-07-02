@@ -28,12 +28,6 @@ export default async function PreventivoPage({ params }: { params: Promise<{ tok
   const expired = data.expires_at ? new Date(data.expires_at) < new Date() : false
 
   return (
-    <QuoteView
-      token={token}
-      quote={data}
-      expired={expired}
-      iban={process.env.NEXT_PUBLIC_QUOTE_IBAN || null}
-      bankHolder={process.env.NEXT_PUBLIC_QUOTE_BANK_HOLDER || "4BID S.r.l."}
-    />
+    <QuoteView token={token} quote={data} expired={expired} />
   )
 }

@@ -279,9 +279,16 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{q.title}</p>
-                    {q.client_email && (
-                      <p className="text-xs text-muted-foreground mt-1">{q.client_email}</p>
-                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {q.quote_number && (
+                        <span className="text-xs font-mono font-medium text-foreground">
+                          {q.quote_number}
+                        </span>
+                      )}
+                      {q.client_email && (
+                        <span className="text-xs text-muted-foreground">{q.client_email}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-semibold">{formatQuoteAmount(q.total_amount, q.currency)}</p>

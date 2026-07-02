@@ -12,6 +12,9 @@ import {
   FileText,
   Receipt,
   KeyRound,
+  Printer,
+  Mail,
+  Copy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,16 +29,15 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
+import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
 
 interface Props {
   token: string
   quote: Partial<SalesChannelQuote>
   expired: boolean
-  iban: string | null
-  bankHolder: string
 }
 
-export default function QuoteView({ token, quote, expired, iban, bankHolder }: Props) {
+export default function QuoteView({ token, quote, expired }: Props) {
   const alreadyPaid = quote.status === "paid"
   const alreadyAccepted = quote.status === "accepted" || alreadyPaid
 
@@ -547,39 +549,112 @@ export default function QuoteView({ token, quote, expired, iban, bankHolder }: P
 
         {/* Post-accettazione: bonifico */}
         {alreadyAccepted && confirmedMethod === "bonifico" && !alreadyPaid && (
-          <section className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center gap-2 text-amber-700 mb-4">
-              <CheckCircle2 className="h-5 w-5" />
-              <h2 className="font-semibold">Preventivo accettato — Pagamento con bonifico</h2>
+          <section id="bonifico-print" className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Banknote className="h-5 w-5" />
+                <h2 className="font-semibold">Istruzioni per il pagamento con bonifico</h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 print:hidden"
+                onClick={() => window.print()}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Stampa
+              </Button>
             </div>
-            {iban ? (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                <p>Effettua il bonifico utilizzando i seguenti dati:</p>
-                <p>
-                  <span className="text-muted-foreground">Intestatario:</span>{" "}
-                  <span className="font-medium">{bankHolder}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">IBAN:</span>{" "}
-                  <span className="font-mono font-medium">{iban}</span>
-                </p>
-                {quote.total_amount != null && (
-                  <p>
-                    <span className="text-muted-foreground">Importo:</span>{" "}
-                    <span className="font-medium">
-                      {formatQuoteAmount(quote.total_amount, quote.currency)}
-                    </span>
+
+            {/* Intestazione con numero preventivo e data, visibile anche in stampa */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-border">
+              <div>
+                {quote.quote_number && (
+                  <p className="text-sm font-bold">Preventivo N. {quote.quote_number}</p>
+                )}
+                {quote.created_at && (
+                  <p className="text-xs text-muted-foreground">
+                    del{" "}
+                    {new Date(quote.created_at).toLocaleDateString("it-IT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
                   </p>
                 )}
-                <p className="text-muted-foreground">
-                  Causale: {quote.title} — {quote.client_company || quote.client_name}
-                </p>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Grazie per l&apos;accettazione. Ti invieremo a breve i dati per effettuare il bonifico.
+              {quote.total_amount != null && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Importo: </span>
+                  <span className="font-bold">
+                    {formatQuoteAmount(quote.total_amount, quote.currency)}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <p className="text-sm mb-3">
+              Effettua il bonifico utilizzando le coordinate bancarie seguenti:
+            </p>
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Intestatario</span>
+                <span className="font-medium text-right">{QUOTE_BANK_DETAILS.holder}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Banca</span>
+                <span className="font-medium text-right">{QUOTE_BANK_DETAILS.bank}</span>
+              </div>
+              <div className="flex justify-between gap-3 items-center">
+                <span className="text-muted-foreground">IBAN</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono font-semibold tracking-tight text-right break-all">
+                    {QUOTE_BANK_DETAILS.iban}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Copia IBAN"
+                    className="print:hidden text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(QUOTE_BANK_DETAILS.iban)
+                      toast.success("IBAN copiato")
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 items-start border-t border-border pt-2 mt-2">
+                <span className="text-muted-foreground">Causale</span>
+                <span className="font-semibold text-right">
+                  {quoteTransferReason(quote.quote_number, quote.title || "")}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+              <div className="flex items-center gap-2 font-medium mb-1">
+                <Mail className="h-4 w-4 text-primary" />
+                Invia la contabile di pagamento
+              </div>
+              <p className="text-muted-foreground">
+                Dopo aver effettuato il bonifico, invia la contabile via email a{" "}
+                <a
+                  href={`mailto:${QUOTE_BANK_DETAILS.paymentEmail}?subject=${encodeURIComponent(
+                    `Contabile pagamento preventivo ${quote.quote_number || ""}`.trim(),
+                  )}`}
+                  className="font-semibold text-primary underline underline-offset-2"
+                >
+                  {QUOTE_BANK_DETAILS.paymentEmail}
+                </a>{" "}
+                indicando come causale il numero di preventivo{" "}
+                <span className="font-semibold text-foreground">
+                  {quote.quote_number || quote.title}
+                </span>
+                .
               </p>
-            )}
+            </div>
           </section>
         )}
 
