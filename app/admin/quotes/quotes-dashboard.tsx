@@ -15,6 +15,7 @@ import {
   Clock,
   CreditCard,
   Banknote,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -181,7 +182,8 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
       toast.error("Link non disponibile: salva di nuovo il preventivo")
       return
     }
-    window.open(`/preventivo/${q.token}`, "_blank", "noopener,noreferrer")
+    // ?preview=1 evita di conteggiare l'anteprima admin tra le aperture cliente.
+    window.open(`/preventivo/${q.token}?preview=1`, "_blank", "noopener,noreferrer")
   }
 
   // ---- editor helpers ----
@@ -246,6 +248,36 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
         </Button>
       </header>
 
+      {quotes.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {(() => {
+            const sent = quotes.filter((q) => q.sent_at).length
+            const viewed = quotes.filter((q) => q.first_viewed_at).length
+            const accepted = quotes.filter((q) => q.accepted_at).length
+            const paid = quotes.filter((q) => q.status === "paid" || q.paid_at).length
+            const pct = (n: number) => (sent > 0 ? Math.round((n / sent) * 100) : 0)
+            const cards = [
+              { label: "Inviati", value: sent, sub: null, icon: Send },
+              { label: "Aperti", value: viewed, sub: `${pct(viewed)}%`, icon: Eye },
+              { label: "Accettati", value: accepted, sub: `${pct(accepted)}%`, icon: CheckCircle2 },
+              { label: "Pagati", value: paid, sub: `${pct(paid)}%`, icon: CreditCard },
+            ]
+            return cards.map((c) => (
+              <div key={c.label} className="bg-card border border-border rounded-lg p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <c.icon className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase tracking-wide">{c.label}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{c.value}</span>
+                  {c.sub && <span className="text-xs text-muted-foreground">{c.sub}</span>}
+                </div>
+              </div>
+            ))
+          })()}
+        </div>
+      )}
+
       {quotes.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
@@ -299,6 +331,24 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  {q.first_viewed_at ? (
+                    <span className="inline-flex items-center gap-1 text-primary">
+                      <Eye className="h-3.5 w-3.5" /> Aperto{" "}
+                      {new Date(q.last_viewed_at || q.first_viewed_at).toLocaleDateString("it-IT", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {q.view_count > 1 && ` · ${q.view_count} volte`}
+                    </span>
+                  ) : (
+                    q.sent_at && (
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="h-3.5 w-3.5 opacity-50" /> Non ancora aperto
+                      </span>
+                    )
+                  )}
                   {q.accepted_at && (
                     <span className="inline-flex items-center gap-1 text-amber-700">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Accettato da {q.acceptance_name}

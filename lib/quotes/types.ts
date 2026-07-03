@@ -91,6 +91,9 @@ export interface SalesChannelQuote {
   expires_at: string | null
   reminder_count: number
   last_reminder_at: string | null
+  first_viewed_at: string | null
+  last_viewed_at: string | null
+  view_count: number
 }
 
 export function formatQuoteAmount(amount: number | null | undefined, currency = "eur"): string {
