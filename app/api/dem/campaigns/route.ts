@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
   try {
-    const { name, subject, html_template } = await request.json()
+    const { name, subject, html_template, track_opens, track_clicks, attach_as_link } =
+      await request.json()
 
     if (!name || !subject || !html_template) {
       return NextResponse.json(
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest) {
         click_count: 0,
         unique_opens: 0,
         unique_clicks: 0,
+        // Opzioni deliverability (default sicuri se non specificate).
+        track_opens: typeof track_opens === "boolean" ? track_opens : true,
+        track_clicks: typeof track_clicks === "boolean" ? track_clicks : true,
+        attach_as_link: typeof attach_as_link === "boolean" ? attach_as_link : false,
       })
       .select()
       .single()
@@ -89,6 +94,11 @@ export async function PATCH(request: NextRequest) {
       }
       updates.queueMoved = count || 0
     }
+
+    // Opzioni deliverability modificabili anche a campagna gia' creata.
+    if (typeof body.track_opens === "boolean") updates.track_opens = body.track_opens
+    if (typeof body.track_clicks === "boolean") updates.track_clicks = body.track_clicks
+    if (typeof body.attach_as_link === "boolean") updates.attach_as_link = body.attach_as_link
 
     // Toggle invio automatico a scaglioni (warm-up gestito dal cron dem-auto-send).
     if (typeof body.auto_send === "boolean") {
