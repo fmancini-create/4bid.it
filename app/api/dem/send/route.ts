@@ -195,6 +195,11 @@ export async function POST(request: NextRequest) {
     // Load the global suppression list so we never email anyone who unsubscribed.
     const batchEmails = recipients.map((r) => r.email).filter(Boolean)
     const unsubscribedSet = new Set<string>()
+    // Also treat hard bounces / complaints as permanent suppression: an address
+    // that already bounced (in ANY campaign) is dead and must never be emailed
+    // again, even if the Resend webhook hasn't yet added it to dem_unsubscribes
+    // (the webhook can lag or be temporarily misconfigured -> defense in depth).
+    const bouncedSet = new Set<string>()
     if (batchEmails.length > 0) {
       const { data: unsubRows } = await supabase
         .from("dem_unsubscribes")
@@ -203,6 +208,15 @@ export async function POST(request: NextRequest) {
       for (const row of unsubRows || []) {
         if (row.email) unsubscribedSet.add(String(row.email).toLowerCase())
       }
+
+      const { data: bouncedRows } = await supabase
+        .from("dem_recipients")
+        .select("email")
+        .in("email", batchEmails)
+        .in("send_status", ["bounced", "complained"])
+      for (const row of bouncedRows || []) {
+        if (row.email) bouncedSet.add(String(row.email).toLowerCase())
+      }
     }
 
     let skippedCount = 0
@@ -210,12 +224,23 @@ export async function POST(request: NextRequest) {
     // Send emails with throttling
     for (const recipient of recipients) {
       try {
+        const emailKey = recipient.email ? String(recipient.email).toLowerCase() : ""
         // Skip and flag anyone on the suppression list (they unsubscribed).
-        if (recipient.email && unsubscribedSet.has(String(recipient.email).toLowerCase())) {
+        if (emailKey && unsubscribedSet.has(emailKey)) {
           skippedCount++
           await supabase
             .from("dem_recipients")
             .update({ send_status: "unsubscribed" })
+            .eq("id", recipient.id)
+          continue
+        }
+        // Skip anyone who previously hard-bounced or complained: keep them
+        // flagged as 'bounced' (do not attempt another send to a dead address).
+        if (emailKey && bouncedSet.has(emailKey)) {
+          skippedCount++
+          await supabase
+            .from("dem_recipients")
+            .update({ send_status: "bounced" })
             .eq("id", recipient.id)
           continue
         }
