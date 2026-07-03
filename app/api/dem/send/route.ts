@@ -35,25 +35,44 @@ function addTracking(
   html: string,
   campaignId: string,
   recipientId: string,
-  baseUrl: string
+  baseUrl: string,
+  opts: { trackOpens: boolean; trackClicks: boolean }
 ): string {
-  // Add tracking pixel for opens
-  const trackingPixel = `<img src="${baseUrl}/api/dem/track?t=open&c=${campaignId}&r=${recipientId}" width="1" height="1" style="display:none" alt="" />`
-
-  // Replace links with tracked redirects
-  const trackedHtml = html.replace(
-    /href="(https?:\/\/[^"]+)"/gi,
-    (match, url) => {
+  // Riscrittura link -> redirect tracciato SOLO se il click-tracking e' attivo.
+  // Riscrivere ogni link su un dominio diverso dal mittente e' un forte segnale
+  // di spam: per le campagne fredde conviene disattivarlo.
+  let trackedHtml = html
+  if (opts.trackClicks) {
+    trackedHtml = html.replace(/href="(https?:\/\/[^"]+)"/gi, (match, url) => {
       const trackedUrl = `${baseUrl}/api/dem/track?t=click&c=${campaignId}&r=${recipientId}&u=${encodeURIComponent(url)}`
       return `href="${trackedUrl}"`
-    }
-  )
+    })
+  }
 
-  // Insert tracking pixel before </body> or at end
+  // Pixel di apertura SOLO se il tracking aperture e' attivo.
+  if (!opts.trackOpens) return trackedHtml
+
+  const trackingPixel = `<img src="${baseUrl}/api/dem/track?t=open&c=${campaignId}&r=${recipientId}" width="1" height="1" style="display:none" alt="" />`
   if (trackedHtml.includes("</body>")) {
     return trackedHtml.replace("</body>", `${trackingPixel}</body>`)
   }
   return trackedHtml + trackingPixel
+}
+
+// Costruisce un box HTML con i link ai documenti (usato quando la campagna
+// preferisce il LINK all'allegato reale: gli allegati su contatti freddi sono
+// un forte segnale di spam, un link a un file ospitato e' molto piu' sicuro).
+function buildAttachmentLinksHtml(attachments: ParsedAttachment[], baseUrl: string): string {
+  if (attachments.length === 0) return ""
+  const rows = attachments
+    .map((a) => {
+      const url = a.path.startsWith("http")
+        ? a.path
+        : `${baseUrl}${a.path.startsWith("/") ? "" : "/"}${a.path}`
+      return `<tr><td style="padding:14px 18px;font-size:13px;color:#5a5a5a;">Documento: <a href="${url}" style="color:#1b2a4a;font-weight:bold;">${a.filename}</a></td></tr>`
+    })
+    .join("")
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf7f0;border:1px solid #ece5d6;border-radius:6px;margin:16px 0;"><tbody>${rows}</tbody></table>`
 }
 
 function sleep(ms: number): Promise<void> {
@@ -181,15 +200,32 @@ export async function POST(request: NextRequest) {
     let sentCount = campaign.sent_count || 0
     let failedCount = campaign.failed_count || 0
 
+    // Opzioni deliverability della campagna (default retrocompatibili).
+    const trackOpens = campaign.track_opens !== false
+    const trackClicks = campaign.track_clicks !== false
+    const attachAsLink = campaign.attach_as_link === true
+
     // Extract attachment markers from the template once, then download the files once
-    const { html: templateWithoutMarkers, attachments: attachmentRefs } = extractAttachments(
+    const { html: templateExtracted, attachments: attachmentRefs } = extractAttachments(
       campaign.html_template
     )
 
+    // Corpo del template (eventualmente arricchito col box link ai documenti).
+    let templateWithoutMarkers = templateExtracted
     const resolvedAttachments: { filename: string; content: Buffer; contentType?: string }[] = []
-    for (const ref of attachmentRefs) {
-      const file = await fetchAttachment(baseUrl, ref)
-      if (file) resolvedAttachments.push(file)
+
+    if (attachAsLink && attachmentRefs.length > 0) {
+      // Niente allegati reali: inserisci un box con i link ai documenti ospitati.
+      const linksBox = buildAttachmentLinksHtml(attachmentRefs, baseUrl)
+      templateWithoutMarkers = templateWithoutMarkers.includes("</body>")
+        ? templateWithoutMarkers.replace("</body>", `${linksBox}</body>`)
+        : templateWithoutMarkers + linksBox
+    } else {
+      // Comportamento classico: scarica e allega i file una sola volta.
+      for (const ref of attachmentRefs) {
+        const file = await fetchAttachment(baseUrl, ref)
+        if (file) resolvedAttachments.push(file)
+      }
     }
 
     // Load the global suppression list so we never email anyone who unsubscribed.
@@ -249,7 +285,10 @@ export async function POST(request: NextRequest) {
 
         // Add tracking (rewrites only http(s) links, so the {{unsubscribe}} token
         // is left untouched and replaced afterwards with the real, untracked URL).
-        const trackedHtml = addTracking(personalizedHtml, campaign_id, recipient.id, baseUrl)
+        const trackedHtml = addTracking(personalizedHtml, campaign_id, recipient.id, baseUrl, {
+          trackOpens,
+          trackClicks,
+        })
 
         // Build the per-recipient unsubscribe URL and inject it into the footer link.
         const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, recipient.email, campaign_id)

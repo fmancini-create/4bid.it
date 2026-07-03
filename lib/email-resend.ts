@@ -10,6 +10,12 @@ interface EmailOptions {
   to: string
   subject: string
   html: string
+  /**
+   * Versione testo semplice. Se non fornita viene generata automaticamente
+   * dall'HTML. Inviare SEMPRE una parte text/plain oltre all'HTML migliora la
+   * deliverability (le mail solo-HTML sono un classico segnale di spam).
+   */
+  text?: string
   replyTo?: string
   attachments?: EmailAttachment[]
   headers?: Record<string, string>
@@ -28,6 +34,48 @@ interface EmailOptions {
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it").replace(/\/$/, "")
 const UNSUBSCRIBE_MAILTO = "clienti@4bid.it"
+
+/**
+ * Converte l'HTML dell'email in testo semplice leggibile:
+ * - rimuove head/style/script e i marker di allegato/tracking
+ * - trasforma <a href> in "testo (url)" per non perdere i link
+ * - preserva le interruzioni di riga di blocchi e <br>
+ * - decodifica le entita' HTML piu' comuni
+ * Nessuna dipendenza esterna: sufficiente per una parte text/plain di fallback.
+ */
+export function htmlToText(html: string): string {
+  let s = html
+  // Rimuovi commenti HTML (inclusi i marker <!--ATTACH:...-->).
+  s = s.replace(/<!--[\s\S]*?-->/g, "")
+  // Rimuovi blocchi non testuali.
+  s = s.replace(/<(head|style|script)[\s\S]*?<\/\1>/gi, "")
+  // Link: mantieni testo + URL (salta ancore/mailto gia' leggibili e placeholder).
+  s = s.replace(/<a\b[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, href, inner) => {
+    const label = inner.replace(/<[^>]+>/g, "").trim()
+    const url = String(href).trim()
+    if (!url || url.startsWith("{{") || url.startsWith("mailto:") || label === url) return label
+    return `${label} (${url})`
+  })
+  // Interruzioni di riga per <br> e chiusure di blocco.
+  s = s.replace(/<br\s*\/?>/gi, "\n")
+  s = s.replace(/<\/(p|div|tr|h[1-6]|li|table)>/gi, "\n")
+  s = s.replace(/<li[^>]*>/gi, "- ")
+  // Rimuovi tutti i tag residui.
+  s = s.replace(/<[^>]+>/g, "")
+  // Decodifica entita' comuni.
+  s = s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&egrave;/gi, "è")
+    .replace(/&agrave;/gi, "à")
+  // Normalizza spazi e righe vuote multiple.
+  s = s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ")
+  return s.trim()
+}
 
 /**
  * Costruisce gli header List-Unsubscribe (+ List-Unsubscribe-Post per il
@@ -92,6 +140,7 @@ export async function sendEmail({
   to,
   subject,
   html,
+  text,
   replyTo,
   attachments,
   headers,
@@ -116,6 +165,8 @@ export async function sendEmail({
       to,
       subject,
       html,
+      // Parte text/plain: fornita esplicitamente o derivata dall'HTML.
+      text: text && text.trim() ? text : htmlToText(html),
       // Replies go to a monitored mailbox. Order: explicit arg > env override > default.
       replyTo: replyTo || process.env.RESEND_REPLY_TO || process.env.SMTP_FROM || "clienti@4bid.it",
       headers: mergedHeaders,

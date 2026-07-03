@@ -9,17 +9,20 @@ export const maxDuration = 300
  * Invia le campagne DEM con `auto_send = true` a scaglioni, con WARM-UP crescente
  * per proteggere la reputazione del dominio mittente:
  *
- *   Giorno 1: 200   Giorno 2: 400   Giorno 3: 800   Giorno 4: 1500   Giorno 5+: 2500
+ *   Giorno 1: 50   Giorno 2: 100   Giorno 3: 150   Giorno 4: 250   Giorno 5+: 400
  *
- * Ogni esecuzione invia al massimo un lotto sicuro (<= 250, sotto il timeout della
- * funzione) e si ferma quando il tetto giornaliero e' raggiunto. Gli scaglioni si
- * distribuiscono naturalmente nell'arco della giornata (meglio per la deliverability
- * di un unico invio massivo). Riusa l'endpoint /api/dem/send gia' collaudato, che
- * gestisce throttle, tracking, allegati ed esclusione dei disiscritti.
+ * Ramp-up PRUDENTE (poche centinaia/giorno) per RICOSTRUIRE reputazione dopo
+ * l'incidente bounce: partire piano riduce spam/cestino. Ogni esecuzione invia al
+ * massimo un lotto sicuro (<= 250, sotto il timeout della funzione) e si ferma
+ * quando il tetto giornaliero e' raggiunto. Gli scaglioni si distribuiscono
+ * naturalmente nell'arco della giornata (meglio per la deliverability di un unico
+ * invio massivo). Riusa l'endpoint /api/dem/send gia' collaudato, che gestisce
+ * throttle, tracking, allegati ed esclusione dei disiscritti. Per alzare i volumi
+ * quando la reputazione e' solida, aumentare questi valori.
  */
 
 // Tetto giornaliero per indice di giorno (0-based). Oltre l'ultimo valore -> regime.
-const WARMUP_DAILY_CAPS = [200, 400, 800, 1500, 2500]
+const WARMUP_DAILY_CAPS = [50, 100, 150, 250, 400]
 // Lotto massimo per singola invocazione (allineato a DEFAULT_BATCH_LIMIT del send).
 const PER_RUN_BATCH = 250
 

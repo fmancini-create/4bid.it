@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   ArrowLeft,
   Plus,
@@ -395,6 +396,12 @@ export default function DemDashboard({
   const [newName, setNewName] = useState("")
   const [newSubject, setNewSubject] = useState("")
   const [newTemplate, setNewTemplate] = useState("")
+  // Opzioni deliverability della nuova campagna. Default pensati per contatti
+  // freddi: pixel di apertura attivo (basso rischio), riscrittura link DISATTIVA
+  // (forte segnale di spam) e documenti come LINK invece che allegati.
+  const [newTrackOpens, setNewTrackOpens] = useState(true)
+  const [newTrackClicks, setNewTrackClicks] = useState(false)
+  const [newAttachAsLink, setNewAttachAsLink] = useState(true)
 
   // Manual recipient form
   const [manualEmail, setManualEmail] = useState("")
@@ -577,6 +584,9 @@ export default function DemDashboard({
           name: newName,
           subject: newSubject,
           html_template: newTemplate,
+          track_opens: newTrackOpens,
+          track_clicks: newTrackClicks,
+          attach_as_link: newAttachAsLink,
         }),
       })
       if (!res.ok) {
@@ -589,6 +599,9 @@ export default function DemDashboard({
       setNewName("")
       setNewSubject("")
       setNewTemplate("")
+      setNewTrackOpens(true)
+      setNewTrackClicks(false)
+      setNewAttachAsLink(true)
       showMessage("Campagna creata con successo")
     } catch (err) {
       showMessage(err instanceof Error ? err.message : "Errore", true)
@@ -1657,8 +1670,36 @@ export default function DemDashboard({
                     {"Variabili disponibili: {{nome}}, {{cognome}}, {{nome_azienda}}, {{email}}"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {"Allegato: aggiungi nel template un marker <!--ATTACH:/percorso/file.pdf|Nome visualizzato.pdf--> (verra' rimosso dal corpo e allegato all'email)."}
+                    {"Allegato: aggiungi nel template un marker <!--ATTACH:/percorso/file.pdf|Nome visualizzato.pdf-->."}
                   </p>
+                </div>
+
+                <div className="rounded-lg border border-border p-4 space-y-4">
+                  <p className="text-sm font-medium">Opzioni deliverability</p>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Per i contatti freddi conviene ridurre i segnali di spam: link non riscritti e documenti come link anziche&apos; allegati.
+                  </p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <Label htmlFor="track-opens" className="text-sm">Traccia aperture (pixel)</Label>
+                      <p className="text-xs text-muted-foreground">Rischio basso. Consente di sapere chi apre.</p>
+                    </div>
+                    <Switch id="track-opens" checked={newTrackOpens} onCheckedChange={setNewTrackOpens} />
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <Label htmlFor="track-clicks" className="text-sm">Traccia click (riscrive i link)</Label>
+                      <p className="text-xs text-muted-foreground">Sconsigliato a freddo: riscrive ogni link su un redirect (segnale di spam).</p>
+                    </div>
+                    <Switch id="track-clicks" checked={newTrackClicks} onCheckedChange={setNewTrackClicks} />
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <Label htmlFor="attach-link" className="text-sm">Documenti come link (non allegati)</Label>
+                      <p className="text-xs text-muted-foreground">Consigliato: gli allegati PDF a freddo finiscono spesso in spam.</p>
+                    </div>
+                    <Switch id="attach-link" checked={newAttachAsLink} onCheckedChange={setNewAttachAsLink} />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
