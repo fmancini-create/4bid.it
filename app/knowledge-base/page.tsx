@@ -4,6 +4,7 @@ import { BookOpen } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { KBCategoryCard } from "@/components/knowledge-base/kb-cards"
 import { KBSearch, type KBSearchItem } from "@/components/knowledge-base/kb-search"
 import {
@@ -76,7 +77,11 @@ export default function KnowledgeBaseHome() {
 
       <Header />
 
-      <section className="pt-32 pb-12 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
+      <Breadcrumbs
+        items={breadcrumbs.map((b) => ({ name: b.name, href: b.url.replace("https://www.4bid.it", "") || "/" }))}
+      />
+
+      <section className="pt-12 pb-12 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
         <div className="container mx-auto px-6">
           <div className="mx-auto max-w-4xl text-center">
             <div className="mb-4 flex items-center justify-center gap-2 text-primary-blue">

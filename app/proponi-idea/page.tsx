@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer"
 import ProjectIdeaForm from "@/components/project-idea-form"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 const PAGE_URL = "https://www.4bid.it/proponi-idea"
 
@@ -182,6 +183,12 @@ export default function ProponiIdeaPage() {
       <LandingPageTracker slug="proponi-idea" />
 
       <Header />
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Sviluppo Software su Misura", href: "/proponi-idea" },
+        ]}
+      />
       <main className="min-h-screen bg-background">
         {/* Hero Section */}
         <section className="pt-32 pb-16 bg-gradient-to-br from-[#5B9BD5]/5 to-[#F4B942]/5">

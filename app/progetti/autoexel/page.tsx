@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, TrendingUp, BarChart3, FileSpreadsheet, Zap, Do
 import { Button } from "@/components/ui/button"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export const metadata = {
   title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
@@ -31,6 +32,13 @@ export default function AutoExelPage() {
         ]}
       />
       <LandingPageTracker slug="progetti/autoexel" />
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "AutoExel", href: "/progetti/autoexel" },
+        ]}
+      />
 
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-r from-green-500 to-emerald-600 text-white overflow-hidden">

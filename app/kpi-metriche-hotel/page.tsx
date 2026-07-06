@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
@@ -49,11 +50,23 @@ export default function KPIMetricheHotelPage() {
         type="Article"
         title="KPI e Metriche Hotel: Monitora le Performance"
         description="Guida completa ai KPI e metriche essenziali per hotel"
-        faq={faqData}
+        faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "KPI e Metriche Hotel", url: "https://www.4bid.it/kpi-metriche-hotel" },
+        ]}
       />
       <LandingPageTracker slug="kpi-metriche-hotel" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "KPI e Metriche Hotel", href: "/kpi-metriche-hotel" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

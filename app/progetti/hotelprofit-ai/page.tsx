@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { EntityLinks } from "@/components/entity-links"
 import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
@@ -70,6 +71,15 @@ export default function HotelProfitAiPage() {
       <LandingPageTracker slug="progetti/hotelprofit-ai" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "HotelProfitAI", href: "/progetti/hotelprofit-ai" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-blue-50 via-green-50 to-white">

@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
@@ -49,11 +50,23 @@ export default function OttimizzazioneOTAPage() {
         type="Service"
         title="Ottimizzazione OTA Hotel"
         description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
-        faq={faqData}
+        faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Ottimizzazione OTA Hotel", url: "https://www.4bid.it/ottimizzazione-ota-hotel" },
+        ]}
       />
       <LandingPageTracker slug="ottimizzazione-ota-hotel" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Ottimizzazione OTA Hotel", href: "/ottimizzazione-ota-hotel" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

@@ -7,6 +7,7 @@ import { CheckCircle2, TrendingUp, Users, Calendar, PieChart, Target } from "luc
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
@@ -82,6 +83,14 @@ export default function RevenueMangementAgriturismPage() {
       />
       <LandingPageTracker slug="revenue-management-agriturismo" />
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Revenue Management Agriturismi", href: "/revenue-management-agriturismo" },
+        ]}
+      />
+
       <main className="min-h-screen">
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-primary-blue to-blue-grey py-20 px-4">

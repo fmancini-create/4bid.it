@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { DemoCalendar } from "@/components/demo-calendar"
 
 export const metadata = {
@@ -50,11 +51,23 @@ export default function PrenotaDemoPage() {
         type="Service"
         title="Prenota una Demo Gratuita"
         description="Prenota una demo gratuita per scoprire i servizi di revenue management 4BID.IT"
-        faq={faqData}
+        faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Prenota Demo", url: "https://www.4bid.it/prenota-demo" },
+        ]}
       />
       <LandingPageTracker slug="prenota-demo" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Prenota Demo", href: "/prenota-demo" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-12 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

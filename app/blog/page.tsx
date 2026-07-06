@@ -4,6 +4,7 @@ import { BookOpen, Clock, ArrowRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { getAllPosts } from "@/lib/blog/posts"
 
 export const runtime = "nodejs"
@@ -48,6 +49,14 @@ export default function BlogIndexPage() {
       />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Blog", href: "/blog" },
+        ]}
+      />
+
 
       {/* Hero */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

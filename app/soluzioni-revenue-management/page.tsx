@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CLUSTER_ORDER, getSolutionsByCluster } from "@/lib/seo/solutions"
 
 export const metadata: Metadata = {
@@ -54,6 +55,14 @@ export default function SoluzioniRevenueManagementPage() {
         ]}
       />
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Soluzioni Revenue Management", href: "/soluzioni-revenue-management" },
+        ]}
+      />
+
       <main className="min-h-screen">
         {/* Hero */}
         <section className="bg-gradient-to-br from-primary-blue to-blue-grey py-20 px-4">

@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { EntityLinks } from "@/components/entity-links"
 import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
@@ -77,6 +78,15 @@ export default function ManubotPage() {
       <LandingPageTracker slug="progetti/manubot" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "ManuBot", href: "/progetti/manubot" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-orange-50 via-amber-50 to-white">

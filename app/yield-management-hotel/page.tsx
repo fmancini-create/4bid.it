@@ -7,6 +7,7 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
@@ -75,6 +76,14 @@ export default function YieldManagementHotelPage() {
       />
       <LandingPageTracker slug="yield-management-hotel" />
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Yield Management Hotel", href: "/yield-management-hotel" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

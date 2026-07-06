@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
@@ -49,11 +50,23 @@ export default function FormazioneRevenueManagementHotelPage() {
         type="Service"
         title="Formazione Revenue Management Hotel"
         description="Corsi di formazione e training per hotel manager e revenue manager"
-        faq={faqData}
+        faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Formazione Revenue Management", url: "https://www.4bid.it/formazione-revenue-management-hotel" },
+        ]}
       />
       <LandingPageTracker slug="formazione-revenue-management-hotel" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Formazione Revenue Management", href: "/formazione-revenue-management-hotel" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, Heart, Camera, FileText, Bell, Users, Stethosco
 import { Button } from "@/components/ui/button"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export const metadata = {
   title: "MyPetSenseAI - AI Health Monitoring for Dogs | 4BID",
@@ -31,6 +32,13 @@ export default function MypetSenseAIPage() {
         ]}
       />
       <LandingPageTracker slug="progetti/mypetsenseai" />
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "MyPetSenseAI", href: "/progetti/mypetsenseai" },
+        ]}
+      />
 
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-to-r from-purple-500 to-pink-600 text-white overflow-hidden">
