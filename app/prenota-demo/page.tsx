@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { DemoCalendar } from "@/components/demo-calendar"
 
 export const metadata = {
@@ -59,6 +60,14 @@ export default function PrenotaDemoPage() {
       <LandingPageTracker slug="prenota-demo" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Prenota Demo", href: "/prenota-demo" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-12 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

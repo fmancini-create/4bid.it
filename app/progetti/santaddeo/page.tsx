@@ -7,6 +7,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { EntityLinks } from "@/components/entity-links"
 import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
@@ -51,6 +52,15 @@ export default function SantaddeoPage() {
       <LandingPageTracker slug="progetti/santaddeo" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "Santaddeo", href: "/progetti/santaddeo" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-32 pb-16 bg-gradient-to-br from-teal-50 via-cyan-50 to-white">

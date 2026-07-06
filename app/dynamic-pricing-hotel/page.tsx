@@ -9,6 +9,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
@@ -76,6 +77,14 @@ export default function DynamicPricingPage() {
       />
       <LandingPageTracker slug="dynamic-pricing-hotel" />
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Dynamic Pricing Hotel", href: "/dynamic-pricing-hotel" },
+        ]}
+      />
+
       <main className="min-h-screen">
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-primary-blue to-blue-grey py-20 px-4">
