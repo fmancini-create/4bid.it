@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Services() {
   const services = [
     {
@@ -31,6 +33,7 @@ export default function Services() {
       title: "Incrementa Il Fatturato Del 45%",
       description:
         "L'incremento del fatturato medio generato dai nostri clienti grazie alle nostre consulenze è del 45%.",
+      href: "/come-aumentare-ricavi-hotel",
     },
     {
       icon: (
@@ -77,20 +80,30 @@ export default function Services() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {services.map((service, index) => (
-            <div
-              key={index}
-              className="bg-white p-8 rounded shadow-sm hover:shadow-md transition-shadow border border-gray-100"
-            >
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 rounded-full bg-[#F4B942] flex items-center justify-center text-gray-700">
-                  {service.icon}
+          {services.map((service, index) => {
+            const cardClass =
+              "bg-white p-8 rounded shadow-sm hover:shadow-md transition-shadow border border-gray-100 block"
+            const inner = (
+              <>
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-[#F4B942] flex items-center justify-center text-gray-700">
+                    {service.icon}
+                  </div>
                 </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">{service.title}</h3>
+                <p className="text-gray-600 text-sm text-center leading-relaxed">{service.description}</p>
+              </>
+            )
+            return service.href ? (
+              <Link key={index} href={service.href} className={`${cardClass} hover:border-[#F4B942]`}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={index} className={cardClass}>
+                {inner}
               </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">{service.title}</h3>
-              <p className="text-gray-600 text-sm text-center leading-relaxed">{service.description}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>

@@ -6,16 +6,17 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export const metadata = {
-  title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026 | 4BID.IT",
+  title: "Aumentare i Ricavi dell'Hotel: 10 Strategie 2026 (+25-40%) | 4BID.IT",
   description:
-    "Guida completa su come aumentare i ricavi del tuo hotel: strategie di Revenue Management, ottimizzazione tariffe, direct booking e molto altro. Risultati concreti in 30 giorni.",
+    "Come aumentare i ricavi del tuo hotel: 10 strategie di revenue management con azioni concrete, KPI e risultati attesi. Prime quick win in 30 giorni, +25-40% di fatturato in 12 mesi.",
   keywords:
-    "aumentare ricavi hotel, revenue hotel, fatturato hotel, guadagni hotel, come aumentare profitti hotel, strategie ricavi alberghieri",
+    "aumentare ricavi hotel, come aumentare ricavi hotel, revenue hotel, fatturato hotel, aumentare fatturato hotel, strategie ricavi alberghieri, revenue management hotel",
   openGraph: {
-    title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026 | 4BID.IT",
-    description: "10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%.",
+    title: "Aumentare i Ricavi dell'Hotel: 10 Strategie 2026 (+25-40%) | 4BID.IT",
+    description: "10 strategie comprovate per aumentare i ricavi del tuo hotel dal 25% al 40%, con azioni concrete e KPI.",
     url: "https://www.4bid.it/come-aumentare-ricavi-hotel",
     type: "article",
   },
@@ -49,22 +50,42 @@ export default function ComeAumentareRicaviHotelPage() {
         type="Article"
         title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026"
         description="10 strategie comprovate per incrementare il fatturato del tuo hotel"
+        url="https://www.4bid.it/come-aumentare-ricavi-hotel"
+        keywords={[
+          "aumentare ricavi hotel",
+          "revenue management hotel",
+          "aumentare fatturato hotel",
+          "dynamic pricing hotel",
+          "prenotazioni dirette hotel",
+        ]}
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Come Aumentare i Ricavi dell'Hotel", url: "https://www.4bid.it/come-aumentare-ricavi-hotel" },
+        ]}
       />
       <LandingPageTracker slug="come-aumentare-ricavi-hotel" />
 
       <Header />
 
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Come Aumentare i Ricavi dell'Hotel", href: "/come-aumentare-ricavi-hotel" },
+        ]}
+      />
+
       {/* Hero Section */}
-      <section className="pt-32 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
+      <section className="pt-16 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Come Aumentare i Ricavi del Tuo Hotel: La Guida Completa 2026
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
-              10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%. Azioni concrete,
-              risultati misurabili, nessuna teoria.
+              Aumentare i ricavi di un hotel significa vendere la camera giusta, al prezzo giusto, al cliente giusto e
+              sul canale giusto. Qui trovi 10 strategie di revenue management con azioni concrete, KPI da monitorare e
+              risultati attesi: prime quick win in 30 giorni, fino a +25-40% di fatturato in 12 mesi.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/#contact">
@@ -77,6 +98,46 @@ export default function ComeAumentareRicaviHotelPage() {
                   Scopri i Nostri Servizi
                 </Button>
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Risposta rapida (featured snippet / AI Overviews) */}
+      <section className="py-12">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="rounded-2xl border border-border bg-card p-8 shadow-sm quick-answer">
+              <h2 className="text-2xl font-bold text-card-foreground mb-3">
+                Come si aumentano i ricavi di un hotel? In breve
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Per aumentare i ricavi di un hotel si agisce su tre leve: <strong className="text-foreground">prezzo</strong>{" "}
+                (con il{" "}
+                <Link href="/dynamic-pricing-hotel" className="text-primary-blue hover:underline">
+                  dynamic pricing
+                </Link>{" "}
+                e l&apos;ottimizzazione dell&apos;{" "}
+                <Link href="/adr-hotel-come-aumentarlo" className="text-primary-blue hover:underline">
+                  ADR
+                </Link>
+                ), <strong className="text-foreground">occupazione</strong> (forecast, minimum stay e segmentazione) e{" "}
+                <strong className="text-foreground">margine</strong> (più{" "}
+                <Link href="/strategie-prenotazioni-dirette-hotel" className="text-primary-blue hover:underline">
+                  prenotazioni dirette
+                </Link>{" "}
+                per ridurre le commissioni OTA e più upselling). Applicando queste leve in modo coordinato tramite il{" "}
+                <Link href="/cose-il-revenue-management" className="text-primary-blue hover:underline">
+                  revenue management
+                </Link>
+                , un hotel ottiene tipicamente +8-10% di RevPAR nel primo mese e +25-40% di ricavi in 12 mesi.
+              </p>
+              <p className="mt-4 text-base text-muted-foreground">
+                <strong className="text-foreground">Esempio concreto:</strong> un hotel con 30 camere, ADR €150 e
+                occupazione 60% fattura circa €985.000/anno. Portando l&apos;ADR a €165 (+10%) e l&apos;occupazione al
+                66% (+6pp), il fatturato sale a circa <strong className="text-foreground">€1.192.000</strong>, cioè{" "}
+                <strong className="text-foreground">+21% (≈ +207.000 €)</strong> senza aggiungere camere.
+              </p>
             </div>
           </div>
         </div>

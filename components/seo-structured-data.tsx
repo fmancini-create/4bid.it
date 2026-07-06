@@ -192,6 +192,11 @@ export function StructuredData({
   }
 
   if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "CollectionPage") {
+    // headline: campo raccomandato da Google per Article, migliora la
+    // comprensione del titolo principale della pagina.
+    if (type === "Article") {
+      mainSchema.headline = title
+    }
     mainSchema.mainEntityOfPage = {
       "@type": "WebPage",
       "@id": url,
