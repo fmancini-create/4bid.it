@@ -6,16 +6,17 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
-  title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
+  title: "Come Aumentare l'ADR Hotel: Guida Completa 2026 | 4BID.IT",
   description:
     "Scopri come aumentare l'ADR (Average Daily Rate) del tuo hotel con strategie pratiche e comprovate. Tecniche concrete per far crescere la tariffa media fino al +40%.",
   keywords:
     "come aumentare ADR hotel, aumentare tariffa media, strategie ADR, crescita revenue hotel, pricing hotel, tariffe hotel più alte",
   openGraph: {
-    title: "Come Aumentare l'ADR Hotel: Guida Completa 2025 | 4BID.IT",
+    title: "Come Aumentare l'ADR Hotel: Guida Completa 2026 | 4BID.IT",
     description: "Strategie pratiche per far crescere la tariffa media del tuo hotel fino al +40%.",
     url: "https://www.4bid.it/adr-hotel-come-aumentarlo",
     type: "article",
@@ -53,13 +54,25 @@ export default function ADRHotelComeAumentarloPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
-        title="Come Aumentare l'ADR Hotel: Guida Completa 2025"
+        title="Come Aumentare l'ADR Hotel: Guida Completa 2026"
         description="Strategie concrete per far crescere la tariffa media del tuo hotel fino al +40%"
-        faq={faqData}
+        faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Come Aumentare l'ADR Hotel", url: "https://www.4bid.it/adr-hotel-come-aumentarlo" },
+        ]}
       />
       <LandingPageTracker slug="adr-hotel-come-aumentarlo" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Come Aumentare l'ADR Hotel", href: "/adr-hotel-come-aumentarlo" },
+        ]}
+      />
+
 
       {/* Hero Section */}
       <section className="pt-40 pb-16 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">
@@ -67,7 +80,7 @@ export default function ADRHotelComeAumentarloPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-primary-blue/10 text-primary-blue px-4 py-2 rounded-full mb-6 text-sm font-semibold">
               <ArrowUpRight className="h-4 w-4" />
-              Guida Completa 2025
+              Guida Completa 2026
             </div>
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
               Come Aumentare l'ADR del Tuo Hotel: Guida Pratica

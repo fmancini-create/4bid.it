@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { EntityLinks } from "@/components/entity-links"
 import { entitySchemaLinks } from "@/lib/seo/entities"
 import type { Metadata } from "next"
@@ -132,6 +133,15 @@ export default function HotelAcceleratorPage() {
       <LandingPageTracker slug="progetti/hotel-accelerator" />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Progetti", href: "/#projects" },
+          { name: "Hotel Accelerator", href: "/progetti/hotel-accelerator" },
+        ]}
+      />
+
 
       {/* Hero Section - Dark theme like hotelaccelerator.com */}
       <section className="pt-32 pb-16 bg-[#0a0a0a]">

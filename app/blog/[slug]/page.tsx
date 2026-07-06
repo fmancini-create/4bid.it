@@ -5,6 +5,7 @@ import { BookOpen, Clock, ChevronLeft, ExternalLink, HelpCircle } from "lucide-r
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { ContactButton } from "@/components/contact-button"
 import { BlogContent } from "@/components/blog/blog-content"
 import { getAllPostSlugs, getPostBySlug } from "@/lib/blog/posts"
@@ -72,6 +73,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       />
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Blog", href: "/blog" },
+          { name: post.title, href: `/blog/${post.slug}` },
+        ]}
+      />
 
       {/* Hero */}
       <section className="pt-32 pb-12 bg-gradient-to-br from-primary-blue/10 via-blue-grey/5 to-background">

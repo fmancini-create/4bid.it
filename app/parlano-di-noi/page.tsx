@@ -3,6 +3,7 @@ import { Newspaper, ExternalLink, Calendar } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 
 export const metadata: Metadata = {
@@ -74,6 +75,14 @@ export default async function ParlanoDiNoiPage() {
         ]}
       />
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Parlano di noi", href: "/parlano-di-noi" },
+        ]}
+      />
+
 
       <main>
         {/* Hero */}

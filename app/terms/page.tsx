@@ -5,6 +5,7 @@ import { Footer } from "@/components/footer"
 import { ArrowLeft } from "lucide-react"
 import Script from "next/script"
 import { StructuredData } from "@/components/seo-structured-data"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export const metadata: Metadata = {
   title: "Termini e Condizioni | 4BID SRL",
@@ -38,6 +39,14 @@ export default function TermsPage() {
       </Script>
 
       <Header />
+
+      <Breadcrumbs
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Termini e Condizioni", href: "/terms" },
+        ]}
+      />
+
       <main className="min-h-screen bg-white pt-24">
         <div className="container mx-auto px-4 py-12 max-w-4xl">
           <Link href="/" className="inline-flex items-center gap-2 text-amber-500 hover:text-amber-600 mb-8">
