@@ -66,6 +66,116 @@ export const metadata: Metadata = {
   },
 }
 
+const processSteps = [
+  {
+    number: "01",
+    title: "Analisi del Mercato",
+    description:
+      "Studio del competitive set, analisi della domanda locale, eventi e stagionalità. Identificazione opportunità e gap nel posizionamento.",
+  },
+  {
+    number: "02",
+    title: "Segmentazione Clientela",
+    description:
+      "Classificazione dei clienti in segmenti (leisure, business, gruppi, eventi) per applicare strategie di pricing differenziate.",
+  },
+  {
+    number: "03",
+    title: "Definizione Strategie di Pricing",
+    description:
+      "Creazione di tariffe dinamiche (BAR, packages, LOS restrictions, early booking, last minute) basate sulla domanda prevista.",
+  },
+  {
+    number: "04",
+    title: "Forecast e Budgeting",
+    description:
+      "Previsione accurata di occupazione e ricavi per i prossimi 365 giorni, con aggiornamenti settimanali basati sul pickup reale.",
+  },
+  {
+    number: "05",
+    title: "Gestione Distribuzione",
+    description:
+      "Ottimizzazione del mix di canali (OTA, sito diretto, GDS, wholesaler) per massimizzare i ricavi netti e ridurre le commissioni.",
+  },
+  {
+    number: "06",
+    title: "Monitoraggio KPI",
+    description:
+      "Tracking continuo di RevPAR, ADR, Occupazione, RGI, Pickup, Pace e altri indicatori chiave per valutare performance e strategia.",
+  },
+]
+
+const faqs = [
+  {
+    question: "Il Revenue Management funziona anche per hotel piccoli?",
+    answer:
+      "Assolutamente sì. Anche un B&B con 5 camere può beneficiare del Revenue Management. Non serve una struttura grande per applicare strategie di pricing dinamico e ottimizzazione dei ricavi. Anzi, le strutture più piccole hanno spesso maggiore flessibilità nel modificare i prezzi rapidamente.",
+  },
+  {
+    question: "Quanto costa implementare il Revenue Management?",
+    answer:
+      "Con 4BID.IT offriamo un modello performance-based: paghi solo una percentuale sull'incremento di fatturato generato. Zero costi fissi, zero rischi. In alternativa, offriamo anche consulenze tradizionali con fee mensile per chi preferisce un budget definito.",
+  },
+  {
+    question: "In quanto tempo si vedono i risultati?",
+    answer:
+      "I primi miglioramenti sono visibili entro 30-60 giorni dall'implementazione delle strategie. I risultati più significativi si consolidano nei primi 6 mesi quando il sistema di pricing dinamico è completamente ottimizzato e calibrato sul tuo mercato specifico.",
+  },
+  {
+    question: "Ho già un Channel Manager, serve altro?",
+    answer:
+      "Il Channel Manager distribuisce le tue tariffe sui vari canali, ma non le ottimizza. Il Revenue Management DECIDE quali tariffe applicare, quando e a chi. I due sistemi lavorano insieme: il Revenue Management definisce la strategia, il Channel Manager la implementa tecnicamente.",
+  },
+  {
+    question: "Il Revenue Management sostituisce il mio staff?",
+    answer:
+      "No, il Revenue Management è uno strumento che POTENZIA il tuo team. Fornisce dati, analisi e raccomandazioni che permettono al tuo staff di prendere decisioni migliori. Spesso offriamo anche formazione per rendere il tuo team autonomo nell'applicare le strategie.",
+  },
+  {
+    question: "Qual è la differenza tra Revenue Management e Yield Management?",
+    answer:
+      "Lo Yield Management è un sottoinsieme del Revenue Management: si concentra sulla gestione dinamica dei prezzi in base alla domanda. Il Revenue Management è più ampio e include anche la gestione dei canali di distribuzione, la segmentazione della clientela, il forecast e l'ottimizzazione di tutte le fonti di ricavo (camere, spa, ristorante, servizi ancillari).",
+  },
+  {
+    question: "Quali KPI si usano nel Revenue Management alberghiero?",
+    answer:
+      "I principali indicatori sono l'ADR (Average Daily Rate, tariffa media giornaliera), il RevPAR (Revenue Per Available Room, ricavo per camera disponibile), il tasso di occupazione, il RGI (Revenue Generation Index, che confronta il tuo RevPAR con quello del mercato), oltre a Pickup e Pace per monitorare l'andamento delle prenotazioni rispetto allo storico.",
+  },
+]
+
+const relatedGuides = [
+  {
+    href: "/come-aumentare-ricavi-hotel",
+    title: "Come Aumentare i Ricavi dell'Hotel",
+    description: "Strategie pratiche e concrete per far crescere il fatturato della tua struttura.",
+  },
+  {
+    href: "/adr-hotel-come-aumentarlo",
+    title: "Come Aumentare l'ADR dell'Hotel",
+    description: "Tecniche per aumentare la tariffa media giornaliera senza perdere occupazione.",
+  },
+  {
+    href: "/ottimizzazione-revpar-hotel",
+    title: "Ottimizzazione del RevPAR",
+    description: "Massimizza il ricavo per camera disponibile bilanciando prezzo e occupazione.",
+  },
+  {
+    href: "/strategie-pricing-hotel",
+    title: "Strategie di Pricing per Hotel",
+    description: "Guida completa alle politiche tariffarie dinamiche per strutture ricettive.",
+  },
+  {
+    href: "/yield-management-hotel",
+    title: "Yield Management Hotel",
+    description: "Approfondisci la disciplina che sta alla base della gestione dinamica dei prezzi.",
+  },
+  {
+    href: "/kpi-hotel-revenue-management",
+    title: "KPI del Revenue Management",
+    description: "Tutti gli indicatori chiave per misurare le performance del tuo hotel.",
+  },
+]
+
 export default function CoseIlRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -74,6 +184,25 @@ export default function CoseIlRevenueManagementPage() {
         title="Cos'è il Revenue Management Hotel? Guida Completa"
         description="Guida completa per comprendere cos'è il Revenue Management Hotel, dove si applica e perché è fondamentale per massimizzare i ricavi."
         url="https://www.4bid.it/cose-il-revenue-management"
+        keywords={[
+          "cos'è il revenue management",
+          "revenue management hotel",
+          "definizione revenue management",
+          "yield management alberghiero",
+          "pricing dinamico hotel",
+        ]}
+        faqs={faqs}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Cos'è il Revenue Management", url: "https://www.4bid.it/cose-il-revenue-management" },
+        ]}
+        howTo={{
+          name: "Come Funziona il Revenue Management Hotel",
+          description:
+            "Il processo in 6 fasi per implementare il Revenue Management in una struttura ricettiva.",
+          steps: processSteps.map((s) => ({ name: s.title, text: s.description })),
+        }}
+        speakable={["h1", ".rm-definition"]}
       />
 
       <LandingPageTracker slug="cose-il-revenue-management" />
@@ -184,7 +313,7 @@ export default function CoseIlRevenueManagementPage() {
       <section className="py-20">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-primary-blue/10 rounded-2xl p-10 border-2 border-primary-blue/20 mb-12">
+            <div className="bg-primary-blue/10 rounded-2xl p-10 border-2 border-primary-blue/20 mb-12 rm-definition">
               <h2 className="text-3xl font-bold text-foreground mb-6">Definizione Semplice</h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                 Il <strong className="text-foreground">Revenue Management</strong> è una strategia aziendale che
@@ -385,44 +514,7 @@ export default function CoseIlRevenueManagementPage() {
           <h2 className="text-4xl font-bold text-center text-foreground mb-12">Come Funziona il Revenue Management?</h2>
 
           <div className="max-w-4xl mx-auto space-y-6">
-            {[
-              {
-                number: "01",
-                title: "Analisi del Mercato",
-                description:
-                  "Studio del competitive set, analisi della domanda locale, eventi e stagionalità. Identificazione opportunità e gap nel posizionamento.",
-              },
-              {
-                number: "02",
-                title: "Segmentazione Clientela",
-                description:
-                  "Classificazione dei clienti in segmenti (leisure, business, gruppi, eventi) per applicare strategie di pricing differenziate.",
-              },
-              {
-                number: "03",
-                title: "Definizione Strategie di Pricing",
-                description:
-                  "Creazione di tariffe dinamiche (BAR, packages, LOS restrictions, early booking, last minute) basate sulla domanda prevista.",
-              },
-              {
-                number: "04",
-                title: "Forecast e Budgeting",
-                description:
-                  "Previsione accurata di occupazione e ricavi per i prossimi 365 giorni, con aggiornamenti settimanali basati sul pickup reale.",
-              },
-              {
-                number: "05",
-                title: "Gestione Distribuzione",
-                description:
-                  "Ottimizzazione del mix di canali (OTA, sito diretto, GDS, wholesaler) per massimizzare i ricavi netti e ridurre le commissioni.",
-              },
-              {
-                number: "06",
-                title: "Monitoraggio KPI",
-                description:
-                  "Tracking continuo di RevPAR, ADR, Occupazione, RGI, Pickup, Pace e altri indicatori chiave per valutare performance e strategia.",
-              },
-            ].map((step, index) => (
+            {processSteps.map((step, index) => (
               <div
                 key={index}
                 className="bg-card rounded-xl p-8 border border-border shadow-md hover:shadow-lg transition-shadow flex gap-6"
@@ -505,33 +597,7 @@ export default function CoseIlRevenueManagementPage() {
           <h2 className="text-4xl font-bold text-center text-foreground mb-12">Domande Frequenti</h2>
 
           <div className="max-w-3xl mx-auto space-y-6">
-            {[
-              {
-                question: "Il Revenue Management funziona anche per hotel piccoli?",
-                answer:
-                  "Assolutamente sì. Anche un B&B con 5 camere può beneficiare del Revenue Management. Non serve una struttura grande per applicare strategie di pricing dinamico e ottimizzazione dei ricavi. Anzi, le strutture più piccole hanno spesso maggiore flessibilità nel modificare i prezzi rapidamente.",
-              },
-              {
-                question: "Quanto costa implementare il Revenue Management?",
-                answer:
-                  "Con 4BID.IT offriamo un modello performance-based: paghi solo una percentuale sull'incremento di fatturato generato. Zero costi fissi, zero rischi. In alternativa, offriamo anche consulenze tradizionali con fee mensile per chi preferisce un budget definito.",
-              },
-              {
-                question: "In quanto tempo si vedono i risultati?",
-                answer:
-                  "I primi miglioramenti sono visibili entro 30-60 giorni dall'implementazione delle strategie. I risultati più significativi si consolidano nei primi 6 mesi quando il sistema di pricing dinamico è completamente ottimizzato e calibrato sul tuo mercato specifico.",
-              },
-              {
-                question: "Ho già un Channel Manager, serve altro?",
-                answer:
-                  "Il Channel Manager distribuisce le tue tariffe sui vari canali, ma non le ottimizza. Il Revenue Management DECIDE quali tariffe applicare, quando e a chi. I due sistemi lavorano insieme: il Revenue Management definisce la strategia, il Channel Manager la implementa tecnicamente.",
-              },
-              {
-                question: "Il Revenue Management sostituisce il mio staff?",
-                answer:
-                  "No, il Revenue Management è uno strumento che POTENZIA il tuo team. Fornisce dati, analisi e raccomandazioni che permettono al tuo staff di prendere decisioni migliori. Spesso offriamo anche formazione per rendere il tuo team autonomo nell'applicare le strategie.",
-              },
-            ].map((faq, index) => (
+            {faqs.map((faq, index) => (
               <div key={index} className="bg-card rounded-xl p-8 border border-border shadow-md">
                 <div className="flex gap-4">
                   <HelpCircle className="h-6 w-6 text-primary-blue flex-shrink-0 mt-1" />
@@ -541,6 +607,32 @@ export default function CoseIlRevenueManagementPage() {
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Approfondimenti / Link Interni */}
+      <section className="py-20">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-foreground mb-4">Approfondisci il Revenue Management</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
+            Guide dedicate per padroneggiare ogni aspetto della gestione dinamica dei ricavi del tuo hotel
+          </p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {relatedGuides.map((guide, index) => (
+              <Link
+                key={index}
+                href={guide.href}
+                className="group bg-card rounded-xl p-6 border border-border shadow-md hover:shadow-lg hover:border-primary-blue/40 transition-all"
+              >
+                <h3 className="text-lg font-bold text-card-foreground mb-2 flex items-center justify-between gap-2">
+                  {guide.title}
+                  <ArrowRight className="h-5 w-5 text-primary-blue flex-shrink-0 transition-transform group-hover:translate-x-1" />
+                </h3>
+                <p className="text-sm text-muted-foreground">{guide.description}</p>
+              </Link>
             ))}
           </div>
         </div>
