@@ -49,7 +49,7 @@ export default function ComeAumentareRicaviHotelPage() {
         type="Article"
         title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026"
         description="10 strategie comprovate per incrementare il fatturato del tuo hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="come-aumentare-ricavi-hotel" />
 

@@ -49,7 +49,7 @@ export default function FormazioneRevenueManagementHotelPage() {
         type="Service"
         title="Formazione Revenue Management Hotel"
         description="Corsi di formazione e training per hotel manager e revenue manager"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="formazione-revenue-management-hotel" />
 

@@ -55,7 +55,7 @@ export default function ADRHotelComeAumentarloPage() {
         type="Article"
         title="Come Aumentare l'ADR Hotel: Guida Completa 2026"
         description="Strategie concrete per far crescere la tariffa media del tuo hotel fino al +40%"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="adr-hotel-come-aumentarlo" />
 

@@ -49,7 +49,7 @@ export default function KPIHotelRevenueManagementPage() {
         type="Article"
         title="KPI Hotel Revenue Management: Monitora Performance"
         description="I KPI essenziali del Revenue Management per monitorare e ottimizzare le performance hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="kpi-hotel-revenue-management" />
 

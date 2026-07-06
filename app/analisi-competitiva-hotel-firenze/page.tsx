@@ -50,7 +50,7 @@ export default function AnalisiCompetitivaHotelFirenzePage() {
         type="Article"
         title="Analisi Competitiva Hotel Firenze"
         description="Analisi strategica del competitive set per hotel a Firenze"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="analisi-competitiva-hotel-firenze" />
 

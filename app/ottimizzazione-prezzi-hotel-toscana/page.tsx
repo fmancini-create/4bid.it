@@ -50,7 +50,7 @@ export default function OttimizzazionePrezziToscanaPage() {
         type="Service"
         title="Ottimizzazione Prezzi Hotel Toscana"
         description="Revenue management per hotel in Toscana con esperti locali"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="ottimizzazione-prezzi-hotel-toscana" />
       <Header />

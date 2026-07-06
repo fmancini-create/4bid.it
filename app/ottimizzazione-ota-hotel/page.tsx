@@ -49,7 +49,7 @@ export default function OttimizzazioneOTAPage() {
         type="Service"
         title="Ottimizzazione OTA Hotel"
         description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="ottimizzazione-ota-hotel" />
 

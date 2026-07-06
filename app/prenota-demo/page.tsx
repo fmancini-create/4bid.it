@@ -50,7 +50,7 @@ export default function PrenotaDemoPage() {
         type="Service"
         title="Prenota una Demo Gratuita"
         description="Prenota una demo gratuita per scoprire i servizi di revenue management 4BID.IT"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="prenota-demo" />
 

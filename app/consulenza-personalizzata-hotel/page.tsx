@@ -49,7 +49,7 @@ export default function ConsulenzaPersonalizzataHotelPage() {
         type="Service"
         title="Consulenza Personalizzata Hotel"
         description="Consulenza revenue management personalizzata per hotel e strutture ricettive"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="consulenza-personalizzata-hotel" />
 

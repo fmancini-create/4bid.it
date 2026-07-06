@@ -49,7 +49,7 @@ export default function KPIMetricheHotelPage() {
         type="Article"
         title="KPI e Metriche Hotel: Monitora le Performance"
         description="Guida completa ai KPI e metriche essenziali per hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="kpi-metriche-hotel" />
 

@@ -49,7 +49,7 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
         type="Service"
         title="Gestione Canali Distribuzione Hotel"
         description="Gestione strategica dei canali di distribuzione online per hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="gestione-canali-distribuzione-hotel" />
 

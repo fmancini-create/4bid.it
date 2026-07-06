@@ -49,7 +49,7 @@ export default function OttimizzazioneADRHotelPage() {
         type="Article"
         title="Ottimizzazione ADR Hotel"
         description="Strategie avanzate per ottimizzare l'ADR del tuo hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="ottimizzazione-adr-hotel" />
 

@@ -49,7 +49,7 @@ export default function ForecastBudgetingHotelPage() {
         type="Service"
         title="Forecast e Budgeting Hotel"
         description="Previsioni accurate e pianificazione finanziaria per hotel"
-        faq={faqData}
+        faqs={faqData}
       />
       <LandingPageTracker slug="forecast-budgeting-hotel" />
 
