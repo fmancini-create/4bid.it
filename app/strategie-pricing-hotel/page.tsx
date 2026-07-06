@@ -8,7 +8,7 @@ import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
-  title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2025 | 4BID.IT",
+  title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2026 | 4BID.IT",
   description:
     "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente. Aumenta RevPAR +37%. Guida completa.",
   keywords:

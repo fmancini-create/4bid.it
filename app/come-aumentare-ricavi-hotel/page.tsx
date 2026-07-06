@@ -8,13 +8,13 @@ import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
-  title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
+  title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026 | 4BID.IT",
   description:
     "Guida completa su come aumentare i ricavi del tuo hotel: strategie di Revenue Management, ottimizzazione tariffe, direct booking e molto altro. Risultati concreti in 30 giorni.",
   keywords:
     "aumentare ricavi hotel, revenue hotel, fatturato hotel, guadagni hotel, come aumentare profitti hotel, strategie ricavi alberghieri",
   openGraph: {
-    title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025 | 4BID.IT",
+    title: "Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026 | 4BID.IT",
     description: "10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%.",
     url: "https://www.4bid.it/come-aumentare-ricavi-hotel",
     type: "article",
@@ -47,7 +47,7 @@ export default function ComeAumentareRicaviHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
-        title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2025"
+        title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026"
         description="10 strategie comprovate per incrementare il fatturato del tuo hotel"
         faq={faqData}
       />
@@ -60,7 +60,7 @@ export default function ComeAumentareRicaviHotelPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-foreground mb-6 text-balance">
-              Come Aumentare i Ricavi del Tuo Hotel: La Guida Completa 2025
+              Come Aumentare i Ricavi del Tuo Hotel: La Guida Completa 2026
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">
               10 strategie comprovate per incrementare il fatturato del tuo hotel dal 25% al 40%. Azioni concrete,

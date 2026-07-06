@@ -22,7 +22,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 
 export const metadata: Metadata = {
-  title: "Cos'è il Revenue Management Hotel? Guida Completa 2025 | 4BID.IT",
+  title: "Cos'è il Revenue Management Hotel? Guida Completa 2026 | 4BID.IT",
   description:
     "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
   keywords:
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     canonical: "https://www.4bid.it/cose-il-revenue-management",
   },
   openGraph: {
-    title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
+    title: "Cos'è il Revenue Management Hotel? Guida Completa 2026",
     description:
       "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
     url: "https://www.4bid.it/cose-il-revenue-management",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cos'è il Revenue Management Hotel? Guida Completa 2025",
+    title: "Cos'è il Revenue Management Hotel? Guida Completa 2026",
     description: "Guida semplice e completa al Revenue Management per hotel e strutture ricettive.",
     images: ["https://www.4bid.it/4bid-colorful-logo.jpg"],
   },
