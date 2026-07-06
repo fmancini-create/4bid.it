@@ -1,5 +1,3 @@
-import Script from "next/script"
-
 interface FAQItem {
   question: string
   answer: string
@@ -353,36 +351,34 @@ export function StructuredData({
     ],
   }
 
+  // JSON-LD reso con tag <script> nativi (non next/script): così il markup è
+  // presente nell'HTML server-side ed è leggibile da tutti i crawler e bot AI,
+  // senza dipendere dall'esecuzione JS lato client (afterInteractive).
   return (
     <>
-      <Script
-        id="structured-data-main"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(mainSchema) }}
       />
       {faqSchema && (
-        <Script
-          id="structured-data-faq"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
       {breadcrumbSchema && (
-        <Script
-          id="structured-data-breadcrumb"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
       )}
       {howToSchema && (
-        <Script
-          id="structured-data-howto"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
         />
       )}
-      <Script
-        id="structured-data-entities"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(entityGraphSchema) }}
       />

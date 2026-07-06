@@ -50,6 +50,10 @@ export default function OttimizzazioneADRHotelPage() {
         title="Ottimizzazione ADR Hotel"
         description="Strategie avanzate per ottimizzare l'ADR del tuo hotel"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Ottimizzazione ADR Hotel", url: "https://www.4bid.it/ottimizzazione-adr-hotel" },
+        ]}
       />
       <LandingPageTracker slug="ottimizzazione-adr-hotel" />
 

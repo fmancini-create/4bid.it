@@ -50,6 +50,10 @@ export default function FormazioneRevenueManagementHotelPage() {
         title="Formazione Revenue Management Hotel"
         description="Corsi di formazione e training per hotel manager e revenue manager"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Formazione Revenue Management", url: "https://www.4bid.it/formazione-revenue-management-hotel" },
+        ]}
       />
       <LandingPageTracker slug="formazione-revenue-management-hotel" />
 

@@ -51,6 +51,10 @@ export default function OttimizzazionePrezziToscanaPage() {
         title="Ottimizzazione Prezzi Hotel Toscana"
         description="Revenue management per hotel in Toscana con esperti locali"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Ottimizzazione Prezzi Hotel Toscana", url: "https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana" },
+        ]}
       />
       <LandingPageTracker slug="ottimizzazione-prezzi-hotel-toscana" />
       <Header />

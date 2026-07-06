@@ -50,6 +50,10 @@ export default function ForecastBudgetingHotelPage() {
         title="Forecast e Budgeting Hotel"
         description="Previsioni accurate e pianificazione finanziaria per hotel"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Forecast e Budgeting Hotel", url: "https://www.4bid.it/forecast-budgeting-hotel" },
+        ]}
       />
       <LandingPageTracker slug="forecast-budgeting-hotel" />
 

@@ -50,6 +50,10 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
         title="Gestione Canali Distribuzione Hotel"
         description="Gestione strategica dei canali di distribuzione online per hotel"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Gestione Canali Distribuzione", url: "https://www.4bid.it/gestione-canali-distribuzione-hotel" },
+        ]}
       />
       <LandingPageTracker slug="gestione-canali-distribuzione-hotel" />
 

@@ -51,6 +51,10 @@ export default function AnalisiCompetitivaHotelFirenzePage() {
         title="Analisi Competitiva Hotel Firenze"
         description="Analisi strategica del competitive set per hotel a Firenze"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Analisi Competitiva Hotel Firenze", url: "https://www.4bid.it/analisi-competitiva-hotel-firenze" },
+        ]}
       />
       <LandingPageTracker slug="analisi-competitiva-hotel-firenze" />
 

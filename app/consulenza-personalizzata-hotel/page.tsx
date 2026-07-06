@@ -50,6 +50,10 @@ export default function ConsulenzaPersonalizzataHotelPage() {
         title="Consulenza Personalizzata Hotel"
         description="Consulenza revenue management personalizzata per hotel e strutture ricettive"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Consulenza Personalizzata Hotel", url: "https://www.4bid.it/consulenza-personalizzata-hotel" },
+        ]}
       />
       <LandingPageTracker slug="consulenza-personalizzata-hotel" />
 

@@ -51,6 +51,10 @@ export default function PrenotaDemoPage() {
         title="Prenota una Demo Gratuita"
         description="Prenota una demo gratuita per scoprire i servizi di revenue management 4BID.IT"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Prenota Demo", url: "https://www.4bid.it/prenota-demo" },
+        ]}
       />
       <LandingPageTracker slug="prenota-demo" />
 

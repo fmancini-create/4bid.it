@@ -50,6 +50,10 @@ export default function OttimizzazioneOTAPage() {
         title="Ottimizzazione OTA Hotel"
         description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
         faqs={faqData}
+        breadcrumbs={[
+          { name: "Home", url: "https://www.4bid.it" },
+          { name: "Ottimizzazione OTA Hotel", url: "https://www.4bid.it/ottimizzazione-ota-hotel" },
+        ]}
       />
       <LandingPageTracker slug="ottimizzazione-ota-hotel" />
 
