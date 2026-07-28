@@ -30,6 +30,9 @@ const PROJECT_ROOM_PUBLIC_PATHS = [
   "/area-riservata/richiedi-accesso",
   "/area-riservata/invito",
   "/area-riservata/auth",
+  // A password reset is by definition requested by someone who cannot sign in,
+  // so guarding this by session would bounce them to the login page forever.
+  "/area-riservata/recupera-password",
 ]
 
 function isProjectRoomPublicPath(pathname: string): boolean {

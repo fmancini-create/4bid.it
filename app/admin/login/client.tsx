@@ -152,8 +152,12 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
       }
 
       const supabase = createClient()
+      // Must NOT point at /admin/*: the proxy guards those paths by session, so
+      // the recovery link used to be bounced straight back to this login page.
+      // /auth/callback exchanges the token server-side, then hands over to the
+      // form under /auth which is reachable without a session.
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/admin/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
       })
 
       if (error) {

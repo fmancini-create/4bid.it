@@ -95,7 +95,15 @@ export default function LoginClient() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-baseline justify-between gap-4">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/area-riservata/recupera-password"
+                  className="text-xs font-semibold text-primary-blue hover:underline"
+                >
+                  Password dimenticata?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
