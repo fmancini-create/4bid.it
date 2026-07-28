@@ -11,13 +11,9 @@
  * Run: node scripts/project-room/verify-audit-durability.mjs
  */
 import { createClient } from "@supabase/supabase-js"
+import { assertVerificationAllowed } from "./_guard.mjs"
 
-const SB_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!SB_URL || !SERVICE) {
-  console.error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY")
-  process.exit(1)
-}
+const { url: SB_URL, service: SERVICE } = assertVerificationAllowed("verify-audit-durability.mjs")
 const db = createClient(SB_URL, SERVICE, { auth: { persistSession: false } })
 
 let pass = 0

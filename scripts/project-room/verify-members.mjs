@@ -7,9 +7,9 @@
  */
 
 import { createClient } from "@supabase/supabase-js"
+import { assertVerificationAllowed } from "./_guard.mjs"
 
-const SB_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
+const { url: SB_URL, service: SERVICE } = assertVerificationAllowed("verify-members.mjs")
 const ANON = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const BASE = "http://localhost:3000"
 
