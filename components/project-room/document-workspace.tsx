@@ -22,7 +22,14 @@ import {
   type ProjectRole,
   type RevisionProposal,
 } from "@/lib/project-room/types"
-import { canComment, canDownload, canProposeRevision, canReviewRevision } from "@/lib/project-room/permissions"
+import {
+  canComment,
+  canDownload,
+  canManageDocuments,
+  canProposeRevision,
+  canReviewRevision,
+} from "@/lib/project-room/permissions"
+import { VersionUpload } from "@/components/project-room/version-upload"
 
 /**
  * pdf.js touches DOM globals as soon as it is imported, so the viewer is loaded
@@ -78,6 +85,8 @@ export function DocumentWorkspace({
   const mayPropose = canProposeRevision(role)
   const mayReview = canReviewRevision(role)
   const mayDownload = canDownload(role, memberCanDownload)
+  // Only gates the UI. The upload route re-checks this server-side.
+  const mayManage = canManageDocuments(role)
 
   const openComments = useMemo(
     () => comments.filter((c) => c.status === "aperto" || c.status === "da_valutare").length,
@@ -162,6 +171,15 @@ export function DocumentWorkspace({
               La versione {activeVersion.version_label} e registrata, ma il documento non e ancora stato caricato.
               Commenti e revisioni restano disponibili e verranno collegati al file appena sara presente.
             </p>
+            {mayManage ? (
+              <div className="mt-2">
+                <VersionUpload
+                  documentId={document.id}
+                  fillVersionId={activeVersion.id}
+                  fillVersionLabel={activeVersion.version_label}
+                />
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -170,16 +188,19 @@ export function DocumentWorkspace({
             {activeVersion.version_label}
             {activeVersion.file_name ? ` · ${activeVersion.file_name}` : ""}
           </span>
-          {!activeVersion.file_path ? null : mayDownload ? (
-            <Button asChild variant="outline" size="sm">
-              <a href={`/api/project-room/versions/${activeVersion.id}/file?download=1`}>
-                <Download className="mr-2 size-4" aria-hidden="true" />
-                Scarica PDF
-              </a>
-            </Button>
-          ) : (
-            <span className="italic">Download non consentito per il tuo ruolo.</span>
-          )}
+          <span className="flex items-center gap-2">
+            {mayManage && activeVersion.file_path ? <VersionUpload documentId={document.id} /> : null}
+            {!activeVersion.file_path ? null : mayDownload ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/project-room/versions/${activeVersion.id}/file?download=1`}>
+                  <Download className="mr-2 size-4" aria-hidden="true" />
+                  Scarica PDF
+                </a>
+              </Button>
+            ) : (
+              <span className="italic">Download non consentito per il tuo ruolo.</span>
+            )}
+          </span>
         </div>
       </div>
 
