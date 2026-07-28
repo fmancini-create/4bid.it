@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import ClientLoginPage from "./client"
-
-const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
+import { SUPER_ADMIN_EMAIL } from "@/lib/admin-config"
 
 export const metadata: Metadata = {
   title: "Accesso Amministratore - 4BID.IT Admin Panel",

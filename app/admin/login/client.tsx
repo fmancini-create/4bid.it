@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,9 +12,37 @@ import { Eye, EyeOff } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-const DEV_CREDENTIALS = {
-  email: "f.mancini@4bid.it",
-  password: "Pippolo75@4bid",
+/**
+ * Clears any Supabase auth cookie left over on this host, including the numbered
+ * chunks (`...auth-token.0`, `.1`) written when a session was too big for one
+ * cookie. A stale or truncated leftover is unreadable server-side, so the proxy
+ * guarding /admin bounces back to this page while the browser SDK still holds a
+ * valid session in memory and reports success.
+ */
+function clearStaleAuthCookies() {
+  if (typeof document === "undefined") return
+  const names = document.cookie
+    .split(";")
+    .map((c) => c.trim().split("=")[0])
+    .filter((n) => n.startsWith("sb-") && n.includes("auth-token"))
+
+  for (const name of names) {
+    for (const domain of [undefined, window.location.hostname, `.${window.location.hostname.replace(/^www\./, "")}`]) {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${domain ? `; domain=${domain}` : ""}`
+    }
+  }
+}
+
+/** Asks the SERVER whether it can read the session the SDK just established. */
+async function serverSeesSession(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/session", { cache: "no-store", credentials: "same-origin" })
+    if (!res.ok) return false
+    const data = await res.json()
+    return Boolean(data?.authenticated && data?.isSuperAdmin)
+  } catch {
+    return false
+  }
 }
 
 interface ClientLoginPageProps {
@@ -28,69 +55,16 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
   const [showPassword, setShowPassword] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isDevOrPreview, setIsDevOrPreview] = useState(false)
-  const router = useRouter()
   const { toast } = useToast()
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hostname = window.location.hostname
-      const isDev =
-        hostname === "localhost" ||
-        hostname.includes("vercel.app") ||
-        hostname.includes("v0.dev") ||
-        hostname.includes("vusercontent.net")
-      setIsDevOrPreview(isDev)
-    }
-  }, [])
-
-  const handleDevLogin = async () => {
-    setEmail(DEV_CREDENTIALS.email)
-    setPassword(DEV_CREDENTIALS.password)
-    setIsLoading(true)
-
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInWithPassword({
-        email: DEV_CREDENTIALS.email,
-        password: DEV_CREDENTIALS.password,
-      })
-
-      if (error) {
-        toast({
-          title: "Errore di accesso",
-          description: error.message,
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Accesso effettuato",
-          description: "Benvenuto nel pannello admin!",
-        })
-        router.push("/admin")
-      }
-    } catch (error) {
-      console.error("Dev login error:", error)
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore. Riprova.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Login form submitted")
-    console.log("[v0] Email:", email)
-    console.log("[v0] Password length:", password.length)
     setIsLoading(true)
 
     try {
-      if (email !== SUPER_ADMIN_EMAIL) {
-        console.log("[v0] Email doesn't match SUPER_ADMIN_EMAIL")
+      // Case-insensitive: the exact comparison used to reject "F.Mancini@4bid.it"
+      // even though Supabase treats it as the very same account.
+      if (email.trim().toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
         toast({
           title: "Accesso Negato",
           description: "Non hai i permessi per accedere a questa area.",
@@ -100,29 +74,55 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
         return
       }
 
-      console.log("[v0] Creating Supabase client...")
       const supabase = createClient()
-      console.log("[v0] Attempting sign in...")
+
+      // A leftover cookie from an earlier session would otherwise survive the new
+      // sign-in and keep the server from reading it.
+      clearStaleAuthCookies()
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        console.log("[v0] Login error:", error)
         toast({
           title: "Errore di accesso",
           description: error.message,
           variant: "destructive",
         })
-      } else {
-        console.log("[v0] Login successful, redirecting...")
-        toast({
-          title: "Accesso effettuato",
-          description: "Benvenuto nel pannello admin!",
-        })
-        router.push("/admin")
+        setIsLoading(false)
+        return
       }
+
+      // Do not announce success on the SDK's word alone: confirm the server can
+      // actually read the session, otherwise the guard on /admin sends the user
+      // straight back here and the "Accesso effettuato" message is a lie.
+      const confirmed = (await serverSeesSession()) || (await serverSeesSession())
+
+      if (!confirmed) {
+        await supabase.auth.signOut()
+        clearStaleAuthCookies()
+        toast({
+          title: "Sessione non registrata dal browser",
+          description:
+            "Le credenziali sono corrette, ma il cookie di sessione non è stato accettato. Disattiva il blocco dei cookie per www.4bid.it (o esci dalla navigazione in incognito) e riprova.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      toast({
+        title: "Accesso effettuato",
+        description: "Benvenuto nel pannello admin!",
+      })
+
+      // Full page load, not router.push: a client-side navigation can replay the
+      // redirect-to-login that Next cached while the user was still signed out.
+      const target = new URLSearchParams(window.location.search).get("redirect")
+      window.location.replace(target?.startsWith("/admin") ? target : "/admin")
+      return
     } catch (error) {
       console.error("[v0] Unexpected error:", error)
       toast({
@@ -131,7 +131,6 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
         variant: "destructive",
       })
     } finally {
-      console.log("[v0] Setting loading to false")
       setIsLoading(false)
     }
   }
@@ -141,7 +140,7 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
     setIsLoading(true)
 
     try {
-      if (email !== SUPER_ADMIN_EMAIL) {
+      if (email.trim().toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
         toast({
           title: "Accesso Negato",
           description: "Non hai i permessi per accedere a questa area.",
@@ -258,19 +257,6 @@ export default function ClientLoginPage({ SUPER_ADMIN_EMAIL }: ClientLoginPagePr
               </button>
             </form>
 
-            {isDevOrPreview && !isResetting && (
-              <div className="mt-4 pt-4 border-t border-dashed border-orange-300">
-                <Button
-                  type="button"
-                  onClick={handleDevLogin}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Accesso in corso..." : "🔧 Dev Login (solo dev/preview)"}
-                </Button>
-                <p className="text-xs text-center text-orange-600 mt-2">Questo pulsante non è visibile in produzione</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </main>
