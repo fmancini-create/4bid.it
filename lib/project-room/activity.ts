@@ -32,6 +32,20 @@ export type AuditAction =
   | "project.created"
   | "project.updated"
 
+/**
+ * Writes one audit entry.
+ *
+ * Two properties this function guarantees, both learned the hard way:
+ *
+ * 1. `organization_id` is always resolved from the project. The admin console
+ *    scopes the trail by organisation, so an entry without it is invisible —
+ *    a log you cannot read is the same as no log at all.
+ * 2. Attribution is denormalised into `metadata` (`actor_email`,
+ *    `project_name`). All three foreign keys are `ON DELETE SET NULL`, so
+ *    removing a user or a project would otherwise silently strip the "who"
+ *    and "where" from history. A legal document room's trail has to outlive
+ *    the rows it points at.
+ */
 export async function recordAudit(params: {
   projectId?: string | null
   userId?: string | null
@@ -42,13 +56,54 @@ export async function recordAudit(params: {
 }): Promise<void> {
   try {
     const admin = createAdminClient()
+
+    let organizationId: string | null = null
+    let projectName: string | null = null
+    if (params.projectId) {
+      const { data: project } = await admin
+        .from("pr_projects")
+        .select("name, organization_id")
+        .eq("id", params.projectId)
+        .maybeSingle()
+      organizationId = (project?.organization_id as string | undefined) ?? null
+      projectName = (project?.name as string | undefined) ?? null
+    }
+
+    let actorEmail: string | null = null
+    if (params.userId) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("email")
+        .eq("id", params.userId)
+        .maybeSingle()
+      actorEmail = (profile?.email as string | undefined) ?? null
+    }
+
+    // An admin action with no project (reviewing an access request) still
+    // belongs to the admin's organisation, so fall back to their membership.
+    if (!organizationId && params.userId) {
+      const { data: membership } = await admin
+        .from("pr_organization_members")
+        .select("organization_id")
+        .eq("user_id", params.userId)
+        .eq("role", "admin")
+        .limit(1)
+        .maybeSingle()
+      organizationId = (membership?.organization_id as string | undefined) ?? null
+    }
+
     const { error } = await admin.from("pr_audit_logs").insert({
+      organization_id: organizationId,
       project_id: params.projectId ?? null,
       user_id: params.userId ?? null,
       action: params.action,
       entity_type: params.entityType ?? null,
       entity_id: params.entityId ?? null,
-      metadata: params.metadata ?? {},
+      metadata: {
+        ...(params.metadata ?? {}),
+        ...(actorEmail ? { actor_email: actorEmail } : {}),
+        ...(projectName ? { project_name: projectName } : {}),
+      },
     })
     if (error) console.log("[v0] recordAudit failed:", params.action, error.message)
   } catch (error) {

@@ -22,6 +22,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
+/**
+ * Audit entries shown per load. The exact total is queried alongside so the UI
+ * can state how many entries exist rather than silently truncating the trail.
+ */
+const AUDIT_PAGE_SIZE = 60
+
 export default async function AdminPage() {
   const admin = await requireOrgAdmin()
   if (!admin.ok) {
@@ -49,12 +55,14 @@ export default async function AdminPage() {
       .select("id, email, role, can_download, expires_at, accepted_at, revoked_at, created_at, project_id")
       .order("created_at", { ascending: false })
       .limit(50),
+    // `ip_address` and `user_agent` are deliberately NOT selected: they are
+    // recorded for forensics but must never reach the browser.
     db
       .from("pr_audit_logs")
-      .select("id, action, entity_type, metadata, created_at, user_id")
+      .select("id, action, entity_type, metadata, created_at, user_id", { count: "exact" })
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
-      .limit(60),
+      .limit(AUDIT_PAGE_SIZE),
   ])
 
   const projects = projectsResult.data ?? []
@@ -66,6 +74,37 @@ export default async function AdminPage() {
     .filter((row) => projectNames.has(row.project_id))
     .map((row) => ({ ...row, project_name: projectNames.get(row.project_id) ?? "—" }))
 
+  // Resolve the actor of each audit entry: a log that only shows a UUID cannot
+  // answer "who did this", which is the whole point of keeping it.
+  const auditRows = auditResult.data ?? []
+  const actorIds = [...new Set(auditRows.map((row) => row.user_id).filter((id): id is string => Boolean(id)))]
+
+  const actorNames = new Map<string, string>()
+  if (actorIds.length > 0) {
+    const { data: actors } = await db.from("profiles").select("id, first_name, last_name, email").in("id", actorIds)
+    for (const actor of actors ?? []) {
+      const name = [actor.first_name, actor.last_name].filter(Boolean).join(" ").trim()
+      actorNames.set(actor.id, name || actor.email || "Utente rimosso")
+    }
+  }
+
+  const auditEntries = auditRows.map((row) => {
+    const metadata = (row.metadata ?? {}) as Record<string, unknown>
+    // `user_id` is ON DELETE SET NULL, so fall back to the email denormalised
+    // into the metadata at write time before giving up on the attribution.
+    const denormalised = typeof metadata.actor_email === "string" ? metadata.actor_email : null
+    const actor = (row.user_id ? actorNames.get(row.user_id) : null) ?? denormalised
+
+    return {
+      id: row.id,
+      action: row.action,
+      entity_type: row.entity_type,
+      metadata: row.metadata,
+      created_at: row.created_at,
+      actor: actor ?? "Account rimosso",
+    }
+  })
+
   const profile = await getProfile(admin.data.id)
 
   return (
@@ -74,7 +113,9 @@ export default async function AdminPage() {
         requests={requestsResult.data ?? []}
         projects={projects}
         invitations={invitations}
-        auditEntries={auditResult.data ?? []}
+        auditEntries={auditEntries}
+        auditTotal={auditResult.count ?? auditEntries.length}
+        auditPageSize={AUDIT_PAGE_SIZE}
       />
     </ProjectRoomShell>
   )

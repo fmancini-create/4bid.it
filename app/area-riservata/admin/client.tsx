@@ -52,6 +52,23 @@ type AuditEntry = {
   entity_type: string | null
   metadata: Record<string, unknown> | null
   created_at: string
+  actor: string
+}
+
+/** Written for durability, already surfaced in their own columns. */
+const INTERNAL_METADATA_KEYS = new Set(["actor_email", "project_name"])
+
+/**
+ * Renders audit metadata as readable pairs. Raw `JSON.stringify` output is
+ * unreadable in a table and hides the values that matter during a review.
+ */
+function describeMetadata(metadata: Record<string, unknown> | null): string {
+  if (!metadata) return "—"
+  const parts = Object.entries(metadata)
+    .filter(([key]) => !INTERNAL_METADATA_KEYS.has(key))
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([key, value]) => `${key.replace(/_/g, " ")}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
+  return parts.length > 0 ? parts.join(" · ") : "—"
 }
 
 function formatDate(value: string | null) {
@@ -82,11 +99,14 @@ export default function AdminClient({
   projects,
   invitations,
   auditEntries,
+  auditTotal,
 }: {
   requests: AccessRequest[]
   projects: { id: string; name: string; status: string }[]
   invitations: Invitation[]
   auditEntries: AuditEntry[]
+  auditTotal: number
+  auditPageSize?: number
 }) {
   const router = useRouter()
   const pending = useMemo(() => requests.filter((r) => r.status === "pending"), [requests])
@@ -220,6 +240,7 @@ export default function AdminClient({
                 <thead className="border-b border-border bg-secondary/50 text-left">
                   <tr>
                     <th className="px-4 py-2 font-semibold">Quando</th>
+                    <th className="px-4 py-2 font-semibold">Chi</th>
                     <th className="px-4 py-2 font-semibold">Azione</th>
                     <th className="px-4 py-2 font-semibold">Oggetto</th>
                     <th className="px-4 py-2 font-semibold">Dettagli</th>
@@ -231,10 +252,11 @@ export default function AdminClient({
                       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
                         {formatDate(entry.created_at)}
                       </td>
+                      <td className="whitespace-nowrap px-4 py-2 font-medium text-brand-navy">{entry.actor}</td>
                       <td className="px-4 py-2 font-mono text-xs font-medium text-brand-navy">{entry.action}</td>
                       <td className="px-4 py-2 text-muted-foreground">{entry.entity_type ?? "—"}</td>
-                      <td className="max-w-[22rem] truncate px-4 py-2 text-xs text-muted-foreground">
-                        {entry.metadata ? JSON.stringify(entry.metadata) : "—"}
+                      <td className="max-w-[20rem] truncate px-4 py-2 text-xs text-muted-foreground">
+                        {describeMetadata(entry.metadata)}
                       </td>
                     </tr>
                   ))}
@@ -242,6 +264,14 @@ export default function AdminClient({
               </table>
             </div>
           )}
+          {auditEntries.length > 0 ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {auditTotal > auditEntries.length
+                ? `Ultime ${auditEntries.length} voci di ${auditTotal} totali. Le voci piu vecchie non sono mostrate in questa schermata.`
+                : `${auditTotal} voci in totale.`}{" "}
+              Indirizzo IP e browser sono registrati ma non vengono mostrati.
+            </p>
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>
