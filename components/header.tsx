@@ -82,8 +82,14 @@ export function Header() {
             <Image src="/logo.png" alt="4bid Logo" width={80} height={50} style={{ width: 'auto', height: 'auto' }} priority />
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          {/* Desktop Navigation
+              Measured: this row needs ~1466px to fit 12 links plus the button. It
+              used to switch on at lg (1024px), so between 1024px and ~1490px the
+              nav overflowed and pushed "Area Riservata" clean off the right edge —
+              invisible and unclickable at ordinary laptop widths. Switch to the
+              full nav only once there is genuinely room; below that the burger
+              menu already exposes every entry. */}
+          <nav className="hidden 2xl:flex items-center gap-8">
             {navItems.map((item) => (
               <Link
                 key={item.label}
@@ -94,15 +100,25 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            {isAdmin ? (
+            {/* "Area Riservata" must lead to the client Project Room, which is what
+                that name refers to. It used to point at /admin/login, the internal
+                back office restricted to a single address, so clients following it
+                could never reach their documents. /area-riservata routes by itself:
+                projects when signed in, login otherwise. */}
+            <Link href="/area-riservata">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white transition-colors bg-transparent"
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Area Riservata
+              </Button>
+            </Link>
+            {isAdmin && (
               <>
                 <Link href="/admin">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white transition-colors bg-transparent"
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
+                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-[#5B9BD5]">
                     Admin
                   </Button>
                 </Link>
@@ -111,29 +127,25 @@ export function Header() {
                   Logout
                 </Button>
               </>
-            ) : (
-              <Link href="/admin/login">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white transition-colors bg-transparent"
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Area Riservata
-                </Button>
-              </Link>
             )}
           </nav>
 
           {/* Mobile Menu Button */}
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="2xl:hidden"
+            aria-label={isMenuOpen ? "Chiudi il menu di navigazione" : "Apri il menu di navigazione"}
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav className="lg:hidden py-4 border-t">
+          <nav className="2xl:hidden py-4 border-t max-h-[calc(100vh-5rem)] overflow-y-auto">
             {navItems.map((item) => (
               <Link
                 key={item.label}
@@ -145,15 +157,20 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            {isAdmin ? (
+            <Link href="/area-riservata" className="block py-3" onClick={() => setIsMenuOpen(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white bg-transparent"
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Area Riservata
+              </Button>
+            </Link>
+            {isAdmin && (
               <>
                 <Link href="/admin" className="block py-3" onClick={() => setIsMenuOpen(false)}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white bg-transparent"
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
+                  <Button variant="ghost" size="sm" className="w-full text-gray-600 hover:text-[#5B9BD5]">
                     Admin
                   </Button>
                 </Link>
@@ -172,17 +189,6 @@ export function Header() {
                   </Button>
                 </div>
               </>
-            ) : (
-              <Link href="/admin/login" className="block py-3" onClick={() => setIsMenuOpen(false)}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white bg-transparent"
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Area Riservata
-                </Button>
-              </Link>
             )}
           </nav>
         )}
