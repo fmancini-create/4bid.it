@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Copy, Inbox, Loader2, ScrollText, Send, ShieldOff, X } from "lucide-react"
+import { Check, Copy, Inbox, Loader2, ScrollText, Send, ShieldOff, Trash2, Users, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,6 +44,21 @@ type Invitation = {
   revoked_at: string | null
   created_at: string
   project_name: string
+}
+
+type ProjectMember = {
+  user_id: string
+  role: string
+  can_download: boolean
+  name: string
+  email: string | null
+}
+
+type ProjectWithMembers = {
+  id: string
+  name: string
+  status: string
+  members: ProjectMember[]
 }
 
 type AuditEntry = {
@@ -97,12 +112,14 @@ function invitationState(i: Invitation) {
 export default function AdminClient({
   requests,
   projects,
+  projectsWithMembers,
   invitations,
   auditEntries,
   auditTotal,
 }: {
   requests: AccessRequest[]
   projects: { id: string; name: string; status: string }[]
+  projectsWithMembers: ProjectWithMembers[]
   invitations: Invitation[]
   auditEntries: AuditEntry[]
   auditTotal: number
@@ -123,7 +140,7 @@ export default function AdminClient({
 
       <Tabs defaultValue="requests">
         {/* Labels stay short so they are not clipped on narrow screens. */}
-        <TabsList className="mb-6 grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+        <TabsList className="mb-6 grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
           <TabsTrigger value="requests">
             Richieste
             {pending.length > 0 ? (
@@ -132,6 +149,7 @@ export default function AdminClient({
               </span>
             ) : null}
           </TabsTrigger>
+          <TabsTrigger value="projects">Accessi</TabsTrigger>
           <TabsTrigger value="invitations">Inviti</TabsTrigger>
           <TabsTrigger value="audit">Registro</TabsTrigger>
         </TabsList>
@@ -196,6 +214,60 @@ export default function AdminClient({
               </div>
             </div>
           ) : null}
+        </TabsContent>
+
+        <TabsContent value="projects">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Accessi già attivi. Il ruolo e il permesso di download si possono cambiare in qualsiasi momento e la revoca
+            è immediata: senza questa schermata l&apos;accesso deciso in fase di approvazione resterebbe per sempre.
+          </p>
+          {projectsWithMembers.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+              <Users className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden="true" />
+              <p className="font-semibold text-brand-navy">Nessun progetto</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {projectsWithMembers.map((project) => (
+                <section key={project.id} className="rounded-xl border border-border bg-card">
+                  <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+                    <h2 className="font-semibold text-brand-navy">{project.name}</h2>
+                    <span className="text-xs text-muted-foreground">
+                      {project.members.length === 1 ? "1 persona" : `${project.members.length} persone`}
+                    </span>
+                  </header>
+                  {project.members.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      Nessun accesso attivo su questo progetto.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[760px] text-sm">
+                        <thead className="border-b border-border bg-secondary/50 text-left">
+                          <tr>
+                            <th className="px-4 py-2 font-semibold">Persona</th>
+                            <th className="px-4 py-2 font-semibold">Ruolo</th>
+                            <th className="px-4 py-2 font-semibold">Download</th>
+                            <th className="px-4 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {project.members.map((member) => (
+                            <MemberRow
+                              key={member.user_id}
+                              projectId={project.id}
+                              member={member}
+                              onDone={() => router.refresh()}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="invitations">
@@ -468,6 +540,164 @@ function RequestCard({
         </Button>
       </div>
     </li>
+  )
+}
+
+/**
+ * One active membership, with the role and download controls.
+ *
+ * Both actions call the server: `pr_project_members` grants no UPDATE to
+ * `authenticated`, so the browser genuinely cannot write these values itself.
+ * The UI never optimistically re-renders a permission — it waits for the server
+ * to confirm, because showing a role that was not actually saved is exactly the
+ * kind of thing that gets someone the wrong document.
+ */
+function MemberRow({
+  projectId,
+  member,
+  onDone,
+}: {
+  projectId: string
+  member: ProjectMember
+  onDone: () => void
+}) {
+  const [busy, setBusy] = useState<"role" | "download" | "remove" | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
+
+  const endpoint = `/api/project-room/admin/projects/${projectId}/members/${member.user_id}`
+  const editableRole = (INVITABLE_ROLES as readonly string[]).includes(member.role)
+
+  async function patch(body: Record<string, unknown>, kind: "role" | "download") {
+    setError(null)
+    setBusy(kind)
+    try {
+      const res = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data?.error ?? "Modifica non riuscita.")
+        return
+      }
+      onDone()
+    } catch {
+      setError("Errore di rete. Riprova.")
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function remove() {
+    setError(null)
+    setBusy("remove")
+    try {
+      const res = await fetch(endpoint, { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data?.error ?? "Revoca non riuscita.")
+        return
+      }
+      onDone()
+    } catch {
+      setError("Errore di rete. Riprova.")
+    } finally {
+      setBusy(null)
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <tr className="border-b border-border last:border-0">
+      <td className="px-4 py-2">
+        <span className="block font-medium text-brand-navy">{member.name}</span>
+        <span className="block text-xs text-muted-foreground">{member.email ?? "—"}</span>
+        {error ? (
+          <span role="alert" className="mt-1 block text-xs text-destructive">
+            {error}
+          </span>
+        ) : null}
+      </td>
+      <td className="px-4 py-2">
+        {editableRole ? (
+          <Select
+            value={member.role}
+            onValueChange={(value) => {
+              if (value !== member.role) void patch({ role: value }, "role")
+            }}
+            disabled={busy !== null}
+          >
+            <SelectTrigger className="w-[11rem]" aria-label={`Ruolo di ${member.name}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {INVITABLE_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          // `admin` is not in INVITABLE_ROLES, so rendering it in the Select
+          // would show an empty trigger. Shown as read-only text instead: a
+          // project administrator is not something to demote by mis-click.
+          <span className="inline-flex flex-col">
+            <span className="font-medium text-brand-navy">
+              {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ?? member.role}
+            </span>
+            <span className="text-xs text-muted-foreground">Non modificabile qui</span>
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-2">
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <Checkbox
+            checked={member.can_download}
+            disabled={busy !== null}
+            onCheckedChange={(v) => void patch({ can_download: v === true }, "download")}
+            aria-label={`Consenti il download a ${member.name}`}
+          />
+          {busy === "download" ? (
+            <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <span className="text-muted-foreground">{member.can_download ? "Sì" : "No"}</span>
+          )}
+        </label>
+      </td>
+      <td className="whitespace-nowrap px-4 py-2 text-right">
+        {confirming ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Revocare?</span>
+            <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy !== null}>
+              {busy === "remove" ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : "Sì, revoca"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirming(false)}
+              disabled={busy !== null}
+            >
+              Annulla
+            </Button>
+          </span>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirming(true)}
+            disabled={busy !== null}
+          >
+            <Trash2 className="mr-2 size-4" aria-hidden="true" />
+            Revoca
+          </Button>
+        )}
+      </td>
+    </tr>
   )
 }
 

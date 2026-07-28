@@ -68,6 +68,53 @@ export default async function AdminPage() {
   const projects = projectsResult.data ?? []
   const projectNames = new Map(projects.map((p) => [p.id, p.name]))
 
+  // Current memberships per project, so access already granted can be reviewed
+  // and revoked. Scoped to this organisation's project ids rather than trusting
+  // the membership table to carry an organisation column (it does not).
+  const projectIds = projects.map((p) => p.id)
+  const membersByProject = new Map<
+    string,
+    { user_id: string; role: string; can_download: boolean; name: string; email: string | null }[]
+  >()
+
+  if (projectIds.length > 0) {
+    // No PostgREST embed here: `pr_project_members` and `profiles` are joined
+    // manually because embeds on this schema have already proved ambiguous.
+    const { data: memberRows } = await db
+      .from("pr_project_members")
+      .select("user_id, project_id, role, can_download")
+      .in("project_id", projectIds)
+
+    const memberIds = [...new Set((memberRows ?? []).map((row) => row.user_id))]
+    const memberProfiles = new Map<string, { name: string; email: string | null }>()
+
+    if (memberIds.length > 0) {
+      const { data: rows } = await db.from("profiles").select("id, first_name, last_name, email").in("id", memberIds)
+      for (const row of rows ?? []) {
+        const name = [row.first_name, row.last_name].filter(Boolean).join(" ").trim()
+        memberProfiles.set(row.id, { name: name || row.email || "Utente senza nome", email: row.email ?? null })
+      }
+    }
+
+    for (const row of memberRows ?? []) {
+      const profileRow = memberProfiles.get(row.user_id)
+      const list = membersByProject.get(row.project_id) ?? []
+      list.push({
+        user_id: row.user_id,
+        role: row.role,
+        can_download: Boolean(row.can_download),
+        name: profileRow?.name ?? "Profilo non creato",
+        email: profileRow?.email ?? null,
+      })
+      membersByProject.set(row.project_id, list)
+    }
+  }
+
+  const projectsWithMembers = projects.map((project) => ({
+    ...project,
+    members: (membersByProject.get(project.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+  }))
+
   // Invitations are fetched without an organisation column (the table has none),
   // so they are filtered down to this organisation's projects in memory.
   const invitations = (invitationsResult.data ?? [])
@@ -112,6 +159,7 @@ export default async function AdminPage() {
       <AdminClient
         requests={requestsResult.data ?? []}
         projects={projects}
+        projectsWithMembers={projectsWithMembers}
         invitations={invitations}
         auditEntries={auditEntries}
         auditTotal={auditResult.count ?? auditEntries.length}
