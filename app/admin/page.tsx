@@ -11,8 +11,7 @@ import TriggerSnapshotButton from "@/components/trigger-snapshot-button"
 import AdminLogoutButton from "@/components/admin-logout-button"
 import AdminAccessDenied from "@/components/admin-access-denied"
 import { RefreshCw } from "lucide-react"
-
-const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
+import { isSuperAdminEmail } from "@/lib/admin-config"
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -25,7 +24,7 @@ export default async function AdminPage() {
     redirect("/admin/login")
   }
 
-  if (user.email !== SUPER_ADMIN_EMAIL) {
+  if (!isSuperAdminEmail(user.email)) {
     return <AdminAccessDenied email={user.email} />
   }
 
