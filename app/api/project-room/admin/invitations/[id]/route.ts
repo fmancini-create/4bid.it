@@ -72,14 +72,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   }
 
   await recordAudit({
-    organizationId: admin.data.organizationId,
     projectId: invitation.project_id,
-    userId: admin.data.user.id,
+    userId: admin.data.id,
     action: "member.removed",
     entityType: "invitation",
     entityId: id,
     metadata: { email: invitation.email, outcome: "invitation_revoked" },
-    request,
   })
 
   return NextResponse.json({ ok: true })

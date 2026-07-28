@@ -33,7 +33,16 @@ export default function InviteClient({
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [needsLogin, setNeedsLogin] = useState(false)
+  const [wrongAccount, setWrongAccount] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  async function signOutAndRetry() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setWrongAccount(false)
+    setError(null)
+    router.refresh()
+  }
 
   const expiry = expiresAt
     ? new Date(expiresAt).toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })
@@ -69,6 +78,10 @@ export default function InviteClient({
 
       if (!res.ok) {
         if (data?.code === "login_required") setNeedsLogin(true)
+        // Another account is signed in in this browser. The server refuses to
+        // bind the invitation to it, so offer to sign out and retry instead of
+        // leaving the invitee stuck.
+        if (data?.code === "wrong_account") setWrongAccount(true)
         setError(data?.error ?? "Impossibile completare l'invito.")
         return
       }
@@ -187,6 +200,15 @@ export default function InviteClient({
                 <Link href="/area-riservata/login" className="mt-1 block font-medium underline">
                   Vai al login
                 </Link>
+              ) : null}
+              {wrongAccount ? (
+                <button
+                  type="button"
+                  onClick={signOutAndRetry}
+                  className="mt-1 block font-medium underline"
+                >
+                  Esci dall&apos;altro account e continua come {email}
+                </button>
               ) : null}
             </div>
           ) : null}

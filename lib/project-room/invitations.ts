@@ -43,10 +43,17 @@ export function hashInvitationToken(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex")
 }
 
-/** Constant-time comparison of two hex digests. */
+/**
+ * Constant-time comparison of two hex digests.
+ *
+ * The values are copied into plain `Uint8Array`s: `Buffer` is a `Uint8Array` at
+ * runtime, but the bundled Node types do not accept it as an `ArrayBufferView`
+ * here. The comparison itself still runs in `timingSafeEqual`, so the
+ * constant-time guarantee is unchanged.
+ */
 export function tokenHashEquals(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, "hex")
-  const bufB = Buffer.from(b, "hex")
+  const bufA = Uint8Array.from(Buffer.from(a, "hex"))
+  const bufB = Uint8Array.from(Buffer.from(b, "hex"))
   if (bufA.length !== bufB.length || bufA.length === 0) return false
   return timingSafeEqual(bufA, bufB)
 }
@@ -79,7 +86,25 @@ export const INVITATION_REJECTION_MESSAGE: Record<InvitationRejection, string> =
   expired: "Questo invito e scaduto. Contatta il referente 4Bid per riceverne uno nuovo.",
 }
 
-/** Absolute URL of the invitation, built from the request origin. */
-export function invitationUrl(origin: string, raw: string): string {
-  return `${origin.replace(/\/$/, "")}/area-riservata/invito/${raw}`
+/**
+ * Absolute URL of the invitation.
+ *
+ * The canonical site URL wins over the request origin: this link is forwarded
+ * by hand to an external client, so it must not inherit a preview host or the
+ * `https://localhost` that the dev proxy reports. The request origin is used
+ * only for local development, where no canonical host applies.
+ */
+export function invitationUrl(requestOrigin: string, raw: string): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
+  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(requestOrigin)
+
+  let base: string
+  if (isLocal) {
+    // Force http: the dev proxy reports https for localhost, which does not resolve.
+    base = requestOrigin.replace(/^https:/, "http:")
+  } else {
+    base = configured || requestOrigin.replace(/\/$/, "")
+  }
+
+  return `${base}/area-riservata/invito/${raw}`
 }

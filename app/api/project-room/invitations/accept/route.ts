@@ -187,14 +187,12 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   await recordAudit({
-    organizationId: project?.organization_id ?? null,
     projectId: invitation.project_id,
     userId,
     action: "invitation.accepted",
     entityType: "invitation",
     entityId: invitation.id,
     metadata: { role: invitation.role, created_account: createdAccount },
-    request,
   })
 
   return NextResponse.json({

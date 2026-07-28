@@ -66,7 +66,7 @@ export default async function AdminPage() {
     .filter((row) => projectNames.has(row.project_id))
     .map((row) => ({ ...row, project_name: projectNames.get(row.project_id) ?? "—" }))
 
-  const profile = await getProfile(admin.data.user.id)
+  const profile = await getProfile(admin.data.id)
 
   return (
     <ProjectRoomShell profile={profile} isAdmin>

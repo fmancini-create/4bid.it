@@ -76,7 +76,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .update({
         status: "rejected",
         review_note: reviewNote,
-        reviewed_by: admin.data.user.id,
+        reviewed_by: admin.data.id,
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -88,13 +88,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     await recordAudit({
-      organizationId: admin.data.organizationId,
-      userId: admin.data.user.id,
+      userId: admin.data.id,
       action: "access_request.reviewed",
       entityType: "access_request",
       entityId: id,
       metadata: { outcome: "rejected" },
-      request,
     })
 
     return NextResponse.json({ status: "rejected" })
@@ -138,7 +136,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       role,
       can_download: canDownload,
       token: hash,
-      invited_by: admin.data.user.id,
+      invited_by: admin.data.id,
       expires_at: invitationExpiry(),
     })
     .select("id, expires_at")
@@ -154,7 +152,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     .update({
       status: "approved",
       review_note: reviewNote,
-      reviewed_by: admin.data.user.id,
+      reviewed_by: admin.data.id,
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -169,15 +167,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   await recordAudit({
-    organizationId: admin.data.organizationId,
     projectId,
-    userId: admin.data.user.id,
+    userId: admin.data.id,
     action: "member.invited",
     entityType: "invitation",
     entityId: invitation.id,
     // The raw token is deliberately absent from the audit metadata.
     metadata: { email: accessRequest.email, role, can_download: canDownload, project: project.name },
-    request,
   })
 
   return NextResponse.json({
