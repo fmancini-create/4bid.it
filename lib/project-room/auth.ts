@@ -170,9 +170,12 @@ export async function requireVersionAccess(
   }
 
   const admin = createAdminClient()
+  // Two foreign keys connect these tables (`versions.document_id` and
+  // `documents.current_version_id`), so a PostgREST embed is ambiguous and
+  // errors out. The document is resolved with a second explicit read instead.
   const { data: version, error } = await admin
     .from("pr_document_versions")
-    .select("id, document_id, file_path, pr_documents!inner(project_id)")
+    .select("id, document_id, file_path")
     .eq("id", versionId)
     .maybeSingle()
 
@@ -182,8 +185,19 @@ export async function requireVersionAccess(
   }
   if (!version) return deny(404, "Versione non trovata.")
 
-  const projectId = (version.pr_documents as unknown as { project_id: string }).project_id
-  const access = await requireProjectAccess(projectId)
+  const { data: document, error: documentError } = await admin
+    .from("pr_documents")
+    .select("project_id")
+    .eq("id", version.document_id)
+    .maybeSingle()
+
+  if (documentError) {
+    console.log("[v0] requireVersionAccess document lookup failed:", documentError.message)
+    return deny(500, "Impossibile verificare la versione.")
+  }
+  if (!document) return deny(404, "Versione non trovata.")
+
+  const access = await requireProjectAccess(document.project_id)
   if (!access.ok) return access
 
   return {

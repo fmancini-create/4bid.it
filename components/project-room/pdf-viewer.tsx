@@ -21,6 +21,13 @@ const MIN_SCALE = 0.5
 const MAX_SCALE = 2.5
 const SCALE_STEP = 0.25
 
+/**
+ * Module-level so the object identity is stable across renders. Inline, react-pdf
+ * sees a "new" options object every render and re-fetches the whole PDF in a loop.
+ * Nothing about these documents should reach an external service.
+ */
+const DOCUMENT_OPTIONS = { isEvalSupported: false } as const
+
 export interface PdfViewerProps {
   versionId: string
   /** Page the parent wants shown, e.g. when a comment is clicked. */
@@ -169,8 +176,7 @@ export function PdfViewer({
               </div>
             }
             error={null}
-            // Nothing about these documents should reach an external service.
-            options={{ isEvalSupported: false }}
+            options={DOCUMENT_OPTIONS}
           >
             <Page
               pageNumber={page}
