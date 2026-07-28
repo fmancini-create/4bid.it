@@ -4,8 +4,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { LogOut, User, FolderKanban, Loader2, ShieldCheck } from "lucide-react"
+import { LogOut, User, FolderKanban, Loader2, ShieldCheck, LayoutDashboard } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { isSuperAdminEmail } from "@/lib/admin-config"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -62,6 +63,12 @@ export function ProjectRoomShell({
   // missing profile row would tell you your own account was deleted.
   const name = profile ? displayName(profile) : "Il mio account"
 
+  // Derived from the signed-in profile rather than a prop: two of the five pages
+  // using this shell never passed `isAdmin`, so a prop-based entry point would go
+  // missing exactly where the user happens to be. Cosmetic only — /admin re-checks
+  // the address server-side, so rendering this link grants nothing.
+  const isSuperAdmin = isSuperAdminEmail(profile?.email)
+
   return (
     <div className="flex min-h-screen flex-col bg-secondary">
       <header className="sticky top-0 z-40 border-b border-border bg-card">
@@ -81,6 +88,17 @@ export function ProjectRoomShell({
                 Progetti
               </Link>
             </Button>
+
+            {isSuperAdmin ? (
+              <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+                {/* Plain <a>: crossing into the back office reloads the app shell
+                    instead of soft-navigating between two separately guarded areas. */}
+                <a href="/admin">
+                  <LayoutDashboard className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Back office
+                </a>
+              </Button>
+            ) : null}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -121,8 +139,22 @@ export function ProjectRoomShell({
                   <DropdownMenuItem asChild>
                     <Link href="/area-riservata/admin">
                       <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Amministrazione
+                      {/* Named for its scope: this is the Project Room's own admin
+                          panel, not the site back office linked below. Two entries
+                          both called "Amministrazione" would be indistinguishable. */}
+                      Amministrazione Project Room
                     </Link>
+                  </DropdownMenuItem>
+                ) : null}
+                {isSuperAdmin ? (
+                  <DropdownMenuItem asChild>
+                    {/* Also in the dropdown, not only in the header button: the
+                        button is hidden below `sm`, so on a phone this would be
+                        the only way back to the back office. */}
+                    <a href="/admin">
+                      <LayoutDashboard className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Back office 4Bid
+                    </a>
                   </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuSeparator />
