@@ -119,6 +119,12 @@
   --color-primary-blue: #5b9bd5;
   --color-blue-grey: #3d5a73;
   --color-yellow: #f4b942;
+  /* Project Room: navy per i titoli e due colori di stato.
+     Il workflow documentale ha bisogno di distinguere "approvato" da
+     "respinto", che il blu/oro del brand da soli non esprimono. */
+  --color-brand-navy: #2c3e50;
+  --color-state-approved: #15803d;
+  --color-state-rejected: #b91c1c;
 }
 
 @layer base {
