@@ -10,7 +10,7 @@ import {
 } from "@/lib/project-room/queries"
 import { ProjectRoomShell } from "@/components/project-room/shell"
 import { BreadcrumbTrail } from "@/components/project-room/breadcrumb-trail"
-import { DocumentWorkspace } from "@/components/project-room/document-workspace"
+import { DocumentWorkspaceClient } from "@/components/project-room/document-workspace-client"
 import { VersionStatusBadge } from "@/components/project-room/status-badge"
 import { ROLE_LABELS } from "@/lib/project-room/types"
 import { recordAudit } from "@/lib/project-room/activity"
@@ -122,7 +122,7 @@ export default async function DocumentPage({
         </div>
       </header>
 
-      <DocumentWorkspace
+      <DocumentWorkspaceClient
         document={document}
         activeVersion={activeVersion}
         comments={comments}

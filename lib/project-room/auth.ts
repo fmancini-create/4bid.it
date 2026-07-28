@@ -138,6 +138,13 @@ export async function requireOrgAdmin(): Promise<Guard<AuthedUser & { organizati
 export async function requireDocumentAccess(
   documentId: string,
 ): Promise<Guard<ProjectAccess & { documentId: string }>> {
+  // Authenticate BEFORE touching the database. Otherwise an anonymous caller
+  // gets 404 for an id that does not exist and 401 for one that does, which is
+  // an existence oracle for document ids — and every probe would run a
+  // service-role read on behalf of nobody.
+  const preAuth = await requireUser()
+  if (!preAuth.ok) return preAuth
+
   if (!isUuid(documentId)) {
     return deny(400, "Identificativo documento non valido.")
   }
@@ -165,6 +172,10 @@ export async function requireDocumentAccess(
 export async function requireVersionAccess(
   versionId: string,
 ): Promise<Guard<ProjectAccess & { documentId: string; versionId: string; filePath: string | null }>> {
+  // Same reasoning as requireDocumentAccess: authenticate before any lookup.
+  const preAuth = await requireUser()
+  if (!preAuth.ok) return preAuth
+
   if (!isUuid(versionId)) {
     return deny(400, "Identificativo versione non valido.")
   }

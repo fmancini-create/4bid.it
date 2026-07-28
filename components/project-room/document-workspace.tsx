@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { Download, FileDiff, History, Loader2, MessageSquarePlus, Quote } from "lucide-react"
+import { Download, FileDiff, FileText, History, Loader2, MessageSquarePlus, Quote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -144,19 +144,33 @@ export function DocumentWorkspace({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]">
       <div className="flex min-w-0 flex-col gap-3">
-        <PdfViewer
-          versionId={activeVersion.id}
-          requestedPage={requestedPage}
-          onPageChange={setCurrentPage}
-          onTextSelect={setSelection}
-        />
+        {activeVersion.file_path ? (
+          <PdfViewer
+            versionId={activeVersion.id}
+            requestedPage={requestedPage}
+            onPageChange={setCurrentPage}
+            onTextSelect={setSelection}
+          />
+        ) : (
+          // No file has been uploaded for this version yet. Mounting the viewer
+          // here would fetch, 404, and then blame the user's session ("accesso
+          // scaduto") for something that is simply not there.
+          <div className="flex min-h-[24rem] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 text-center">
+            <FileText className="size-6 text-muted-foreground" aria-hidden="true" />
+            <p className="text-sm font-medium text-foreground">Nessun file caricato per questa versione</p>
+            <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+              La versione {activeVersion.version_label} e registrata, ma il documento non e ancora stato caricato.
+              Commenti e revisioni restano disponibili e verranno collegati al file appena sara presente.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
             {activeVersion.version_label}
             {activeVersion.file_name ? ` · ${activeVersion.file_name}` : ""}
           </span>
-          {mayDownload ? (
+          {!activeVersion.file_path ? null : mayDownload ? (
             <Button asChild variant="outline" size="sm">
               <a href={`/api/project-room/versions/${activeVersion.id}/file?download=1`}>
                 <Download className="mr-2 size-4" aria-hidden="true" />
