@@ -217,7 +217,12 @@ export default function ProjectsSection() {
                   alt={`${project.name} Logo`}
                   width={200}
                   height={120}
-                  className={`object-contain max-h-full w-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
+                  /* `w-auto` alone leaves height driven by the 200x120 attrs while
+                     width is derived from CSS, which distorts logos whose real
+                     ratio differs and trips Next's aspect-ratio warning. Pairing
+                     it with `h-auto` lets both axes follow the intrinsic ratio,
+                     capped by `max-h-full`. */
+                  className={`object-contain max-h-full w-auto h-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
                 />
           </div>
 
