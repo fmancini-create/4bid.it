@@ -8,6 +8,7 @@ import { MessageCircle, X, Send, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { isPrivateArea } from "@/lib/is-private-area"
 
 interface Message {
   id: string
@@ -51,6 +52,12 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
 
   // Hide chat on the public ecomobility booking pages
   if (pathname?.startsWith("/ecomobility")) {
+    return null
+  }
+
+  // Hide it in the reserved areas too: the transcripts feed a sales/lead flow,
+  // which is the wrong context for a client reviewing confidential documents.
+  if (isPrivateArea(pathname)) {
     return null
   }
 

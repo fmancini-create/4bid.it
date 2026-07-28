@@ -1,18 +1,29 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { isPrivateArea } from "@/lib/is-private-area"
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false)
+  const pathname = usePathname()
+  const privateArea = isPrivateArea(pathname)
 
   useEffect(() => {
+    // Nell'area riservata non viene impostato alcun cookie non essenziale
+    // (analytics e chat sono disattivati), quindi il banner non ha nulla da
+    // chiedere: mostrarlo prometterebbe un trattamento che non avviene.
+    if (privateArea) {
+      setShowBanner(false)
+      return
+    }
     // Check if user has already made a choice
     const consent = localStorage.getItem("cookie-consent")
     if (!consent) {
       setShowBanner(true)
     }
-  }, [])
+  }, [privateArea])
 
   const handleAccept = () => {
     localStorage.setItem("cookie-consent", "accepted")
@@ -21,7 +32,11 @@ export function CookieConsent() {
       analytics_storage: "granted",
     })
 
-    if (typeof window !== "undefined" && window.initYandexMetrika) {
+    // Il consenso viene registrato, ma la Metrika (che gira con webvisor, cioe'
+    // registrazione del DOM) non va avviata mentre si e' dentro l'area riservata:
+    // finirebbe per registrare il contenuto dei documenti dei clienti.
+    // Partira' normalmente alla prima pagina pubblica.
+    if (typeof window !== "undefined" && window.initYandexMetrika && !isPrivateArea(pathname)) {
       window.initYandexMetrika()
       console.log("[v0] Cookie consent accepted - Yandex Metrika initialized")
     }

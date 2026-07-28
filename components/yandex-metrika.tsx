@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useRef } from "react"
+import { isPrivateArea } from "@/lib/is-private-area"
 
 declare global {
   interface Window {
@@ -17,6 +18,14 @@ export function YandexMetrika() {
   const prevSearchParamsRef = useRef<string | null>(null)
 
   useEffect(() => {
+    // Le aree riservate non vengono tracciate: i path conterrebbero slug di
+    // progetto e nomi di documenti riservati.
+    if (isPrivateArea(pathname)) {
+      prevPathnameRef.current = pathname
+      prevSearchParamsRef.current = searchParams?.toString() || ""
+      return
+    }
+
     // Build current URL
     let url = window.origin + pathname
     if (searchParams?.toString()) {

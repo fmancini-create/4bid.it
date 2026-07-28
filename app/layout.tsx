@@ -9,6 +9,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
+import { IS_PRIVATE_AREA_JS } from "@/lib/is-private-area"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -85,14 +86,16 @@ export default function RootLayout({
       <head>
         {isProduction && (
           <>
-            {/* Google Tag Manager - script HTML standard nel head per essere immediatamente visibile ai crawler */}
+            {/* Google Tag Manager - script HTML standard nel head per essere immediatamente visibile ai crawler.
+                Non viene inizializzato nelle aree riservate: i path conterrebbero
+                slug di progetto e nomi di documenti riservati. */}
             <script
               dangerouslySetInnerHTML={{
-                __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                __html: `if(!${IS_PRIVATE_AREA_JS}){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-K8PFZCBS');`,
+})(window,document,'script','dataLayer','GTM-K8PFZCBS');}`,
               }}
             />
 
@@ -102,8 +105,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               dangerouslySetInnerHTML={{
                 __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+if(!${IS_PRIVATE_AREA_JS}){
 gtag('js', new Date());
-gtag('config', 'G-S6YEEXE4C3');`,
+gtag('config', 'G-S6YEEXE4C3');
+}`,
               }}
             />
 
@@ -132,7 +137,12 @@ gtag('config', 'G-S6YEEXE4C3');`,
                 });
                 window.yandexMetrikaLoaded = true;
               };
-              if (typeof window !== "undefined") {
+              // La Metrika e' inizializzata con webvisor (session replay): registra
+              // il DOM della pagina. Nelle aree riservate le pagine mostrano
+              // documenti riservati dei clienti, quindi il replay finirebbe per
+              // inviare il CONTENUTO dei documenti a un provider terzo.
+              // Qui non viene inizializzata affatto.
+              if (typeof window !== "undefined" && !${IS_PRIVATE_AREA_JS}) {
                 var consent = localStorage.getItem("cookie-consent");
                 if (consent === "accepted") {
                   window.initYandexMetrika();

@@ -20,6 +20,23 @@ function isAdminApiRoute(pathname: string): boolean {
   return ADMIN_API_ROUTES.some((route) => pathname.startsWith(route))
 }
 
+/**
+ * Paths inside /area-riservata that must stay reachable without a session,
+ * otherwise a user could never sign in or accept an invitation.
+ * `/area-riservata` itself is the public entry page.
+ */
+const PROJECT_ROOM_PUBLIC_PATHS = [
+  "/area-riservata/login",
+  "/area-riservata/richiedi-accesso",
+  "/area-riservata/invito",
+  "/area-riservata/auth",
+]
+
+function isProjectRoomPublicPath(pathname: string): boolean {
+  if (pathname === "/area-riservata" || pathname === "/area-riservata/") return true
+  return PROJECT_ROOM_PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 function getClientIP(request: NextRequest): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
 }
@@ -96,6 +113,42 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Project Room (area riservata) session guard.
+  // Only checks that a session EXISTS; which projects that session may read is
+  // decided per request by requireProjectAccess against the database.
+  if (pathname.startsWith("/area-riservata") && !isProjectRoomPublicPath(pathname)) {
+    let response = NextResponse.next({ request: { headers: request.headers } })
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            response = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+          },
+        },
+      },
+    )
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      const loginUrl = new URL("/area-riservata/login", request.url)
+      loginUrl.searchParams.set("redirect", pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    return response
+  }
+
   // Admin route protection
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
     let response = NextResponse.next({
@@ -144,7 +197,11 @@ export async function proxy(request: NextRequest) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://yastatic.net https://cdn.vercel-insights.com",
+      // `blob:` and `worker-src` are required by pdf.js, which runs its parser
+      // in a Web Worker. Without worker-src the directive falls back to
+      // default-src and the viewer fails to start.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://yastatic.net https://cdn.vercel-insights.com",
+      "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' https://fonts.gstatic.com",
