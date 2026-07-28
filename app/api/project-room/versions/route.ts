@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       document_id: documentId,
       version_number: versionNumber,
       version_label: label,
-      change_summary: changeSummary || null,
+      changelog: changeSummary || null,
       file_path: path,
       file_name: file.name,
       file_size: file.size,
