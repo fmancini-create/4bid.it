@@ -671,7 +671,17 @@ function MemberRow({
         {confirming ? (
           <span className="inline-flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Revocare?</span>
-            <Button type="button" variant="destructive" size="sm" onClick={remove} disabled={busy !== null}>
+            {/* Every row renders the same visible words, so the accessible name
+                has to carry the person: an irreversible action must never read
+                as a bare "Revoca" repeated once per member. */}
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={remove}
+              disabled={busy !== null}
+              aria-label={`Conferma la revoca dell'accesso di ${member.name}`}
+            >
               {busy === "remove" ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : "Sì, revoca"}
             </Button>
             <Button
@@ -680,6 +690,7 @@ function MemberRow({
               size="sm"
               onClick={() => setConfirming(false)}
               disabled={busy !== null}
+              aria-label={`Annulla la revoca dell'accesso di ${member.name}`}
             >
               Annulla
             </Button>
@@ -691,6 +702,7 @@ function MemberRow({
             size="sm"
             onClick={() => setConfirming(true)}
             disabled={busy !== null}
+            aria-label={`Revoca l'accesso di ${member.name}`}
           >
             <Trash2 className="mr-2 size-4" aria-hidden="true" />
             Revoca
@@ -728,7 +740,14 @@ function InvitationRow({ invitation, onDone }: { invitation: Invitation; onDone:
       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{formatDate(invitation.expires_at)}</td>
       <td className="px-4 py-2 text-right">
         {revocable ? (
-          <Button type="button" variant="ghost" size="sm" onClick={revoke} disabled={busy}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={revoke}
+            disabled={busy}
+            aria-label={`Revoca l'invito di ${invitation.email}`}
+          >
             {busy ? (
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
             ) : (
