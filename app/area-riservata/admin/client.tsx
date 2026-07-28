@@ -271,6 +271,11 @@ export default function AdminClient({
         </TabsContent>
 
         <TabsContent value="invitations">
+          <InviteForm projects={projects} onDone={() => router.refresh()} />
+
+          <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Inviti emessi
+          </h2>
           {invitations.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
               <Send className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden="true" />
@@ -346,6 +351,268 @@ export default function AdminClient({
           ) : null}
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+/**
+ * Invite a client who never asked for access.
+ *
+ * Before this existed an invitation could only be produced by approving an
+ * incoming request, so the client had to discover the site and apply first —
+ * 4Bid could not start the conversation at all.
+ *
+ * The result panel always shows the link, even when the email was sent
+ * successfully: the message can land in spam, and an invitation that only ever
+ * existed inside a mail server is one nobody can chase.
+ */
+function InviteForm({
+  projects,
+  onDone,
+}: {
+  projects: { id: string; name: string; status: string }[]
+  onDone: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [email, setEmail] = useState("")
+  const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? "")
+  const [role, setRole] = useState<string>("reader")
+  const [canDownload, setCanDownload] = useState(false)
+  const [note, setNote] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [result, setResult] = useState<{
+    url: string
+    email: string
+    project_name: string
+    emailSent: boolean
+    emailError?: string
+    replacedPrevious: number
+  } | null>(null)
+
+  async function submit() {
+    setError(null)
+    if (!email.trim()) {
+      setError("Inserisci l'email della persona da invitare.")
+      return
+    }
+    if (!projectId) {
+      setError("Nessun progetto disponibile a cui associare l'invito.")
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch("/api/project-room/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          project_id: projectId,
+          role,
+          can_download: canDownload,
+          note: note.trim() || null,
+          send_email: true,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data?.error ?? "Invito non creato.")
+        return
+      }
+      setResult({
+        url: data.invitation.url,
+        email: data.invitation.email,
+        project_name: data.invitation.project_name,
+        emailSent: Boolean(data.email?.sent),
+        emailError: data.email?.error,
+        replacedPrevious: Number(data.replaced_previous ?? 0),
+      })
+    } catch {
+      setError("Errore di rete. Riprova.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function reset() {
+    setResult(null)
+    setEmail("")
+    setNote("")
+    setCanDownload(false)
+    setRole("reader")
+    setOpen(false)
+    onDone()
+  }
+
+  if (result) {
+    return (
+      <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5">
+        <p className="flex items-center gap-2 font-semibold text-emerald-900">
+          <Check className="size-4" aria-hidden="true" />
+          Invito creato per {result.email}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-emerald-900">
+          {result.emailSent
+            ? `Email inviata a ${result.email} con l'accesso al progetto ${result.project_name}.`
+            : "L'invito è valido, ma l'email non è partita: inoltra il link qui sotto manualmente."}
+        </p>
+        {!result.emailSent && result.emailError ? (
+          <p className="mt-1 text-xs text-emerald-900">Motivo: {result.emailError}</p>
+        ) : null}
+        {result.replacedPrevious > 0 ? (
+          <p className="mt-1 text-xs text-emerald-900">
+            {result.replacedPrevious === 1
+              ? "L'invito precedente ancora valido è stato revocato: solo questo link funziona."
+              : `${result.replacedPrevious} inviti precedenti sono stati revocati: solo questo link funziona.`}
+          </p>
+        ) : null}
+
+        <p className="mt-3 text-sm font-medium text-emerald-900">
+          Link mostrato una sola volta: non è memorizzato e non potrà essere recuperato.
+        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <Input readOnly value={result.url} className="bg-card font-mono text-xs" aria-label="Link di invito" />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(result.url)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              } catch {
+                setError("Copia non riuscita: seleziona il testo manualmente.")
+              }
+            }}
+          >
+            {copied ? (
+              <>
+                <Check className="mr-2 size-4" aria-hidden="true" />
+                Copiato
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 size-4" aria-hidden="true" />
+                Copia
+              </>
+            )}
+          </Button>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={reset}>
+          Ho finito, chiudi
+        </Button>
+      </div>
+    )
+  }
+
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5">
+        <div className="min-w-0">
+          <p className="font-semibold text-brand-navy">Invita un cliente</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Serve per dare accesso a chi non ha compilato il modulo sul sito. Riceve l&apos;email con il link e tu
+            mantieni una copia del link da inoltrare.
+          </p>
+        </div>
+        <Button type="button" onClick={() => setOpen(true)} disabled={projects.length === 0}>
+          <Send className="mr-2 size-4" aria-hidden="true" />
+          Nuovo invito
+        </Button>
+        {projects.length === 0 ? (
+          <p className="w-full text-sm text-muted-foreground">
+            Nessun progetto disponibile: creane uno prima di invitare.
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <p className="font-semibold text-brand-navy">Nuovo invito</p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="invite-email">Email del cliente</Label>
+          <Input
+            id="invite-email"
+            type="email"
+            autoComplete="off"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="nome@azienda.it"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="invite-project">Progetto</Label>
+          <Select value={projectId} onValueChange={setProjectId}>
+            <SelectTrigger id="invite-project">
+              <SelectValue placeholder="Seleziona" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="invite-role">Ruolo</Label>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger id="invite-role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {INVITABLE_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="invite-note">Messaggio per il cliente</Label>
+          <Input
+            id="invite-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Facoltativo, compare nell'email"
+          />
+        </div>
+      </div>
+
+      <label className="mt-3 flex items-center gap-2 text-sm text-foreground">
+        <Checkbox checked={canDownload} onCheckedChange={(v) => setCanDownload(v === true)} />
+        Consenti il download dei PDF
+      </label>
+
+      {error ? (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" onClick={submit} disabled={busy}>
+          {busy ? (
+            <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Send className="mr-2 size-4" aria-hidden="true" />
+          )}
+          Crea e invia invito
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+          Annulla
+        </Button>
+      </div>
     </div>
   )
 }
