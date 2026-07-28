@@ -17,6 +17,8 @@ import {
   INVITATION_REJECTION_MESSAGE,
 } from "@/lib/project-room/invitations"
 import { ROLE_LABELS } from "@/lib/project-room/types"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import InviteClient from "./client"
 
 export const metadata: Metadata = {
@@ -26,21 +28,38 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
+/**
+ * Site chrome around the invitation. The invitee arrives here from an email with
+ * no other context, so the 4Bid logo and footer are what tell them the page is
+ * genuinely ours before they are asked to choose a password.
+ */
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      {children}
+      <Footer />
+    </div>
+  )
+}
+
 function Problem({ message }: { message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center">
-        <AlertCircle className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden="true" />
-        <h1 className="text-lg font-semibold text-foreground">Invito non utilizzabile</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
-        <Link
-          href="/area-riservata/login"
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Vai al login
-        </Link>
-      </div>
-    </main>
+    <Shell>
+      <main className="flex flex-1 items-center justify-center bg-muted/40 px-4 pb-16 pt-24">
+        <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center">
+          <AlertCircle className="mx-auto mb-3 size-8 text-muted-foreground" aria-hidden="true" />
+          <h1 className="text-lg font-semibold text-foreground">Invito non utilizzabile</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+          <Link
+            href="/area-riservata/login"
+            className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Vai al login
+          </Link>
+        </div>
+      </main>
+    </Shell>
   )
 }
 
@@ -70,12 +89,14 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     .maybeSingle()
 
   return (
-    <InviteClient
-      token={token}
-      email={invitation.email}
-      projectName={project?.name ?? "Progetto riservato"}
-      roleLabel={ROLE_LABELS[invitation.role as keyof typeof ROLE_LABELS] ?? invitation.role}
-      expiresAt={invitation.expires_at}
-    />
+    <Shell>
+      <InviteClient
+        token={token}
+        email={invitation.email}
+        projectName={project?.name ?? "Progetto riservato"}
+        roleLabel={ROLE_LABELS[invitation.role as keyof typeof ROLE_LABELS] ?? invitation.role}
+        expiresAt={invitation.expires_at}
+      />
+    </Shell>
   )
 }

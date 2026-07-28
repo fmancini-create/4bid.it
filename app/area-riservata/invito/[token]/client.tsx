@@ -107,7 +107,9 @@ export default function InviteClient({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
+    // flex-1 + pt-24, not min-h-screen: the site header is fixed, so the form
+    // would otherwise sit underneath it.
+    <main className="flex flex-1 items-center justify-center bg-muted/40 px-4 pb-16 pt-24">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">

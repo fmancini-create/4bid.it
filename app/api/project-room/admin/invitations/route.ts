@@ -162,7 +162,6 @@ export async function POST(request: Request) {
       url,
       projectName: project.name,
       role,
-      canDownload,
       expiresAt: invitation.expires_at,
       note,
       invitedByName: admin.data.email ?? null,
