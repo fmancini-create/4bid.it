@@ -35,8 +35,14 @@ export default function ResetPasswordClient({ adminEmail }: { adminEmail: string
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
+    // Browsers re-attach the fragment after a server redirect, so an implicit-flow
+    // link can arrive here carrying usable tokens even though /auth/callback saw
+    // no query params and reported "missing". Trust the tokens over that report.
+    const hasFragmentTokens =
+      typeof window !== "undefined" && /access_token=|refresh_token=/.test(window.location.hash)
+
     const callbackError = searchParams.get("error")
-    if (callbackError) {
+    if (callbackError && !hasFragmentTokens) {
       setError(CALLBACK_ERRORS[callbackError] ?? CALLBACK_ERRORS.missing)
       setStatus("invalid")
       return
