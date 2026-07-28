@@ -3,8 +3,16 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, Lock, LogOut } from "lucide-react"
+import { Menu, X, Lock, LogOut, ChevronDown, FolderOpen, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
@@ -100,34 +108,59 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            {/* "Area Riservata" must lead to the client Project Room, which is what
-                that name refers to. It used to point at /admin/login, the internal
-                back office restricted to a single address, so clients following it
-                could never reach their documents. /area-riservata routes by itself:
-                projects when signed in, login otherwise. */}
-            <Link href="/area-riservata">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white transition-colors bg-transparent"
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                Area Riservata
-              </Button>
-            </Link>
-            {isAdmin && (
-              <>
-                <Link href="/admin">
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-[#5B9BD5]">
-                    Admin
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-600 hover:text-[#5B9BD5]">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
+            {/* Two separate areas exist — the client Project Room and the internal
+                back office — and only a label distinguished them, so a single
+                button named "Area Riservata" could not serve both: clients read
+                it as their documents, we read it as the back office. Worse, the
+                /admin entry rendered only when isAdmin was already true, so the
+                door was visible exclusively to whoever had already walked through
+                it. Both destinations are now named explicitly and always
+                reachable. A dropdown keeps them within the width of one button:
+                this row already needs ~1466px of the 1536px available at 2xl. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white transition-colors bg-transparent"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Accedi
+                  <ChevronDown className="h-4 w-4 ml-1" />
                 </Button>
-              </>
-            )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Aree riservate</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/area-riservata" className="flex-col items-start gap-0.5 cursor-pointer">
+                    <span className="flex items-center gap-2 font-medium">
+                      <FolderOpen className="h-4 w-4" />
+                      Project Room
+                    </span>
+                    <span className="pl-6 text-xs text-muted-foreground">Documenti e revisioni clienti</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin" className="flex-col items-start gap-0.5 cursor-pointer">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Settings className="h-4 w-4" />
+                      Pannello Admin
+                    </span>
+                    <span className="pl-6 text-xs text-muted-foreground">Gestione sito e piattaforma</span>
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Esci
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -157,38 +190,46 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/area-riservata" className="block py-3" onClick={() => setIsMenuOpen(false)}>
+            {/* Vertical space is not scarce here, so both areas get their own
+                entry rather than hiding behind a dropdown. */}
+            <p className="pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Aree riservate</p>
+            <Link href="/area-riservata" className="block py-2" onClick={() => setIsMenuOpen(false)}>
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white bg-transparent"
+                className="w-full justify-start border-[#5B9BD5] text-[#5B9BD5] hover:bg-[#5B9BD5] hover:text-white bg-transparent"
               >
-                <Lock className="h-4 w-4 mr-2" />
-                Area Riservata
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Project Room
+                <span className="ml-auto text-xs opacity-70">Clienti</span>
+              </Button>
+            </Link>
+            <Link href="/admin" className="block py-2" onClick={() => setIsMenuOpen(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start border-gray-300 text-gray-600 hover:bg-gray-100 bg-transparent"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Pannello Admin
+                <span className="ml-auto text-xs opacity-70">4BID</span>
               </Button>
             </Link>
             {isAdmin && (
-              <>
-                <Link href="/admin" className="block py-3" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full text-gray-600 hover:text-[#5B9BD5]">
-                    Admin
-                  </Button>
-                </Link>
-                <div className="block py-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      handleLogout()
-                      setIsMenuOpen(false)
-                    }}
-                    className="w-full text-gray-600 hover:text-[#5B9BD5]"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </Button>
-                </div>
-              </>
+              <div className="block py-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    handleLogout()
+                    setIsMenuOpen(false)
+                  }}
+                  className="w-full justify-start text-gray-600 hover:text-[#5B9BD5]"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Esci
+                </Button>
+              </div>
             )}
           </nav>
         )}

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { notifyNewAccessRequest } from "@/lib/project-room/notify"
+
+/** A resubmission re-alerts the admins only once per this interval. */
+const RENOTIFY_AFTER_MS = 15 * 60 * 1000
 
 /**
  * Public endpoint for the "richiedi accesso" form.
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
     // instead of flooding the admin queue with duplicates.
     const { data: existing } = await admin
       .from("pr_access_requests")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("email", email)
       .eq("status", "pending")
       .maybeSingle()
@@ -83,6 +87,23 @@ export async function POST(request: Request) {
           message,
         })
         .eq("id", existing.id)
+
+      // Re-notify on a resubmission, but not on every one: if the first alert
+      // never arrived (bad key, spam folder) silence here would be permanent,
+      // while alerting on each submit would let a loop flood the inbox. One
+      // alert per address per RENOTIFY_AFTER_MS is the compromise.
+      const age = existing.created_at ? Date.now() - new Date(existing.created_at).getTime() : Infinity
+      if (age > RENOTIFY_AFTER_MS) {
+        await notifyNewAccessRequest({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          company,
+          job_role: jobRole,
+          message,
+          resubmitted: true,
+        })
+      }
 
       return NextResponse.json({ ok: true })
     }
@@ -102,6 +123,19 @@ export async function POST(request: Request) {
       // Never surface the raw database message to the client.
       return NextResponse.json({ error: "Non riusciamo a registrare la richiesta. Riprova." }, { status: 500 })
     }
+
+    // Awaited, but its failure is deliberately not propagated: the request is
+    // already persisted, so returning an error here would tell the prospect to
+    // try again and create a duplicate. A silent row was the original defect —
+    // the alert is what makes it visible to a human.
+    await notifyNewAccessRequest({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      company,
+      job_role: jobRole,
+      message,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (error) {

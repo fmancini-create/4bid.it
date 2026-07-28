@@ -189,21 +189,21 @@ export function Footer() {
               <Link href="/terms" title="Termini e Condizioni" className="text-gray-400 hover:text-white transition-colors text-sm">
                 Termini e Condizioni
               </Link>
+              {/* Same wording as the header dropdown: two areas called almost the
+                  same thing is exactly what made the back office unfindable. */}
               <Link
                 href="/area-riservata"
-                title="Area Riservata clienti"
+                title="Project Room - area riservata clienti"
                 className="text-gray-400 hover:text-white transition-colors text-sm"
               >
-                Area Riservata
+                Project Room
               </Link>
-              {/* The header only shows the back office once signed in, so this keeps
-                  the internal login reachable from a cold start. */}
               <Link
-                href="/admin/login"
-                title="Accesso amministrazione 4BID"
-                className="text-gray-500 hover:text-white transition-colors text-sm"
+                href="/admin"
+                title="Pannello Admin - gestione sito e piattaforma 4BID"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
               >
-                Amministrazione
+                Pannello Admin
               </Link>
             </div>
           </div>

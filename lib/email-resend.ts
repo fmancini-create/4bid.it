@@ -7,7 +7,14 @@ interface EmailAttachment {
 }
 
 interface EmailOptions {
-  to: string
+  /**
+   * Destinatario singolo oppure elenco.
+   *
+   * NON passare piu indirizzi in una sola stringa separata da virgole: l'API di
+   * Resend la rifiuta con un 422 `validation_error`. Per piu destinatari usare
+   * un array, che viene inoltrato all'API cosi com'e.
+   */
+  to: string | string[]
   subject: string
   html: string
   /**
@@ -82,7 +89,7 @@ export function htmlToText(html: string): string {
  * one-click RFC 8058). Ritorna {} se non applicabile.
  */
 function buildUnsubscribeHeaders(
-  to: string,
+  to: string | string[],
   listUnsubscribe: string | false | undefined,
   campaignId: string | undefined,
   existing: Record<string, string> | undefined,
@@ -92,14 +99,17 @@ function buildUnsubscribeHeaders(
   // Chi invia ha gia impostato il proprio header (es. il sistema DEM): non tocchiamo.
   const hasHeader = existing && Object.keys(existing).some((k) => k.toLowerCase() === "list-unsubscribe")
   if (hasHeader) return {}
-  // Solo per destinatario singolo (il one-click deve essere per-utente).
-  if (to.includes(",")) return {}
+  // Solo per destinatario singolo (il one-click deve essere per-utente): un
+  // array con piu indirizzi, o una stringa con la virgola, non sono ammessi.
+  const recipients = Array.isArray(to) ? to : [to]
+  if (recipients.length !== 1 || recipients[0].includes(",")) return {}
+  const single = recipients[0]
 
   let url: string
   if (typeof listUnsubscribe === "string") {
     url = listUnsubscribe
   } else {
-    const encoded = Buffer.from(to.trim().toLowerCase()).toString("base64url")
+    const encoded = Buffer.from(single.trim().toLowerCase()).toString("base64url")
     url = `${SITE_URL}/api/dem/unsubscribe?e=${encoded}${campaignId ? `&c=${encodeURIComponent(campaignId)}` : ""}`
   }
 

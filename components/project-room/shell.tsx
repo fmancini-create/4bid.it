@@ -56,7 +56,11 @@ export function ProjectRoomShell({
     }
   }
 
-  const name = displayName(profile)
+  // displayName() answers "Utente rimosso" for a null profile, which is right for
+  // a comment author whose account is gone (the FKs are ON DELETE SET NULL) but
+  // alarming here: this shell always renders for the signed-in viewer, so a
+  // missing profile row would tell you your own account was deleted.
+  const name = profile ? displayName(profile) : "Il mio account"
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary">

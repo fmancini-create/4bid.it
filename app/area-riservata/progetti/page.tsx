@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { FileText, FolderOpen, MessageSquare } from "lucide-react"
-import { requireUser } from "@/lib/project-room/auth"
+import { requireUser, requireOrgAdmin } from "@/lib/project-room/auth"
 import { getProfile, listProjectsForUser } from "@/lib/project-room/queries"
 import { ProjectRoomShell } from "@/components/project-room/shell"
 import { ProjectStatusBadge } from "@/components/project-room/status-badge"
@@ -20,13 +20,17 @@ export default async function ProjectsPage() {
     redirect("/area-riservata/login?redirect=/area-riservata/progetti")
   }
 
-  const [profile, projects] = await Promise.all([
+  // This is the page you land on after signing in, yet it was the only shell in
+  // the area that never passed `isAdmin`, so the "Amministrazione" entry stayed
+  // hidden exactly where it was needed most.
+  const [profile, projects, adminGuard] = await Promise.all([
     getProfile(guard.data.id),
     listProjectsForUser(guard.data.id),
+    requireOrgAdmin(),
   ])
 
   return (
-    <ProjectRoomShell profile={profile}>
+    <ProjectRoomShell profile={profile} isAdmin={adminGuard.ok}>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-brand-navy">I miei progetti</h1>
         <p className="mt-1 text-sm text-muted-foreground">
