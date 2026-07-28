@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { LogOut, User, FolderKanban, Loader2 } from "lucide-react"
+import { LogOut, User, FolderKanban, Loader2, ShieldCheck } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,10 +28,17 @@ export function ProjectRoomShell({
   profile,
   children,
   breadcrumb,
+  isAdmin = false,
 }: {
   profile: Profile | null
   children: React.ReactNode
   breadcrumb?: React.ReactNode
+  /**
+   * Shows the admin entry point. Cosmetic only: `/area-riservata/admin` and its
+   * API re-check `requireOrgAdmin()` server-side, so passing `true` here does
+   * not grant anything.
+   */
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -106,6 +113,14 @@ export function ProjectRoomShell({
                     Il mio profilo
                   </Link>
                 </DropdownMenuItem>
+                {isAdmin ? (
+                  <DropdownMenuItem asChild>
+                    <Link href="/area-riservata/admin">
+                      <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Amministrazione
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
                   {isLoggingOut ? (
