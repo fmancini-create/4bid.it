@@ -189,6 +189,22 @@ export function Footer() {
               <Link href="/terms" title="Termini e Condizioni" className="text-gray-400 hover:text-white transition-colors text-sm">
                 Termini e Condizioni
               </Link>
+              <Link
+                href="/area-riservata"
+                title="Area Riservata clienti"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Area Riservata
+              </Link>
+              {/* The header only shows the back office once signed in, so this keeps
+                  the internal login reachable from a cold start. */}
+              <Link
+                href="/admin/login"
+                title="Accesso amministrazione 4BID"
+                className="text-gray-500 hover:text-white transition-colors text-sm"
+              >
+                Amministrazione
+              </Link>
             </div>
           </div>
         </div>
