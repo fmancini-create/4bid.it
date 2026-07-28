@@ -21,14 +21,17 @@ import {
   Search,
   FileText,
   Lock,
+  Inbox,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AdminNavigationProps {
   userEmail: string
+  /** Pending Project Room access requests, shown as a badge. */
+  pendingProjectRoom?: number
 }
 
-export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
+export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: AdminNavigationProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [pendingPress, setPendingPress] = useState(0)
 
@@ -127,6 +130,21 @@ export default function AdminNavigation({ userEmail }: AdminNavigationProps) {
           })}
 
           <div className="h-px bg-border my-2" />
+
+          {/* Pending access requests were only visible inside the Project Room
+              panel, so they went unread. The count travels with the navigation. */}
+          <button
+            onClick={() => scrollToSection("project-room")}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+          >
+            <Inbox className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Project Room</span>
+            {pendingProjectRoom > 0 && (
+              <span className="ml-auto shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                {pendingProjectRoom}
+              </span>
+            )}
+          </button>
 
           {/* The Project Room had no entry anywhere in this sidebar, so once inside
               the back office there was no way to reach the client area at all. */}

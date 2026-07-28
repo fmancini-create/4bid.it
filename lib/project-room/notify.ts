@@ -221,6 +221,14 @@ export async function sendInvitationEmail(params: {
       Non condividere questo link: chi lo possiede puo accedere ai documenti del progetto.
     </p>`)
 
+  // Resend ACCEPTS reserved domains like .test and only fails later, at delivery:
+  // the API would report success while the message hard-bounces, so the panel
+  // would claim "email inviata" for an address that can never receive it. Those
+  // bounces also degrade the sending domain's reputation for real clients.
+  if (isUndeliverable(params.to)) {
+    return { sent: false, error: "Dominio non recapitabile: inoltra il link manualmente." }
+  }
+
   try {
     const result = await sendEmail({
       to: params.to,

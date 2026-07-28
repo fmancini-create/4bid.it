@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
+import AdminProjectRoom from "@/components/admin-project-room"
 import AdminContacts from "@/components/admin-contacts"
 import AdminLandingPages from "@/components/admin-landing-pages"
 import AdminProjectSubmissions from "@/components/admin-project-submissions"
@@ -79,6 +80,31 @@ export default async function AdminPage() {
     }
   })
 
+  // Project Room tables are governed by their own RLS, which does not know about
+  // this back office. The service-role client is only reached after the
+  // SUPER_ADMIN_EMAIL check above, so authorisation still precedes the read.
+  const prAdmin = createAdminClient()
+  const [prRequestsResult, prInvitationsResult, prProjectsResult] = await Promise.all([
+    prAdmin
+      .from("pr_access_requests")
+      .select("id, first_name, last_name, email, company, message, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+    prAdmin
+      .from("pr_invitations")
+      .select("id", { count: "exact", head: true })
+      .is("accepted_at", null)
+      .is("revoked_at", null),
+    prAdmin.from("pr_projects").select("id", { count: "exact", head: true }),
+  ])
+
+  // A failed read must not render as "nessuna richiesta": that is the exact
+  // silence that let a real request go unnoticed in the first place.
+  const prError = prRequestsResult.error || prInvitationsResult.error || prProjectsResult.error
+  if (prError) {
+    console.error("[v0] Project Room summary unavailable:", prError.message)
+  }
+
   const lastSnapshotDate = lastSnapshotResult.data?.[0]?.date || "Mai"
   const totalYesterdayViews = (yesterdayStatsResult.data || []).reduce((sum, stat) => sum + (stat.views || 0), 0)
 
@@ -112,7 +138,7 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <AdminNavigation userEmail={user.email || ""} />
+      <AdminNavigation userEmail={user.email || ""} pendingProjectRoom={(prRequestsResult.data || []).length} />
 
       <div
         className="lg:ml-64 pt-14 sm:pt-24 container mx-auto p-3 sm:p-8 space-y-6 sm:space-y-16"
@@ -132,6 +158,15 @@ export default async function AdminPage() {
             <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5">Azioni</h3>
             <TriggerSnapshotButton />
           </div>
+        </div>
+
+        <div id="project-room">
+          <AdminProjectRoom
+            pendingRequests={prRequestsResult.data || []}
+            pendingInvitations={prInvitationsResult.count || 0}
+            projectCount={prProjectsResult.count || 0}
+            unavailableReason={prError ? "Lettura delle tabelle Project Room non riuscita." : null}
+          />
         </div>
 
         <AdminLandingPages landingPages={landingPagesWithYesterday} />

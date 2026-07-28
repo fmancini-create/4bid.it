@@ -428,6 +428,10 @@ function InviteForm({
         emailError: data.email?.error,
         replacedPrevious: Number(data.replaced_previous ?? 0),
       })
+      // Refresh straight away: waiting until the panel is closed left the list
+      // below reading "Nessun invito emesso" directly under a confirmation that
+      // one had just been created.
+      onDone()
     } catch {
       setError("Errore di rete. Riprova.")
     } finally {
