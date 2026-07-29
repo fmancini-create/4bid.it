@@ -420,6 +420,9 @@ async function processProject(project: {
       // marketing. Un link di disiscrizione one-click spegnerebbe l'unico canale
       // con cui i partecipanti vengono avvisati.
       listUnsubscribe: false,
+      // Questo commento diceva "non marketing" mentre il messaggio partiva da
+      // `marketing@mrk.4bid.it`, lo stesso mittente di 31.000 email di campagna.
+      transactional: true,
     })
 
     if (!result.success) {

@@ -336,7 +336,15 @@ export function PdfViewer({
         onMouseUp={handleMouseUp}
         // No `min-h` class here: a 24rem floor fought the measured maxHeight
         // below and forced the box past the bottom of the window.
-        className="flex justify-center overflow-auto bg-muted/60 p-4"
+        // `p-1` on a phone, `p-4` from `sm` up. Measured at 390px the page got
+        // only 324px: 32px went to the page margins, 2px to this box's border and
+        // another 32px to this padding. On a screen where the document already
+        // renders at 53% those 24px are text size, and the padding is decoration —
+        // the page is inside a bordered card that already separates it visually.
+        // Safe to change: the width comes from `contentRect` in the ResizeObserver
+        // above, which excludes padding, so the fit recomputes itself instead of
+        // relying on a hardcoded number that would now be wrong.
+        className="flex justify-center overflow-auto bg-muted/60 p-1 sm:p-4"
         style={{
           // Grows with the zoom, then stops: while the page is short the box
           // hugs it, so there is nothing to scroll and no empty band either.

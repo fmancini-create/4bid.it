@@ -86,10 +86,47 @@ async function resolveAdminEmails(): Promise<string[]> {
   }
 }
 
-const wrapper = (inner: string) => `
-<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2933;max-width:560px">
-  ${inner}
-</div>`
+/**
+ * Wraps the message body in a full HTML document.
+ *
+ * It was a bare `<div>` before. On a phone that matters: without
+ * `<meta name="viewport">` mobile Gmail and iOS Mail render the message at
+ * desktop width and then zoom it out, so the text arrives shrunken and the
+ * button becomes a tiny target. `width:device-width` keeps it at real size.
+ *
+ * `padding:16px` stops the text from touching the screen edges, and
+ * `-webkit-text-size-adjust` prevents iOS from resizing the copy on its own.
+ */
+const wrapper = (inner: string) => `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+</head>
+<body style="margin:0;padding:0;background:#f5f7fa;-webkit-text-size-adjust:100%">
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2933;max-width:560px;margin:0 auto;padding:16px;background:#ffffff">
+    ${inner}
+  </div>
+</body>
+</html>`
+
+/**
+ * The call-to-action button, built once so every email gets the same tap target.
+ *
+ * `display:block` instead of `inline-block`: on a narrow screen an inline button
+ * is only as wide as its text, which is a small thing to hit with a thumb. As a
+ * block it stretches to the column width (capped at 320px so it does not look
+ * stretched on desktop).
+ *
+ * Measured at 390px wide, not assumed: 195x48px before, 358x53px now — the same
+ * ~2x bigger thumb target. Note the height was ALREADY above the 44px minimum
+ * that Apple and Google recommend, so the real gain here is width, not height:
+ * the old button was only as wide as its label, sitting in the left third of the
+ * screen.
+ */
+const button = (url: string, label: string) => `
+    <a href="${url}" style="display:block;max-width:320px;background:#5B9BD5;color:#ffffff;text-decoration:none;padding:16px 24px;border-radius:8px;font-weight:600;font-size:16px;text-align:center;line-height:21px">${label}</a>`
 
 /**
  * Tells the 4Bid admins that somebody asked for Project Room access.
@@ -160,6 +197,7 @@ export async function notifyNewAccessRequest(request: {
       // Purely transactional: an unsubscribe header on an internal alert would
       // let one click switch off the notifications this whole feature depends on.
       listUnsubscribe: false,
+      transactional: true,
     })
 
     if (!result.success) {
@@ -179,7 +217,7 @@ export async function notifyNewAccessRequest(request: {
  * The raw token is a bearer credential, so it appears in the message body and
  * nowhere else: it is never logged here, and the caller must not persist it.
  */
-export async function sendInvitationEmail(params: {
+export type InvitationEmailParams = {
   to: string
   url: string
   projectName: string
@@ -188,7 +226,15 @@ export async function sendInvitationEmail(params: {
   /** Optional note from the admin, shown above the button. */
   note?: string | null
   invitedByName?: string | null
-}): Promise<NotifyResult> {
+}
+
+/**
+ * Builds the invitation email body.
+ *
+ * Exported so the markup can be rendered and measured exactly as it is sent.
+ * Re-creating the HTML in a test script would only verify the copy in the script.
+ */
+export function buildInvitationEmailHtml(params: Omit<InvitationEmailParams, "to">): string {
   const roleLabel = ROLE_LABELS[params.role as keyof typeof ROLE_LABELS] ?? params.role
   const expiry = new Date(params.expiresAt).toLocaleDateString("it-IT", {
     day: "numeric",
@@ -196,7 +242,7 @@ export async function sendInvitationEmail(params: {
     year: "numeric",
   })
 
-  const html = wrapper(`
+  return wrapper(`
     <h2 style="margin:0 0 4px;font-size:19px">Accesso alla Project Room</h2>
     <p style="margin:0 0 16px;color:#52606d">${esc(params.invitedByName) || "4Bid"} ti ha dato accesso al progetto <strong>${esc(params.projectName)}</strong>.</p>
     ${
@@ -208,16 +254,26 @@ export async function sendInvitationEmail(params: {
       <tr><td style="padding:4px 12px 4px 0;color:#52606d">Progetto</td><td style="padding:4px 0"><strong>${esc(params.projectName)}</strong></td></tr>
       <tr><td style="padding:4px 12px 4px 0;color:#52606d">Ruolo</td><td style="padding:4px 0"><strong>${esc(roleLabel)}</strong></td></tr>
     </table>
-    <p style="margin:0 0 20px">
-      <a href="${params.url}" style="display:inline-block;background:#5B9BD5;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:600">Attiva il tuo accesso</a>
+    <div style="margin:0 0 16px">${button(params.url, "Attiva il tuo accesso")}</div>
+    <p style="margin:0 0 20px;color:#7b8794;font-size:13px;line-height:1.5">
+      Se il pulsante non funziona, copia e incolla questo indirizzo nel browser:<br>
+      <!-- word-break: on a phone a long link would otherwise stretch the layout and
+           force the whole message to scroll sideways. -->
+      <a href="${params.url}" style="color:#3d7ab8;word-break:break-all">${esc(params.url)}</a>
     </p>
-    <p style="margin:0 0 8px;color:#52606d;font-size:13px">
+    <p style="margin:0 0 8px;color:#52606d;font-size:14px">
       Il link &egrave; valido fino al <strong>${expiry}</strong> e pu&ograve; essere usato una sola volta.
       Se hai gi&agrave; un account 4Bid, accedi con le tue credenziali: l'accesso al progetto &egrave; gi&agrave; attivo.
     </p>
     <p style="margin:0;color:#7b8794;font-size:13px">
       Non condividere questo link: chi lo possiede pu&ograve; accedere ai documenti del progetto.
     </p>`)
+}
+
+export async function sendInvitationEmail(params: InvitationEmailParams): Promise<NotifyResult> {
+  // Same builder the preview renders: one source of markup, so what gets measured
+  // is what gets delivered.
+  const html = buildInvitationEmailHtml(params)
 
   // Resend ACCEPTS reserved domains like .test and only fails later, at delivery:
   // the API would report success while the message hard-bounces, so the panel
@@ -233,6 +289,10 @@ export async function sendInvitationEmail(params: {
       subject: `Accesso alla Project Room 4Bid: ${params.projectName}`,
       html,
       listUnsubscribe: false,
+      // NON dal mittente delle campagne: un invito personale spedito da
+      // `marketing@` viene smistato tra le promozioni. Vedi `transactional`
+      // in email-resend.ts.
+      transactional: true,
     })
 
     if (!result.success) {

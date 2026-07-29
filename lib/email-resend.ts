@@ -37,6 +37,22 @@ interface EmailOptions {
   listUnsubscribe?: string | false
   /** Id campagna opzionale, accodato al link di disiscrizione. */
   campaignId?: string
+  /**
+   * Usa il mittente per la posta di SERVIZIO (inviti, avvisi) invece di quello
+   * pubblicitario.
+   *
+   * Perche' esiste: le 10 campagne DEM hanno raggiunto oltre 31.000 indirizzi
+   * partendo da `marketing@mrk.4bid.it`, e finora un invito personale partiva
+   * dalla stessa identita'. Per Gmail e' un segnale da posta pubblicitaria, che
+   * la smista in Promozioni o Spam invece della posta in arrivo.
+   *
+   * ATTENZIONE: entrambi i mittenti devono restare su `mrk.4bid.it`, il solo
+   * dominio verificato su Resend. Verificato con l'API: `progetti@4bid.it` e
+   * `no-reply@px.4bid.it` vengono RIFIUTATI con 403 "domain is not verified",
+   * quindi spostare li' il mittente non migliorerebbe il recapito: azzererebbe
+   * gli invii. La parte prima della chiocciola invece e' libera.
+   */
+  transactional?: boolean
 }
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it").replace(/\/$/, "")
@@ -137,7 +153,15 @@ function getClient(): Resend | null {
  * - Falls back to Resend's shared test sender, which can ONLY deliver to the
  *   email address that owns the Resend account (useful for the first test).
  */
-function resolveFrom(): string {
+function resolveFrom(transactional?: boolean): string {
+  if (transactional) {
+    const tx = process.env.RESEND_FROM_TRANSACTIONAL?.trim()
+    if (tx) return tx
+    // Stesso dominio verificato, identita' diversa: un invito personale non deve
+    // presentarsi come "marketing". Il nome visualizzato dice a cosa serve, cosi
+    // il destinatario riconosce il messaggio anche se lo trova tra le promozioni.
+    return "4Bid Project Room <progetti@mrk.4bid.it>"
+  }
   const from = process.env.RESEND_FROM?.trim()
   if (from) return from
   // Default sender on the verified subdomain mrk.4bid.it.
@@ -156,6 +180,7 @@ export async function sendEmail({
   headers,
   listUnsubscribe,
   campaignId,
+  transactional,
 }: EmailOptions) {
   const client = getClient()
   if (!client) {
@@ -171,7 +196,7 @@ export async function sendEmail({
 
   try {
     const { data, error } = await client.emails.send({
-      from: resolveFrom(),
+      from: resolveFrom(transactional),
       to,
       subject,
       html,

@@ -27,6 +27,7 @@ export type AuditAction =
   | "member.role_changed"
   | "member.removed"
   | "invitation.accepted"
+  | "invitation.resent"
   | "access_request.created"
   | "access_request.reviewed"
   | "project.created"
