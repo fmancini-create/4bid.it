@@ -137,16 +137,24 @@ gtag('config', 'G-S6YEEXE4C3');
                 });
                 window.yandexMetrikaLoaded = true;
               };
-              // La Metrika e' inizializzata con webvisor (session replay): registra
-              // il DOM della pagina. Nelle aree riservate le pagine mostrano
-              // documenti riservati dei clienti, quindi il replay finirebbe per
-              // inviare il CONTENUTO dei documenti a un provider terzo.
-              // Qui non viene inizializzata affatto.
+              // AVVIO IMMEDIATO, allineato a Google Analytics.
+              //
+              // Prima la Metrika partiva solo con localStorage["cookie-consent"]
+              // === "accepted". Misurato in produzione: su una pagina senza consenso
+              // Google aveva gtag attivo, 5 eventi in dataLayer e 2 richieste
+              // partite, mentre Yandex era a ZERO richieste. Chi ignorava il banner
+              // e navigava non veniva visto da Yandex per tutta la sessione: e'
+              // questa la ragione per cui i segnali non arrivavano piu'.
+              //
+              // Il fallback <noscript> in fondo al body, invece, ha SEMPRE inviato
+              // l'hit senza consenso: i due percorsi erano incoerenti fra loro.
+              //
+              // L'UNICO cancello che resta e' l'area riservata, e va tenuto: la
+              // Metrika gira con webvisor (session replay), quindi registra il DOM.
+              // Nelle pagine riservate il DOM contiene i documenti dei clienti, che
+              // finirebbero a un provider terzo. La' non parte affatto.
               if (typeof window !== "undefined" && !${IS_PRIVATE_AREA_JS}) {
-                var consent = localStorage.getItem("cookie-consent");
-                if (consent === "accepted") {
-                  window.initYandexMetrika();
-                }
+                window.initYandexMetrika();
               }
             `,
               }}
