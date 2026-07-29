@@ -193,7 +193,9 @@ Scrivi in italiano, analisi professionale e dettagliata.`,
     const { text } = await generateText({
       model: "openai/gpt-4o",
       prompt,
-      maxTokens: 2000,
+      // AI SDK 5: l'opzione si chiama maxOutputTokens. Con "maxTokens" il
+      // limite veniva silenziosamente ignorato e la risposta non aveva tetto.
+      maxOutputTokens: 2000,
     })
 
     console.log("[v0] Generate API - text generated, length:", text?.length)

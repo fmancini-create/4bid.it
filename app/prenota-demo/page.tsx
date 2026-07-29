@@ -48,6 +48,7 @@ export default function PrenotaDemoPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/prenota-demo"
         type="Service"
         title="Prenota una Demo Gratuita"
         description="Prenota una demo gratuita per scoprire i servizi di revenue management 4BID.IT"

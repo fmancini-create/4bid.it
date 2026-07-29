@@ -47,6 +47,7 @@ export default function ForecastBudgetingHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/forecast-budgeting-hotel"
         type="Service"
         title="Forecast e Budgeting Hotel"
         description="Previsioni accurate e pianificazione finanziaria per hotel"

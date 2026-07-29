@@ -53,6 +53,7 @@ export default function ADRHotelComeAumentarloPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/adr-hotel-come-aumentarlo"
         type="Article"
         title="Come Aumentare l'ADR Hotel: Guida Completa 2026"
         description="Strategie concrete per far crescere la tariffa media del tuo hotel fino al +40%"

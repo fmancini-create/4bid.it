@@ -652,7 +652,9 @@ export async function POST(request: Request) {
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
-      maxTokens: 500,
+      // AI SDK 5: l'opzione si chiama maxOutputTokens. Con "maxTokens" il
+      // limite veniva silenziosamente ignorato e la risposta non aveva tetto.
+      maxOutputTokens: 500,
       system: knowledgeBase,
       prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile. Se usi informazioni specifiche dalla knowledge base, includi le fonti alla fine.`,
     })

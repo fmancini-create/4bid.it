@@ -47,6 +47,7 @@ export default function OttimizzazioneADRHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/ottimizzazione-adr-hotel"
         type="Article"
         title="Ottimizzazione ADR Hotel"
         description="Strategie avanzate per ottimizzare l'ADR del tuo hotel"

@@ -48,6 +48,7 @@ export default function AnalisiCompetitivaHotelFirenzePage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/analisi-competitiva-hotel-firenze"
         type="Article"
         title="Analisi Competitiva Hotel Firenze"
         description="Analisi strategica del competitive set per hotel a Firenze"

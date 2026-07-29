@@ -47,6 +47,7 @@ export default function FormazioneRevenueManagementHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/formazione-revenue-management-hotel"
         type="Service"
         title="Formazione Revenue Management Hotel"
         description="Corsi di formazione e training per hotel manager e revenue manager"

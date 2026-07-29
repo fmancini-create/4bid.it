@@ -48,6 +48,7 @@ export default function OttimizzazionePrezziToscanaPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana"
         type="Service"
         title="Ottimizzazione Prezzi Hotel Toscana"
         description="Revenue management per hotel in Toscana con esperti locali"

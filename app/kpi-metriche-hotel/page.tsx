@@ -47,6 +47,7 @@ export default function KPIMetricheHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/kpi-metriche-hotel"
         type="Article"
         title="KPI e Metriche Hotel: Monitora le Performance"
         description="Guida completa ai KPI e metriche essenziali per hotel"

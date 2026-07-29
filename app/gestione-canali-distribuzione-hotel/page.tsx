@@ -47,6 +47,7 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/gestione-canali-distribuzione-hotel"
         type="Service"
         title="Gestione Canali Distribuzione Hotel"
         description="Gestione strategica dei canali di distribuzione online per hotel"

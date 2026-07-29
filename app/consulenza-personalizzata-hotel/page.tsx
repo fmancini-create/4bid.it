@@ -47,6 +47,7 @@ export default function ConsulenzaPersonalizzataHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/consulenza-personalizzata-hotel"
         type="Service"
         title="Consulenza Personalizzata Hotel"
         description="Consulenza revenue management personalizzata per hotel e strutture ricettive"

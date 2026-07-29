@@ -47,6 +47,7 @@ export default function OttimizzazioneOTAPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/ottimizzazione-ota-hotel"
         type="Service"
         title="Ottimizzazione OTA Hotel"
         description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
