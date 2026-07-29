@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useRef } from "react"
+import { AIR_MARKET_PRESET } from "@/lib/dem/air-market-template"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -279,6 +280,7 @@ const DEMO_SANTADDEO_PRESET = {
 </body>
 </html>`,
 }
+
 
 interface Campaign {
   id: string
@@ -567,6 +569,13 @@ export default function DemDashboard({
     setNewName(DEMO_SANTADDEO_PRESET.name)
     setNewSubject(DEMO_SANTADDEO_PRESET.subject)
     setNewTemplate(DEMO_SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
+
+  const loadAirMarketPreset = () => {
+    setNewName(AIR_MARKET_PRESET.name)
+    setNewSubject(AIR_MARKET_PRESET.subject)
+    setNewTemplate(AIR_MARKET_PRESET.html)
     setShowNewCampaign(true)
   }
 
@@ -1625,6 +1634,10 @@ export default function DemDashboard({
             <Button size="sm" variant="outline" onClick={loadDemoPreset}>
               <FileText className="h-4 w-4 mr-2" />
               Invito Demo
+            </Button>
+            <Button size="sm" variant="outline" onClick={loadAirMarketPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Traffico Aereo
             </Button>
             <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
               <DialogTrigger asChild>

@@ -1,6 +1,55 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 
+type Supa = ReturnType<typeof createAdminClient>
+
+// Legge una colonna per intero, a pagine.
+//
+// TRAPPOLA: PostgREST restituisce al massimo 1.000 righe per query. I disiscritti
+// oggi sono 1.267: una `select` semplice ne avrebbe scaricati 1.000 e i restanti
+// 267 sarebbero rientrati fra i destinatari SENZA alcun errore visibile.
+async function leggiTutteLeEmail(
+  query: (da: number, a: number) => PromiseLike<{ data: { email: string | null }[] | null; error: unknown }>
+): Promise<string[]> {
+  const out: string[] = []
+  const passo = 1000
+  for (let da = 0; ; da += passo) {
+    const { data, error } = await query(da, da + passo - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    for (const r of data) if (r.email) out.push(r.email.trim().toLowerCase())
+    if (data.length < passo) break
+  }
+  return out
+}
+
+// Insieme degli indirizzi da NON contattare mai piu':
+//  - chi si e' disiscritto (obbligo di legge, vale per tutte le campagne)
+//  - gli indirizzi inesistenti o che ci hanno segnalato come spam: continuare a
+//    scrivergli danneggia la reputazione del mittente e fa finire in spam anche
+//    le email dei destinatari validi
+async function caricaSoppressi(supabase: Supa): Promise<{
+  soppressi: Set<string>
+  disiscritti: number
+  nonRecapitabili: number
+}> {
+  const disiscritti = await leggiTutteLeEmail((da, a) =>
+    supabase.from("dem_unsubscribes").select("email").range(da, a)
+  )
+  const nonRecapitabili = await leggiTutteLeEmail((da, a) =>
+    supabase
+      .from("dem_recipients")
+      .select("email")
+      .in("send_status", ["bounced", "complained", "unsubscribed"])
+      .range(da, a)
+  )
+  return {
+    soppressi: new Set([...disiscritti, ...nonRecapitabili]),
+    disiscritti: new Set(disiscritti).size,
+    nonRecapitabili: new Set(nonRecapitabili).size,
+  }
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
@@ -33,12 +82,24 @@ export async function POST(request: NextRequest) {
 
     const existingEmails = new Set((existing || []).map((r) => r.email.toLowerCase()))
 
-    // Filter out duplicates
+    // Chi si e' disiscritto (o e' irraggiungibile) va escluso QUI, al momento del
+    // caricamento. Prima il controllo esisteva solo in fase di invio: i disiscritti
+    // venivano comunque caricati e mostrati fra i destinatari, cosi' i numeri in
+    // dashboard erano gonfiati e ogni conteggio manuale era fuorviante.
+    const { soppressi, disiscritti, nonRecapitabili } = await caricaSoppressi(supabase)
+
+    let scartatiPerDisiscrizione = 0
     const newRecipients = recipients
-      .filter(
-        (r: { email: string }) =>
-          r.email && r.email.includes("@") && !existingEmails.has(r.email.toLowerCase())
-      )
+      .filter((r: { email: string }) => {
+        if (!r.email || !r.email.includes("@")) return false
+        const email = r.email.trim().toLowerCase()
+        if (existingEmails.has(email)) return false
+        if (soppressi.has(email)) {
+          scartatiPerDisiscrizione++
+          return false
+        }
+        return true
+      })
       .map((r: { email: string; nome?: string; cognome?: string; nome_azienda?: string; tipo_contatto?: string }) => ({
         campaign_id,
         email: r.email.trim().toLowerCase(),
@@ -53,7 +114,14 @@ export async function POST(request: NextRequest) {
 
     if (newRecipients.length === 0) {
       return NextResponse.json(
-        { error: "Nessun nuovo destinatario da aggiungere (tutti duplicati o invalidi)", added: 0 },
+        {
+          error:
+            scartatiPerDisiscrizione > 0
+              ? `Nessun destinatario da aggiungere: ${scartatiPerDisiscrizione} esclusi perche' disiscritti o non raggiungibili, gli altri erano duplicati o non validi`
+              : "Nessun nuovo destinatario da aggiungere (tutti duplicati o invalidi)",
+          added: 0,
+          esclusi_disiscritti: scartatiPerDisiscrizione,
+        },
         { status: 400 }
       )
     }
@@ -72,7 +140,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       added,
-      duplicates: recipients.length - newRecipients.length,
+      // `duplicates` contava anche i disiscritti, che duplicati non sono: teniamo
+      // i due numeri distinti, altrimenti l'esclusione resta invisibile.
+      duplicates: recipients.length - newRecipients.length - scartatiPerDisiscrizione,
+      esclusi_disiscritti: scartatiPerDisiscrizione,
+      lista_soppressione: { disiscritti, non_recapitabili: nonRecapitabili },
       total: newRecipients.length,
     })
   } catch (error) {
