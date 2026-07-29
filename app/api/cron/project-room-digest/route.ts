@@ -18,8 +18,16 @@ async function handle(request: NextRequest) {
   const isVercelCron =
     request.headers.has("x-vercel-cron-signature") || request.headers.get("user-agent")?.includes("vercel-cron")
   const isManuallyAuthorized = Boolean(process.env.CRON_SECRET) && authHeader === `Bearer ${process.env.CRON_SECRET}`
-  // Come gli altri cron del progetto. Nota: significa che una prova sul dev
-  // server NON dimostra che l'autorizzazione funzioni in produzione.
+  // Stesso schema degli altri 4 cron del progetto, deliberatamente non
+  // divergente. LIMITE NOTO: il controllo sullo user-agent e' falsificabile, e
+  // in dev l'autorizzazione e' del tutto disattivata (quindi una prova sul dev
+  // server NON dimostra che funzioni in produzione).
+  // Perche' non l'ho irrigidito qui: se in produzione fosse proprio lo
+  // user-agent l'unica condizione che passa, richiedere il Bearer spegnerebbe
+  // il riepilogo in silenzio. L'impatto di una chiamata abusiva e' comunque
+  // contenuto: il watermark impedisce di rispedire eventi gia' comunicati e la
+  // finestra di silenzio quelli troppo recenti, quindi al massimo si anticipa
+  // di poco un invio legittimo. Da rivedere per tutti i cron insieme.
   const isDev = process.env.NODE_ENV === "development"
 
   if (!isDev && !isVercelCron && !isManuallyAuthorized) {

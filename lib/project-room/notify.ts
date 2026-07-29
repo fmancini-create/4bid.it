@@ -212,11 +212,11 @@ export async function sendInvitationEmail(params: {
       <a href="${params.url}" style="display:inline-block;background:#5B9BD5;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:600">Attiva il tuo accesso</a>
     </p>
     <p style="margin:0 0 8px;color:#52606d;font-size:13px">
-      Il link e valido fino al <strong>${expiry}</strong> e puo essere usato una sola volta.
-      Se hai gia un account 4Bid, accedi con le tue credenziali: l'accesso al progetto e gia attivo.
+      Il link &egrave; valido fino al <strong>${expiry}</strong> e pu&ograve; essere usato una sola volta.
+      Se hai gi&agrave; un account 4Bid, accedi con le tue credenziali: l'accesso al progetto &egrave; gi&agrave; attivo.
     </p>
     <p style="margin:0;color:#7b8794;font-size:13px">
-      Non condividere questo link: chi lo possiede puo accedere ai documenti del progetto.
+      Non condividere questo link: chi lo possiede pu&ograve; accedere ai documenti del progetto.
     </p>`)
 
   // Resend ACCEPTS reserved domains like .test and only fails later, at delivery:

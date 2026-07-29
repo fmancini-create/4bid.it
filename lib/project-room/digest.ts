@@ -231,12 +231,16 @@ function summarise(events: DigestEvent[]): string {
     parts.push(`${n} ${n === 1 ? one : many}`)
   }
 
-  if (parts.length === 0) return "attivita"
+  // Accento letterale e non entita' HTML: questa stringa finisce anche
+  // nell'OGGETTO della mail (vedi subject piu' sotto), dove "&agrave;" non
+  // verrebbe interpretato e si leggerebbe "attivit&agrave;".
+  if (parts.length === 0) return "attività"
   if (parts.length === 1) return parts[0]
   return `${parts.slice(0, -1).join(", ")} e ${parts[parts.length - 1]}`
 }
 
-function buildHtml(params: {
+/** Esportata per poter ispezionare il corpo della mail senza spedirla. */
+export function buildHtml(params: {
   projectName: string
   projectSlug: string | null
   events: DigestEvent[]
