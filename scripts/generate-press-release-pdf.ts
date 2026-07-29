@@ -16,8 +16,13 @@
 // semplice. Meglio una virgoletta diritta che un documento che non si genera.
 
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
-import { writeFile, mkdir } from "node:fs/promises"
+import { writeFile, mkdir, readFile } from "node:fs/promises"
 import { COMUNICATO, DATA_COMUNICATO } from "../lib/dem/press-release-air-market"
+
+// Marchi: Santaddeo in testa (e' il prodotto di cui parla il comunicato),
+// 4 bid in coda (e' chi lo pubblica).
+const LOGO_SANTADDEO = "public/santaddeo-logo.png"
+const LOGO_4BID = "public/4bid-logo-email.png"
 
 const BLU = rgb(0.106, 0.165, 0.29) // #1b2a4a
 const VERDE = rgb(0.169, 0.702, 0.639) // #2bb3a3
@@ -40,6 +45,20 @@ function perWinAnsi(testo: string): string {
 }
 
 type Font = Awaited<ReturnType<PDFDocument["embedFont"]>>
+
+/**
+ * Incorpora un'immagine scegliendo il metodo dai byte iniziali, NON
+ * dall'estensione del file: `public/4bid-logo-email.png` e' in realta' un JPEG
+ * con estensione .png, e chiamare embedPng su un JPEG fa fallire pdf-lib.
+ */
+async function incorporaImmagine(pdf: PDFDocument, percorso: string) {
+  const byte = await readFile(percorso)
+  const isPng = byte[0] === 0x89 && byte[1] === 0x50 && byte[2] === 0x4e && byte[3] === 0x47
+  const isJpeg = byte[0] === 0xff && byte[1] === 0xd8
+  if (isPng) return pdf.embedPng(byte)
+  if (isJpeg) return pdf.embedJpg(byte)
+  throw new Error(`${percorso}: formato non riconosciuto (ne' PNG ne' JPEG)`)
+}
 
 /** Spezza il testo in righe che stanno nella larghezza data. */
 function spezzaRighe(testo: string, font: Font, corpo: number, larghezza: number): string[] {
@@ -108,14 +127,22 @@ async function main() {
     y -= opzioni.spazioSotto ?? 0
   }
 
-  // Filo verde in testa: richiama il bordo dell'intestazione dell'email.
-  pagina.drawRectangle({
+  // Intestazione: marchio Santaddeo e sotto il filo verde che richiama il bordo
+  // dell'email. Il logo e' largo 3,4 volte la sua altezza, quindi l'altezza si
+  // ricava dalla larghezza scelta: fissarle entrambe lo deformerebbe.
+  const logoSantaddeo = await incorporaImmagine(pdf, LOGO_SANTADDEO)
+  const LARGHEZZA_LOGO = 148
+  const altezzaLogo = (logoSantaddeo.height / logoSantaddeo.width) * LARGHEZZA_LOGO
+  pagina.drawImage(logoSantaddeo, {
     x: MARGINE,
-    y: A4.altezza - MARGINE + 12,
-    width: LARGHEZZA_TESTO,
-    height: 3,
-    color: VERDE,
+    y: y - altezzaLogo,
+    width: LARGHEZZA_LOGO,
+    height: altezzaLogo,
   })
+  y -= altezzaLogo + 14
+
+  pagina.drawRectangle({ x: MARGINE, y, width: LARGHEZZA_TESTO, height: 3, color: VERDE })
+  y -= 22
 
   scrivi(COMUNICATO.etichetta, { font: grassetto, corpo: 11, colore: VERDE, spazioSotto: 2 })
   scrivi(COMUNICATO.luogoData, { corpo: 10, colore: GRIGIO, spazioSotto: 14 })
@@ -165,8 +192,16 @@ async function main() {
     scrivi(riga, { corpo: 10, colore: GRIGIO, interlinea: 14 })
   }
 
-  // Numerazione: un comunicato di due pagine senza numeri, se stampato, si
-  // scompagina sul tavolo di redazione.
+  // Piede di pagina: numerazione a sinistra (un comunicato di due pagine senza
+  // numeri, se stampato, si scompagina sul tavolo di redazione) e marchio 4 bid
+  // a destra. Il logo sta a DESTRA di proposito: la numerazione occupa la fascia
+  // sinistra e sovrapporre i due elementi sulla stessa colonna li farebbe
+  // scontrare. In verticale resta sotto la soglia oltre la quale il testo non
+  // scende mai (MARGINE + 30), quindi non copre mai una riga del comunicato.
+  const logo4bid = await incorporaImmagine(pdf, LOGO_4BID)
+  const ALTEZZA_LOGO_4BID = 26
+  const larghezza4bid = (logo4bid.width / logo4bid.height) * ALTEZZA_LOGO_4BID
+
   const pagine = pdf.getPages()
   pagine.forEach((p, i) => {
     const etichetta = `Santaddeo - Comunicato stampa - ${DATA_COMUNICATO} - pagina ${i + 1} di ${pagine.length}`
@@ -176,6 +211,12 @@ async function main() {
       size: 8,
       font: normale,
       color: rgb(0.62, 0.62, 0.62),
+    })
+    p.drawImage(logo4bid, {
+      x: A4.larghezza - MARGINE - larghezza4bid,
+      y: MARGINE - 30,
+      width: larghezza4bid,
+      height: ALTEZZA_LOGO_4BID,
     })
   })
 

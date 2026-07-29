@@ -40,15 +40,19 @@
 // diventa il titolo dell'articolo.
 
 /**
- * Il nome del fondatore non e' noto al codice: nel progetto compare solo
- * l'indirizzo f.mancini@4bid.it. Inventare il nome di una persona in un
- * comunicato diretto a 54 redazioni non e' un'opzione, quindi resta un
- * segnaposto volutamente illeggibile: se finisse in un invio si noterebbe
- * subito, mentre un nome sbagliato passerebbe inosservato fino alla pubblicazione.
+ * Nome confermato dall'utente il 29/07/2026, coerente con l'unico riferimento
+ * presente nel progetto (l'indirizzo f.mancini@4bid.it). Prima era un
+ * segnaposto: in un testo diretto a 54 redazioni un nome di persona non si
+ * deduce, si fa confermare.
  */
-export const NOME_FONDATORE_DA_COMPLETARE = "[[ NOME E COGNOME - DA COMPLETARE ]]"
+export const NOME_FONDATORE = "Filippo Mancini"
 
-export const DATA_COMUNICATO = "29 luglio 2026"
+/**
+ * Data unica del comunicato: da qui derivano sia la riga "luogo, data" del testo
+ * sia il piede di pagina del PDF. Tenerla in un solo punto evita che l'email
+ * dichiari una data e il PDF allegato un'altra.
+ */
+export const DATA_COMUNICATO = "30 luglio 2026"
 
 export const COMUNICATO = {
   etichetta: "COMUNICATO STAMPA",
@@ -74,7 +78,7 @@ export const COMUNICATO = {
   citazione: {
     testo:
       "Un albergatore indipendente ha sempre saputo da dove sono arrivati i suoi ospiti. Non aveva modo di sapere da dove stanno per arrivare. La capacità aerea è un'informazione pubblica, ma nessuno la traduceva in una decisione commerciale alla sua scala: la si trovava in strumenti pensati per le grandi catene, e comunque per aggiustare il prezzo. Noi la usiamo per rispondere a una domanda diversa e più concreta: su quale mercato conviene lavorare nei prossimi mesi.",
-    attribuzione: `${NOME_FONDATORE_DA_COMPLETARE}, fondatore di 4 bid srl`,
+    attribuzione: `${NOME_FONDATORE}, fondatore di 4 bid srl`,
   },
 
   chiusura:
