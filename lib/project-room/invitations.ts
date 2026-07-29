@@ -82,8 +82,8 @@ export function invitationRejection(row: {
 
 export const INVITATION_REJECTION_MESSAGE: Record<InvitationRejection, string> = {
   revoked: "Questo invito e stato revocato. Contatta il referente 4Bid per riceverne uno nuovo.",
-  accepted: "Questo invito e gia stato utilizzato. Accedi con le tue credenziali.",
-  expired: "Questo invito e scaduto. Contatta il referente 4Bid per riceverne uno nuovo.",
+  accepted: "Questo invito è già stato utilizzato. Accedi con le tue credenziali.",
+  expired: "Questo invito è scaduto. Contatta il referente 4Bid per riceverne uno nuovo.",
 }
 
 /**

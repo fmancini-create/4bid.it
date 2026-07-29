@@ -65,7 +65,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (accessRequest.status !== "pending") {
     // Prevents two admins approving the same request twice (double invitation).
     return NextResponse.json(
-      { error: "Questa richiesta e gia stata gestita." },
+      { error: "Questa richiesta è già stata gestita." },
       { status: 409 },
     )
   }

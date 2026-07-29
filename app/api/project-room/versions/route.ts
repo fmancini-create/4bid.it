@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status })
   }
   if (!canManageDocuments(access.data.role)) {
-    return NextResponse.json({ error: "Solo un project manager puo caricare versioni." }, { status: 403 })
+    return NextResponse.json({ error: "Solo un project manager può caricare versioni." }, { status: 403 })
   }
 
   if (!(file instanceof File) || file.size === 0) {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   // attacker-controlled. A real PDF starts with %PDF-.
   const header = new TextDecoder("latin1").decode(bytes.subarray(0, 5))
   if (header !== "%PDF-") {
-    return NextResponse.json({ error: "Il file non e un PDF valido." }, { status: 400 })
+    return NextResponse.json({ error: "Il file non è un PDF valido." }, { status: 400 })
   }
 
   // Page count comes from parsing the document, never from user input.
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
     if (target.file_path) {
       return NextResponse.json(
-        { error: "Questa versione ha gia un file. Carica una nuova versione." },
+        { error: "Questa versione ha già un file. Carica una nuova versione." },
         { status: 409 },
       )
     }

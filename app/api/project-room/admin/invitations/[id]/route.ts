@@ -52,12 +52,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
   if (invitation.accepted_at) {
     return NextResponse.json(
-      { error: "L'invito e gia stato accettato. Rimuovi il membro dal progetto per revocargli l'accesso." },
+      { error: "L'invito è già stato accettato. Rimuovi il membro dal progetto per revocargli l'accesso." },
       { status: 409 },
     )
   }
   if (invitation.revoked_at) {
-    return NextResponse.json({ error: "Invito gia revocato." }, { status: 409 })
+    return NextResponse.json({ error: "Invito già revocato." }, { status: 409 })
   }
 
   const { error: updateError } = await db

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   }
 
   // Already a member? Sending an invitation would produce a link that dies on
-  // arrival ("invito gia utilizzato"), so say so plainly instead.
+  // arrival ("invito già utilizzato"), so say so plainly instead.
   //
   // The check goes through `profiles`: `auth.users` is not readable through
   // PostgREST even with the service role, so account existence is never probed
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
     if (membership) {
       return NextResponse.json(
-        { error: "Questa persona ha gia accesso al progetto. Modifica il suo ruolo dalla scheda Accessi." },
+        { error: "Questa persona ha già accesso al progetto. Modifica il suo ruolo dalla scheda Accessi." },
         { status: 409 },
       )
     }

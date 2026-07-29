@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   const content = typeof payload.content === "string" ? payload.content.trim() : ""
   if (content.length === 0) {
-    return NextResponse.json({ error: "Il commento non puo essere vuoto." }, { status: 400 })
+    return NextResponse.json({ error: "Il commento non può essere vuoto." }, { status: 400 })
   }
   if (content.length > MAX_CONTENT) {
     return NextResponse.json({ error: "Il commento supera la lunghezza massima." }, { status: 400 })

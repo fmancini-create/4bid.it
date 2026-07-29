@@ -167,7 +167,7 @@ export function PdfViewer({
             }}
             onLoadError={(loadError) => {
               console.log("[v0] pdf load error:", loadError.message)
-              setError("Il file non e disponibile o il tuo accesso e scaduto. Ricarica la pagina.")
+              setError("Il file non è disponibile o il tuo accesso è scaduto. Ricarica la pagina.")
             }}
             loading={
               <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
