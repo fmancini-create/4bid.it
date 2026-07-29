@@ -40,7 +40,7 @@ async function chiama(percorso: string, opzioni?: RequestInit) {
 
 async function main() {
   const { createClient } = await import("@supabase/supabase-js")
-  const { OGGETTO_COMUNICATO, htmlComunicatoStampa, NOME_FONDATORE_DA_COMPLETARE } = await import(
+  const { OGGETTO_COMUNICATO, htmlComunicatoStampa, NOME_FONDATORE } = await import(
     "../lib/dem/press-release-air-market"
   )
 
@@ -161,10 +161,15 @@ async function main() {
     .neq("send_status", "pending")
   console.log(`    non piu' in attesa (deve essere 0): ${inSospeso}`)
 
-  const contieneSegnaposto = (finale as { subject?: string } | null) !== null &&
+  // Controllo POSITIVO sulla firma: `dem_campaigns` conserva una COPIA dell'html,
+  // quindi non basta che il nome sia giusto nel template, deve essere finito
+  // dentro la riga salvata. Si verifica anche che non sia rimasto il vecchio
+  // segnaposto, altrimenti una redazione riceverebbe "[[ DA COMPLETARE ]]".
+  const htmlSalvato =
     (await db.from("dem_campaigns").select("html_template").eq("id", campaignId).single()).data
-      ?.html_template?.includes(NOME_FONDATORE_DA_COMPLETARE)
-  console.log(`    segnaposto del nome presente: ${contieneSegnaposto ? "SI, da completare" : "no"}`)
+      ?.html_template ?? ""
+  console.log(`    firma "${NOME_FONDATORE}" presente: ${htmlSalvato.includes(NOME_FONDATORE) ? "si" : "NO, DA CORREGGERE"}`)
+  console.log(`    segnaposto residuo (deve essere no): ${htmlSalvato.includes("DA COMPLETARE") ? "SI, DA CORREGGERE" : "no"}`)
 
   // Le altre campagne non devono essere state toccate.
   console.log("")
