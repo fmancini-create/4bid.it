@@ -11,7 +11,7 @@ import { CLUSTER_ORDER, getSolutionsByCluster } from "@/lib/seo/solutions"
 export const metadata: Metadata = {
   title: "Soluzioni di Revenue Management per Hotel e Strutture Ricettive | 4BID",
   description:
-    "Tutte le soluzioni 4BID di revenue management per hotel, B&B, agriturismi e resort: consulenza, software, dynamic pricing, distribuzione, prenotazioni dirette, KPI e formazione.",
+    "Le soluzioni 4BID per hotel, B&B, agriturismi e resort: consulenza, software, dynamic pricing, distribuzione, prenotazioni dirette e KPI.",
   keywords:
     "soluzioni revenue management hotel, consulenza revenue management, software revenue management, dynamic pricing, prenotazioni dirette, kpi hotel",
   alternates: { canonical: "https://www.4bid.it/soluzioni-revenue-management" },

@@ -7,13 +7,14 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata: Metadata = {
   title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
   description:
-    "Yield management professionale per hotel: gestione capacità, pricing dinamico, restrizioni LOS intelligenti, overbooking controllato. Massimizza RevPAR con strategie avanzate.",
+    "Yield management per hotel: gestione della capacità, pricing dinamico, restrizioni LOS e overbooking controllato. Massimizza il RevPAR.",
   keywords:
     "yield management hotel, gestione capacità hotel, ottimizzazione occupazione alberghiera, yield optimization, capacity management hotel, gestione inventario camere strategica",
   alternates: {
@@ -333,6 +334,8 @@ export default function YieldManagementHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="yield-management-hotel" />
+      <FaqSection faqs={faqs} />
+
       <Footer />
     </div>
   )

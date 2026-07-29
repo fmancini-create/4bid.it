@@ -261,6 +261,13 @@ export function StructuredData({
       ? {
           "@context": "https://schema.org",
           "@type": "FAQPage",
+          // Il blocco FAQ e' un nodo separato dal principale: senza @id ne'
+          // url restava un'entita' anonima, non collegata alla pagina che la
+          // contiene. Ancorarlo all'URL canonico permette ai crawler di
+          // attribuire le FAQ a questa pagina.
+          "@id": `${url}#faq`,
+          url,
+          mainEntityOfPage: { "@id": url },
           mainEntity: faqs.map((faq) => ({
             "@type": "Question",
             name: faq.question,

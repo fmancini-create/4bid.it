@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Preventivi Progetti Personalizzati Hotel | Soluzioni Su Misura | 4BID.IT",
   description:
-    "Richiedi preventivo per progetti personalizzati hotel: software revenue management, gestione manutenzioni, app mobile. Risposta in 24h con fattibilità, costi e tempi.",
+    "Richiedi un preventivo per progetti hotel su misura: software revenue management, gestione manutenzioni, app mobile. Risposta in 24h.",
   keywords:
     "preventivo software hotel, progetti personalizzati hotel, sviluppo software alberghiero, app hotel su misura, consulenza IT hotel",
 }

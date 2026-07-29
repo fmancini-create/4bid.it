@@ -5,13 +5,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "KPI Hotel Revenue Management: Monitora Performance e Massimizza Ricavi | 4BID.IT",
   description:
-    "Scopri i KPI essenziali del Revenue Management hotel: RevPAR, ADR, RGI, Pickup. Dashboard real-time, alert automatici e decisioni data-driven per ottimizzare i ricavi.",
+    "I KPI essenziali del Revenue Management hotel: RevPAR, ADR, RGI e Pickup. Dashboard real-time, alert automatici e decisioni data-driven.",
   keywords:
     "KPI revenue management, KPI hotel, RevPAR, RGI, pickup rate, ADR optimization, metriche revenue management, dashboard hotel, performance hotel",
   openGraph: {
@@ -47,6 +48,7 @@ export default function KPIHotelRevenueManagementPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/kpi-hotel-revenue-management"
         type="Article"
         title="KPI Hotel Revenue Management: Monitora Performance"
         description="I KPI essenziali del Revenue Management per monitorare e ottimizzare le performance hotel"
@@ -344,6 +346,8 @@ export default function KPIHotelRevenueManagementPage() {
       </section>
 
       <RelatedSolutions currentSlug="kpi-hotel-revenue-management" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

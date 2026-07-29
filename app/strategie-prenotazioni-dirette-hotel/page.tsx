@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Strategie Prenotazioni Dirette Hotel | Ridurre Commissioni OTA | 4BID.IT",
   description:
-    "Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%. Strategie di direct booking e disintermediazione per hotel e strutture ricettive.",
+    "Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%: strategie di direct booking e disintermediazione.",
   keywords:
     "prenotazioni dirette hotel, direct booking, ridurre commissioni OTA, disintermediazione hotel, strategie prenotazioni, booking engine, revenue management",
 }

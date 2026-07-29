@@ -203,12 +203,26 @@ export async function proxy(request: NextRequest) {
       // `blob:` and `worker-src` are required by pdf.js, which runs its parser
       // in a Web Worker. Without worker-src the directive falls back to
       // default-src and the viewer fails to start.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://yastatic.net https://cdn.vercel-insights.com",
+      // Yandex Metrika loads its tag from mc.yandex.ru but talks to
+      // mc.yandex.com at runtime (verified in production: the /watch calls all
+      // land on the .com host). Both hosts must be listed.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://cdn.vercel-insights.com",
       "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://mc.yandex.ru https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
+      // connect-src is what actually gated the two analytics failures found in
+      // production:
+      //
+      // 1. Session replay (webvisor) uploads the recorded DOM over XHR/beacon,
+      //    not as an image. Page-view hits survived only because they are sent
+      //    as pixels and img-src allows https:. With mc.yandex.com missing here
+      //    every recording upload was blocked, so Metrika showed page views
+      //    while Session Replay stayed permanently empty.
+      // 2. GA4 posts to analytics.google.com and www.google.com/g/collect in
+      //    addition to www.google-analytics.com. Measured on every page load:
+      //    2 blocked requests per navigation.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.google.com https://region1.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
       "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://calendar.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

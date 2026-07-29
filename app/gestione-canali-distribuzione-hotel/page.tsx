@@ -5,13 +5,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
   description:
-    "Gestione strategica dei canali di distribuzione online per hotel. Ottimizza OTA, aumenta prenotazioni dirette e riduci le commissioni. Consulenza specializzata Channel Management.",
+    "Gestione dei canali di distribuzione online per hotel: ottimizza le OTA, aumenta le prenotazioni dirette e riduci le commissioni.",
   keywords:
     "gestione canali distribuzione hotel, ottimizzazione OTA, channel manager hotel, prenotazioni dirette, commissioni booking, distribuzione online hotel",
   openGraph: {
@@ -47,6 +48,7 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/gestione-canali-distribuzione-hotel"
         type="Service"
         title="Gestione Canali Distribuzione Hotel"
         description="Gestione strategica dei canali di distribuzione online per hotel"
@@ -344,6 +346,8 @@ export default function GestioneCanaliDistribuzioneHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="gestione-canali-distribuzione-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

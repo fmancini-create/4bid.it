@@ -3,7 +3,7 @@ import VolantinoClient from "./volantino-client"
 export const metadata = {
   title: "Volantino Suite Prodotti 4BID | Software per Hotel e Turismo",
   description:
-    "Scarica il volantino della suite 4BID: Santaddeo (Revenue Management), HotelProfit AI (Controllo di Gestione), Manubot (Manutenzioni) e Hotel Accelerator. Software pensati per il settore alberghiero.",
+    "Scarica il volantino della suite 4BID: Santaddeo, HotelProfit AI, Manubot e Hotel Accelerator. Software pensati per il settore alberghiero.",
   keywords:
     "volantino 4bid, suite 4bid, software hotel, santaddeo, hotelprofit ai, manubot, hotel accelerator, brochure prodotti hotel",
   alternates: {

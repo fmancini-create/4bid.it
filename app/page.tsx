@@ -14,13 +14,13 @@ import { StructuredData } from "@/components/seo-structured-data"
 export const metadata: Metadata = {
   title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
   description:
-    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi, ottimizza prezzi e prenotazioni dirette. La suite 4BID: Santaddeo, HotelProfit AI, Manubot, Hotel Accelerator e Ecomobility.",
+    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette con la suite 4BID.",
   keywords:
     "revenue management hotel, software revenue management, aumentare ricavi hotel, dynamic pricing hotel, consulenza revenue management, prenotazioni dirette hotel, software gestionale hotel, santaddeo, 4bid",
   openGraph: {
     title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
     description:
-      "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette. La suite 4BID per il mondo HORECA.",
+      "Software e consulenza di revenue management per hotel, B&B e agriturismi: più ricavi, prezzi ottimizzati e prenotazioni dirette.",
     type: "website",
     url: "https://www.4bid.it",
     locale: "it_IT",

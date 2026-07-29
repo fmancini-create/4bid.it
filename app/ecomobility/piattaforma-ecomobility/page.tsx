@@ -15,7 +15,7 @@ import { ContactButton } from "@/components/contact-button"
 export const metadata: Metadata = {
   title: "Piattaforma Ecomobility per Strutture Ricettive | Software Noleggio Veicoli | 4BID",
   description:
-    "Software SaaS per gestire il noleggio di mobilità elettrica in hotel e strutture turistiche. Prenotazioni automatiche, pagamenti, documenti, gestione batteria. Multi-tenant e white-label.",
+    "Software SaaS per il noleggio di mobilità elettrica in hotel: prenotazioni, pagamenti, documenti e gestione batteria. Multi-tenant e white-label.",
   keywords:
     "piattaforma ecomobility, software noleggio veicoli hotel, gestionale mobilità elettrica, saas noleggio e-bike, software noleggio scooter elettrici, white label mobility",
   alternates: {

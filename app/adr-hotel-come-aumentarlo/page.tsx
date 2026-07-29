@@ -6,13 +6,14 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Come Aumentare l'ADR Hotel: Guida Completa 2026 | 4BID.IT",
   description:
-    "Scopri come aumentare l'ADR (Average Daily Rate) del tuo hotel con strategie pratiche e comprovate. Tecniche concrete per far crescere la tariffa media fino al +40%.",
+    "Come aumentare l'ADR del tuo hotel: strategie pratiche e comprovate per far crescere la tariffa media fino al +40%.",
   keywords:
     "come aumentare ADR hotel, aumentare tariffa media, strategie ADR, crescita revenue hotel, pricing hotel, tariffe hotel più alte",
   openGraph: {
@@ -53,6 +54,7 @@ export default function ADRHotelComeAumentarloPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/adr-hotel-come-aumentarlo"
         type="Article"
         title="Come Aumentare l'ADR Hotel: Guida Completa 2026"
         description="Strategie concrete per far crescere la tariffa media del tuo hotel fino al +40%"
@@ -418,6 +420,8 @@ export default function ADRHotelComeAumentarloPage() {
       </section>
 
       <RelatedSolutions currentSlug="adr-hotel-come-aumentarlo" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

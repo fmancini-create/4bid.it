@@ -6,13 +6,14 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Ottimizzazione Prezzi Hotel Toscana: Revenue Management Locale | 4BID.IT",
   description:
-    "Revenue management per hotel in Toscana: esperti locali conoscono mercato Firenze, Siena, Chianti. Pricing dinamico eventi toscani, analisi competitiva locale. +35% RevPAR medio.",
+    "Revenue management per hotel in Toscana: esperti del mercato di Firenze, Siena e Chianti. Pricing dinamico e analisi locale. +35% RevPAR.",
   keywords:
     "ottimizzazione prezzi hotel toscana, revenue management firenze, consulenza revenue siena, pricing dinamico toscana, revenue manager hotel firenze chianti, ottimizzazione tariffe hotel toscani",
   openGraph: {
@@ -48,6 +49,7 @@ export default function OttimizzazionePrezziToscanaPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana"
         type="Service"
         title="Ottimizzazione Prezzi Hotel Toscana"
         description="Revenue management per hotel in Toscana con esperti locali"
@@ -407,6 +409,8 @@ export default function OttimizzazionePrezziToscanaPage() {
       </section>
 
       <RelatedSolutions currentSlug="ottimizzazione-prezzi-hotel-toscana" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

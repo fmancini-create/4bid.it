@@ -5,13 +5,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Consulenza Personalizzata Hotel | Revenue Management su Misura | 4BID.IT",
   description:
-    "Consulenza revenue management personalizzata per hotel, B&B e strutture ricettive. Analisi su misura, piano operativo dedicato e supporto continuativo per massimizzare ricavi.",
+    "Consulenza revenue management su misura per hotel, B&B e strutture ricettive: analisi dedicata, piano operativo e supporto continuativo.",
   keywords:
     "consulenza hotel, revenue management personalizzato, consulenza ricettività, ottimizzazione hotel, strategia revenue",
   openGraph: {
@@ -47,6 +48,7 @@ export default function ConsulenzaPersonalizzataHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/consulenza-personalizzata-hotel"
         type="Service"
         title="Consulenza Personalizzata Hotel"
         description="Consulenza revenue management personalizzata per hotel e strutture ricettive"
@@ -270,6 +272,8 @@ export default function ConsulenzaPersonalizzataHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="consulenza-personalizzata-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

@@ -107,7 +107,7 @@ const progetti = [
 export const metadata: Metadata = {
   title: "Sviluppo Software e App su Misura | Anche con Revenue Share | 4BID",
   description:
-    "Trasformiamo la tua idea in software: web app, app mobile, gestionali e SaaS su misura. Preventivo gratuito in 24 ore e, per i progetti selezionati, sviluppo senza costi iniziali con revenue share.",
+    "Trasformiamo la tua idea in software: web app, app mobile, gestionali e SaaS su misura. Preventivo gratuito in 24 ore, anche in revenue share.",
   keywords: [
     "sviluppo software su misura",
     "sviluppo app",
@@ -123,7 +123,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Sviluppo Software e App su Misura — Anche con Revenue Share | 4BID",
     description:
-      "Hai un'idea digitale? La trasformiamo in software. Preventivo gratuito in 24h con fattibilità, costi e tempi. Per i progetti selezionati sviluppiamo senza costi iniziali (revenue share).",
+      "Hai un'idea digitale? La trasformiamo in software. Preventivo gratuito in 24h con fattibilità, costi e tempi. Anche senza costi iniziali.",
     type: "website",
     url: PAGE_URL,
     locale: "it_IT",

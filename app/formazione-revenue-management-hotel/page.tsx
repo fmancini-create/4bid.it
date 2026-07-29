@@ -5,13 +5,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
   description:
-    "Corsi di formazione Revenue Management per hotel: dai fondamentali alle strategie avanzate. Training pratico per hotel manager, revenue manager e staff alberghiero.",
+    "Corsi di formazione in Revenue Management per hotel: dai fondamentali alle strategie avanzate. Training pratico per manager e staff.",
   keywords:
     "formazione revenue management, corsi hotel, training revenue, corso revenue manager, formazione alberghiera, workshop hotel",
   openGraph: {
@@ -47,6 +48,7 @@ export default function FormazioneRevenueManagementHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/formazione-revenue-management-hotel"
         type="Service"
         title="Formazione Revenue Management Hotel"
         description="Corsi di formazione e training per hotel manager e revenue manager"
@@ -307,6 +309,8 @@ export default function FormazioneRevenueManagementHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="formazione-revenue-management-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Web Marketing Hotel | Aumenta le Prenotazioni Dirette | 4BID.IT",
   description:
-    "Servizi di Web Marketing specializzati per hotel. SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette e ridurre le commissioni OTA.",
+    "Web Marketing per hotel: SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette e ridurre le commissioni OTA.",
   keywords:
     "web marketing hotel, digital marketing alberghiero, SEO hotel, Google Ads hotel, prenotazioni dirette, marketing turistico, advertising hotel",
 }

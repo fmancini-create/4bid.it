@@ -5,13 +5,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
   description:
-    "Guida completa ai KPI e metriche essenziali per hotel: RevPAR, ADR, occupazione, TRevPAR. Scopri come monitorare e migliorare le performance della tua struttura ricettiva.",
+    "Guida ai KPI e alle metriche per hotel: RevPAR, ADR, occupazione e TRevPAR. Scopri come monitorare e migliorare le performance.",
   keywords:
     "KPI hotel, metriche hotel, RevPAR, ADR, occupazione hotel, TRevPAR, performance hotel, indicatori revenue management, analytics hotel",
   openGraph: {
@@ -47,6 +48,7 @@ export default function KPIMetricheHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/kpi-metriche-hotel"
         type="Article"
         title="KPI e Metriche Hotel: Monitora le Performance"
         description="Guida completa ai KPI e metriche essenziali per hotel"
@@ -323,6 +325,8 @@ export default function KPIMetricheHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="kpi-metriche-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

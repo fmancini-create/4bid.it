@@ -15,7 +15,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "HotelProfitAI - Controllo di Gestione Intelligente per Hotel | 4BID.IT",
   description:
-    "HotelProfitAI: massimizza i profitti del tuo hotel con team di commercialisti specializzati supportati dall'AI. Analisi real-time, forecasting e consigli personalizzati.",
+    "HotelProfitAI: massimizza i profitti del tuo hotel con commercialisti specializzati e AI. Analisi real-time, forecasting e consigli su misura.",
   keywords:
     "hotel profit, controllo gestione hotel, ai hotel, revenue management, profit optimization, hospitality, business intelligence",
   openGraph: {

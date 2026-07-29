@@ -9,7 +9,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs"
 export const metadata = {
   title: "AutoExel - Il primo Excel per chi non sa usare Excel | 4BID",
   description:
-    "Carica un file Excel o CSV per ottenere analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti usando comandi in linguaggio naturale — senza formule.",
+    "Carica un file Excel o CSV e ottieni analisi automatiche, KPI e grafici. Oppure crea fogli intelligenti in linguaggio naturale, senza formule.",
   alternates: {
     canonical: "https://www.4bid.it/progetti/autoexel",
   },

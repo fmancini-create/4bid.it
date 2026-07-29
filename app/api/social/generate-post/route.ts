@@ -53,7 +53,9 @@ Rispondi SOLO con il testo del post, senza introduzioni o spiegazioni.`
     const { text } = await generateText({
       model: "openai/gpt-4o-mini",
       prompt,
-      maxTokens: 500,
+      // AI SDK 5: l'opzione si chiama maxOutputTokens. Con "maxTokens" il
+      // limite veniva silenziosamente ignorato e la risposta non aveva tetto.
+      maxOutputTokens: 500,
     })
 
     return NextResponse.json({ content: text.trim() })

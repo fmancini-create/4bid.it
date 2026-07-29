@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Prenotazioni Dirette Hotel | Aumenta Direct Booking e Riduci OTA | 4BID.IT",
   description:
-    "Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%. Piano operativo per incrementare il direct booking e la redditività della tua struttura.",
+    "Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50% con un piano operativo per il direct booking.",
   keywords:
     "prenotazioni dirette hotel, direct booking hotel, ridurre commissioni OTA, aumentare prenotazioni dirette, booking engine hotel, revenue management",
 }

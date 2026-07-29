@@ -5,13 +5,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { DemoCalendar } from "@/components/demo-calendar"
 
 export const metadata = {
   title: "Prenota una Demo Gratuita | Revenue Management Hotel | 4BID.IT",
   description:
-    "Prenota una demo gratuita e senza impegno. Scegli direttamente data e ora dal nostro calendario e scopri come aumentare i ricavi della tua struttura con SANTADDEO e i servizi 4BID.IT.",
+    "Prenota una demo gratuita e senza impegno: scegli data e ora dal calendario e scopri come aumentare i ricavi con SANTADDEO e i servizi 4BID.",
   keywords:
     "prenota demo hotel, demo revenue management, demo gratuita santaddeo, appuntamento revenue manager, calendario prenotazione demo",
   openGraph: {
@@ -48,6 +49,7 @@ export default function PrenotaDemoPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/prenota-demo"
         type="Service"
         title="Prenota una Demo Gratuita"
         description="Prenota una demo gratuita per scoprire i servizi di revenue management 4BID.IT"
@@ -153,6 +155,8 @@ export default function PrenotaDemoPage() {
           </Link>
         </div>
       </section>
+
+      <FaqSection faqs={faqData} />
 
       <Footer />
     </div>

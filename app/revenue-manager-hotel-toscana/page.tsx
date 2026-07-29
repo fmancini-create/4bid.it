@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Revenue Manager Hotel Toscana | Consulenza Firenze, Siena, Pisa | 4BID.IT",
   description:
-    "Revenue Manager specializzato in hotel in Toscana. Consulenza Revenue Management a Firenze, Siena, Pisa e tutta la Toscana. Aumenta i ricavi del tuo hotel con un esperto locale.",
+    "Revenue Manager per hotel in Toscana: consulenza a Firenze, Siena, Pisa e in tutta la regione. Aumenta i ricavi con un esperto locale.",
   keywords:
     "revenue manager toscana, revenue manager firenze, consulenza hotel toscana, revenue management firenze, revenue manager siena, consulente alberghiero toscana",
 }

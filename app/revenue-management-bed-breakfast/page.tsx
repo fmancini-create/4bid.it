@@ -12,7 +12,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Revenue Management Bed & Breakfast: Aumenta Ricavi B&B +40% | 4BID.IT",
   description:
-    "Revenue management per bed and breakfast e piccole strutture familiari. Strategie pricing B&B, riduzione commissioni OTA, aumento prenotazioni dirette. Solo performance-based.",
+    "Revenue management per bed and breakfast e piccole strutture: pricing B&B, meno commissioni OTA, più prenotazioni dirette. Performance-based.",
   keywords:
     "revenue management bed and breakfast, revenue b&b, pricing bed and breakfast, ottimizzazione tariffe b&b, consulenza bed breakfast, aumento ricavi b&b piccole strutture",
   alternates: {

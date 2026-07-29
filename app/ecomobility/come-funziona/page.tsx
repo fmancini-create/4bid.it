@@ -15,7 +15,7 @@ import { ContactButton } from "@/components/contact-button"
 export const metadata: Metadata = {
   title: "Come Funziona 4BID Ecomobility | Guida Passo Passo al Noleggio Veicoli Elettrici",
   description:
-    "Scopri come funziona 4BID Ecomobility: dalla scelta del veicolo alla riconsegna. Prenotazione autonoma, pagamento online, ritiro e riconsegna guidata. Guida completa per ospiti e gestori.",
+    "Come funziona 4BID Ecomobility: prenotazione autonoma, pagamento online, ritiro e riconsegna guidata. La guida per ospiti e gestori.",
   keywords:
     "come funziona ecomobility, tutorial noleggio e-bike hotel, guida prenotazione veicoli elettrici, processo noleggio mobilità sostenibile, istruzioni noleggio scooter elettrici",
   alternates: {

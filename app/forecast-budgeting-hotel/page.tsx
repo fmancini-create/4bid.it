@@ -5,13 +5,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
   description:
-    "Servizi professionali di forecast e budgeting per hotel. Previsioni accurate di occupazione, ADR e revenue con analisi predittiva avanzata per massimizzare i risultati.",
+    "Forecast e budgeting per hotel: previsioni accurate di occupazione, ADR e revenue con analisi predittiva avanzata per massimizzare i risultati.",
   keywords:
     "forecast hotel, budgeting alberghiero, previsioni revenue, budget hotel, pianificazione finanziaria hotel, forecasting occupazione",
   openGraph: {
@@ -47,6 +48,7 @@ export default function ForecastBudgetingHotelPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/forecast-budgeting-hotel"
         type="Service"
         title="Forecast e Budgeting Hotel"
         description="Previsioni accurate e pianificazione finanziaria per hotel"
@@ -389,6 +391,8 @@ export default function ForecastBudgetingHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="forecast-budgeting-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

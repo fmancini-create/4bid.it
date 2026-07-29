@@ -10,7 +10,7 @@ import { entitySchemaLinks } from "@/lib/seo/entities"
 export const metadata = {
   title: "Il Metodo 4BID - Revenue Management, Dati e AI per Hotel | 4BID.IT",
   description:
-    "Il Metodo 4BID combina revenue management, analisi dei dati, intelligenza artificiale, automazioni e controllo operativo. Un approccio nato dall'esperienza reale nella gestione alberghiera.",
+    "Il Metodo 4BID unisce revenue management, analisi dei dati, intelligenza artificiale e automazioni. Nato dall'esperienza reale in hotel.",
   keywords:
     "metodo 4bid, revenue management hotel, intelligenza artificiale hotel, automazione hotel, controllo di gestione strutture ricettive",
   openGraph: {

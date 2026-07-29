@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 export const metadata: Metadata = {
   title: "Parlano di noi - Rassegna stampa | 4BID",
   description:
-    "Articoli, notizie e menzioni online su 4BID e i suoi prodotti: Santaddeo, Manubot, HotelProfitAI, Hotel Accelerator e 4BID Ecomobility. La rassegna stampa aggiornata.",
+    "Articoli e menzioni online su 4BID e i suoi prodotti: Santaddeo, Manubot, HotelProfitAI, Hotel Accelerator ed Ecomobility. Rassegna stampa.",
   keywords: "4bid rassegna stampa, parlano di noi 4bid, news santaddeo, news manubot, hotelprofitai stampa",
   alternates: {
     canonical: "https://www.4bid.it/parlano-di-noi",

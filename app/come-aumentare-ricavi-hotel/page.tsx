@@ -5,13 +5,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { RelatedSolutions } from "@/components/related-solutions"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export const metadata = {
   title: "Aumentare i Ricavi dell'Hotel: 10 Strategie 2026 (+25-40%) | 4BID.IT",
   description:
-    "Come aumentare i ricavi del tuo hotel: 10 strategie di revenue management con azioni concrete, KPI e risultati attesi. Prime quick win in 30 giorni, +25-40% di fatturato in 12 mesi.",
+    "10 strategie di revenue management con azioni concrete e KPI: prime quick win in 30 giorni, +25-40% di fatturato in 12 mesi.",
   keywords:
     "aumentare ricavi hotel, come aumentare ricavi hotel, revenue hotel, fatturato hotel, aumentare fatturato hotel, strategie ricavi alberghieri, revenue management hotel",
   openGraph: {
@@ -451,6 +452,8 @@ export default function ComeAumentareRicaviHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="come-aumentare-ricavi-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

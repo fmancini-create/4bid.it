@@ -13,7 +13,7 @@ import { ContactButton } from "@/components/contact-button"
 export const metadata: Metadata = {
   title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
   description:
-    "Consulenza revenue management hotel professionale: strategie pricing dinamico, ottimizzazione tariffe e ADR. Performance-based, paghi solo sui risultati. Analisi gratuita.",
+    "Consulenza revenue management hotel: pricing dinamico, ottimizzazione tariffe e ADR. Paghi solo sui risultati. Analisi gratuita.",
   keywords:
     "consulenza revenue management hotel, revenue manager hotel, consulenza alberghiera professionale, ottimizzazione tariffe hotel, pricing hotel strategico, aumento ricavi hotel",
   alternates: {

@@ -5,13 +5,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
 export const metadata = {
   title: "Ottimizzazione OTA Hotel | Riduci Commissioni e Aumenta Visibilità | 4BID.IT",
   description:
-    "Servizio di ottimizzazione OTA per hotel. Riduci le commissioni fino al 40%, aumenta la visibilità su Booking, Expedia e altri portali. Strategia channel management efficace.",
+    "Ottimizzazione OTA per hotel: riduci le commissioni fino al 40% e aumenta la visibilità su Booking, Expedia e altri portali.",
   keywords:
     "ottimizzazione OTA hotel, gestione booking.com, ridurre commissioni OTA, channel management hotel, visibilità portali turistici, strategia OTA",
   openGraph: {
@@ -47,6 +48,7 @@ export default function OttimizzazioneOTAPage() {
   return (
     <div className="min-h-screen bg-background">
       <StructuredData
+        url="https://www.4bid.it/ottimizzazione-ota-hotel"
         type="Service"
         title="Ottimizzazione OTA Hotel"
         description="Riduci commissioni OTA e aumenta visibilità su Booking, Expedia e altri portali"
@@ -446,6 +448,8 @@ export default function OttimizzazioneOTAPage() {
       </section>
 
       <RelatedSolutions currentSlug="ottimizzazione-ota-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

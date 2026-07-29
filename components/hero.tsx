@@ -22,19 +22,27 @@ const slides = [
 
 export default function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  // Le slide 2 e 3 sono nel viewport (nascoste solo da opacity-0), quindi
+  // loading="lazy" non ha alcun effetto: misurato, il browser le scaricava a
+  // 80/81ms insieme alla slide LCP, rubandole banda. Vengono montate solo
+  // quando servono davvero, cioe' al primo cambio slide.
+  const [caricaAltreSlide, setCaricaAltreSlide] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => {
+      setCaricaAltreSlide(true)
       setCurrentSlide((prev) => (prev + 1) % slides.length)
     }, 5000)
     return () => clearInterval(timer)
   }, [])
 
   const nextSlide = () => {
+    setCaricaAltreSlide(true)
     setCurrentSlide((prev) => (prev + 1) % slides.length)
   }
 
   const prevSlide = () => {
+    setCaricaAltreSlide(true)
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
   }
 
@@ -47,15 +55,17 @@ export default function Hero() {
             index === currentSlide ? "opacity-100" : "opacity-0"
           }`}
         >
-          <Image
-            src={slide.image || "/placeholder.svg"}
-            alt={slide.text}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority={index === 0}
-            loading={index === 0 ? "eager" : "lazy"}
-          />
+          {(index === 0 || caricaAltreSlide) && (
+            <Image
+              src={slide.image || "/placeholder.svg"}
+              alt={slide.text}
+              fill
+              sizes="100vw"
+              className="object-cover"
+              priority={index === 0}
+              loading={index === 0 ? "eager" : "lazy"}
+            />
+          )}
 
           <div className="absolute inset-0 bg-[#6B9DBD]/40" />
         </div>
