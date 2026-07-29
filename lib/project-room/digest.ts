@@ -349,19 +349,25 @@ async function processProject(project: {
       return { ...base, status: "sessione_in_corso", events: events.length }
     }
 
-    // Lock: prenota il progetto solo se nessun altro lo sta elaborando. La
-    // condizione sul lock e' nella WHERE, cosi' due esecuzioni sovrapposte non
-    // possono spedire entrambe (l'ultima non trova righe da aggiornare).
-    const lockUntil = new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString()
-    const nowIso = new Date().toISOString()
-    const { data: claimed } = await db
-      .from("pr_digest_state")
-      .update({ locked_until: lockUntil })
-      .eq("project_id", project.id)
-      .or(`locked_until.is.null,locked_until.lt.${nowIso}`)
-      .select("project_id")
-      .maybeSingle()
+    // Lock: prenota il progetto solo se nessun altro lo sta elaborando, cosi' due
+    // esecuzioni sovrapposte non possono spedire entrambe la stessa mail.
+    // La condizione sta nel database (funzione pr_claim_digest_lock) e non in un
+    // filtro PostgREST: `.or("locked_until.lt.<iso>")` fallisce con "column ...
+    // does not exist" perche' i punti dei millisecondi rompono il parser dei
+    // filtri. Con l'errore ingoiato il codice concludeva "gia' in corso" e il
+    // riepilogo non partiva MAI: difetto trovato solo eseguendolo davvero.
+    const { data: claimedRows, error: lockError } = await db.rpc("pr_claim_digest_lock", {
+      p_project_id: project.id,
+      p_lock_minutes: LOCK_MINUTES,
+    })
 
+    // Un errore qui NON e' "qualcun altro sta elaborando": e' un guasto, e va
+    // dichiarato. Confonderli e' esattamente cio' che nascondeva il difetto.
+    if (lockError) {
+      return { ...base, status: "errore", error: `Lock non acquisibile: ${lockError.message}` }
+    }
+
+    const claimed = Array.isArray(claimedRows) ? claimedRows[0] : claimedRows
     if (!claimed) return { ...base, status: "gia_in_corso" }
 
     // Destinatari: membri del progetto + admin dell'organizzazione. Per scelta
