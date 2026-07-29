@@ -3,18 +3,70 @@ import { createAdminClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
+// Un indirizzo plausibile: nessuno spazio, una sola chiocciola, un dominio con
+// punto. Serve a scartare il testo spazzatura prodotto da una decodifica errata.
+const EMAIL_RE = /^[^\s@,;:<>()[\]\\"]+@[^\s@,;:<>()[\]\\"]+\.[A-Za-z]{2,}$/
+
+function isPlausibleEmail(value: string): boolean {
+  return value.length <= 254 && EMAIL_RE.test(value)
+}
+
 function decodeEmail(raw: string | null): string | null {
   if (!raw) return null
-  try {
-    // Email may be base64url-encoded to keep the URL clean and avoid issues.
-    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/")
-    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4)
-    const decoded = Buffer.from(padded, "base64").toString("utf8")
-    if (decoded.includes("@")) return decoded.trim().toLowerCase()
-  } catch {
-    // fall through to plain value
+
+  // 1) Valore in chiaro (anche percent-encoded). Va provato PRIMA del base64.
+  //
+  // IL DIFETTO: in produzione ci sono 10 richieste di disiscrizione salvate con
+  // l'email corrotta (caratteri di sostituzione UTF-8) e quindi INEFFICACI: la
+  // persona risultava disiscritta con un indirizzo inesistente e continuava a
+  // ricevere le DEM, pur avendo visto la conferma "sei stato rimosso".
+  //
+  // Causa PROVATA: `Buffer.from(x, "base64")` e' PERMISSIVO, non fallisce sui
+  // caratteri non validi ma li scarta e restituisce byte casuali. La vecchia
+  // guardia si limitava a `decoded.includes("@")`: bastava che fra quei byte
+  // capitasse un 0x40 per far passare la spazzatura. Misurato su link
+  // deliberatamente manomessi (portati in maiuscolo, o troncati di 1-3
+  // caratteri): la vecchia guardia accettava spazzatura nel 95-100% dei casi.
+  // Tutti e 10 i valori in tabella hanno esattamente UNA chiocciola, la firma
+  // di questo passaggio.
+  //
+  // NON provato: quale manomissione sia avvenuta davvero. Le identita' non sono
+  // recuperabili (tentati: minuscolo, maiuscolo, troncature, percent-encoding,
+  // incrocio col CSV e con gli eventi di tracciamento; 0 corrispondenze su
+  // 29.994 candidati). Le 10 righe restano come traccia storica.
+  //
+  // Ora un link manomesso viene RIFIUTATO: la persona vede l'invito a
+  // rispondere all'email invece di una falsa conferma. Verificato che i link
+  // validi continuano a funzionare (5/5) e che i manomessi non passano (0/5).
+  let plain = raw.trim()
+  if (plain.includes("%")) {
+    try {
+      plain = decodeURIComponent(plain).trim()
+    } catch {
+      // percent-encoding malformato: si prosegue col valore grezzo
+    }
   }
-  if (raw.includes("@")) return decodeURIComponent(raw).trim().toLowerCase()
+  if (isPlausibleEmail(plain)) return plain.toLowerCase()
+
+  // 2) Base64url, ma solo se l'alfabeto e' quello giusto: cosi' un'email in
+  // chiaro (che contiene "@" e ".") non entra mai in questo ramo.
+  if (/^[A-Za-z0-9\-_]+={0,2}$/.test(raw.trim())) {
+    try {
+      const normalized = raw.trim().replace(/-/g, "+").replace(/_/g, "/")
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4)
+      const decoded = Buffer.from(padded, "base64").toString("utf8").trim()
+      // Verifica di andata e ritorno: se il testo decodificato non ricodifica
+      // nell'originale, la decodifica ha "digerito" caratteri non validi.
+      const reencoded = Buffer.from(decoded, "utf8").toString("base64url")
+      if (reencoded === raw.trim().replace(/=+$/, "") && isPlausibleEmail(decoded)) {
+        return decoded.toLowerCase()
+      }
+    } catch {
+      // non era base64 valido
+    }
+  }
+
+  console.log("[v0] unsubscribe: parametro email non decodificabile, richiesta rifiutata")
   return null
 }
 

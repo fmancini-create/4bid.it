@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useRef } from "react"
+import { AIR_MARKET_PRESET } from "@/lib/dem/air-market-template"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -66,7 +67,7 @@ const SANTADDEO_PRESET = {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Header -->
           <tr>
             <td style="background-color:#1b2a4a;padding:28px 32px;">
@@ -135,7 +136,7 @@ const HOTEL_PRESET = {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Header -->
           <tr>
             <td style="background-color:#1b2a4a;padding:28px 32px;">
@@ -230,7 +231,7 @@ const DEMO_SANTADDEO_PRESET = {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Header -->
           <tr>
             <td align="center" style="background-color:#ffffff;padding:32px 32px 24px;border-bottom:3px solid #2bb3a3;">
@@ -279,6 +280,7 @@ const DEMO_SANTADDEO_PRESET = {
 </body>
 </html>`,
 }
+
 
 interface Campaign {
   id: string
@@ -567,6 +569,13 @@ export default function DemDashboard({
     setNewName(DEMO_SANTADDEO_PRESET.name)
     setNewSubject(DEMO_SANTADDEO_PRESET.subject)
     setNewTemplate(DEMO_SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
+
+  const loadAirMarketPreset = () => {
+    setNewName(AIR_MARKET_PRESET.name)
+    setNewSubject(AIR_MARKET_PRESET.subject)
+    setNewTemplate(AIR_MARKET_PRESET.html)
     setShowNewCampaign(true)
   }
 
@@ -1625,6 +1634,10 @@ export default function DemDashboard({
             <Button size="sm" variant="outline" onClick={loadDemoPreset}>
               <FileText className="h-4 w-4 mr-2" />
               Invito Demo
+            </Button>
+            <Button size="sm" variant="outline" onClick={loadAirMarketPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Traffico Aereo
             </Button>
             <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
               <DialogTrigger asChild>
