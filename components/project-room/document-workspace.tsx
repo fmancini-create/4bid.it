@@ -88,6 +88,21 @@ export function DocumentWorkspace({
     function measure() {
       const element = asideRef.current
       if (!element) return
+
+      // The cap belongs to the side-by-side layout only. The scroll class that
+      // makes the cap survivable is `lg:overflow-y-auto`, so below `lg` the box
+      // was being limited with nothing to scroll it: measured on a 390px screen
+      // the panel was pinned to 320px while holding 466px of comments, and the
+      // extra 146px painted straight over the footer — the reply button rendered
+      // *below* a footer that comes after it in the DOM.
+      //
+      // 1024px is Tailwind's `lg`. It has to be the same number as the class or
+      // the two disagree exactly in the gap between them.
+      if (!window.matchMedia("(min-width: 1024px)").matches) {
+        setAsideMaxHeight(null)
+        return
+      }
+
       const top = element.getBoundingClientRect().top
       setAsideMaxHeight(Math.max(320, Math.round(window.innerHeight - top - 12)))
     }
@@ -247,7 +262,10 @@ export function DocumentWorkspace({
         still scrolled by exactly the same 66px.
 
         Only from `lg` up: stacked on a phone a nested scroll area is worse than
-        simply scrolling the page.
+        simply scrolling the page. Note the guard has to live in the measuring
+        effect, not here: `lg:overflow-y-auto` is breakpoint-aware but an inline
+        `style` is not, so gating only the class left the phone with a height cap
+        and no scroll.
       */}
       <aside
         ref={asideRef}
