@@ -35,6 +35,49 @@ export function formatDateOnlyIT(isoString: string | null | undefined): string {
 }
 
 /**
+ * Data numerica con anno a 4 cifre: "27/01/2026".
+ *
+ * Equivalente a `toLocaleDateString("it-IT")` ma con il fuso **fissato** a
+ * Europe/Rome. Senza `timeZone` il server (UTC) e il browser (ora italiana)
+ * producono giorni diversi per i timestamp serali, causando un errore di
+ * idratazione: e' esattamente cosi' che la stessa riga mostrava 26/01 e 27/01.
+ * Tenuto separato da `formatDateOnlyIT` perche' `dateStyle: "short"` abbrevia
+ * l'anno a due cifre ("27/01/26") e cambierebbe le tabelle esistenti.
+ */
+export function formatDateNumericIT(isoString: string | null | undefined): string {
+  if (!isoString) return ""
+  try {
+    return new Date(isoString).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: TIMEZONE,
+    })
+  } catch {
+    return isoString
+  }
+}
+
+/**
+ * Data e ora numeriche: "27/01/2026, 21:40". Come sopra, fuso fissato.
+ */
+export function formatDateTimeNumericIT(isoString: string | null | undefined): string {
+  if (!isoString) return ""
+  try {
+    return new Date(isoString).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: TIMEZONE,
+    })
+  } catch {
+    return isoString
+  }
+}
+
+/**
  * Formatta data e ora in italiano
  */
 export function formatDateTimeIT(isoString: string | null | undefined): string {

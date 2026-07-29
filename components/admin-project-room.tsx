@@ -1,4 +1,5 @@
 import { ArrowUpRight, Inbox, Lock, Send } from "lucide-react"
+import { formatDateTimeNumericIT } from "@/lib/date-utils"
 
 /**
  * Project Room summary for the super admin back office.
@@ -98,15 +99,7 @@ export default function AdminProjectRoom({
                   <li key={request.id} className="rounded-lg border border-border bg-card p-3 sm:p-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                       <p className="font-semibold text-foreground">{name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(request.created_at).toLocaleString("it-IT", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatDateTimeNumericIT(request.created_at)}</p>
                     </div>
                     <p className="text-sm text-muted-foreground break-all">{request.email}</p>
                     {request.company && <p className="text-sm text-muted-foreground">{request.company}</p>}

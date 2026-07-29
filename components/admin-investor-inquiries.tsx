@@ -20,6 +20,7 @@ import {
   Reply,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { formatDateNumericIT } from "@/lib/date-utils"
 
 interface InvestorInquiry {
   id: string
@@ -243,7 +244,7 @@ export default function AdminInvestorInquiries({ inquiries }: AdminInvestorInqui
                         )}
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>{new Date(inquiry.created_at).toLocaleDateString("it-IT")}</span>
+                          <span>{formatDateNumericIT(inquiry.created_at)}</span>
                         </div>
                       </div>
 
