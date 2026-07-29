@@ -17,7 +17,13 @@ import "react-pdf/dist/Page/AnnotationLayer.css"
  */
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
-const MIN_SCALE = 0.5
+/**
+ * 0.25 and not 0.5: measured at 1136x679 there are only ~390px between the
+ * toolbar and the bottom of the window, and a 792pt sheet needs ~0.38 to fit.
+ * With a floor of 0.5 "fit page" was clamped and silently did nothing — it left
+ * a 412px page inside a 384px box, still scrolling.
+ */
+const MIN_SCALE = 0.25
 const MAX_SCALE = 2.5
 const SCALE_STEP = 0.25
 
@@ -36,10 +42,16 @@ const MAX_HEIGHT_VH = 86
 const VERTICAL_PADDING = 32
 
 /** Space kept below the viewer for the file name and download row. */
-const BOTTOM_RESERVE = 96
+const BOTTOM_RESERVE = 44
 
-/** Below this the viewer would be unusable, so the page is allowed to scroll instead. */
-const MIN_BOX_HEIGHT = 384
+/**
+ * Below this the viewer is unusable, so the whole page is allowed to scroll
+ * instead. Deliberately smaller than the old 384: on a 679px-tall window the
+ * viewer starts at y=288, leaving ~390px, so a 384 floor plus the reserve
+ * overflowed the window and produced a SECOND scrollbar on the document — two
+ * scrollbars where the point of the change was to have none.
+ */
+const MIN_BOX_HEIGHT = 260
 
 /**
  * Slack before the layout is widened. Without it, a page landing exactly on the
@@ -137,14 +149,41 @@ export function PdfViewer({
       const element = containerRef.current
       if (!element) return
       const top = element.getBoundingClientRect().top
-      // Leaves room for the file name and download row rendered under the viewer.
-      const room = window.innerHeight - top - BOTTOM_RESERVE
+      // Room below the viewer for the file name and download row.
+      let room = window.innerHeight - top - BOTTOM_RESERVE
+
+      // The comments panel sits beside the viewer and is often TALLER than it.
+      // Measured at 1136x679: the panel was 430px and pushed the document 66px
+      // past the window, so sizing the viewer against the window alone removed
+      // the viewer's own scrollbar but left the whole PAGE scrolling.
+      //
+      // The panel is measured directly rather than via
+      // `documentElement.scrollHeight`: the page height depends on this very
+      // decision, so reading it back would be a feedback loop.
+      // Only while the panel is genuinely BESIDE the viewer. Once it has moved
+      // below (wide layout) it no longer competes for height, and subtracting it
+      // anyway wasted 44 measured px and pinned the box at 347px forever.
+      const panel = needsWidth ? null : element.closest("[data-pdf-viewer-column]")?.nextElementSibling
+      if (panel) {
+        // How far the panel's bottom edge already falls past the window.
+        const panelOverflow = panel.getBoundingClientRect().bottom - window.innerHeight + BOTTOM_RESERVE
+        if (panelOverflow > 0) room -= panelOverflow
+      }
+
       setMaxBoxHeight(Math.max(MIN_BOX_HEIGHT, Math.min(room, Math.round((window.innerHeight * MAX_HEIGHT_VH) / 100))))
     }
-    measure()
+    // Deferred by a frame: when `needsWidth` flips, the parent re-flows the grid
+    // in the same commit, so measuring synchronously would read the OLD layout
+    // and keep the stale cap.
+    const frame = requestAnimationFrame(measure)
     window.addEventListener("resize", measure)
-    return () => window.removeEventListener("resize", measure)
-  }, [])
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener("resize", measure)
+    }
+    // The panel moving below changes how much height is available, so this has
+    // to be redone on layout change rather than measured once on mount.
+  }, [needsWidth])
 
   /**
    * Open on the whole page rather than at an arbitrary 100%: the reader sees the
@@ -282,7 +321,9 @@ export function PdfViewer({
       <div
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        className="flex min-h-[24rem] justify-center overflow-auto bg-muted/60 p-4"
+        // No `min-h` class here: a 24rem floor fought the measured maxHeight
+        // below and forced the box past the bottom of the window.
+        className="flex justify-center overflow-auto bg-muted/60 p-4"
         style={{
           // Grows with the zoom, then stops: while the page is short the box
           // hugs it, so there is nothing to scroll and no empty band either.
@@ -291,6 +332,9 @@ export function PdfViewer({
               ? Math.min(maxBoxHeight, Math.ceil(pageSize.height * scale) + VERTICAL_PADDING)
               : maxBoxHeight
             : undefined,
+          // Keeps the loading state from collapsing to nothing before the first
+          // page is measured.
+          minHeight: pageSize ? undefined : MIN_BOX_HEIGHT,
         }}
       >
         {error ? (
