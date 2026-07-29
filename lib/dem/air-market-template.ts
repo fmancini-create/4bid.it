@@ -32,7 +32,11 @@ export const AIR_MARKET_PRESET = {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f2;padding:24px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
+        <!-- La larghezza deve essere ELASTICA: con "width:600px" fisso su un
+             telefono da 390px l'email sfora di 210px e il testo esce dallo
+             schermo (misurato). "width:100%" con "max-width:600px" tiene i 600px
+             sul desktop e si adatta sul telefono. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Intestazione -->
           <tr>
             <td align="center" style="background-color:#ffffff;padding:32px 32px 24px;border-bottom:3px solid #2bb3a3;">
