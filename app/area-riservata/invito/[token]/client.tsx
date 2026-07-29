@@ -13,6 +13,20 @@ import { formatDateIT } from "@/lib/date-utils"
 
 const MIN_PASSWORD_LENGTH = 10
 
+/**
+ * Altezza dei campi su telefono.
+ *
+ * Il valore predefinito di shadcn e' `h-9`, cioe' 36px: misurato su uno schermo
+ * da 390px, sotto i 44px che Apple e Google indicano come minimo comodo per il
+ * pollice. Questa e' la prima schermata che un cliente invitato vede, e la sbaglia
+ * una volta sola: se non riesce a compilarla, non entra.
+ *
+ * Da `sm` in su torna a 36px, perche' col mouse il bersaglio grande non serve.
+ * Il carattere resta a 16px (verificato): sotto quella misura iOS ingrandisce la
+ * pagina da solo al primo tocco su un campo.
+ */
+const CAMPO_MOBILE = "h-11 sm:h-9"
+
 export default function InviteClient({
   token,
   email,
@@ -148,7 +162,7 @@ export default function InviteClient({
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Esci dall&apos;altro account per attivare il tuo accesso. L&apos;invito resta valido.
             </p>
-            <Button type="button" onClick={signOutAndRetry} className="mt-4 w-full">
+            <Button type="button" onClick={signOutAndRetry} className={`mt-4 w-full ${CAMPO_MOBILE}`}>
               Esci e continua come {email}
             </Button>
           </div>
@@ -157,7 +171,7 @@ export default function InviteClient({
           <div className="mb-4 flex flex-col gap-1.5">
             <Label htmlFor="invite-email">Email</Label>
             {/* Read-only: the address is fixed by the invitation, not chosen here. */}
-            <Input id="invite-email" value={email} readOnly disabled className="bg-muted" />
+            <Input id="invite-email" value={email} readOnly disabled className={`bg-muted ${CAMPO_MOBILE}`} />
           </div>
 
           <div className="mb-4 grid gap-3 sm:grid-cols-2">
@@ -165,6 +179,7 @@ export default function InviteClient({
               <Label htmlFor="invite-first-name">Nome</Label>
               <Input
                 id="invite-first-name"
+                className={CAMPO_MOBILE}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete="given-name"
@@ -175,6 +190,7 @@ export default function InviteClient({
               <Label htmlFor="invite-last-name">Cognome</Label>
               <Input
                 id="invite-last-name"
+                className={CAMPO_MOBILE}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 autoComplete="family-name"
@@ -187,6 +203,7 @@ export default function InviteClient({
             <Label htmlFor="invite-company">Azienda</Label>
             <Input
               id="invite-company"
+              className={CAMPO_MOBILE}
               value={company}
               onChange={(e) => setCompany(e.target.value)}
               autoComplete="organization"
@@ -198,6 +215,7 @@ export default function InviteClient({
             <Label htmlFor="invite-password">Password</Label>
             <Input
               id="invite-password"
+              className={CAMPO_MOBILE}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -212,6 +230,7 @@ export default function InviteClient({
             <Label htmlFor="invite-confirm">Conferma password</Label>
             <Input
               id="invite-confirm"
+              className={CAMPO_MOBILE}
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -243,7 +262,7 @@ export default function InviteClient({
             </div>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className={`w-full ${CAMPO_MOBILE}`} disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
