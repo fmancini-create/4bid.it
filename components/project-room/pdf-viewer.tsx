@@ -22,6 +22,34 @@ const MAX_SCALE = 2.5
 const SCALE_STEP = 0.25
 
 /**
+ * How tall the viewer may grow, as a share of the window. The box grows with the
+ * zoom so the scrollbars appear as late as possible, but it must never become
+ * taller than the window or the toolbar would scroll out of reach.
+ *
+ * Honest limit: past this height a zoomed portrait page IS taller than any
+ * screen, so vertical scrolling returns. Zooming in means "show me less of the
+ * page, bigger" — that cannot be scroll-free at every zoom level.
+ */
+const MAX_HEIGHT_VH = 86
+
+/** `p-4` on the scroll area, top + bottom. */
+const VERTICAL_PADDING = 32
+
+/** Space kept below the viewer for the file name and download row. */
+const BOTTOM_RESERVE = 96
+
+/** Below this the viewer would be unusable, so the page is allowed to scroll instead. */
+const MIN_BOX_HEIGHT = 384
+
+/**
+ * Slack before the layout is widened. Without it, a page landing exactly on the
+ * column width could toggle the wide layout on and off, because showing a
+ * vertical scrollbar narrows the content box by ~15px and would flip the
+ * decision straight back.
+ */
+const WIDEN_HYSTERESIS = 12
+
+/**
  * Module-level so the object identity is stable across renders. Inline, react-pdf
  * sees a "new" options object every render and re-fetches the whole PDF in a loop.
  * Nothing about these documents should reach an external service.
@@ -36,6 +64,11 @@ export interface PdfViewerProps {
   onDocumentLoad?: (pageCount: number) => void
   /** Text the reader highlighted, used to seed a revision proposal. */
   onTextSelect?: (selection: { text: string; page: number } | null) => void
+  /**
+   * Raised when the zoomed page no longer fits the column, so the parent can
+   * give the viewer the full width instead of letting it scroll sideways.
+   */
+  onNeedsWidthChange?: (needsWidth: boolean) => void
   className?: string
 }
 
@@ -45,6 +78,7 @@ export function PdfViewer({
   onPageChange,
   onDocumentLoad,
   onTextSelect,
+  onNeedsWidthChange,
   className,
 }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null)
@@ -52,6 +86,99 @@ export function PdfViewer({
   const [scale, setScale] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  /** Intrinsic page size in CSS px at 100%, reported by pdf.js. */
+  const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null)
+  const [needsWidth, setNeedsWidth] = useState(false)
+
+  /**
+   * Width available to the page while the viewer sits in its normal column.
+   * Captured only in that state: once the parent has widened the viewer, reusing
+   * the new (larger) width as the yardstick would make the page "fit" again and
+   * the layout would oscillate.
+   */
+  const baselineWidthRef = useRef(0)
+  const needsWidthRef = useRef(false)
+  const didFitRef = useRef(false)
+
+  /**
+   * How tall the box may grow. Measured from where the viewer starts down to the
+   * bottom of the window instead of a fixed `vh` value: a hardcoded height that
+   * ignores the header and breadcrumb above only trades the viewer's own
+   * scrollbar for a scrollbar on the whole page.
+   */
+  const [maxBoxHeight, setMaxBoxHeight] = useState<number | null>(null)
+
+  const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver((entries) => {
+      // `contentRect` already excludes the padding, so this is exactly the room
+      // the rendered page has.
+      const width = entries[0]?.contentRect.width ?? 0
+      if (width > 0 && !needsWidthRef.current) baselineWidthRef.current = width
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    function measure() {
+      const element = containerRef.current
+      if (!element) return
+      const top = element.getBoundingClientRect().top
+      // Leaves room for the file name and download row rendered under the viewer.
+      const room = window.innerHeight - top - BOTTOM_RESERVE
+      setMaxBoxHeight(Math.max(MIN_BOX_HEIGHT, Math.min(room, Math.round((window.innerHeight * MAX_HEIGHT_VH) / 100))))
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [])
+
+  /**
+   * Open on the whole page rather than at an arbitrary 100%: the reader sees the
+   * full sheet with no scrollbars, then zooms in if they want to read closely.
+   */
+  useEffect(() => {
+    if (didFitRef.current || !pageSize || !maxBoxHeight) return
+    const width = baselineWidthRef.current
+    if (width <= 0) return
+    didFitRef.current = true
+    setScale(
+      clampScale(Math.min(width / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
+    )
+  }, [pageSize, maxBoxHeight])
+
+  /**
+   * Deliberately not recomputed on container resize: the container width is a
+   * *consequence* of this decision, so feeding it back in would loop.
+   */
+  useEffect(() => {
+    if (!pageSize || baselineWidthRef.current <= 0) return
+    const next = pageSize.width * scale > baselineWidthRef.current + WIDEN_HYSTERESIS
+    needsWidthRef.current = next
+    setNeedsWidth(next)
+  }, [pageSize, scale])
+
+  useEffect(() => {
+    onNeedsWidthChange?.(needsWidth)
+  }, [needsWidth, onNeedsWidthChange])
+
+  /** Fit the whole sheet in view, which is the only genuinely scroll-free zoom. */
+  const fitPage = useCallback(() => {
+    if (!pageSize || !maxBoxHeight || baselineWidthRef.current <= 0) {
+      setScale(1)
+      return
+    }
+    setScale(
+      clampScale(
+        Math.min(baselineWidthRef.current / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height),
+      ),
+    )
+  }, [pageSize, maxBoxHeight])
 
   // The parent may ask for a specific page (clicking a comment). Guarded by the
   // known page count so an out-of-range page_number cannot blank the viewer.
@@ -138,8 +265,9 @@ export function PdfViewer({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setScale(1)}
-            aria-label="Ripristina zoom"
+            onClick={fitPage}
+            aria-label="Adatta la pagina alla finestra"
+            title="Adatta la pagina alla finestra"
           >
             <RotateCw className="size-4" aria-hidden="true" />
           </Button>
@@ -149,7 +277,16 @@ export function PdfViewer({
       <div
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        className="flex max-h-[70vh] min-h-[24rem] justify-center overflow-auto bg-muted/60 p-4"
+        className="flex min-h-[24rem] justify-center overflow-auto bg-muted/60 p-4"
+        style={{
+          // Grows with the zoom, then stops: while the page is short the box
+          // hugs it, so there is nothing to scroll and no empty band either.
+          maxHeight: maxBoxHeight
+            ? pageSize
+              ? Math.min(maxBoxHeight, Math.ceil(pageSize.height * scale) + VERTICAL_PADDING)
+              : maxBoxHeight
+            : undefined,
+        }}
       >
         {error ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
@@ -181,6 +318,15 @@ export function PdfViewer({
             <Page
               pageNumber={page}
               scale={scale}
+              // `originalWidth/Height` are the sheet's size at 100%: every fit
+              // and widen decision below is measured against them.
+              onLoadSuccess={(loaded) => {
+                setPageSize((current) =>
+                  current?.width === loaded.originalWidth && current?.height === loaded.originalHeight
+                    ? current
+                    : { width: loaded.originalWidth, height: loaded.originalHeight },
+                )
+              }}
               renderTextLayer
               renderAnnotationLayer={false}
               className="shadow-sm"

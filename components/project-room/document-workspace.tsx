@@ -72,6 +72,8 @@ export function DocumentWorkspace({
 
   const [currentPage, setCurrentPage] = useState(1)
   const [requestedPage, setRequestedPage] = useState<number | null>(null)
+  /** Set by the viewer when the zoomed page outgrows its column. */
+  const [wideViewer, setWideViewer] = useState(false)
   const [selection, setSelection] = useState<{ text: string; page: number } | null>(null)
 
   const [commentText, setCommentText] = useState("")
@@ -151,11 +153,19 @@ export function DocumentWorkspace({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]">
+    <div
+      className={cn(
+        "grid gap-6",
+        // Zoomed in, the sheet needs more than the column can give: the panel
+        // moves below instead of leaving the reader to scroll sideways.
+        wideViewer ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_26rem]",
+      )}
+    >
       <div className="flex min-w-0 flex-col gap-3">
         {activeVersion.file_path ? (
           <PdfViewer
             versionId={activeVersion.id}
+            onNeedsWidthChange={setWideViewer}
             requestedPage={requestedPage}
             onPageChange={setCurrentPage}
             onTextSelect={setSelection}
