@@ -1,23 +1,4 @@
-// Modello DEM condiviso: usato dalla dashboard per precompilare la campagna e
-// dagli script di creazione, cosi' esiste UNA sola versione del testo.
-// DEM sul traffico aereo (Air Market Intelligence).
-//
-// Deve restare CURIOSA e SINTETICA: una sola idea, letta in meno di 20 secondi.
-// L'obiettivo non e' spiegare il modulo, ma portare sulla pagina delle
-// funzionalita' e alla demo.
-//
-// Il testo dice quello che la pagina /features dichiara davvero ("analisi dei
-// voli in arrivo sugli aeroporti vicini: da quali paesi arrivera' la domanda e
-// su quali mercati puntare"): promettere altro significherebbe far arrivare il
-// lettore su una pagina che lo smentisce.
-//
-// Il collegamento usa www.santaddeo.com: senza "www" il sito risponde 301 e ogni
-// redirect e' un'occasione in piu' di perdere il clic e di far storcere il naso
-// ai filtri antispam.
-export const AIR_MARKET_PRESET = {
-  name: "Santaddeo - Traffico aereo (Air Market)",
-  subject: "Il tuo prossimo ospite ha già prenotato il volo",
-  html: `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8" />
@@ -40,7 +21,7 @@ export const AIR_MARKET_PRESET = {
           <!-- Intestazione -->
           <tr>
             <td align="center" style="background-color:#ffffff;padding:32px 32px 24px;border-bottom:3px solid #2bb3a3;">
-              <img src="https://www.4bid.it/santaddeo-logo.png" alt="Santaddeo" width="300" style="display:block;width:300px;max-width:78%;height:auto;border:0;margin:0 auto;" />
+              <img src="/santaddeo-logo.png" alt="Santaddeo" width="300" style="display:block;width:300px;max-width:78%;height:auto;border:0;margin:0 auto;" />
             </td>
           </tr>
           <!-- Rotta aerea: immagine PURAMENTE DECORATIVA.
@@ -57,7 +38,7 @@ export const AIR_MARKET_PRESET = {
                  anche sugli schermi a doppia densita'. -->
           <tr>
             <td align="center" style="padding:0;line-height:0;font-size:0;">
-              <img src="https://www.4bid.it/dem/aereo-rotta.png" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;" />
+              <img src="/dem/aereo-rotta.png" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;" />
             </td>
           </tr>
           <!-- Gancio -->
@@ -114,5 +95,4 @@ export const AIR_MARKET_PRESET = {
     </tr>
   </table>
 </body>
-</html>`,
-}
+</html>
