@@ -126,16 +126,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Insert in batches of 100
+    // Inserimento a lotti di 100.
+    //
+    // Un errore qui NON va ingoiato. In precedenza veniva solo scritto in console
+    // e la route rispondeva 200 con `added: 0`: un caricamento completamente
+    // fallito era indistinguibile da "nessun contatto nuovo da aggiungere".
+    // Sintomo reale: 29.923 contatti caricati, zero righe scritte, nessun errore
+    // in risposta (ogni riga violava il vincolo su `tipo_contatto`).
     let added = 0
+    let erroreInserimento: string | null = null
     for (let i = 0; i < newRecipients.length; i += 100) {
       const batch = newRecipients.slice(i, i + 100)
       const { error } = await supabase.from("dem_recipients").insert(batch)
       if (error) {
-        console.error("Error inserting recipients batch:", error)
-      } else {
-        added += batch.length
+        console.error("[v0] dem/recipients: inserimento lotto fallito:", error)
+        erroreInserimento = error.message
+        break
       }
+      added += batch.length
+    }
+
+    if (erroreInserimento) {
+      return NextResponse.json(
+        {
+          error: `Caricamento interrotto: ${erroreInserimento}`,
+          added,
+          da_inserire: newRecipients.length,
+          esclusi_disiscritti: scartatiPerDisiscrizione,
+        },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({

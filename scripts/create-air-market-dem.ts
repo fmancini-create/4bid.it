@@ -75,7 +75,10 @@ function leggiContatti(): Contatto[] {
       nome: (c[iNome] || "").trim() || undefined,
       cognome: (c[iCognome] || "").trim() || undefined,
       nome_azienda: (c[iAzienda] || "").trim() || undefined,
-      tipo_contatto: "hotel",
+      // ATTENZIONE: la tabella accetta solo cliente / ex_cliente / potenziale /
+      // rappresentante (vincolo dem_recipients_tipo_contatto_check). Un valore
+      // fuori elenco (il primo tentativo usava "hotel") fa rifiutare OGNI riga.
+      tipo_contatto: "potenziale",
     })
   }
   return out
@@ -123,6 +126,13 @@ async function main() {
       body: JSON.stringify({ campaign_id: campaignId, recipients: lotto }),
     })
     const d = await res.json()
+    // Non proseguire in silenzio: se un lotto non entra, i successivi falliranno
+    // allo stesso modo e il totale finale sarebbe una bugia.
+    if (!res.ok && (d.added || 0) === 0 && (d.esclusi_disiscritti || 0) < lotto.length) {
+      throw new Error(
+        `lotto ${Math.floor(i / LOTTO) + 1} non caricato (HTTP ${res.status}): ${d.error || JSON.stringify(d)}`
+      )
+    }
     aggiunti += d.added || 0
     esclusiDisiscritti += d.esclusi_disiscritti || 0
     duplicati += d.duplicates || 0
