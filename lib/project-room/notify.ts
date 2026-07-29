@@ -184,7 +184,6 @@ export async function sendInvitationEmail(params: {
   url: string
   projectName: string
   role: string
-  canDownload: boolean
   expiresAt: string
   /** Optional note from the admin, shown above the button. */
   note?: string | null
@@ -208,7 +207,6 @@ export async function sendInvitationEmail(params: {
     <table style="border-collapse:collapse;margin-bottom:16px">
       <tr><td style="padding:4px 12px 4px 0;color:#52606d">Progetto</td><td style="padding:4px 0"><strong>${esc(params.projectName)}</strong></td></tr>
       <tr><td style="padding:4px 12px 4px 0;color:#52606d">Ruolo</td><td style="padding:4px 0"><strong>${esc(roleLabel)}</strong></td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:#52606d">Download</td><td style="padding:4px 0"><strong>${params.canDownload ? "consentito" : "non consentito"}</strong></td></tr>
     </table>
     <p style="margin:0 0 20px">
       <a href="${params.url}" style="display:inline-block;background:#5B9BD5;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:600">Attiva il tuo accesso</a>
