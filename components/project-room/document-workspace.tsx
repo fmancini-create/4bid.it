@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CommentThread } from "@/components/project-room/comment-thread"
 import { RevisionStatusBadge, VersionStatusBadge } from "@/components/project-room/status-badge"
+import { cn } from "@/lib/utils"
 import {
   COMMENT_TYPE_LABELS,
   COMMENT_TYPES,

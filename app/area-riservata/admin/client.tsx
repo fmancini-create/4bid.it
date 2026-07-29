@@ -658,6 +658,16 @@ function RequestCard({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // 409 = the request is no longer pending: another admin handled it, or
+        // this tab has simply been open for a while. Showing the error alone
+        // left the card stuck with live buttons and the counter still showing
+        // it, so the only way out was a manual reload. Reload the list instead:
+        // the stale card disappears on its own.
+        if (res.status === 409) {
+          setError("Questa richiesta è già stata gestita altrove. Aggiorno l'elenco…")
+          onDone()
+          return
+        }
         setError(data?.error ?? "Operazione non riuscita.")
         return
       }

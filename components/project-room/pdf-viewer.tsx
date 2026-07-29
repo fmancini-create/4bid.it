@@ -96,8 +96,14 @@ export function PdfViewer({
    * Captured only in that state: once the parent has widened the viewer, reusing
    * the new (larger) width as the yardstick would make the page "fit" again and
    * the layout would oscillate.
+   *
+   * State and not a ref on purpose: a ref would be written by the ResizeObserver
+   * without re-rendering, so the "fit on open" effect below would run once with
+   * a width of 0, bail out, and never run again — the document would open at an
+   * arbitrary 100% instead of fitted, and only on slower loads.
    */
-  const baselineWidthRef = useRef(0)
+  const [baselineWidth, setBaselineWidth] = useState(0)
+  /** Mirrors `needsWidth` for the observer callback, which sees a stale closure. */
   const needsWidthRef = useRef(false)
   const didFitRef = useRef(false)
 
@@ -118,7 +124,9 @@ export function PdfViewer({
       // `contentRect` already excludes the padding, so this is exactly the room
       // the rendered page has.
       const width = entries[0]?.contentRect.width ?? 0
-      if (width > 0 && !needsWidthRef.current) baselineWidthRef.current = width
+      if (width <= 0 || needsWidthRef.current) return
+      // Sub-pixel jitter must not re-render, or the observer feeds itself.
+      setBaselineWidth((current) => (Math.abs(current - width) < 1 ? current : width))
     })
     observer.observe(element)
     return () => observer.disconnect()
@@ -143,25 +151,24 @@ export function PdfViewer({
    * full sheet with no scrollbars, then zooms in if they want to read closely.
    */
   useEffect(() => {
-    if (didFitRef.current || !pageSize || !maxBoxHeight) return
-    const width = baselineWidthRef.current
-    if (width <= 0) return
+    if (didFitRef.current || !pageSize || !maxBoxHeight || baselineWidth <= 0) return
     didFitRef.current = true
     setScale(
-      clampScale(Math.min(width / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
+      clampScale(Math.min(baselineWidth / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
     )
-  }, [pageSize, maxBoxHeight])
+  }, [pageSize, maxBoxHeight, baselineWidth])
 
   /**
-   * Deliberately not recomputed on container resize: the container width is a
-   * *consequence* of this decision, so feeding it back in would loop.
+   * Measured against the *column* width, never against the viewer's current
+   * width: the current width is a consequence of this very decision, so feeding
+   * it back in would oscillate.
    */
   useEffect(() => {
-    if (!pageSize || baselineWidthRef.current <= 0) return
-    const next = pageSize.width * scale > baselineWidthRef.current + WIDEN_HYSTERESIS
+    if (!pageSize || baselineWidth <= 0) return
+    const next = pageSize.width * scale > baselineWidth + WIDEN_HYSTERESIS
     needsWidthRef.current = next
     setNeedsWidth(next)
-  }, [pageSize, scale])
+  }, [pageSize, scale, baselineWidth])
 
   useEffect(() => {
     onNeedsWidthChange?.(needsWidth)
@@ -169,16 +176,14 @@ export function PdfViewer({
 
   /** Fit the whole sheet in view, which is the only genuinely scroll-free zoom. */
   const fitPage = useCallback(() => {
-    if (!pageSize || !maxBoxHeight || baselineWidthRef.current <= 0) {
+    if (!pageSize || !maxBoxHeight || baselineWidth <= 0) {
       setScale(1)
       return
     }
     setScale(
-      clampScale(
-        Math.min(baselineWidthRef.current / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height),
-      ),
+      clampScale(Math.min(baselineWidth / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
     )
-  }, [pageSize, maxBoxHeight])
+  }, [pageSize, maxBoxHeight, baselineWidth])
 
   // The parent may ask for a specific page (clicking a comment). Guarded by the
   // known page count so an out-of-range page_number cannot blank the viewer.
