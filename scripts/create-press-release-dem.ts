@@ -22,7 +22,14 @@ const BASE = process.env.DEM_BASE_URL || "http://localhost:3000"
 /** Indirizzo pubblico del PDF: vive nel `public/` di questo progetto (4bid.it). */
 const URL_PDF = "https://www.4bid.it/comunicati/santaddeo-air-market-intelligence.pdf"
 
-const NOME_CAMPAGNA = "Comunicato stampa - Air Market Intelligence (29/07/2026)"
+const NOME_CAMPAGNA = "Comunicato stampa - Air Market Intelligence (30/07/2026)"
+
+/**
+ * Nome con cui la campagna era stata creata la prima volta. La ricerca a riga 83
+ * avviene PER NOME: senza questo elenco, cambiare la data avrebbe prodotto una
+ * seconda bozza con altri 54 destinatari, lasciando la prima orfana in dashboard.
+ */
+const NOMI_PRECEDENTI = ["Comunicato stampa - Air Market Intelligence (29/07/2026)"]
 
 type Destinatario = {
   email: string
@@ -80,11 +87,17 @@ async function main() {
 
   // 2. Crea la campagna, se non esiste gia'. Rieseguire lo script non deve
   //    produrre una seconda bozza identica.
-  const esistente = (campagne || []).find((c) => c.name === NOME_CAMPAGNA)
+  const esistente = (campagne || []).find(
+    (c) => c.name === NOME_CAMPAGNA || NOMI_PRECEDENTI.includes(c.name),
+  )
   let campaignId: string
   if (esistente) {
     campaignId = esistente.id
     console.log(`  campagna gia' presente, la riuso: ${campaignId}`)
+    if (esistente.name !== NOME_CAMPAGNA) {
+      await db.from("dem_campaigns").update({ name: NOME_CAMPAGNA }).eq("id", campaignId)
+      console.log(`  rinominata: "${esistente.name}" -> "${NOME_CAMPAGNA}"`)
+    }
     // Il testo puo' essere stato corretto dopo la prima creazione: si aggiorna
     // SOLO se e' ancora una bozza mai partita, altrimenti si cambierebbe sotto
     // i piedi un invio in corso o concluso.
@@ -159,7 +172,12 @@ async function main() {
     .select("id", { count: "exact", head: true })
     .eq("campaign_id", campaignId)
     .neq("send_status", "pending")
-  console.log(`    non piu' in attesa (deve essere 0): ${inSospeso}`)
+  // La colonna e' `send_status`, NON `status`: quest'ultima non esiste e una
+  // query che la usa non torna "zero righe", va in errore. Il valore atteso qui
+  // e' 1, non 0: l'utente ha inviato una prova a f.mancini@ibarronci.com il
+  // 29/07. Un indirizzo gia' "sent" viene SALTATO dall'invio, quindi per rifare
+  // la prova quella riga va riportata a "pending".
+  console.log(`    non piu' in attesa (1 = prova dell'utente, atteso): ${inSospeso}`)
 
   // Controllo POSITIVO sulla firma: `dem_campaigns` conserva una COPIA dell'html,
   // quindi non basta che il nome sia giusto nel template, deve essere finito

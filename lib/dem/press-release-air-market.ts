@@ -47,7 +47,12 @@
  */
 export const NOME_FONDATORE = "Filippo Mancini"
 
-export const DATA_COMUNICATO = "29 luglio 2026"
+/**
+ * Data unica del comunicato: da qui derivano sia la riga "luogo, data" del testo
+ * sia il piede di pagina del PDF. Tenerla in un solo punto evita che l'email
+ * dichiari una data e il PDF allegato un'altra.
+ */
+export const DATA_COMUNICATO = "30 luglio 2026"
 
 export const COMUNICATO = {
   etichetta: "COMUNICATO STAMPA",
