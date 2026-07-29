@@ -5,6 +5,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
@@ -324,6 +325,8 @@ export default function KPIMetricheHotelPage() {
       </section>
 
       <RelatedSolutions currentSlug="kpi-metriche-hotel" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

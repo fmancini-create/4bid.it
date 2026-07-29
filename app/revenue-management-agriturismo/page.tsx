@@ -7,6 +7,7 @@ import { CheckCircle2, TrendingUp, Users, Calendar, PieChart, Target } from "luc
 import Link from "next/link"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
@@ -385,6 +386,8 @@ export default function RevenueMangementAgriturismPage() {
         </section>
         <RelatedSolutions currentSlug="revenue-management-agriturismo" />
       </main>
+      <FaqSection faqs={faqs} />
+
       <Footer />
     </>
   )

@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
@@ -419,6 +420,8 @@ export default function ADRHotelComeAumentarloPage() {
       </section>
 
       <RelatedSolutions currentSlug="adr-hotel-come-aumentarlo" />
+      <FaqSection faqs={faqData} />
+
       <Footer />
     </div>
   )

@@ -9,6 +9,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
 import { StructuredData } from "@/components/seo-structured-data"
+import { FaqSection } from "@/components/faq-section"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { RelatedSolutions } from "@/components/related-solutions"
 
@@ -368,6 +369,8 @@ export default function DynamicPricingPage() {
         </section>
         <RelatedSolutions currentSlug="dynamic-pricing-hotel" />
       </main>
+      <FaqSection faqs={faqs} />
+
       <Footer />
     </>
   )
