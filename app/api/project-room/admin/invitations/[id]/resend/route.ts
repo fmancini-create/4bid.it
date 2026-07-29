@@ -51,7 +51,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: invitation, error: fetchError } = await db
     .from("pr_invitations")
-    .select("id, project_id, email, role, can_download, token, token_sealed, accepted_at, resend_count")
+    // `revoked_at` is required, not decorative: the rotation rule below keys off
+    // it. Leaving it out of this list made `invitation.revoked_at` undefined, so
+    // the "a revoked invitation must come back with a fresh link" branch read as
+    // present in the source but could never fire.
+    .select(
+      "id, project_id, email, role, can_download, token, token_sealed, accepted_at, revoked_at, resend_count",
+    )
     .eq("id", id)
     .maybeSingle()
 
@@ -107,6 +113,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   if (emailChanged) {
     rotationReason = "address_changed"
+  } else if (invitation.revoked_at) {
+    // A revocation is a deliberate act: an admin decided that link had to stop
+    // working, and one common reason is that it leaked. Reviving the invitation
+    // with the SAME link would reopen exactly the hole the revocation closed, so
+    // a revoked invitation always comes back with a fresh link.
+    rotationReason = "was_revoked"
   } else if (!canPreserveTokens()) {
     rotationReason = "no_key"
   } else {

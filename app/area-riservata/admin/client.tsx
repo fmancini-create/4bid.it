@@ -1173,11 +1173,20 @@ function ResendInvitationRow({
                 : "È stato reinviato lo stesso link di prima, che resta valido."}
             </p>
 
+            {/* "Consegnata" sarebbe una promessa che non possiamo mantenere: il
+                servizio di posta conferma di aver PRESO IN CARICO il messaggio, non
+                che sia arrivato nella posta in arrivo. Due inviti reali risultavano
+                accettati e non sono mai stati letti (probabilmente in Promozioni o
+                Spam), quindi il link resta sempre in vista come rimedio certo. */}
             {result.emailSent ? (
-              <p className="text-sm text-emerald-700">Email inviata.</p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-emerald-700">Email consegnata al servizio di posta.</span> Se non la
+                trova, chiedi di controllare Spam e Promozioni, oppure mandagli direttamente il link qui sotto.
+              </p>
             ) : (
               <p className="text-sm text-destructive" role="alert">
-                Email non inviata{result.emailError ? `: ${result.emailError}` : ""}. Copia il link qui sotto e invialo a mano.
+                Email non inviata{result.emailError ? `: ${result.emailError}` : ""}. Copia il link qui sotto e invialo a
+                mano.
               </p>
             )}
 
