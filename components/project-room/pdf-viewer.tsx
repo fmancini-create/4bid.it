@@ -160,10 +160,15 @@ export function PdfViewer({
       // The panel is measured directly rather than via
       // `documentElement.scrollHeight`: the page height depends on this very
       // decision, so reading it back would be a feedback loop.
-      // Only while the panel is genuinely BESIDE the viewer. Once it has moved
-      // below (wide layout) it no longer competes for height, and subtracting it
-      // anyway wasted 44 measured px and pinned the box at 347px forever.
-      const panel = needsWidth ? null : element.closest("[data-pdf-viewer-column]")?.nextElementSibling
+      // Only while the panel is genuinely BESIDE the viewer, decided by geometry
+      // rather than by the wide-layout flag: on a phone the panel is stacked
+      // BELOW even though that flag is off, and treating it as a neighbour then
+      // subtracted its whole height — measured at 390x720 it starved the box down
+      // to the 260px floor and opened the document at an unreadable 29%.
+      const candidate = element.closest("[data-pdf-viewer-column]")?.nextElementSibling
+      const panelRect = candidate?.getBoundingClientRect()
+      const beside = panelRect ? panelRect.top < element.getBoundingClientRect().bottom - 40 : false
+      const panel = beside ? candidate : null
       if (panel) {
         // How far the panel's bottom edge already falls past the window.
         const panelOverflow = panel.getBoundingClientRect().bottom - window.innerHeight + BOTTOM_RESERVE
@@ -192,9 +197,16 @@ export function PdfViewer({
   useEffect(() => {
     if (didFitRef.current || !pageSize || !maxBoxHeight || baselineWidth <= 0) return
     didFitRef.current = true
-    setScale(
-      clampScale(Math.min(baselineWidth / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
-    )
+
+    // Fills the WIDTH rather than fitting the whole sheet, on every screen size.
+    //
+    // Measured on this 679px-tall window: fitting the whole page meant 44% (and
+    // 29% on a phone), where the document is present but unreadable. Filling the
+    // width gives ~103%, removes the sideways scrolling that was the actual
+    // complaint, and leaves only vertical scrolling — which is how everyone reads
+    // a document anyway. The box still grows to the tallest the window allows, so
+    // there is as little of it as possible.
+    setScale(clampScale(baselineWidth / pageSize.width))
   }, [pageSize, maxBoxHeight, baselineWidth])
 
   /**
@@ -213,16 +225,17 @@ export function PdfViewer({
     onNeedsWidthChange?.(needsWidth)
   }, [needsWidth, onNeedsWidthChange])
 
-  /** Fit the whole sheet in view, which is the only genuinely scroll-free zoom. */
-  const fitPage = useCallback(() => {
-    if (!pageSize || !maxBoxHeight || baselineWidth <= 0) {
+  /**
+   * Back to the width-filling zoom the document opened at, not to a bare 100%:
+   * a "reset" that lands somewhere the reader has never seen is not a reset.
+   */
+  const fitWidth = useCallback(() => {
+    if (!pageSize || baselineWidth <= 0) {
       setScale(1)
       return
     }
-    setScale(
-      clampScale(Math.min(baselineWidth / pageSize.width, (maxBoxHeight - VERTICAL_PADDING) / pageSize.height)),
-    )
-  }, [pageSize, maxBoxHeight, baselineWidth])
+    setScale(clampScale(baselineWidth / pageSize.width))
+  }, [pageSize, baselineWidth])
 
   // The parent may ask for a specific page (clicking a comment). Guarded by the
   // known page count so an out-of-range page_number cannot blank the viewer.
@@ -309,9 +322,9 @@ export function PdfViewer({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={fitPage}
-            aria-label="Adatta la pagina alla finestra"
-            title="Adatta la pagina alla finestra"
+            onClick={fitWidth}
+            aria-label="Adatta alla larghezza"
+            title="Adatta alla larghezza"
           >
             <RotateCw className="size-4" aria-hidden="true" />
           </Button>
