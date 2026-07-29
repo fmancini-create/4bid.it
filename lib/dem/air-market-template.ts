@@ -52,9 +52,11 @@ export const AIR_MARKET_PRESET = {
                  l'immagine non carica, la riga si richiude senza lasciare
                  buchi ne' icone di errore.
                - Nessun attributo height: se l'immagine e' bloccata la riga
-                 collassa invece di riservare 200px vuoti.
-               - Il file e' 1013px di larghezza ma mostrato a 600: resta nitido
-                 anche sugli schermi a doppia densita'. -->
+                 collassa invece di riservare spazio vuoto.
+               - Il file e' 1013x266 ma mostrato a 600 di larghezza (158 di
+                 altezza): resta nitido anche sugli schermi a doppia densita'.
+                 Ritagliato a banda larga di proposito: quadrato sarebbe alto
+                 600px e spingerebbe il gancio fuori dalla prima schermata. -->
           <tr>
             <td align="center" style="padding:0;line-height:0;font-size:0;">
               <img src="https://www.4bid.it/dem/aereo-rotta.png" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;" />
