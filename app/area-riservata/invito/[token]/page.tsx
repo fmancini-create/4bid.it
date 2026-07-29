@@ -10,7 +10,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { AlertCircle } from "lucide-react"
 
-import { createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient, createClient } from "@/lib/supabase/server"
 import {
   hashInvitationToken,
   invitationRejection,
@@ -74,7 +74,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     .maybeSingle()
 
   if (!invitation) {
-    return <Problem message="Il link non e valido. Verifica di aver copiato l'indirizzo completo." />
+    return <Problem message="Il link non è valido. Verifica di aver copiato l'indirizzo completo." />
   }
 
   const rejection = invitationRejection(invitation)
@@ -88,6 +88,15 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     .eq("id", invitation.project_id)
     .maybeSingle()
 
+  // Sessione eventualmente presente in questo browser. Serve solo per avvisare
+  // subito di un conflitto di indirizzo: il permesso vero lo decide comunque
+  // /api/project-room/invitations/accept, che rifiuta di legare l'invito a un
+  // account diverso. Un invito NON deve mai toccare un account esistente.
+  const auth = await createClient()
+  const {
+    data: { user },
+  } = await auth.auth.getUser()
+
   return (
     <Shell>
       <InviteClient
@@ -96,6 +105,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         projectName={project?.name ?? "Progetto riservato"}
         roleLabel={ROLE_LABELS[invitation.role as keyof typeof ROLE_LABELS] ?? invitation.role}
         expiresAt={invitation.expires_at}
+        signedInEmail={user?.email ?? null}
       />
     </Shell>
   )

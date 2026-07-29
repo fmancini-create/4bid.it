@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { CheckCircle2, Clock, XCircle, Eye, Save, Reply } from "lucide-react"
+import { formatDateNumericIT, formatDateTimeNumericIT } from "@/lib/date-utils"
 
 type ProjectSubmission = {
   id: string
@@ -196,9 +197,7 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
                 ) : (
                   safeSubmissions.map((submission) => (
                     <TableRow key={submission.id}>
-                      <TableCell className="text-sm">
-                        {new Date(submission.created_at).toLocaleDateString("it-IT")}
-                      </TableCell>
+                      <TableCell className="text-sm">{formatDateNumericIT(submission.created_at)}</TableCell>
                       <TableCell className="font-medium">{submission.name}</TableCell>
                       <TableCell className="text-sm">{submission.email}</TableCell>
                       <TableCell className="max-w-xs truncate">{submission.project_title}</TableCell>
@@ -294,7 +293,7 @@ export default function AdminProjectSubmissions({ submissions }: { submissions: 
               <div>
                 <p className="text-sm font-medium mb-1">Data Invio</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(selectedSubmission.created_at).toLocaleString("it-IT")}
+                  {formatDateTimeNumericIT(selectedSubmission.created_at)}
                 </p>
               </div>
 

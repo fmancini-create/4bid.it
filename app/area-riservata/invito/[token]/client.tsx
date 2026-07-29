@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
+import { formatDateIT } from "@/lib/date-utils"
 
 const MIN_PASSWORD_LENGTH = 10
 
@@ -18,12 +19,15 @@ export default function InviteClient({
   projectName,
   roleLabel,
   expiresAt,
+  signedInEmail,
 }: {
   token: string
   email: string
   projectName: string
   roleLabel: string
   expiresAt: string | null
+  /** Email della sessione presente in questo browser, se ce n'e' una. */
+  signedInEmail: string | null
 }) {
   const router = useRouter()
   const [firstName, setFirstName] = useState("")
@@ -36,6 +40,14 @@ export default function InviteClient({
   const [wrongAccount, setWrongAccount] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  // Conflitto noto GIA' al caricamento: in questo browser c'e' la sessione di
+  // un altro indirizzo. Prima lo si scopriva solo dopo aver compilato nome,
+  // cognome, azienda e password e premuto "Attiva accesso" — lavoro buttato.
+  // Confronto case-insensitive: "F.Mancini@" e "f.mancini@" sono lo stesso
+  // account e segnalarli come diversi sarebbe un falso allarme.
+  const sessionConflict =
+    !!signedInEmail && signedInEmail.trim().toLowerCase() !== email.trim().toLowerCase()
+
   async function signOutAndRetry() {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -44,9 +56,10 @@ export default function InviteClient({
     router.refresh()
   }
 
-  const expiry = expiresAt
-    ? new Date(expiresAt).toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })
-    : null
+  // Fuso fissato a Europe/Rome dall'helper: senza, una scadenza a tarda sera
+  // darebbe un giorno diverso sul server (UTC) e nel browser, con l'errore di
+  // idratazione. Qui non si vedeva ancora, ma il difetto era latente.
+  const expiry = expiresAt ? formatDateIT(expiresAt, { dateStyle: "long" }) : null
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -125,7 +138,22 @@ export default function InviteClient({
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="rounded-xl border border-border bg-card p-6">
+        {sessionConflict ? (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-6 text-center">
+            <p className="text-sm leading-relaxed text-foreground">
+              In questo browser risulta collegato{" "}
+              <span className="font-medium">{signedInEmail}</span>, mentre questo invito &egrave; per{" "}
+              <span className="font-medium">{email}</span>.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Esci dall&apos;altro account per attivare il tuo accesso. L&apos;invito resta valido.
+            </p>
+            <Button type="button" onClick={signOutAndRetry} className="mt-4 w-full">
+              Esci e continua come {email}
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="rounded-xl border border-border bg-card p-6">
           <div className="mb-4 flex flex-col gap-1.5">
             <Label htmlFor="invite-email">Email</Label>
             {/* Read-only: the address is fixed by the invitation, not chosen here. */}
@@ -232,10 +260,12 @@ export default function InviteClient({
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
             <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span>
-              Questo link e personale e a uso singolo{expiry ? `, valido fino al ${expiry}` : ""}. Non condividerlo.
+              Questo link &egrave; personale e a uso singolo
+              {expiry ? `, valido fino al ${expiry}` : ""}. Non condividerlo.
             </span>
-          </p>
-        </form>
+            </p>
+          </form>
+        )}
       </div>
     </main>
   )

@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     // account it was addressed to.
     if ((sessionUser.email ?? "").toLowerCase() !== invitation.email.toLowerCase()) {
       return NextResponse.json(
-        { error: "Questo invito e destinato a un altro indirizzo email.", code: "wrong_account" },
+        { error: "Questo invito è destinato a un altro indirizzo email.", code: "wrong_account" },
         { status: 403 },
       )
     }
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       // otherwise an invitation link would be an account-takeover primitive.
       return NextResponse.json(
         {
-          error: "Esiste gia un account con questa email. Accedi e riapri il link per completare l'invito.",
+          error: "Esiste già un account con questa email. Accedi e riapri il link per completare l'invito.",
           code: "login_required",
         },
         { status: 409 },

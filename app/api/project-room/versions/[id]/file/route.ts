@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const wantsDownload = new URL(request.url).searchParams.get("download") === "1"
   if (wantsDownload && !canDownload(access.data.role, access.data.canDownload)) {
-    return NextResponse.json({ error: "Il download non e consentito per il tuo ruolo." }, { status: 403 })
+    return NextResponse.json({ error: "Il download non è consentito per il tuo ruolo." }, { status: 403 })
   }
 
   const admin = createAdminClient()

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const proposedText = typeof payload.proposed_text === "string" ? payload.proposed_text.trim() : ""
   if (proposedText.length === 0) {
-    return NextResponse.json({ error: "Il testo proposto non puo essere vuoto." }, { status: 400 })
+    return NextResponse.json({ error: "Il testo proposto non può essere vuoto." }, { status: 400 })
   }
   if (proposedText.length > MAX_TEXT) {
     return NextResponse.json({ error: "Il testo proposto supera la lunghezza massima." }, { status: 400 })

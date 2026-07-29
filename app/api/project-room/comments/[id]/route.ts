@@ -95,7 +95,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (typeof payload.content === "string") {
     const content = payload.content.trim()
     if (content.length === 0) {
-      return NextResponse.json({ error: "Il commento non puo essere vuoto." }, { status: 400 })
+      return NextResponse.json({ error: "Il commento non può essere vuoto." }, { status: 400 })
     }
     if (content.length > MAX_CONTENT) {
       return NextResponse.json({ error: "Il commento supera la lunghezza massima." }, { status: 400 })
@@ -118,7 +118,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (!allowed) {
       return NextResponse.json(
-        { error: "Il commento non e piu modificabile: ha ricevuto risposte o e passato troppo tempo." },
+        { error: "Il commento non è più modificabile: ha ricevuto risposte o è passato troppo tempo." },
         { status: 403 },
       )
     }

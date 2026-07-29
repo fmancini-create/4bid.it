@@ -83,7 +83,7 @@ export function VersionUpload({ documentId, fillVersionId, fillVersionLabel }: P
             <DialogTitle>{filling ? `Carica il file per ${fillVersionLabel}` : "Carica una nuova versione"}</DialogTitle>
             <DialogDescription>
               {filling
-                ? "La versione e gia registrata: questo caricamento ne completa il file, senza creare una nuova versione."
+                ? "La versione è già registrata: questo caricamento ne completa il file, senza creare una nuova versione."
                 : "La versione precedente non viene sostituita: resta consultabile nello storico."}
             </DialogDescription>
           </DialogHeader>
