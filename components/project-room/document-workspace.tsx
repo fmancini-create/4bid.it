@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Download, FileDiff, FileText, History, Loader2, MessageSquarePlus, Quote } from "lucide-react"
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CommentThread } from "@/components/project-room/comment-thread"
 import { RevisionStatusBadge, VersionStatusBadge } from "@/components/project-room/status-badge"
+import { cn } from "@/lib/utils"
 import {
   COMMENT_TYPE_LABELS,
   COMMENT_TYPES,
@@ -72,6 +73,28 @@ export function DocumentWorkspace({
 
   const [currentPage, setCurrentPage] = useState(1)
   const [requestedPage, setRequestedPage] = useState<number | null>(null)
+  /** Set by the viewer when the zoomed page outgrows its column. */
+  const [wideViewer, setWideViewer] = useState(false)
+
+  /**
+   * Measured height cap for the comments panel, from where it actually starts
+   * down to the bottom of the window. See the note on the <aside> for why this
+   * cannot be a fixed `vh` value.
+   */
+  const asideRef = useRef<HTMLElement>(null)
+  const [asideMaxHeight, setAsideMaxHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    function measure() {
+      const element = asideRef.current
+      if (!element) return
+      const top = element.getBoundingClientRect().top
+      setAsideMaxHeight(Math.max(320, Math.round(window.innerHeight - top - 12)))
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [])
   const [selection, setSelection] = useState<{ text: string; page: number } | null>(null)
 
   const [commentText, setCommentText] = useState("")
@@ -151,11 +174,20 @@ export function DocumentWorkspace({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div className="flex min-w-0 flex-col gap-3">
+    <div
+      className={cn(
+        "grid gap-6",
+        // Zoomed in, the sheet needs more than the column can give: the panel
+        // moves below instead of leaving the reader to scroll sideways.
+        wideViewer ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_26rem]",
+      )}
+    >
+      {/* Marker the viewer uses to find the panel beside it and shrink to fit. */}
+      <div data-pdf-viewer-column className="flex min-w-0 flex-col gap-3">
         {activeVersion.file_path ? (
           <PdfViewer
             versionId={activeVersion.id}
+            onNeedsWidthChange={setWideViewer}
             requestedPage={requestedPage}
             onPageChange={setCurrentPage}
             onTextSelect={setSelection}
@@ -204,7 +236,24 @@ export function DocumentWorkspace({
         </div>
       </div>
 
-      <aside className="flex min-w-0 flex-col">
+      {/*
+        The panel scrolls on its own instead of stretching the page. With many
+        comments it grew past the window and dragged the whole document down, so
+        the reader got a page-level scrollbar even when the PDF fitted perfectly.
+
+        The height is measured, not guessed: a hardcoded `calc(100vh-11rem)`
+        computed to 503px while the grid actually started at y=234 leaving 445px,
+        so the cap was looser than the content and never took effect — the page
+        still scrolled by exactly the same 66px.
+
+        Only from `lg` up: stacked on a phone a nested scroll area is worse than
+        simply scrolling the page.
+      */}
+      <aside
+        ref={asideRef}
+        className={cn("flex min-w-0 flex-col", !wideViewer && "lg:overflow-y-auto")}
+        style={!wideViewer && asideMaxHeight ? { maxHeight: asideMaxHeight } : undefined}
+      >
         <Tabs defaultValue="commenti" className="flex min-h-0 flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="commenti" className="text-xs sm:text-sm">
