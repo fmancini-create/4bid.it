@@ -14,7 +14,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "HOTEL ACCELERATOR - Il Software Gestionale Completo per Hotel | 4BID.IT",
   description:
-    "Hotel Accelerator: CMS, CRM, Email Marketing, Inbox Omnicanale e AI in un'unica soluzione. Aumenta le prenotazioni dirette fino al 35% e riduci le commissioni OTA.",
+    "Hotel Accelerator: CMS, CRM, email marketing, inbox omnicanale e AI in un'unica soluzione. Prenotazioni dirette fino al +35%.",
   keywords:
     "hotel accelerator, software gestionale hotel, cms hotel, crm alberghiero, email marketing hotel, inbox omnicanale, ai hotel, prenotazioni dirette",
   openGraph: {

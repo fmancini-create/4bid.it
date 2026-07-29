@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Forecast e Budgeting Hotel | Previsioni Revenue Management | 4BID.IT",
   description:
-    "Servizi professionali di forecast e budgeting per hotel. Previsioni accurate di occupazione, ADR e revenue con analisi predittiva avanzata per massimizzare i risultati.",
+    "Forecast e budgeting per hotel: previsioni accurate di occupazione, ADR e revenue con analisi predittiva avanzata per massimizzare i risultati.",
   keywords:
     "forecast hotel, budgeting alberghiero, previsioni revenue, budget hotel, pianificazione finanziaria hotel, forecasting occupazione",
   openGraph: {

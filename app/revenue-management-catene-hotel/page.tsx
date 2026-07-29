@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Revenue Management per Catene Alberghiere | Gestione Multi-Property | 4BID.IT",
   description:
-    "Soluzioni di Revenue Management per catene hotel e gruppi alberghieri. Centralizzazione strategie, ottimizzazione multi-property, economia di scala e performance superiori.",
+    "Revenue Management per catene hotel e gruppi alberghieri: strategie centralizzate, ottimizzazione multi-property ed economie di scala.",
   keywords:
     "revenue management catene hotel, gestione multi property, cluster management hotel, revenue strategy gruppi alberghieri, centralizzazione pricing hotel",
   alternates: {

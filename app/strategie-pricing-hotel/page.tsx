@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS | Guida 2026 | 4BID.IT",
   description:
-    "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente. Aumenta RevPAR +37%. Guida completa.",
+    "Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing e restrizioni LOS. Dal pricing statico al dinamico. +37% RevPAR.",
   keywords:
     "strategie pricing hotel, BAR strategy hotel, dynamic pricing strategico, price fencing alberghiero, length of stay restrictions, strategie tariffe hotel avanzate, pricing optimization",
   alternates: {

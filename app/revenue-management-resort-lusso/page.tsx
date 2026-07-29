@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Revenue Management Resort di Lusso | 4BID.IT",
   description:
-    "Consulenza Revenue Management specializzata per resort di lusso, hotel 5 stelle e strutture premium. Strategie esclusive per massimizzare i ricavi delle strutture luxury.",
+    "Consulenza Revenue Management per resort di lusso, hotel 5 stelle e strutture premium: strategie esclusive per massimizzare i ricavi.",
   keywords:
     "revenue management lusso, resort 5 stelle, hotel luxury, pricing premium, gestione resort, revenue manager luxury hotel, consulenza hospitality lusso",
 }

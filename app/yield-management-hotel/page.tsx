@@ -13,7 +13,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata: Metadata = {
   title: "Yield Management Hotel: Ottimizza Occupazione e RevPAR +35% | 4BID.IT",
   description:
-    "Yield management professionale per hotel: gestione capacità, pricing dinamico, restrizioni LOS intelligenti, overbooking controllato. Massimizza RevPAR con strategie avanzate.",
+    "Yield management per hotel: gestione della capacità, pricing dinamico, restrizioni LOS e overbooking controllato. Massimizza il RevPAR.",
   keywords:
     "yield management hotel, gestione capacità hotel, ottimizzazione occupazione alberghiera, yield optimization, capacity management hotel, gestione inventario camere strategica",
   alternates: {

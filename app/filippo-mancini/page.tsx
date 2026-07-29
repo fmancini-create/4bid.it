@@ -11,7 +11,7 @@ import { entitySchemaLinks } from "@/lib/seo/entities"
 export const metadata = {
   title: "Filippo Mancini - Fondatore di 4BID | 4BID.IT",
   description:
-    "Filippo Mancini è il fondatore di 4BID e ideatore di Santaddeo, Hotel Accelerator, HotelProfitAI e ManuBot. Imprenditore nel settore hospitality ed esperto di revenue management alberghiero.",
+    "Filippo Mancini, fondatore di 4BID e ideatore di Santaddeo, Hotel Accelerator, HotelProfitAI e ManuBot. Esperto di revenue management alberghiero.",
   keywords:
     "Filippo Mancini, fondatore 4bid, revenue management hotel, esperto revenue management, Santaddeo, Villa I Barronci",
   openGraph: {

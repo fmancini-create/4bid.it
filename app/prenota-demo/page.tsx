@@ -11,7 +11,7 @@ import { DemoCalendar } from "@/components/demo-calendar"
 export const metadata = {
   title: "Prenota una Demo Gratuita | Revenue Management Hotel | 4BID.IT",
   description:
-    "Prenota una demo gratuita e senza impegno. Scegli direttamente data e ora dal nostro calendario e scopri come aumentare i ricavi della tua struttura con SANTADDEO e i servizi 4BID.IT.",
+    "Prenota una demo gratuita e senza impegno: scegli data e ora dal calendario e scopri come aumentare i ricavi con SANTADDEO e i servizi 4BID.",
   keywords:
     "prenota demo hotel, demo revenue management, demo gratuita santaddeo, appuntamento revenue manager, calendario prenotazione demo",
   openGraph: {

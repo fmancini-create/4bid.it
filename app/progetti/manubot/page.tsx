@@ -15,7 +15,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "MANUBOT - Sistema Smart di Gestione Manutenzioni | 4BID.IT",
   description:
-    "MANUBOT: il sistema universale di gestione manutenzioni che usa WhatsApp e Telegram. Dashboard completa, zero app da installare, perfetto per hotel e strutture ricettive.",
+    "MANUBOT: gestione manutenzioni via WhatsApp e Telegram, con dashboard completa e zero app da installare. Ideale per hotel e strutture ricettive.",
   keywords:
     "manubot, gestione manutenzioni hotel, sistema manutenzione, whatsapp business, telegram bot, facility management, gestione interventi",
   openGraph: {

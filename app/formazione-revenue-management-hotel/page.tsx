@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Formazione Revenue Management Hotel | Corsi e Training | 4BID.IT",
   description:
-    "Corsi di formazione Revenue Management per hotel: dai fondamentali alle strategie avanzate. Training pratico per hotel manager, revenue manager e staff alberghiero.",
+    "Corsi di formazione in Revenue Management per hotel: dai fondamentali alle strategie avanzate. Training pratico per manager e staff.",
   keywords:
     "formazione revenue management, corsi hotel, training revenue, corso revenue manager, formazione alberghiera, workshop hotel",
   openGraph: {

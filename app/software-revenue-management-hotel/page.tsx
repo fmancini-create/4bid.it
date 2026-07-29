@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Software Revenue Management Hotel | Soluzioni RMS Professionali | 4BID.IT",
   description:
-    "Software Revenue Management per hotel con AI, dynamic pricing e analytics avanzati. Ottimizza tariffe, massimizza RevPAR e aumenta i ricavi con il nostro RMS intelligente.",
+    "Software Revenue Management per hotel con AI, dynamic pricing e analytics: ottimizza le tariffe e massimizza il RevPAR con il nostro RMS.",
   keywords:
     "software revenue management hotel, RMS hotel, sistema revenue management, software alberghiero, dynamic pricing hotel, gestionale hotel, revenue management system",
   alternates: {

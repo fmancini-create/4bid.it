@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Ottimizzazione ADR Hotel | Come Aumentare Tariffa Media | 4BID.IT",
   description:
-    "Strategie avanzate per ottimizzare l'ADR (Average Daily Rate) del tuo hotel. Aumenta la tariffa media fino al +35% senza perdere occupazione con pricing strategico.",
+    "Strategie avanzate per ottimizzare l'ADR del tuo hotel: aumenta la tariffa media fino al +35% senza perdere occupazione.",
   keywords:
     "ADR hotel, average daily rate, aumentare tariffa media hotel, ottimizzazione prezzi hotel, pricing strategico, revenue management ADR",
   openGraph: {

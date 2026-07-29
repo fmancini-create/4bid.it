@@ -10,7 +10,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Ottimizzazione RevPAR Hotel - Strategie per Massimizzare il Revenue per Available Room | 4BID.IT",
   description:
-    "Ottimizza il RevPAR del tuo hotel con strategie avanzate di Revenue Management. Aumenta occupazione e tariffe medie per massimizzare i ricavi totali. Consulenza specializzata RevPAR.",
+    "Ottimizza il RevPAR del tuo hotel con strategie avanzate di Revenue Management: più occupazione e tariffe medie più alte. Consulenza dedicata.",
   keywords:
     "ottimizzazione revpar, revenue per available room, aumentare revpar hotel, strategie revpar, massimizzare revpar, revenue management revpar",
 }

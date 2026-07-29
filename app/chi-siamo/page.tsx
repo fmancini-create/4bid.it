@@ -11,7 +11,7 @@ import { entitySchemaLinks } from "@/lib/seo/entities"
 export const metadata = {
   title: "Chi siamo - 4BID, Revenue Management e Tecnologia per l'Hospitality | 4BID.IT",
   description:
-    "4BID è una società italiana specializzata in revenue management, software e soluzioni AI per hotel, B&B, agriturismi e strutture ricettive. Scopri missione, visione, competenze e prodotti.",
+    "4BID è la società italiana di revenue management, software e AI per hotel, B&B e agriturismi. Scopri missione, competenze e prodotti.",
   keywords:
     "4bid, chi siamo 4bid, revenue management hotel, software hotel, consulenza alberghiera, hospitality tech Italia",
   openGraph: {

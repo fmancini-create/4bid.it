@@ -15,7 +15,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata: Metadata = {
   title: "Dynamic Pricing Hotel Automatico: +30% Ricavi con AI | 4BID.IT",
   description:
-    "Dynamic pricing hotel automatizzato 24/7: algoritmi AI ottimizzano tariffe in tempo reale. +50 fattori analizzati, aggiornamento continuo su tutti i canali. ROI garantito 90 giorni.",
+    "Dynamic pricing hotel 24/7: algoritmi AI ottimizzano le tariffe in tempo reale su tutti i canali. ROI garantito in 90 giorni.",
   keywords:
     "dynamic pricing hotel, prezzi dinamici hotel automatici, pricing dinamico real-time, ottimizzazione tariffe automatica, algoritmo pricing hotel, revenue optimization AI",
   alternates: {

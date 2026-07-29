@@ -25,7 +25,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs"
 export const metadata: Metadata = {
   title: "Cos'è il Revenue Management Hotel? Guida Completa 2026 | 4BID.IT",
   description:
-    "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
+    "Cos'è il revenue management: definizione, dove si applica, perché serve e come funziona. Guida con esempi pratici. +30% ricavi medi.",
   keywords:
     "cos'è revenue management, cosa significa revenue management, revenue management spiegazione semplice, revenue management definizione hotel, guida revenue management completa, revenue management come funziona",
   alternates: {
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Cos'è il Revenue Management Hotel? Guida Completa 2026",
     description:
-      "Cos'è il revenue management spiegato semplice: definizione, dove si applica (hotel, B&B, resort), perché è necessario, come funziona. Guida completa con esempi pratici. +30% ricavi medi.",
+      "Cos'è il revenue management: definizione, dove si applica, perché serve e come funziona. Guida con esempi pratici. +30% ricavi medi.",
     url: "https://www.4bid.it/cose-il-revenue-management",
     siteName: "4BID.IT",
     locale: "it_IT",

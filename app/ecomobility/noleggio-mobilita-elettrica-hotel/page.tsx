@@ -11,7 +11,7 @@ import { ContactButton } from "@/components/contact-button"
 export const metadata: Metadata = {
   title: "Noleggio Mobilità Elettrica per Hotel e Strutture Turistiche | 4BID Ecomobility",
   description:
-    "Offri ai tuoi ospiti e-bike, scooter elettrici e veicoli green. Piattaforma completa per hotel, resort e agriturismi. Gestione automatizzata, zero pensieri. Richiedi demo gratuita.",
+    "Offri ai tuoi ospiti e-bike, scooter elettrici e veicoli green: piattaforma completa per hotel e resort, gestione automatizzata. Demo gratuita.",
   keywords:
     "noleggio mobilità elettrica hotel, e-bike hotel, scooter elettrici strutture turistiche, mobilità sostenibile resort, noleggio biciclette elettriche agriturismo, veicoli elettrici ospiti hotel",
   alternates: {

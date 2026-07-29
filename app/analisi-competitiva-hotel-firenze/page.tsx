@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Analisi Competitiva Hotel Firenze | Revenue Management | 4BID.IT",
   description:
-    "Analisi competitiva strategica per hotel a Firenze. Monitora la concorrenza, ottimizza prezzi e posizionamento per massimizzare i ricavi del tuo hotel nel mercato fiorentino.",
+    "Analisi competitiva per hotel a Firenze: monitora la concorrenza e ottimizza prezzi e posizionamento per massimizzare i ricavi.",
   keywords:
     "analisi competitiva hotel, hotel firenze, competitive set firenze, rate shopping firenze, pricing hotel firenze, mercato alberghiero firenze, revenue management firenze",
   openGraph: {

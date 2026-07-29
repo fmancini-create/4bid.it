@@ -9,13 +9,22 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
+        // CSS and JS must stay crawlable. Both Google and Bing render pages
+        // before ranking them, so blocking stylesheets and scripts leaves every
+        // engine except Googlebot (which had its own allow-rule below) looking
+        // at an unstyled, non-hydrated page. The previous rule disallowed
+        // "/*.js$" and "/*.css$" for "*", which is exactly the configuration
+        // Google's own guidance warns against.
         allow: ["/", "/llms.txt"],
-        disallow: ["/admin/", "/api/", "/_next/static/", "/_next/image", "/scripts/", "/*.js$", "/*.css$", "/*.json$"],
+        disallow: ["/admin/", "/api/", "/scripts/", "/*.json$"],
       },
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/_next/static/", "/_next/image"],
+        // "/_next/static/" and "/_next/image" used to be disallowed here too,
+        // which blocked Googlebot from the very chunks and optimised images it
+        // needs to render the page. Only genuinely private paths stay blocked.
+        disallow: ["/admin/", "/api/"],
       },
       ...AI_CRAWLERS.map((userAgent) => ({
         userAgent,

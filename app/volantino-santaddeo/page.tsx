@@ -3,7 +3,7 @@ import VolantinoSantaddeoClient from "./volantino-santaddeo-client"
 export const metadata = {
   title: "Volantino Santaddeo | Revenue Management Hotel a Costo Zero",
   description:
-    "Scarica il volantino di Santaddeo, il Revenue Management System che paghi solo se funziona: zero costi fissi, formula a commissione sui risultati. Fai crescere la tua struttura a costo zero.",
+    "Scarica il volantino di Santaddeo, il Revenue Management System che paghi solo se funziona: zero costi fissi, commissione sui risultati.",
   keywords:
     "volantino santaddeo, revenue management costo zero, rms a commissione, aumentare ricavi hotel, software revenue management hotel, santaddeo",
   alternates: {

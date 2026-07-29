@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Consulenza Personalizzata Hotel | Revenue Management su Misura | 4BID.IT",
   description:
-    "Consulenza revenue management personalizzata per hotel, B&B e strutture ricettive. Analisi su misura, piano operativo dedicato e supporto continuativo per massimizzare ricavi.",
+    "Consulenza revenue management su misura per hotel, B&B e strutture ricettive: analisi dedicata, piano operativo e supporto continuativo.",
   keywords:
     "consulenza hotel, revenue management personalizzato, consulenza ricettività, ottimizzazione hotel, strategia revenue",
   openGraph: {

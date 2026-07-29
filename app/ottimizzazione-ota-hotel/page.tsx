@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Ottimizzazione OTA Hotel | Riduci Commissioni e Aumenta Visibilità | 4BID.IT",
   description:
-    "Servizio di ottimizzazione OTA per hotel. Riduci le commissioni fino al 40%, aumenta la visibilità su Booking, Expedia e altri portali. Strategia channel management efficace.",
+    "Ottimizzazione OTA per hotel: riduci le commissioni fino al 40% e aumenta la visibilità su Booking, Expedia e altri portali.",
   keywords:
     "ottimizzazione OTA hotel, gestione booking.com, ridurre commissioni OTA, channel management hotel, visibilità portali turistici, strategia OTA",
   openGraph: {

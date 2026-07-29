@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "KPI e Metriche Hotel: Monitora le Performance | 4BID.IT",
   description:
-    "Guida completa ai KPI e metriche essenziali per hotel: RevPAR, ADR, occupazione, TRevPAR. Scopri come monitorare e migliorare le performance della tua struttura ricettiva.",
+    "Guida ai KPI e alle metriche per hotel: RevPAR, ADR, occupazione e TRevPAR. Scopri come monitorare e migliorare le performance.",
   keywords:
     "KPI hotel, metriche hotel, RevPAR, ADR, occupazione hotel, TRevPAR, performance hotel, indicatori revenue management, analytics hotel",
   openGraph: {

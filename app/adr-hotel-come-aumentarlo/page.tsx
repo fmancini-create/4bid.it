@@ -12,7 +12,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Come Aumentare l'ADR Hotel: Guida Completa 2026 | 4BID.IT",
   description:
-    "Scopri come aumentare l'ADR (Average Daily Rate) del tuo hotel con strategie pratiche e comprovate. Tecniche concrete per far crescere la tariffa media fino al +40%.",
+    "Come aumentare l'ADR del tuo hotel: strategie pratiche e comprovate per far crescere la tariffa media fino al +40%.",
   keywords:
     "come aumentare ADR hotel, aumentare tariffa media, strategie ADR, crescita revenue hotel, pricing hotel, tariffe hotel più alte",
   openGraph: {

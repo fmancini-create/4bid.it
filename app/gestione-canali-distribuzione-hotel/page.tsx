@@ -11,7 +11,7 @@ import { RelatedSolutions } from "@/components/related-solutions"
 export const metadata = {
   title: "Gestione Canali Distribuzione Hotel | Ottimizzazione OTA | 4BID.IT",
   description:
-    "Gestione strategica dei canali di distribuzione online per hotel. Ottimizza OTA, aumenta prenotazioni dirette e riduci le commissioni. Consulenza specializzata Channel Management.",
+    "Gestione dei canali di distribuzione online per hotel: ottimizza le OTA, aumenta le prenotazioni dirette e riduci le commissioni.",
   keywords:
     "gestione canali distribuzione hotel, ottimizzazione OTA, channel manager hotel, prenotazioni dirette, commissioni booking, distribuzione online hotel",
   openGraph: {
