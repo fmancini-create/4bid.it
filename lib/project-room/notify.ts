@@ -160,6 +160,7 @@ export async function notifyNewAccessRequest(request: {
       // Purely transactional: an unsubscribe header on an internal alert would
       // let one click switch off the notifications this whole feature depends on.
       listUnsubscribe: false,
+      transactional: true,
     })
 
     if (!result.success) {
@@ -233,6 +234,10 @@ export async function sendInvitationEmail(params: {
       subject: `Accesso alla Project Room 4Bid: ${params.projectName}`,
       html,
       listUnsubscribe: false,
+      // NON dal mittente delle campagne: un invito personale spedito da
+      // `marketing@` viene smistato tra le promozioni. Vedi `transactional`
+      // in email-resend.ts.
+      transactional: true,
     })
 
     if (!result.success) {
