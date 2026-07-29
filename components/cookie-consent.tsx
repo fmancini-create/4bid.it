@@ -32,13 +32,17 @@ export function CookieConsent() {
       analytics_storage: "granted",
     })
 
-    // Il consenso viene registrato, ma la Metrika (che gira con webvisor, cioe'
-    // registrazione del DOM) non va avviata mentre si e' dentro l'area riservata:
-    // finirebbe per registrare il contenuto dei documenti dei clienti.
-    // Partira' normalmente alla prima pagina pubblica.
+    // La Metrika NON dipende piu' dal consenso: parte dal root layout al
+    // caricamento della pagina, come Google Analytics. Questa chiamata non e'
+    // quindi il percorso normale ed e' idempotente (guardia `yandexMetrikaLoaded`).
+    //
+    // Resta per un caso reale: lo script inline del layout gira una volta sola,
+    // al caricamento. Chi arriva su una pagina dell'area riservata (dove la
+    // Metrika e' volutamente spenta, perche' il webvisor registrerebbe il DOM dei
+    // documenti dei clienti) e poi passa a una pagina pubblica con la navigazione
+    // interna, senza questo richiamo non verrebbe conteggiato mai.
     if (typeof window !== "undefined" && window.initYandexMetrika && !isPrivateArea(pathname)) {
       window.initYandexMetrika()
-      console.log("[v0] Cookie consent accepted - Yandex Metrika initialized")
     }
 
     setShowBanner(false)
