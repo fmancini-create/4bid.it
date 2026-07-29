@@ -4,11 +4,14 @@
  * An invitation token is a bearer credential: whoever holds it can claim access
  * to a confidential project. It is therefore treated like a password.
  *
- *   - The raw token is generated once, returned to the admin once, and never
- *     stored. `pr_invitations.token` holds only a SHA-256 hash.
- *   - Lookup is by hash, so a leaked database dump does not yield usable
- *     invitation links.
+ *   - `pr_invitations.token` holds only a SHA-256 hash, and every lookup and
+ *     comparison goes through it. That column is irreversible and authoritative.
  *   - Comparison uses `timingSafeEqual` on the hash, not `===`.
+ *   - Additionally, an ENCRYPTED copy of the token is kept in `token_sealed` so
+ *     the identical link can be resent (see `token-vault.ts`). This weakens the
+ *     original "never stored" property on purpose: database plus the environment
+ *     key together do expose the links, whereas the hash alone did not. The key
+ *     lives outside the database, so a dump on its own is still useless.
  *
  * The raw token never appears in a URL query string either: it is sent in the
  * request body when accepting, so it does not end up in server access logs or

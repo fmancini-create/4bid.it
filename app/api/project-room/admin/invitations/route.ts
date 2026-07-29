@@ -25,6 +25,7 @@ import {
   isInvitableRole,
 } from "@/lib/project-room/invitations"
 import { sendInvitationEmail } from "@/lib/project-room/notify"
+import { sealToken } from "@/lib/project-room/token-vault"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const MAX_NOTE = 1000
@@ -140,6 +141,11 @@ export async function POST(request: Request) {
       role,
       can_download: canDownload,
       token: hash,
+      // Encrypted copy, so this exact link can be resent later instead of
+      // rotating and invalidating what the client already received. Null when no
+      // key is configured — the resend endpoint then issues a fresh link and
+      // says so, rather than failing.
+      token_sealed: sealToken(raw),
       invited_by: admin.data.id,
       expires_at: expiresAt,
     })

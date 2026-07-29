@@ -996,22 +996,59 @@ function MemberRow({
 
 function InvitationRow({ invitation, onDone }: { invitation: Invitation; onDone: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
   const state = invitationState(invitation)
   const revocable = !invitation.accepted_at && !invitation.revoked_at
+  // Accepted invitations are done: the person is a member, so resending is
+  // meaningless. Everything else (pending, expired, revoked) can be resent.
+  const resendable = !invitation.accepted_at
 
   async function revoke() {
     setBusy(true)
+    setError(null)
     try {
       const res = await fetch(`/api/project-room/admin/invitations/${invitation.id}`, { method: "DELETE" })
-      if (res.ok) onDone()
+      if (res.ok) {
+        onDone()
+        return
+      }
+      // Previously the failure was swallowed and the row just sat there. Now the
+      // reason is shown, and the list refreshes when the server says the row has
+      // already moved on.
+      const payload = await res.json().catch(() => null)
+      setError(payload?.error ?? "Revoca non riuscita.")
+      if (res.status === 404 || res.status === 409) onDone()
+    } catch {
+      setError("Revoca non riuscita: controlla la connessione.")
     } finally {
       setBusy(false)
     }
   }
 
+  if (editing) {
+    return (
+      <ResendInvitationRow
+        invitation={invitation}
+        onCancel={() => setEditing(false)}
+        onDone={() => {
+          setEditing(false)
+          onDone()
+        }}
+      />
+    )
+  }
+
   return (
     <tr className="border-b border-border last:border-0">
-      <td className="px-4 py-2 font-medium text-brand-navy">{invitation.email}</td>
+      <td className="px-4 py-2 font-medium text-brand-navy">
+        {invitation.email}
+        {error ? (
+          <span className="mt-1 block text-xs font-normal text-destructive" role="alert">
+            {error}
+          </span>
+        ) : null}
+      </td>
       <td className="px-4 py-2 text-muted-foreground">{invitation.project_name}</td>
       <td className="px-4 py-2 text-muted-foreground">
         {ROLE_LABELS[invitation.role as keyof typeof ROLE_LABELS] ?? invitation.role}
@@ -1020,23 +1057,243 @@ function InvitationRow({ invitation, onDone }: { invitation: Invitation; onDone:
       <td className={`px-4 py-2 font-semibold ${state.tone}`}>{state.label}</td>
       <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{formatDate(invitation.expires_at)}</td>
       <td className="px-4 py-2 text-right">
-        {revocable ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={revoke}
-            disabled={busy}
-            aria-label={`Revoca l'invito di ${invitation.email}`}
-          >
-            {busy ? (
-              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+        <div className="flex items-center justify-end gap-1">
+          {resendable ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setError(null)
+                setEditing(true)
+              }}
+              disabled={busy}
+              aria-label={`Reinvia o modifica l'invito di ${invitation.email}`}
+            >
+              <Send className="mr-2 size-4" aria-hidden="true" />
+              Reinvia
+            </Button>
+          ) : null}
+          {revocable ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={revoke}
+              disabled={busy}
+              aria-label={`Revoca l'invito di ${invitation.email}`}
+            >
+              {busy ? (
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <ShieldOff className="mr-2 size-4" aria-hidden="true" />
+              )}
+              Revoca
+            </Button>
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+/**
+ * Inline editor for resending an invitation.
+ *
+ * The one thing this panel must never do is imply the old link still works. The
+ * server decides whether the link is reused or rotated (changing the address
+ * always rotates it, because the previous recipient would otherwise keep access
+ * to a confidential project), and the outcome is reported verbatim afterwards.
+ */
+function ResendInvitationRow({
+  invitation,
+  onCancel,
+  onDone,
+}: {
+  invitation: Invitation
+  onCancel: () => void
+  onDone: () => void
+}) {
+  const [email, setEmail] = useState(invitation.email)
+  const [role, setRole] = useState(invitation.role)
+  const [canDownload, setCanDownload] = useState(invitation.can_download === true)
+  const [note, setNote] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<{ url: string; rotated: boolean; emailSent: boolean; emailError: string | null } | null>(
+    null,
+  )
+
+  const emailChanged = email.trim().toLowerCase() !== invitation.email
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/project-room/admin/invitations/${invitation.id}/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), role, can_download: canDownload, note: note.trim() || null }),
+      })
+      const payload = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        setError(payload?.error ?? "Reinvio non riuscito.")
+        // The invitation was accepted or deleted meanwhile: refresh so the row
+        // stops offering an action that can no longer work.
+        if (res.status === 404 || res.status === 409) onDone()
+        return
+      }
+
+      setResult({
+        url: payload.url,
+        rotated: payload.link_rotated === true,
+        emailSent: payload.email_sent === true,
+        emailError: payload.email_error ?? null,
+      })
+    } catch {
+      setError("Reinvio non riuscito: controlla la connessione.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (result) {
+    return (
+      <tr className="border-b border-border bg-muted/40 last:border-0">
+        <td colSpan={7} className="px-4 py-4">
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-semibold text-brand-navy">
+              Invito reinviato a {email.trim().toLowerCase()}
+            </p>
+
+            <p className="text-sm text-muted-foreground">
+              {result.rotated
+                ? "È stato generato un link nuovo: quello precedente non funziona più."
+                : "È stato reinviato lo stesso link di prima, che resta valido."}
+            </p>
+
+            {result.emailSent ? (
+              <p className="text-sm text-emerald-700">Email inviata.</p>
             ) : (
-              <ShieldOff className="mr-2 size-4" aria-hidden="true" />
+              <p className="text-sm text-destructive" role="alert">
+                Email non inviata{result.emailError ? `: ${result.emailError}` : ""}. Copia il link qui sotto e invialo a mano.
+              </p>
             )}
-            Revoca
-          </Button>
-        ) : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code className="min-w-0 flex-1 truncate rounded border border-border bg-background px-3 py-2 text-xs">
+                {result.url}
+              </code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => navigator.clipboard?.writeText(result.url)}
+              >
+                Copia link
+              </Button>
+              <Button type="button" size="sm" onClick={onDone}>
+                Chiudi
+              </Button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
+  return (
+    <tr className="border-b border-border bg-muted/40 last:border-0">
+      <td colSpan={7} className="px-4 py-4">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm font-semibold text-brand-navy">Reinvia invito</p>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`resend-email-${invitation.id}`}>Email</Label>
+              <Input
+                id={`resend-email-${invitation.id}`}
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`resend-role-${invitation.id}`}>Ruolo</Label>
+              {/* INVITABLE_ROLES, not every label: the server rejects anything else,
+                  so offering a wider list would only produce a confusing error. */}
+              <Select value={role} onValueChange={setRole} disabled={busy}>
+                <SelectTrigger id={`resend-role-${invitation.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVITABLE_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`resend-note-${invitation.id}`}>Nota (facoltativa)</Label>
+              <Input
+                id={`resend-note-${invitation.id}`}
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                disabled={busy}
+                placeholder="Mostrata nell'email"
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <Checkbox
+              checked={canDownload}
+              onCheckedChange={(checked) => setCanDownload(checked === true)}
+              disabled={busy}
+            />
+            Può scaricare i PDF
+          </label>
+
+          {/* Stated BEFORE sending, not after: changing the address must revoke the
+              old link, and the admin has to know that in advance. */}
+          <p className="text-sm text-muted-foreground">
+            {emailChanged
+              ? "Hai modificato l'indirizzo: verrà generato un link nuovo e quello inviato prima smetterà di funzionare."
+              : "Verrà reinviato lo stesso link, se ancora recuperabile; altrimenti ne verrà creato uno nuovo (te lo diremo)."}
+          </p>
+
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" onClick={submit} disabled={busy}>
+              {busy ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                  Invio…
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 size-4" aria-hidden="true" />
+                  Reinvia invito
+                </>
+              )}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
+              Annulla
+            </Button>
+          </div>
+        </div>
       </td>
     </tr>
   )
