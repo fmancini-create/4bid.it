@@ -79,7 +79,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const isProduction = process.env.NODE_ENV === "production"
+  /**
+   * Perimetro della misurazione: SOLO il sito pubblico in produzione.
+   *
+   * Prima la condizione era `NODE_ENV === "production"`, che su Vercel e' vero
+   * per OGNI distribuzione, anteprime comprese: ogni deploy di prova finiva
+   * nella stessa proprieta' GA e nello stesso contatore Yandex del sito vero.
+   * Le anteprime sono protette, quindi le apriamo solo noi dal pannello v0: quel
+   * traffico e' lavoro interno, non visite. Nel rapporto degli ultimi 90 giorni
+   * `v0.app / referral` e' infatti la PRIMA sorgente con 143 utenti su 237
+   * (60%), mentre la ricerca organica ne porta 2 in totale.
+   *
+   * `VERCEL_ENV` distingue quello che `NODE_ENV` non distingue: vale
+   * "production" solo sul dominio di produzione, "preview" sulle anteprime,
+   * "development" in locale. Se e' assente (build fuori da Vercel) non si
+   * misura: meglio un dato mancante che un dato falso.
+   */
+  const isProduction = process.env.VERCEL_ENV === "production"
 
   return (
     <html lang="it" className="scroll-smooth">
