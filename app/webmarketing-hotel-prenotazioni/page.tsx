@@ -13,6 +13,7 @@ export const metadata = {
     "Web Marketing per hotel: SEO, Google Ads, Meta Ads e strategie digital per aumentare le prenotazioni dirette e ridurre le commissioni OTA.",
   keywords:
     "web marketing hotel, digital marketing alberghiero, SEO hotel, Google Ads hotel, prenotazioni dirette, marketing turistico, advertising hotel",
+  alternates: { canonical: "https://www.4bid.it/webmarketing-hotel-prenotazioni" },
 }
 
 export default function WebMarketingHotelPrenotazioniPage() {

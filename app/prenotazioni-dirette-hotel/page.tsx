@@ -13,6 +13,7 @@ export const metadata = {
     "Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50% con un piano operativo per il direct booking.",
   keywords:
     "prenotazioni dirette hotel, direct booking hotel, ridurre commissioni OTA, aumentare prenotazioni dirette, booking engine hotel, revenue management",
+  alternates: { canonical: "https://www.4bid.it/prenotazioni-dirette-hotel" },
 }
 
 export default function PrenotazioniDiretteHotelPage() {

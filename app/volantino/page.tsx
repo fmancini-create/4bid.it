@@ -9,6 +9,11 @@ export const metadata = {
   alternates: {
     canonical: "https://www.4bid.it/volantino",
   },
+  // Materiale commerciale da inviare o stampare, non una pagina che qualcuno
+  // cerca su Google: stesso trattamento di /sfondo-call. `follow: true` perche'
+  // i collegamenti verso le pagine dei prodotti restano utili.
+  // La pagina resta online e funzionante: chi ha il link la apre come prima.
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Volantino Suite Prodotti 4BID",
     description:

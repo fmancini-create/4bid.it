@@ -57,9 +57,20 @@ export const metadata: Metadata = {
       "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette.",
     images: ["/og-image-4bid.jpg"],
   },
-  alternates: {
-    canonical: "https://www.4bid.it",
-  },
+  /**
+   * NIENTE `alternates.canonical` qui.
+   *
+   * I metadata del layout radice vengono EREDITATI da ogni pagina che non li
+   * sovrascrive: un canonical dichiarato qui faceva dire a 10 pagine "sono un
+   * doppione della home, indicizza quella al mio posto". Erano cosi' escluse
+   * dai risultati per loro stessa dichiarazione, e non potevano posizionarsi
+   * per nulla: tra queste /prenotazioni-dirette-hotel,
+   * /strategie-vendita-diretta-hotel e /revenue-manager-hotel-toscana.
+   *
+   * Il canonical e' per definizione l'indirizzo DELLA singola pagina, quindi va
+   * dichiarato nella pagina. La home ha il suo in `app/page.tsx`, percio' qui
+   * non si perde nulla.
+   */
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
@@ -79,7 +90,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const isProduction = process.env.NODE_ENV === "production"
+  /**
+   * Perimetro della misurazione: SOLO il sito pubblico in produzione.
+   *
+   * Prima la condizione era `NODE_ENV === "production"`, che su Vercel e' vero
+   * per OGNI distribuzione, anteprime comprese: ogni deploy di prova finiva
+   * nella stessa proprieta' GA e nello stesso contatore Yandex del sito vero.
+   * Le anteprime sono protette, quindi le apriamo solo noi dal pannello v0: quel
+   * traffico e' lavoro interno, non visite. Nel rapporto degli ultimi 90 giorni
+   * `v0.app / referral` e' infatti la PRIMA sorgente con 143 utenti su 237
+   * (60%), mentre la ricerca organica ne porta 2 in totale.
+   *
+   * `VERCEL_ENV` distingue quello che `NODE_ENV` non distingue: vale
+   * "production" solo sul dominio di produzione, "preview" sulle anteprime,
+   * "development" in locale. Se e' assente (build fuori da Vercel) non si
+   * misura: meglio un dato mancante che un dato falso.
+   */
+  const isProduction = process.env.VERCEL_ENV === "production"
 
   return (
     <html lang="it" className="scroll-smooth">

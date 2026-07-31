@@ -9,6 +9,8 @@ export const metadata = {
   alternates: {
     canonical: "https://www.4bid.it/volantino-3",
   },
+  // Materiale commerciale: vedi la nota in app/volantino/page.tsx.
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Volantino Suite 4BID - Edizione Editoriale",
     description:

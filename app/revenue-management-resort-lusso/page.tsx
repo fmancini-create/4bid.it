@@ -13,6 +13,7 @@ export const metadata = {
     "Consulenza Revenue Management per resort di lusso, hotel 5 stelle e strutture premium: strategie esclusive per massimizzare i ricavi.",
   keywords:
     "revenue management lusso, resort 5 stelle, hotel luxury, pricing premium, gestione resort, revenue manager luxury hotel, consulenza hospitality lusso",
+  alternates: { canonical: "https://www.4bid.it/revenue-management-resort-lusso" },
 }
 
 export default function RevenueManagementResortLussoPage() {

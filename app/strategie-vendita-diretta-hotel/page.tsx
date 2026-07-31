@@ -13,6 +13,7 @@ export const metadata = {
     "Aumenta le vendite dirette del tuo hotel riducendo la dipendenza da OTA. Strategie, strumenti e tecniche di disintermediazione per massimizzare i margini.",
   keywords:
     "vendita diretta hotel, disintermediazione hotel, vendere senza OTA, direct selling hotel, strategie vendita hotel, booking diretto",
+  alternates: { canonical: "https://www.4bid.it/strategie-vendita-diretta-hotel" },
 }
 
 export default function StrategieVenditaDirettaHotelPage() {
