@@ -9,6 +9,8 @@ export const metadata = {
   alternates: {
     canonical: "https://www.4bid.it/volantino-4",
   },
+  // Materiale commerciale: vedi la nota in app/volantino/page.tsx.
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Volantino Tri-fold 4BID - Pronto Stampa",
     description: "A4 orizzontale, 6 pannelli totali: copertina, 4 prodotti e retro copertina.",

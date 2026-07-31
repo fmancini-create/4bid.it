@@ -13,6 +13,10 @@ export const metadata = {
     "Ottimizza il RevPAR del tuo hotel con strategie avanzate di Revenue Management: più occupazione e tariffe medie più alte. Consulenza dedicata.",
   keywords:
     "ottimizzazione revpar, revenue per available room, aumentare revpar hotel, strategie revpar, massimizzare revpar, revenue management revpar",
+  // Senza questa riga la pagina EREDITA il canonical del layout radice, cioe'
+  // dichiara la home come propria versione ufficiale e si autoesclude dai
+  // risultati di ricerca.
+  alternates: { canonical: "https://www.4bid.it/ottimizzazione-revpar-hotel" },
 }
 
 export default function OttimizzazioneRevparHotelPage() {

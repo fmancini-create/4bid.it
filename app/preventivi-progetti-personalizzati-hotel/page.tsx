@@ -13,6 +13,7 @@ export const metadata = {
     "Richiedi un preventivo per progetti hotel su misura: software revenue management, gestione manutenzioni, app mobile. Risposta in 24h.",
   keywords:
     "preventivo software hotel, progetti personalizzati hotel, sviluppo software alberghiero, app hotel su misura, consulenza IT hotel",
+  alternates: { canonical: "https://www.4bid.it/preventivi-progetti-personalizzati-hotel" },
 }
 
 export default function PreventiviProgettiPersonalizzatiHotelPage() {

@@ -172,24 +172,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     },
-    {
-      url: `${baseUrl}/volantino`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/volantino-2`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/volantino-3`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    },
+    // I /volantino* NON stanno in sitemap: sono materiale commerciale che si
+    // manda per email o si stampa, nessuno li cerca su Google. Erano dichiarati
+    // con priorita' 0.7, piu' alta di /prenota-demo (0.6), e non sono
+    // raggiungibili navigando il sito: dichiarare a Google pagine di servizio
+    // sparge su di esse la scansione che serve alle pagine vere.
+    // Restano online e funzionanti: chi ha il collegamento li apre come prima.
     {
       url: `${baseUrl}/proponi-idea`,
       lastModified,

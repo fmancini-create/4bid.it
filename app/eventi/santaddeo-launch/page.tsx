@@ -15,6 +15,7 @@ export const metadata = {
     description: "Partecipa alla presentazione ufficiale di SANTADDEO, il primo Revenue Management System intelligente e umano.",
     type: "website",
   },
+  alternates: { canonical: "https://www.4bid.it/eventi/santaddeo-launch" },
 }
 
 export default function SantaddeoLaunchPage() {

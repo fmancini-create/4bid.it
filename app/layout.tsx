@@ -57,9 +57,20 @@ export const metadata: Metadata = {
       "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette.",
     images: ["/og-image-4bid.jpg"],
   },
-  alternates: {
-    canonical: "https://www.4bid.it",
-  },
+  /**
+   * NIENTE `alternates.canonical` qui.
+   *
+   * I metadata del layout radice vengono EREDITATI da ogni pagina che non li
+   * sovrascrive: un canonical dichiarato qui faceva dire a 10 pagine "sono un
+   * doppione della home, indicizza quella al mio posto". Erano cosi' escluse
+   * dai risultati per loro stessa dichiarazione, e non potevano posizionarsi
+   * per nulla: tra queste /prenotazioni-dirette-hotel,
+   * /strategie-vendita-diretta-hotel e /revenue-manager-hotel-toscana.
+   *
+   * Il canonical e' per definizione l'indirizzo DELLA singola pagina, quindi va
+   * dichiarato nella pagina. La home ha il suo in `app/page.tsx`, percio' qui
+   * non si perde nulla.
+   */
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
