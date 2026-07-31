@@ -22,6 +22,17 @@ export type Solution = {
 export const SOLUTIONS: Solution[] = [
   // Consulenza & Strategia
   {
+    // Questa e' la pagina che si posiziona meglio di tutto il sito: da sola
+    // regge 5 delle 10 chiavi per cui 4bid.it e' presente su Google, inclusa
+    // "revenue management" (1.000 ricerche/mese). Mancava da questo elenco,
+    // quindi ne' il Footer ne' RelatedSolutions la collegavano: riceveva 2 soli
+    // link interni in tutto il sito. Metterla qui la collega da ogni landing.
+    slug: "cose-il-revenue-management",
+    title: "Cos'è il Revenue Management",
+    short: "La guida di partenza: cos'è, come funziona e perché conviene.",
+    cluster: "Consulenza & Strategia",
+  },
+  {
     slug: "consulenza-revenue-management-hotel",
     title: "Consulenza Revenue Management",
     short: "Strategia su misura per aumentare i ricavi della tua struttura.",
