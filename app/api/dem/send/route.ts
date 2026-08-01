@@ -197,7 +197,32 @@ export async function POST(request: NextRequest) {
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : request.headers.get("origin") || "https://www.4bid.it")
 
+    // Il totale inviate riparte dal CONTEGGIO REALE delle righe, non dal
+    // contatore memorizzato `campaign.sent_count`.
+    //
+    // Perche': `sent_count` e' un contatore incrementale, e leggerlo come punto
+    // di partenza CONGELA un eventuale errore invece di correggerlo. Misurato su
+    // tutte e 8 le campagne esistenti: scarto di esattamente +1 (es. clienti,
+    // 15 email realmente inviate ma contatore a 14), identico da giorni proprio
+    // perche' ogni invio ripartiva dal valore sbagliato.
+    //
+    // Contando dal vero il numero si autocorregge al primo invio successivo.
+    // Includo 'bounced' e 'opened' perche' sono stati SUCCESSIVI a un invio
+    // riuscito: escluderli farebbe scendere il totale quando arrivano i
+    // rimbalzi, cioe' mostrerebbe meno email di quante sono partite.
     let sentCount = campaign.sent_count || 0
+    {
+      const { count: giaInviate, error: erroreConteggio } = await supabase
+        .from("dem_recipients")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign_id)
+        .in("send_status", ["sent", "bounced", "opened"])
+
+      // Se la lettura fallisce si tiene il valore memorizzato: degradare a 0
+      // azzererebbe il totale storico della campagna, cioe' sostituirebbe un
+      // numero leggermente errato con uno gravemente falso.
+      if (!erroreConteggio && typeof giaInviate === "number") sentCount = giaInviate
+    }
     let failedCount = campaign.failed_count || 0
 
     // Opzioni deliverability della campagna (default retrocompatibili).
