@@ -46,7 +46,10 @@ export async function GET(request: NextRequest) {
   const buildQuery = (head: boolean) => {
     let q = supabase
       .from("dem_unsubscribes")
-      .select("id, email, campaign_id, reason, created_at", { count: "exact", head })
+      // `bounce_type` serve in pagina: senza di esso la lista non dice QUALI
+      // indirizzi sono davvero morti, e "ripulire la lista" resta un consiglio
+      // non eseguibile.
+      .select("id, email, campaign_id, reason, bounce_type, bounce_subtype, created_at", { count: "exact", head })
     if (search) {
       const safe = search.replace(/[(),]/g, " ").trim()
       if (safe) q = q.ilike("email", `%${safe}%`)
