@@ -106,6 +106,12 @@ export async function PATCH(request: NextRequest) {
       // Riattivando da zero, azzera la data di avvio warm-up (riparte dal giorno 1).
       if (body.auto_send === true) {
         updates.auto_started_on = null
+        // Azzera anche il motivo dell'eventuale sospensione automatica per
+        // rimbalzi. Va fatto QUI e non solo dal client: questa rotta accetta un
+        // elenco chiuso di campi, quindi un `auto_paused_reason` inviato dalla
+        // pagina verrebbe scartato in silenzio e l'avviso resterebbe visibile su
+        // una campagna in funzione.
+        updates.auto_paused_reason = null
       }
     }
 

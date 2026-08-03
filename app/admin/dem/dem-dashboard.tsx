@@ -299,6 +299,10 @@ interface Campaign {
   updated_at: string
   auto_send?: boolean
   auto_started_on?: string | null
+  // Motivo della sospensione automatica per rimbalzi troppo alti. Senza questo
+  // campo in pagina la campagna risulterebbe solo "spenta", e riaccenderla
+  // ricomincerebbe a bruciare la reputazione del mittente senza saperlo.
+  auto_paused_reason?: string | null
 }
 
 interface Recipient {
@@ -855,9 +859,18 @@ export default function DemDashboard({
     if (!selectedCampaign) return
     const enabling = !selectedCampaign.auto_send
     if (enabling) {
+      // I volumi dichiarati qui devono essere quelli VERI (WARMUP_DAILY_CAPS nel
+      // cron: 50, 100, 150, 250, 400). Prima il testo prometteva "200, 400, 800,
+      // 1500, poi 2500/giorno": fino a 6 volte tanto. Chi accettava si aspettava
+      // di finire una lista di 28.000 contatti in meno di due settimane, mentre
+      // al ritmo reale servono mesi.
+      const sospesa = selectedCampaign.auto_paused_reason
+      const avviso = sospesa
+        ? `\n\nATTENZIONE: questa campagna e' stata sospesa automaticamente.\n${sospesa}\nRiattivandola senza ripulire la lista i rimbalzi ripartiranno, e la reputazione del mittente peggiora anche per i destinatari validi.`
+        : ""
       if (
         !confirm(
-          `Attivare l'invio automatico per "${selectedCampaign.name}"?\n\nLa campagna verra' inviata da sola a scaglioni, ogni giorno dalle 9:00 alle 18:00, con volume crescente per proteggere la reputazione del mittente (giorno 1: 200, giorno 2: 400, giorno 3: 800, giorno 4: 1500, poi 2500/giorno) finche' la lista non e' esaurita. Non dovrai premere "Invia".`
+          `Attivare l'invio automatico per "${selectedCampaign.name}"?\n\nLa campagna verra' inviata da sola a scaglioni, ogni giorno dalle 9:00 alle 18:00, con volume crescente per proteggere la reputazione del mittente (giorno 1: 50, giorno 2: 100, giorno 3: 150, giorno 4: 250, poi 400/giorno) finche' la lista non e' esaurita. Non dovrai premere "Invia".\n\nL'invio si sospende da solo se i rimbalzi superano il 5%.${avviso}`,
         )
       )
         return
@@ -868,7 +881,10 @@ export default function DemDashboard({
       const res = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auto_send: enabling }),
+        // Riattivando si azzera il motivo: lasciarlo mostrerebbe per sempre un
+        // avviso di sospensione su una campagna in funzione, e un avviso che non
+        // corrisponde allo stato reale insegna a ignorare gli avvisi.
+        body: JSON.stringify(enabling ? { auto_send: true, auto_paused_reason: null } : { auto_send: false }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Errore aggiornamento")
@@ -1204,6 +1220,22 @@ export default function DemDashboard({
               )}
             </div>
           </div>
+
+          {/* Sospensione automatica per rimbalzi: senza questo avviso la
+              campagna risulterebbe solo "spenta", e il pulsante verde invoglia a
+              riaccenderla senza sapere che i rimbalzi ripartiranno. */}
+          {selectedCampaign.auto_paused_reason && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 text-destructive border border-destructive/20"
+            >
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="space-y-1">
+                <p className="font-semibold leading-relaxed">Invio automatico sospeso dal sistema</p>
+                <p className="text-sm leading-relaxed text-pretty">{selectedCampaign.auto_paused_reason}</p>
+              </div>
+            </div>
+          )}
 
           {/* Stats cards */}
           {stats && (
