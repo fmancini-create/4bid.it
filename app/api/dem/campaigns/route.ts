@@ -115,6 +115,14 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Rimozione esplicita della sospensione SENZA riaccendere l'automatico.
+    // Serve una via d'uscita: ora l'invio manuale rifiuta le campagne sospese, e
+    // senza questo l'unico modo di riprendere sarebbe attivare l'invio
+    // automatico, cioe' un effetto piu' ampio di quello voluto.
+    if (body.auto_paused_reason === null) {
+      updates.auto_paused_reason = null
+    }
+
     // Estrae i campi non-colonna prima di aggiornare la tabella campagne.
     const queueMoved = (updates.queueMoved as number | undefined) ?? undefined
     delete updates.queueMoved

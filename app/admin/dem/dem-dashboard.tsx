@@ -902,6 +902,37 @@ export default function DemDashboard({
     }
   }
 
+  // Rimuove la sospensione per rimbalzi senza riaccendere l'invio automatico.
+  // Serve perche' l'invio manuale ora rifiuta le campagne sospese: senza questo
+  // l'unico modo di riprendere sarebbe attivare l'automatico, cioe' un effetto
+  // piu' ampio di quello voluto.
+  const clearPause = async () => {
+    if (!selectedCampaign?.auto_paused_reason) return
+    if (
+      !confirm(
+        `Rimuovere la sospensione da "${selectedCampaign.name}"?\n\nLa sospensione e' scattata perche' i rimbalzi hanno superato il 5%. Se la lista non e' stata ripulita, i rimbalzi ripartiranno e la reputazione del mittente peggiora anche per i destinatari validi.\n\nMotivo registrato:\n${selectedCampaign.auto_paused_reason}`,
+      )
+    )
+      return
+    setTogglingAuto(true)
+    try {
+      const res = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_paused_reason: null }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Errore aggiornamento")
+      setSelectedCampaign((prev) => (prev ? { ...prev, ...data.campaign } : prev))
+      setCampaigns((prev) => prev.map((c) => (c.id === data.campaign.id ? { ...c, ...data.campaign } : c)))
+      showMessage("Sospensione rimossa. L'invio automatico resta spento: attivalo tu quando vuoi.")
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setTogglingAuto(false)
+    }
+  }
+
   const resumeQueue = async () => {
     if (!selectedCampaign || !stats) return
     const pausedCount = stats.summary.paused || 0
@@ -1230,9 +1261,16 @@ export default function DemDashboard({
               className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 text-destructive border border-destructive/20"
             >
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
-              <div className="space-y-1">
-                <p className="font-semibold leading-relaxed">Invio automatico sospeso dal sistema</p>
+              <div className="space-y-2">
+                <p className="font-semibold leading-relaxed">Invio sospeso dal sistema</p>
                 <p className="text-sm leading-relaxed text-pretty">{selectedCampaign.auto_paused_reason}</p>
+                <p className="text-sm leading-relaxed text-pretty">
+                  Anche il pulsante &quot;Invia&quot; e&apos; bloccato: nessuna email parte finche&apos; la sospensione
+                  resta attiva.
+                </p>
+                <Button variant="outline" size="sm" onClick={clearPause} disabled={togglingAuto}>
+                  Rimuovi la sospensione
+                </Button>
               </div>
             </div>
           )}

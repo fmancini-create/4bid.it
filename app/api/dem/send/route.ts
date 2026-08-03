@@ -164,6 +164,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campagna gia' in fase di invio" }, { status: 400 })
     }
 
+    // Campagna sospesa dal freno sui rimbalzi: NON si invia, nemmeno a mano.
+    //
+    // Il freno vive nel cron `dem-auto-send`, ma questa rotta e' un secondo
+    // percorso verso lo stesso invio: senza questo controllo la sospensione
+    // fermava l'automazione e lasciava il pulsante "Invia" perfettamente
+    // funzionante, cioe' proteggeva solo la meta' dei modi di spedire.
+    //
+    // Rifiuto esplicito con il motivo, non silenzioso: chi preme deve sapere
+    // perche' non e' partito nulla. Per riprendere si rimuove la sospensione in
+    // modo consapevole (pulsante in pagina), dopo aver ripulito la lista.
+    if (campaign.auto_paused_reason) {
+      return NextResponse.json(
+        {
+          error: `Invio bloccato: la campagna e' sospesa per rimbalzi troppo alti. ${campaign.auto_paused_reason}`,
+          paused: true,
+        },
+        { status: 409 },
+      )
+    }
+
     // Count how many recipients are still pending (the whole queue)
     const { count: pendingTotal } = await supabase
       .from("dem_recipients")
