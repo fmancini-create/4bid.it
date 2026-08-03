@@ -128,6 +128,63 @@ export async function GET(request: NextRequest) {
         continue
       }
 
+      // FRENO SUI RIMBALZI.
+      //
+      // Perche' esiste: il 29/06 sono partite 3.291 email con il 31,2% di
+      // rimbalzi e NIENTE le ha fermate, perche' non c'era alcun controllo. Nei
+      // 12 giorni precedenti la stessa lista viaggiava allo 0,2%: il problema
+      // non e' stato accorgersi tardi, e' che nessuno stava guardando.
+      //
+      // I fornitori di posta considerano accettabile un tasso sotto il 2%: oltre
+      // il 5% la reputazione del mittente si deteriora e le email finiscono in
+      // spam ANCHE per i destinatari validi. Per questo la guardia sta PRIMA di
+      // ogni invio: sospende l'automazione invece di continuare a bruciare
+      // reputazione.
+      //
+      // Misuro sugli ultimi 3 giorni, non sullo storico: un tasso storico basso
+      // diluisce un peggioramento in corso e direbbe "tutto bene" mentre il
+      // danno avviene. Servono almeno 200 email misurate, altrimenti 2 rimbalzi
+      // su 10 invii (20%) fermerebbero una campagna sana.
+      {
+        const treGiorniFa = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+        const conta = async (filtro: (q: any) => any) => {
+          const { count, error } = await filtro(
+            supabase
+              .from("dem_recipients")
+              .select("id", { count: "exact", head: true })
+              .eq("campaign_id", campaign.id)
+              .gte("sent_at", treGiorniFa),
+          )
+          return error ? null : (count ?? 0)
+        }
+        const inviate = await conta((q: any) => q.in("send_status", ["sent", "bounced", "opened"]))
+        const rimbalzate = await conta((q: any) => q.eq("send_status", "bounced"))
+
+        // Se la misura non e' leggibile NON invio: proseguire al buio e' proprio
+        // cio' che ha permesso l'incidente. Un guasto deve fermare, non passare.
+        if (inviate === null || rimbalzate === null) {
+          console.error(`[v0] dem-auto-send: tasso rimbalzi non misurabile per ${campaign.id}, salto per prudenza`)
+          results.push({ campaign: campaign.id, skipped: "bounce_rate_unreadable" })
+          continue
+        }
+
+        const SOGLIA = 0.05
+        const MINIMO_MISURABILE = 200
+        if (inviate >= MINIMO_MISURABILE) {
+          const tasso = rimbalzate / inviate
+          if (tasso > SOGLIA) {
+            const motivo = `Sospesa automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi negli ultimi 3 giorni (${rimbalzate} su ${inviate}), oltre la soglia del ${SOGLIA * 100}%. Ripulire la lista prima di riprendere.`
+            await supabase
+              .from("dem_campaigns")
+              .update({ auto_send: false, auto_paused_reason: motivo, updated_at: new Date().toISOString() })
+              .eq("id", campaign.id)
+            console.error(`[v0] dem-auto-send: SOSPESA ${campaign.id} - ${motivo}`)
+            results.push({ campaign: campaign.id, paused: "bounce_rate_too_high", rate: tasso, sent: inviate })
+            continue
+          }
+        }
+      }
+
       // Primo invio in assoluto: registra la data di avvio warm-up (giorno 1).
       let startedOn = campaign.auto_started_on as string | null
       if (!startedOn) {
