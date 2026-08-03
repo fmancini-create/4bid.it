@@ -346,6 +346,12 @@ export async function PATCH(request: NextRequest) {
       else if (action === "resume") updates.status = "active"
       else if (action === "stop") updates.status = "stopped"
 
+      // Tornando attivo si azzera il motivo dell'eventuale sospensione
+      // automatica per rimbalzi: lasciarlo mostrerebbe un avviso di sospensione
+      // su un richiamo in funzione, e un avviso che non corrisponde allo stato
+      // reale insegna a ignorare gli avvisi.
+      if (updates.status === "active") updates.paused_reason = null
+
       if (Object.keys(updates).length > 0) {
         updates.updated_at = new Date().toISOString()
         const { error } = await supabase.from("dem_followups").update(updates).eq("id", body.followup_id)

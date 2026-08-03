@@ -429,6 +429,78 @@ export interface FollowupStepRow {
 // 'pending', delega l'invio reale a /api/dem/send (tracking/unsub/throttle inclusi)
 // e aggiorna i contatori commerciali. Idempotente: chi ha gia' ricevuto lo step
 // non viene re-arruolato (followups_sent == step_number - 1).
+// Freno sui rimbalzi per i RICHIAMI.
+//
+// I richiami sono un terzo percorso di invio: creano campagne "figlie" e le
+// spediscono con un id proprio, quindi la sospensione della campagna madre non
+// li ferma. Senza questo controllo restavano l'unica via aperta.
+//
+// La finestra NON e' temporale come per la lista fredda. Misurata la realta': i
+// richiami inviano a lotti sporadici (149 email il 12/07, 150 l'08/07, poi
+// niente per tre settimane), quindi "ultimi 3 giorni con almeno 200 email" non
+// scatterebbe MAI: un freno che non scatta e' identico a un freno che non c'e'.
+// Si misura invece sugli ULTIMI invii del richiamo, che si adatta al volume e
+// resta pesato sul recente.
+export const WARM_BOUNCE_THRESHOLD = 0.05
+export const WARM_BOUNCE_MIN_SAMPLE = 200
+export const WARM_BOUNCE_SAMPLE_SIZE = 500
+
+export async function checkWarmBounceRate(
+  supabase: SupabaseLike,
+  followupId: string
+): Promise<{ blocked: boolean; unreadable: boolean; reason: string | null; measured: number; bounced: number }> {
+  const esito = (o: Partial<{ blocked: boolean; unreadable: boolean; reason: string | null }>, m = 0, b = 0) => ({
+    blocked: false,
+    unreadable: false,
+    reason: null,
+    measured: m,
+    bounced: b,
+    ...o,
+  })
+
+  const { data: figlie, error: eFiglie } = await supabase
+    .from("dem_campaigns")
+    .select("id")
+    .eq("followup_id", followupId)
+  // Lettura fallita: NON si invia. Proseguire al buio e' esattamente cio' che ha
+  // permesso l'incidente del 29/06 sulla lista fredda.
+  if (eFiglie) return esito({ unreadable: true, reason: eFiglie.message || "lettura campagne figlie fallita" })
+
+  const ids = (figlie || []).map((c: { id: string }) => c.id)
+  // Nessuna figlia: il richiamo non ha ancora spedito nulla, niente da misurare.
+  if (ids.length === 0) return esito({})
+
+  const { data: righe, error: eRighe } = await supabase
+    .from("dem_recipients")
+    .select("send_status")
+    .in("campaign_id", ids)
+    .not("sent_at", "is", null)
+    // Ordine UNIVOCO: `sent_at` da solo non basta a rendere stabile il campione
+    // quando molte righe condividono lo stesso istante.
+    .order("sent_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(WARM_BOUNCE_SAMPLE_SIZE)
+  if (eRighe) return esito({ unreadable: true, reason: eRighe.message || "lettura destinatari fallita" })
+
+  const misurate = (righe || []).length
+  const rimbalzate = (righe || []).filter((r: { send_status: string }) => r.send_status === "bounced").length
+  // Campione troppo piccolo: 2 rimbalzi su 10 invii (20%) fermerebbero un
+  // richiamo sano.
+  if (misurate < WARM_BOUNCE_MIN_SAMPLE) return esito({}, misurate, rimbalzate)
+
+  const tasso = rimbalzate / misurate
+  if (tasso <= WARM_BOUNCE_THRESHOLD) return esito({}, misurate, rimbalzate)
+
+  return esito(
+    {
+      blocked: true,
+      reason: `Sospeso automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi sulle ultime ${misurate} email inviate (${rimbalzate} su ${misurate}), oltre la soglia del ${WARM_BOUNCE_THRESHOLD * 100}%. Ripulire la lista prima di riprendere.`,
+    },
+    misurate,
+    rimbalzate
+  )
+}
+
 export async function dispatchWarmStep(
   supabase: SupabaseLike,
   params: {
@@ -443,6 +515,35 @@ export async function dispatchWarmStep(
   const { followup, step, baseUrl } = params
   if (params.maxToSend <= 0 || !step.enabled) {
     return { childCampaignId: step.send_campaign_id, requested: 0, sent: 0 }
+  }
+
+  // Il controllo sta PRIMA di arruolare e creare la campagna figlia: dopo
+  // avrebbe gia' prodotto righe e una campagna da spedire.
+  const freno = await checkWarmBounceRate(supabase, followup.id)
+  if (freno.unreadable) {
+    console.error(`[v0] dem-warm-send: tasso rimbalzi non misurabile per ${followup.id}, salto per prudenza`)
+    return {
+      childCampaignId: step.send_campaign_id,
+      requested: 0,
+      sent: 0,
+      sendResult: { skipped: "bounce_rate_unreadable", reason: freno.reason },
+    }
+  }
+  if (freno.blocked) {
+    // `paused` e' uno stato gia' previsto: il cron seleziona solo gli `active`,
+    // e la pagina mostra badge e pulsante di ripresa. Il motivo va scritto,
+    // altrimenti la pausa sarebbe muta e riattivare sembrerebbe innocuo.
+    await supabase
+      .from("dem_followups")
+      .update({ status: "paused", paused_reason: freno.reason, updated_at: new Date().toISOString() })
+      .eq("id", followup.id)
+    console.error(`[v0] dem-warm-send: SOSPESO richiamo ${followup.id} - ${freno.reason}`)
+    return {
+      childCampaignId: step.send_campaign_id,
+      requested: 0,
+      sent: 0,
+      sendResult: { paused: "bounce_rate_too_high", reason: freno.reason, measured: freno.measured },
+    }
   }
 
   let eligible = await fetchEligibleWarmRecipients(

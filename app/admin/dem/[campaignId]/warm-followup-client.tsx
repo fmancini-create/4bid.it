@@ -19,6 +19,7 @@ import {
   Trash2,
   Settings2,
   Mail,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -110,6 +111,9 @@ interface Followup {
   warm_priority: boolean
   reallocate_unused: boolean
   scheduled_at: string | null
+  // Motivo della pausa automatica per rimbalzi. Senza questo il richiamo
+  // risulterebbe solo "In pausa", e il pulsante "Riprendi" sembrerebbe innocuo.
+  paused_reason?: string | null
 }
 
 interface WarmData {
@@ -477,6 +481,17 @@ function FollowupStatusControls({
   const [busy, setBusy] = useState(false)
 
   const patch = async (action: string) => {
+    // Riprendere un richiamo sospeso dal sistema non e' come riprenderne uno
+    // messo in pausa a mano: se la lista non e' stata ripulita i rimbalzi
+    // ripartono. La conferma riporta il motivo, cosi' la scelta e' informata.
+    if ((action === "resume" || action === "activate") && followup.paused_reason) {
+      if (
+        !confirm(
+          `Riprendere "${followup.name}"?\n\nE' stato sospeso automaticamente perche' i rimbalzi hanno superato il 5%. Se la lista non e' stata ripulita, i rimbalzi ripartiranno e la reputazione del mittente peggiora anche per i destinatari validi.\n\nMotivo registrato:\n${followup.paused_reason}`,
+        )
+      )
+        return
+    }
     setBusy(true)
     try {
       const res = await fetch("/api/dem/warm", {
@@ -519,8 +534,21 @@ function FollowupStatusControls({
   const sb = statusBadge[followup.status] || statusBadge.draft
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Badge className={`${sb.cls} border-0`}>{sb.label}</Badge>
+    <div className="flex flex-col gap-2">
+      {followup.paused_reason && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-destructive"
+        >
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          <div className="space-y-1">
+            <p className="font-semibold leading-relaxed">Solleciti sospesi dal sistema</p>
+            <p className="text-sm leading-relaxed text-pretty">{followup.paused_reason}</p>
+          </div>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className={`${sb.cls} border-0`}>{sb.label}</Badge>
       {(followup.status === "draft" || followup.status === "stopped") && (
         <Button size="sm" onClick={() => patch("activate")} disabled={busy}>
           <Play className="mr-1.5 h-4 w-4" />
@@ -545,9 +573,16 @@ function FollowupStatusControls({
           Ferma
         </Button>
       )}
-      <Button size="sm" variant="ghost" onClick={del} disabled={busy} className="text-destructive hover:text-destructive">
-        <Trash2 className="h-4 w-4" />
-      </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={del}
+          disabled={busy}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   )
 }
