@@ -192,15 +192,54 @@ export async function POST(request: NextRequest) {
       .eq("send_status", "pending")
 
     // Get only the next batch of pending recipients (ordered for deterministic progress)
-    const { data: recipients, error: recipientsError } = await supabase
+    //
+    // FILTRI DI VALIDAZIONE, applicati QUI e non nel ciclo di invio: scartare un
+    // indirizzo dopo averlo estratto consumerebbe il lotto senza spedire nulla
+    // (100 estratti, 100 scartati, zero email), e all'utente sembrerebbe che
+    // l'invio non funzioni.
+    //
+    // 1) `dominio-morto` e' escluso SEMPRE, anche a filtro spento: il dominio non
+    //    ha record MX, quindi la consegna e' impossibile per certezza tecnica,
+    //    non per prudenza. Ogni tentativo e' solo un rimbalzo in piu'.
+    // 2) `rischio-alto` e' escluso solo se la campagna ha `send_only_safe`.
+    //
+    // `non-verificato` (errore di rete durante il controllo) e i destinatari mai
+    // validati (`null`) restano ammessi: un controllo che non e' riuscito non e'
+    // un verdetto sull'indirizzo, e trattarlo come tale bloccherebbe l'invio per
+    // un problema nostro.
+    const soloSicuri = campaign.send_only_safe === true
+
+    let queryDestinatari = supabase
       .from("dem_recipients")
       .select("*")
       .eq("campaign_id", campaign_id)
       .eq("send_status", "pending")
+      .or("validation_status.is.null,validation_status.neq.dominio-morto")
+
+    if (soloSicuri) {
+      queryDestinatari = queryDestinatari.eq("validation_status", "sicuro")
+    }
+
+    const { data: recipients, error: recipientsError } = await queryDestinatari
       .order("created_at", { ascending: true })
       .limit(batchLimit)
 
     if (recipientsError || !recipients || recipients.length === 0) {
+      // Messaggio distinto quando il filtro e' la causa: "nessuno in attesa" con
+      // 27.000 in coda sarebbe una bugia, e manderebbe a cercare un guasto
+      // inesistente invece della casella "solo fascia sicura".
+      if (soloSicuri && (pendingTotal || 0) > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Nessun destinatario nella fascia sicura. La coda non e' vuota: " +
+              "il filtro \"invia solo alla fascia sicura\" e' attivo. Esegui la " +
+              "validazione oppure disattiva il filtro.",
+            filtered: true,
+          },
+          { status: 400 },
+        )
+      }
       return NextResponse.json({ error: "Nessun destinatario in attesa" }, { status: 400 })
     }
 

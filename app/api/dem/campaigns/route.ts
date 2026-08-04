@@ -100,6 +100,11 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.track_clicks === "boolean") updates.track_clicks = body.track_clicks
     if (typeof body.attach_as_link === "boolean") updates.attach_as_link = body.attach_as_link
 
+    // Filtro "invia solo alla fascia sicura". Va dichiarato QUI perche' questa
+    // rotta accetta un elenco chiuso di campi: senza questa riga la casella in
+    // pagina verrebbe scartata in silenzio e sembrerebbe non funzionare.
+    if (typeof body.send_only_safe === "boolean") updates.send_only_safe = body.send_only_safe
+
     // Toggle invio automatico a scaglioni (warm-up gestito dal cron dem-auto-send).
     if (typeof body.auto_send === "boolean") {
       updates.auto_send = body.auto_send
