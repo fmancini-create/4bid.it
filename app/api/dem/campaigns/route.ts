@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 
-export async function GET() {
+// `request` va dichiarato anche qui: senza parametro la guardia non potrebbe
+// leggere le intestazioni. Prima questa GET restituiva a CHIUNQUE, senza alcun
+// cookie, id / oggetto / template HTML di tutte le campagne - cioe' proprio gli
+// identificativi che servono per far partire un invio dalla rotta /send.
+export async function GET(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   const { data: campaigns, error } = await supabase
@@ -17,6 +25,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {
@@ -65,6 +76,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
   const { searchParams } = new URL(request.url)
   const id = searchParams.get("id")
@@ -165,6 +179,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  // La piu' distruttiva del gruppo: cancella campagna, destinatari ed eventi di
+  // tracciamento. Era raggiungibile senza credenziali.
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
   const { searchParams } = new URL(request.url)
   const id = searchParams.get("id")

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-resend"
+import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 
 // Allow long-running sends: throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
@@ -133,6 +134,12 @@ async function fetchAttachment(
 }
 
 export async function POST(request: NextRequest) {
+  // Guardia PRIMA di qualunque lettura del corpo: questa rotta spedisce email a
+  // decine di migliaia di destinatari esterni, e senza controllo rispondeva
+  // "Campagna non trovata" a chiunque, cioe' elaborava la richiesta.
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {

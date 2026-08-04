@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getLocationByEmail } from "@/lib/dem/hotels-csv"
+import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 
 export async function GET(request: NextRequest) {
+  // Espone indirizzi email dei destinatari e la loro localita': dato personale,
+  // non solo un conteggio.
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const { searchParams } = new URL(request.url)
   const campaignId = searchParams.get("c")
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 
 type Supa = ReturnType<typeof createAdminClient>
 
@@ -51,6 +52,9 @@ async function caricaSoppressi(supabase: Supa): Promise<{
 }
 
 export async function POST(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {
@@ -176,6 +180,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {
@@ -249,6 +256,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {
