@@ -52,7 +52,12 @@ type Font = Awaited<ReturnType<PDFDocument["embedFont"]>>
  * con estensione .png, e chiamare embedPng su un JPEG fa fallire pdf-lib.
  */
 async function incorporaImmagine(pdf: PDFDocument, percorso: string) {
-  const byte = await readFile(percorso)
+  // Stessa conversione usata in app/api/dem/resend-webhook: con @types/node 22
+  // il tipo `Buffer` non e' assegnabile a `Uint8Array<ArrayBuffer>`.
+  // `Uint8Array.from` copia elemento per elemento, quindi rispetta l'offset del
+  // Buffer: `new Uint8Array(byte.buffer)` sarebbe SBAGLIATO, perche' Node riusa
+  // un ArrayBuffer condiviso e verrebbero letti byte di altri dati.
+  const byte = Uint8Array.from(await readFile(percorso))
   const isPng = byte[0] === 0x89 && byte[1] === 0x50 && byte[2] === 0x4e && byte[3] === 0x47
   const isJpeg = byte[0] === 0xff && byte[1] === 0xd8
   if (isPng) return pdf.embedPng(byte)

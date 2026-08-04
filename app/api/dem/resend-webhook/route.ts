@@ -32,15 +32,25 @@ function verifySvixSignature(
 ): boolean {
   if (!headers.id || !headers.timestamp || !headers.signature) return false
   try {
-    const secretBytes = Buffer.from(secret.replace(/^whsec_/, ""), "base64")
+    // `Uint8Array.from(Buffer.from(...))` e' il modello GIA' usato nel progetto
+    // (lib/project-room/invitations.ts, token-vault.ts): con @types/node 22 il
+    // tipo `Buffer` non e' piu' assegnabile a `BinaryLike`/`ArrayBufferView`,
+    // perche' il suo ArrayBuffer e' dichiarato `ArrayBufferLike`. La conversione
+    // copia gli stessi byte, quindi il valore dell'HMAC non cambia: NON e' un
+    // cast che mette a tacere il compilatore, e infatti gli altri tre file che
+    // usano crypto in questo progetto non danno errore proprio perche' seguono
+    // questa forma.
+    const secretBytes = Uint8Array.from(Buffer.from(secret.replace(/^whsec_/, ""), "base64"))
     const signedContent = `${headers.id}.${headers.timestamp}.${rawBody}`
     const expected = crypto.createHmac("sha256", secretBytes).update(signedContent).digest("base64")
     // L'header puo' contenere piu' firme separate da spazio, ognuna "v1,<sig>".
     const provided = headers.signature.split(" ").map((p) => p.split(",")[1] || p)
     return provided.some((sig) => {
       try {
-        const a = Buffer.from(sig)
-        const b = Buffer.from(expected)
+        const a = Uint8Array.from(Buffer.from(sig))
+        const b = Uint8Array.from(Buffer.from(expected))
+        // Il controllo sulla lunghezza resta obbligatorio: `timingSafeEqual`
+        // solleva un'eccezione se i due argomenti hanno lunghezza diversa.
         return a.length === b.length && crypto.timingSafeEqual(a, b)
       } catch {
         return false
