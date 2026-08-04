@@ -13,30 +13,47 @@ import { promises as dns } from "node:dns"
  *
  *  2. INDIRIZZI PERSONALI IN AZIENDE. I rimbalzi si concentrano per FREQUENZA
  *     del dominio nella lista, non per dominio nominato (libero.it 3,6%,
- *     tin.it 2,7% - innocui):
- *       dominio con 1 solo indirizzo  -> 12,9%
- *       dominio con 2-5 indirizzi     -> 11,5%
- *       dominio con 6+ indirizzi      ->  2,4%  (sotto soglia)
- *     Un dominio che compare una volta sola e' tipicamente la casella di una
- *     persona specifica: se quella persona ha lasciato l'azienda, l'indirizzo
- *     non esiste piu'. I domini frequenti sono caselle di servizio
- *     (info@, booking@) che sopravvivono al ricambio del personale.
+ *     tin.it 2,7% - innocui). Un dominio che compare una volta sola e'
+ *     tipicamente la casella di una persona: se quella persona ha lasciato
+ *     l'azienda, l'indirizzo non esiste piu'. I domini molto frequenti sono
+ *     caselle di servizio (info@, booking@) che sopravvivono al ricambio.
+ *
+ * SOGLIA: misurata sulle 981 email con esito noto, contando la frequenza su
+ * TUTTA la lista (28.773 indirizzi) - cioe' con lo stesso criterio che il
+ * filtro puo' applicare prima di spedire:
+ *       1 indirizzo    -> 19,9%   (544 invii)
+ *       2-5            -> 16,6%   (193)
+ *       6-11           -> 31,8%   ( 22 invii: campione troppo piccolo, rumore)
+ *       12-19          -> 16,7%   ( 30)
+ *       20+            ->  4,2%   (192)  <- l'unica fascia sotto il 5%
+ *
+ * ATTENZIONE, ERRORE DA NON RIPETERE: una stima precedente dava "6+ -> 2,4%"
+ * perche' contava la frequenza sulle SOLE email gia' inviate (981) invece che
+ * su tutta la lista. Sono due grandezze diverse e la prima NON e' calcolabile
+ * prima di spedire: un dominio con 6 indirizzi fra gli inviati ne ha molti di
+ * piu' in lista. Verificato: con la soglia a 6 il tasso atteso e' 8,2%, non
+ * 2,4%. Una soglia va misurata con lo stesso criterio con cui verra' applicata.
  *
  * NESSUNO DEI DUE FILTRI BASTA DA SOLO: il controllo MX scarta solo il 5,6%
  * della coda (i domini morti sono tanti ma con pochi indirizzi ciascuno) e
  * lascerebbe un tasso atteso intorno all'11%, ancora sopra soglia.
  */
 
-/** Soglia oltre la quale un dominio e' considerato "di servizio". Deriva dalla
- *  misura: a 6+ indirizzi il tasso osservato scende al 2,4%. */
-export const SOGLIA_DOMINIO_SICURO = 6
+/** Soglia oltre la quale un dominio e' considerato "di servizio".
+ *
+ *  Vale 20 perche' e' l'unica fascia con tasso misurato sotto il 5% (4,2% su
+ *  192 invii). Il margine e' sottile: 8 rimbalzi su 192, e un solo rimbalzo in
+ *  piu' porterebbe al 4,7%. Alzare la soglia costa poco in copertura (7.440
+ *  email a 20+ contro 8.688 a 6+, cioe' -14%) e vale il rischio evitato. */
+export const SOGLIA_DOMINIO_SICURO = 20
 
 export type StatoValidazione =
   /** Dominio senza MX: non puo' ricevere posta. Da non inviare. */
   | "dominio-morto"
-  /** Dominio raro nella lista (1-5 indirizzi): probabile casella personale. */
+  /** Dominio poco frequente in lista (meno di 20 indirizzi): probabile casella
+   *  personale, tasso misurato fra il 16,6% e il 19,9%. */
   | "rischio-alto"
-  /** Dominio frequente (6+): probabile casella di servizio. */
+  /** Dominio molto frequente (20+): probabile casella di servizio, 4,2%. */
   | "sicuro"
   /** Controllo non riuscito (rete/timeout): non e' un giudizio sull'indirizzo. */
   | "non-verificato"

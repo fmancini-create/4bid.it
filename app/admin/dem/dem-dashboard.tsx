@@ -305,7 +305,8 @@ interface Campaign {
   // ricomincerebbe a bruciare la reputazione del mittente senza saperlo.
   auto_paused_reason?: string | null
   // Quando attivo, l'invio spedisce SOLO ai destinatari classificati "sicuro"
-  // dalla validazione (dominio con 6+ indirizzi in lista).
+  // dalla validazione (dominio con 20+ indirizzi in lista: unica fascia con
+  // tasso di rimbalzo misurato sotto la soglia del 5%).
   send_only_safe?: boolean
 }
 
@@ -1428,8 +1429,9 @@ export default function DemDashboard({
                       Invia solo alla fascia sicura
                     </span>
                     <span className="text-xs text-muted-foreground leading-relaxed text-pretty">
-                      Spedisce solo agli indirizzi su domini con almeno 6 contatti in lista, dove i rimbalzi misurati
-                      sono al 2,4% invece del 12,9%. Gli altri restano in coda, non vengono cancellati.
+                      Spedisce solo agli indirizzi su domini con almeno 20 contatti in lista: tipicamente caselle di
+                      servizio come info@ o booking@, dove i rimbalzi misurati sono al 4,2% contro il 16,5% della lista
+                      intera. Gli altri restano in coda, non vengono cancellati.
                     </span>
                   </span>
                 </label>
