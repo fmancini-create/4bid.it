@@ -32,6 +32,10 @@ interface Unsubscribe {
   email: string
   campaign_id: string | null
   reason: string | null
+  // Distingue un indirizzo inesistente da un problema passeggero: senza questo
+  // non si sa quali indirizzi rimuovere davvero dalla lista.
+  bounce_type: string | null
+  bounce_subtype: string | null
   created_at: string
 }
 
@@ -65,6 +69,10 @@ const REASON_LABELS: Record<string, string> = {
   manuale: "Manuale",
   "one-click": "One-click",
   link: "Link email",
+  // Erano assenti pur essendo i motivi piu' frequenti: la colonna mostrava il
+  // valore tecnico grezzo.
+  bounce: "Rimbalzo",
+  complaint: "Segnalato come spam",
 }
 
 export default function DisiscrizioniView() {
@@ -266,9 +274,28 @@ export default function DisiscrizioniView() {
                         </TableCell>
                         <TableCell className="font-medium">{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            {REASON_LABELS[u.reason || ""] || u.reason || "—"}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline" className="font-normal">
+                              {REASON_LABELS[u.reason || ""] || u.reason || "—"}
+                            </Badge>
+                            {u.bounce_type === "Permanent" && (
+                              <Badge variant="destructive" className="font-normal" title={u.bounce_subtype || undefined}>
+                                Indirizzo inesistente
+                              </Badge>
+                            )}
+                            {u.bounce_type === "Temporary" && (
+                              <Badge variant="secondary" className="font-normal" title={u.bounce_subtype || undefined}>
+                                Problema temporaneo
+                              </Badge>
+                            )}
+                            {/* I rimbalzi registrati prima del 03/08/2026 non hanno il tipo:
+                                dichiararlo evita di leggerli come "verificati". */}
+                            {u.reason === "bounce" && !u.bounce_type && (
+                              <Badge variant="outline" className="font-normal text-muted-foreground">
+                                Tipo non registrato
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(u.created_at)}

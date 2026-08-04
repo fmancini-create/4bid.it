@@ -50,6 +50,7 @@ import {
   Ban,
   ShieldOff,
   Flame,
+  ShieldCheck,
 } from "lucide-react"
 
 const SANTADDEO_PRESET = {
@@ -303,6 +304,21 @@ interface Campaign {
   // campo in pagina la campagna risulterebbe solo "spenta", e riaccenderla
   // ricomincerebbe a bruciare la reputazione del mittente senza saperlo.
   auto_paused_reason?: string | null
+  // Quando attivo, l'invio spedisce SOLO ai destinatari classificati "sicuro"
+  // dalla validazione (dominio con 20+ indirizzi in lista: unica fascia con
+  // tasso di rimbalzo misurato sotto la soglia del 5%).
+  send_only_safe?: boolean
+}
+
+// Esito della validazione degli indirizzi di una campagna.
+interface EsitoValidazione {
+  inCoda: number
+  dominiDistinti: number
+  dominiControllatiAdesso: number
+  dominiDaCache: number
+  erroriRete: number
+  esiti: { sicuro: number; rischioAlto: number; dominioMorto: number; nonVerificato: number }
+  percentuali: { sicuro: number; rischioAlto: number; dominioMorto: number; nonVerificato: number }
 }
 
 interface Recipient {
@@ -381,6 +397,8 @@ export default function DemDashboard({
   const [sending, setSending] = useState(false)
   const [togglingAuto, setTogglingAuto] = useState(false)
   const [resuming, setResuming] = useState(false)
+  const [validando, setValidando] = useState(false)
+  const [esitoValidazione, setEsitoValidazione] = useState<EsitoValidazione | null>(null)
   const [recipientsPage, setRecipientsPage] = useState(0)
   // Filtri/ordinamento lista destinatari (applicati lato server)
   const [searchInput, setSearchInput] = useState("")
@@ -902,6 +920,58 @@ export default function DemDashboard({
     }
   }
 
+  // Valida gli indirizzi ancora in coda. NON invia e NON rimuove nessuno:
+  // scrive solo un giudizio, cosi' la decisione resta all'utente.
+  const validaIndirizzi = async () => {
+    if (!selectedCampaign) return
+    setValidando(true)
+    setEsitoValidazione(null)
+    try {
+      const res = await fetch("/api/dem/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: selectedCampaign.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Validazione fallita")
+      setEsitoValidazione(data as EsitoValidazione)
+      showMessage(
+        `Validazione completata: ${data.esiti.sicuro.toLocaleString("it-IT")} indirizzi nella fascia sicura, ${data.esiti.dominioMorto.toLocaleString("it-IT")} su domini inesistenti.`,
+      )
+      fetchStats(selectedCampaign.id)
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setValidando(false)
+    }
+  }
+
+  // Attiva/disattiva il filtro "invia solo alla fascia sicura".
+  const toggleSoloSicuri = async (attivo: boolean) => {
+    if (!selectedCampaign) return
+    setTogglingAuto(true)
+    try {
+      const res = await fetch(`/api/dem/campaigns?id=${selectedCampaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ send_only_safe: attivo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Errore aggiornamento")
+      setSelectedCampaign((prev) => (prev ? { ...prev, ...data.campaign } : prev))
+      setCampaigns((prev) => prev.map((c) => (c.id === data.campaign.id ? { ...c, ...data.campaign } : c)))
+      showMessage(
+        attivo
+          ? "Filtro attivo: partiranno solo gli indirizzi della fascia sicura."
+          : "Filtro disattivato: l'invio tornera' a includere anche gli indirizzi a rischio alto.",
+      )
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "Errore", true)
+    } finally {
+      setTogglingAuto(false)
+    }
+  }
+
   // Rimuove la sospensione per rimbalzi senza riaccendere l'invio automatico.
   // Serve perche' l'invio manuale ora rifiuta le campagne sospese: senza questo
   // l'unico modo di riprendere sarebbe attivare l'automatico, cioe' un effetto
@@ -1273,6 +1343,100 @@ export default function DemDashboard({
                 </Button>
               </div>
             </div>
+          )}
+
+          {/* Validazione degli indirizzi. Sta accanto all'avviso di sospensione
+              di proposito: l'avviso invita a "ripulire la lista", e senza questi
+              strumenti quell'istruzione non era eseguibile. */}
+          {stats && stats.summary.pending > 0 && (
+            <Card>
+              <CardContent className="p-4 flex flex-col gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-semibold text-foreground leading-relaxed">Qualita&apos; degli indirizzi</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
+                      Controlla quali domini possono ancora ricevere posta e stima il rischio di rimbalzo. Non invia
+                      nulla e non cancella nessuno.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={validaIndirizzi} disabled={validando}>
+                    <ShieldCheck className={`h-4 w-4 mr-2 ${validando ? "animate-pulse" : ""}`} aria-hidden="true" />
+                    {validando ? "Controllo in corso..." : "Valida indirizzi"}
+                  </Button>
+                </div>
+
+                {esitoValidazione && (
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="flex flex-col gap-1 p-3 rounded-md bg-muted">
+                        <span className="text-xs text-muted-foreground">Fascia sicura</span>
+                        <span className="text-xl font-bold text-foreground">
+                          {esitoValidazione.esiti.sicuro.toLocaleString("it-IT")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {esitoValidazione.percentuali.sicuro}% della coda
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1 p-3 rounded-md bg-muted">
+                        <span className="text-xs text-muted-foreground">Rischio alto</span>
+                        <span className="text-xl font-bold text-foreground">
+                          {esitoValidazione.esiti.rischioAlto.toLocaleString("it-IT")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {esitoValidazione.percentuali.rischioAlto}% della coda
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1 p-3 rounded-md bg-destructive/10">
+                        <span className="text-xs text-destructive">Domini inesistenti</span>
+                        <span className="text-xl font-bold text-destructive">
+                          {esitoValidazione.esiti.dominioMorto.toLocaleString("it-IT")}
+                        </span>
+                        <span className="text-xs text-destructive">esclusi sempre</span>
+                      </div>
+                      <div className="flex flex-col gap-1 p-3 rounded-md bg-muted">
+                        <span className="text-xs text-muted-foreground">Non verificati</span>
+                        <span className="text-xl font-bold text-foreground">
+                          {esitoValidazione.esiti.nonVerificato.toLocaleString("it-IT")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">restano ammessi</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed text-pretty">
+                      {esitoValidazione.dominiDistinti.toLocaleString("it-IT")} domini distinti in coda,{" "}
+                      {esitoValidazione.dominiControllatiAdesso.toLocaleString("it-IT")} controllati adesso e{" "}
+                      {esitoValidazione.dominiDaCache.toLocaleString("it-IT")} ripresi da un controllo recente.
+                      {esitoValidazione.erroriRete > 0 && (
+                        <>
+                          {" "}
+                          {esitoValidazione.erroriRete.toLocaleString("it-IT")} controlli non sono riusciti: quegli
+                          indirizzi restano ammessi, perche&apos; un errore di rete non dice nulla sull&apos;indirizzo.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 accent-primary"
+                    checked={selectedCampaign.send_only_safe === true}
+                    onChange={(e) => toggleSoloSicuri(e.target.checked)}
+                    disabled={togglingAuto}
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-foreground leading-relaxed">
+                      Invia solo alla fascia sicura
+                    </span>
+                    <span className="text-xs text-muted-foreground leading-relaxed text-pretty">
+                      Spedisce solo agli indirizzi su domini con almeno 20 contatti in lista: tipicamente caselle di
+                      servizio come info@ o booking@, dove i rimbalzi misurati sono al 4,2% contro il 16,5% della lista
+                      intera. Gli altri restano in coda, non vengono cancellati.
+                    </span>
+                  </span>
+                </label>
+              </CardContent>
+            </Card>
           )}
 
           {/* Stats cards */}

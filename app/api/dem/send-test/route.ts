@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-resend"
+import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 
 function personalizeTemplate(
   template: string,
@@ -77,6 +78,11 @@ async function fetchAttachment(
 }
 
 export async function POST(request: NextRequest) {
+  // Anche l'invio di prova spedisce email vere e scrive nel database: senza
+  // guardia chiunque poteva usarlo come mittente arbitrario a nostro nome.
+  const rifiuto = await rifiutaSeNonAutorizzato(request)
+  if (rifiuto) return rifiuto
+
   const supabase = createAdminClient()
 
   try {

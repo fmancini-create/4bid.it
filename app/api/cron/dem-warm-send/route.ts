@@ -117,6 +117,7 @@ export async function GET(request: NextRequest) {
         .order("step_number", { ascending: true })
 
       let dispatched = false
+      let pausedForBounces = false
       for (const step of (steps || []) as FollowupStepRow[]) {
         if (step.step_number > MAX_STEPS) continue
         const dispatch = await dispatchWarmStep(supabase, {
@@ -126,6 +127,26 @@ export async function GET(request: NextRequest) {
           baseUrl,
           maxToSend: toSend,
         })
+
+        // Sospensione per rimbalzi: va riportata ESPLICITAMENTE.
+        // Il freno restituisce `requested: 0` come chi non ha contatti da
+        // inviare, quindi senza questo blocco il cron avrebbe archiviato una
+        // sospensione sotto l'etichetta "no_eligible_now": un difetto grave
+        // taciuto da un messaggio di routine. Si esce subito dal ciclo, perche'
+        // il motivo non riguarda il singolo passo ma l'intero richiamo.
+        const esito = dispatch.sendResult as { paused?: string; skipped?: string; reason?: string } | undefined
+        if (esito?.paused === "bounce_rate_too_high" || esito?.skipped === "bounce_rate_unreadable") {
+          results.push({
+            followup: followup.id,
+            step: step.step_number,
+            paused: esito.paused ?? null,
+            skipped: esito.skipped ?? null,
+            reason: esito.reason,
+          })
+          pausedForBounces = true
+          break
+        }
+
         if (dispatch.requested > 0) {
           results.push({
             followup: followup.id,
@@ -140,6 +161,12 @@ export async function GET(request: NextRequest) {
           break
         }
       }
+
+      // Sospeso per rimbalzi: NON si prosegue oltre.
+      // Il blocco che segue puo' scrivere `completed`, che sovrascriverebbe il
+      // `paused` appena impostato: la sospensione verrebbe cancellata dal cron
+      // stesso, un passo dopo averla decisa.
+      if (pausedForBounces) continue
 
       if (!dispatched) {
         // Nessuno step ha contatti da inviare ora.
