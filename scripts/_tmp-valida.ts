@@ -49,7 +49,10 @@ async function main() {
   const elenco = Array.from(domini)
   const esito = new Map<string, boolean | null>()
   let erroriRete = 0
-  const P = 20
+  // Parallelismo alto: 16.865 domini a ~330ms l'uno sarebbero 90 minuti in serie.
+  const P = 100
+  const t0 = Date.now()
+  let ultimoAvviso = 0
   for (let i = 0; i < elenco.length; i += P) {
     const lotto = elenco.slice(i, i + P)
     const res = await Promise.all(
@@ -59,9 +62,31 @@ async function main() {
       esito.set(r.d, r.haMx)
       if (r.haMx === null) erroriRete++
     }
-    if (i > 0 && i % 500 === 0) console.log(`  ...${i}/${elenco.length}`)
+    // Avanzamento a SOGLIE, non su `i % 500`: `i` avanza a passi di P, quindi
+    // il resto non e' mai zero e non stamperebbe nulla. Inoltre `process.stdout`
+    // qui e' bufferizzato, percio' l'assenza di righe non prova che sia bloccato.
+    if (i - ultimoAvviso >= 2000) {
+      ultimoAvviso = i
+      const sec = ((Date.now() - t0) / 1000).toFixed(0)
+      console.log(`  ...${i}/${elenco.length} in ${sec}s`)
+    }
   }
-  console.log(`  fatto. Errori di rete: ${erroriRete}`)
+  console.log(`  fatto in ${((Date.now() - t0) / 1000).toFixed(0)}s. Errori di rete: ${erroriRete}`)
+
+  // Memorizzo gli esiti per dominio: e' la cache che la rotta reale riusa, e
+  // serve anche come traccia verificabile dall'esterno (prima non scrivevo
+  // nulla qui, quindi "0 domini memorizzati" non distingueva lento da bloccato).
+  const dom = Array.from(esito.entries()).filter(([, v]) => v !== null)
+  for (let i = 0; i < dom.length; i += 1000) {
+    const fetta = dom.slice(i, i + 1000)
+    await c.query(
+      `insert into dem_domain_checks (domain, has_mx, checked_at)
+       select * from unnest($1::text[], $2::boolean[]) as t(d, m), lateral (select now()) as x(c)
+       on conflict (domain) do update set has_mx = excluded.has_mx, checked_at = excluded.checked_at`,
+      [fetta.map(([d]) => d), fetta.map(([, v]) => v as boolean)],
+    )
+  }
+  console.log(`  domini memorizzati: ${dom.length}`)
 
   // 4) Classificazione con la funzione reale.
   const conteggio: Record<string, number> = {}
