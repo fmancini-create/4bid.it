@@ -1,34 +1,69 @@
+export type QuoteProject = "consulting" | "santaddeo" | "hotelprofitai" | "manubot" | "custom"
+export type QuoteBillingPeriod = "one_time" | "monthly" | "quarterly" | "yearly"
+export type QuoteDiscountType = "percentage" | "fixed"
+
+export interface QuoteSupportTerms {
+  level?: string
+  channels?: string[]
+  response_time?: string
+  availability?: string
+  account_manager?: boolean
+  onboarding?: string
+  training_hours?: number
+  notes?: string
+}
+
+export interface QuoteDiscount {
+  type: QuoteDiscountType
+  value: number
+  reason?: string
+  duration_months?: number | null
+}
+
 export interface QuoteLineItem {
+  id?: string
+  kind?: "consulting" | "plan" | "module" | "setup" | "service" | "custom"
+  project?: QuoteProject
+  source_product_id?: string | null
+  source_plan_id?: string | null
+  catalog_version?: string | null
+  name?: string
   description: string
+  features?: string[]
+  quantity?: number
+  unit_amount?: number
+  list_amount?: number
+  discount?: QuoteDiscount | null
+  discount_amount?: number
   amount: number
+  billing_period?: QuoteBillingPeriod
+  trial_days?: number
+  support?: QuoteSupportTerms | null
+  configuration?: Record<string, unknown>
+  catalog_snapshot?: Record<string, unknown>
 }
 
 export interface QuoteRequestedField {
   key: string
   label: string
-  // "credentials" renders two inputs (ID/username + password) on the public page.
   type: "text" | "textarea" | "password" | "credentials" | "email" | "url"
   required: boolean
   help?: string
 }
 
-// Billing data the client fills in on the public page, used to issue the invoice.
 export interface QuoteBillingDetails {
-  company?: string // Ragione sociale / Denominazione
-  vat?: string // Partita IVA
-  tax_code?: string // Codice Fiscale
-  address?: string // Indirizzo sede legale
-  zip?: string // CAP
-  city?: string // Città
-  province?: string // Provincia
-  sdi_code?: string // Codice destinatario SDI
-  pec?: string // PEC
-  reference?: string // Referente amministrativo
+  company?: string
+  vat?: string
+  tax_code?: string
+  address?: string
+  zip?: string
+  city?: string
+  province?: string
+  sdi_code?: string
+  pec?: string
+  reference?: string
 }
 
-// Credentials (ID + password) are stored as a JSON string inside the single
-// submitted_fields entry for that field key, so submitted_fields stays a
-// Record<string, string>. Legacy "password" fields keep their plain value.
 export interface QuoteCredential {
   id: string
   password: string
@@ -46,7 +81,6 @@ export function decodeCredential(value: string | undefined | null): QuoteCredent
       return { id: String(parsed.id || ""), password: String(parsed.password || "") }
     }
   } catch {
-    // Legacy plain string: treat it as the password.
     return { id: "", password: value }
   }
   return { id: "", password: "" }
@@ -55,6 +89,7 @@ export function decodeCredential(value: string | undefined | null): QuoteCredent
 export type QuoteStatus = "draft" | "sent" | "accepted" | "paid"
 export type QuotePaymentMethod = "bonifico" | "card"
 export type QuotePaymentStatus = "pending" | "awaiting_transfer" | "paid"
+export type QuoteProvisioningStatus = "not_required" | "pending" | "processing" | "partial" | "completed" | "failed" | "manual_action"
 
 export interface SalesChannelQuote {
   id: string
@@ -84,9 +119,14 @@ export interface SalesChannelQuote {
   payment_method: QuotePaymentMethod | null
   payment_status: QuotePaymentStatus | null
   stripe_session_id: string | null
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
   paid_at: string | null
   token: string | null
   status: QuoteStatus
+  provisioning_status?: QuoteProvisioningStatus
+  provisioning_started_at?: string | null
+  provisioned_at?: string | null
   sent_at: string | null
   expires_at: string | null
   reminder_count: number
@@ -94,6 +134,30 @@ export interface SalesChannelQuote {
   first_viewed_at: string | null
   last_viewed_at: string | null
   view_count: number
+}
+
+export function calculateQuoteLine(item: QuoteLineItem): QuoteLineItem {
+  const quantity = Math.max(1, Number(item.quantity) || 1)
+  const unitAmount = Number(item.unit_amount ?? item.list_amount ?? item.amount) || 0
+  const listAmount = unitAmount * quantity
+  let discountAmount = 0
+  if (item.discount?.type === "percentage") {
+    discountAmount = listAmount * Math.min(100, Math.max(0, Number(item.discount.value) || 0)) / 100
+  } else if (item.discount?.type === "fixed") {
+    discountAmount = Math.min(listAmount, Math.max(0, Number(item.discount.value) || 0))
+  }
+  return {
+    ...item,
+    quantity,
+    unit_amount: unitAmount,
+    list_amount: listAmount,
+    discount_amount: discountAmount,
+    amount: Math.max(0, listAmount - discountAmount),
+  }
+}
+
+export function calculateQuoteTotal(items: QuoteLineItem[]): number {
+  return items.reduce((total, item) => total + calculateQuoteLine(item).amount, 0)
 }
 
 export function formatQuoteAmount(amount: number | null | undefined, currency = "eur"): string {
