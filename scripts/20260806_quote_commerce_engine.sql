@@ -1,4 +1,5 @@
 -- Quote commerce engine: run once on the 4Bid Supabase project.
+-- Apply in staging first and keep a database backup before production.
 
 alter table public.sales_channel_quotes
   add column if not exists stripe_customer_id text,
@@ -17,11 +18,12 @@ create table if not exists public.sales_channel_quote_provisioning_jobs (
     check (status in ('pending','processing','succeeded','failed','manual_action')),
   payload jsonb not null default '{}'::jsonb,
   response jsonb,
-  attempts integer not null default 0,
+  attempts integer not null default 0 check (attempts >= 0),
   last_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  completed_at timestamptz
+  completed_at timestamptz,
+  unique (quote_id, project)
 );
 
 create index if not exists idx_quote_provisioning_quote_id
