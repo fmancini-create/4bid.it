@@ -14,7 +14,7 @@ import { calculateQuoteLine, calculateQuoteTotal, formatQuoteAmount, type QuoteL
 
 type CatalogItem = {
   id: string
-  project: "santaddeo" | "hotelprofitai" | "manubot"
+  project: "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot"
   kind: "plan" | "module" | "setup" | "service"
   name: string
   description?: string
@@ -25,10 +25,20 @@ type CatalogItem = {
   trial_days?: number
   support?: QuoteLineItem["support"]
   version?: string
+  configuration_schema?: Record<string, unknown>
   raw_snapshot: Record<string, unknown>
 }
 
 type CatalogGroup = { project: string; items: CatalogItem[]; configured: boolean; error: string | null }
+
+const PROJECT_LABELS: Record<string, string> = {
+  hotelaccelerator: "HotelAccelerator — Suite",
+  santaddeo: "Santaddeo — Revenue",
+  hotelprofitai: "HotelProfitAI — Controllo di gestione",
+  manubot: "ManuBot — Operations",
+  consulting: "Consulenza 4Bid",
+  custom: "Voce libera",
+}
 
 const emptyItem = (): QuoteLineItem => ({
   id: crypto.randomUUID(), kind: "custom", project: "custom", name: "", description: "",
@@ -51,7 +61,7 @@ export default function QuoteCommerceBuilder() {
   useEffect(() => {
     fetch("/api/quotes/catalog", { cache: "no-store" })
       .then(async r => { if (!r.ok) throw new Error("Catalogo non disponibile"); return r.json() })
-      .then(setCatalog)
+      .then(data => setCatalog(Array.isArray(data) ? data : data.projects ?? []))
       .catch(e => toast.error(e.message))
       .finally(() => setLoadingCatalog(false))
   }, [])
@@ -71,7 +81,8 @@ export default function QuoteCommerceBuilder() {
       catalog_version: item.version || "current", name: item.name, description: item.description || item.name,
       features: item.features, quantity: 1, unit_amount: item.unit_amount, list_amount: item.unit_amount,
       amount: item.unit_amount, billing_period: item.billing_period, trial_days: item.trial_days || 0,
-      support: item.support || null, discount: null, configuration: {}, catalog_snapshot: item.raw_snapshot,
+      support: item.support || null, discount: null,
+      configuration: item.configuration_schema || {}, catalog_snapshot: item.raw_snapshot,
     }])
   }
 
@@ -100,7 +111,7 @@ export default function QuoteCommerceBuilder() {
 
   return <div className="max-w-7xl mx-auto space-y-8">
     <div className="flex items-center justify-between gap-4">
-      <div><h1 className="text-3xl font-bold">Nuovo preventivo commerciale</h1><p className="text-muted-foreground">Consulenze, piani e moduli multi-progetto</p></div>
+      <div><h1 className="text-3xl font-bold">Nuovo preventivo commerciale</h1><p className="text-muted-foreground">HotelAccelerator, prodotti verticali, consulenze e servizi 4Bid</p></div>
       <Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button>
     </div>
 
@@ -120,16 +131,16 @@ export default function QuoteCommerceBuilder() {
     </section>
 
     <section className="border rounded-xl p-5 space-y-4 bg-card">
-      <div className="flex justify-between items-center"><div><h2 className="font-semibold text-lg">Catalogo prodotti</h2><p className="text-xs text-muted-foreground">I dati vengono fotografati nel preventivo</p></div>{loadingCatalog && <span className="text-sm">Caricamento…</span>}</div>
-      <div className="grid md:grid-cols-3 gap-4">
-        {catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold capitalize">{group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{!group.items.length && <p className="text-xs text-muted-foreground">Catalogo non configurato</p>}{group.items.map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left border rounded-md p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="text-xs text-muted-foreground">{formatQuoteAmount(item.unit_amount,item.currency)} · {item.billing_period}</span></button>)}</div>)}
+      <div className="flex justify-between items-center"><div><h2 className="font-semibold text-lg">Catalogo prodotti</h2><p className="text-xs text-muted-foreground">HotelAccelerator è la suite madre; Santaddeo, HotelProfitAI e ManuBot restano acquistabili anche singolarmente. I dati vengono fotografati nel preventivo.</p></div>{loadingCatalog && <span className="text-sm">Caricamento…</span>}</div>
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{!group.items.length && <p className="text-xs text-muted-foreground">Catalogo non configurato</p>}{group.items.map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left border rounded-md p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="text-xs text-muted-foreground">{item.unit_amount > 0 ? `${formatQuoteAmount(item.unit_amount,item.currency)} · ${item.billing_period}` : "Prezzo personalizzabile"}</span></button>)}</div>)}
       </div>
     </section>
 
     <section className="space-y-4">
       <div className="flex justify-between items-center"><h2 className="font-semibold text-xl">Voci del preventivo</h2><Button variant="outline" onClick={() => setItems(v => [...v, emptyItem()])}><Plus className="h-4 w-4 mr-2" />Voce libera</Button></div>
       {items.map((item,index) => <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
-        <div className="flex justify-between gap-3"><div className="grid md:grid-cols-2 gap-3 flex-1"><div><Label>Nome</Label><Input value={item.name || ''} onChange={e => patchItem(index,{name:e.target.value})} /></div><div><Label>Progetto</Label><Select value={item.project || 'custom'} onValueChange={v => patchItem(index,{project:v as QuoteLineItem['project']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['consulting','santaddeo','hotelprofitai','manubot','custom'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div></div><Button size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_,i)=>i!==index))}><Trash2 className="h-4 w-4" /></Button></div>
+        <div className="flex justify-between gap-3"><div className="grid md:grid-cols-2 gap-3 flex-1"><div><Label>Nome</Label><Input value={item.name || ''} onChange={e => patchItem(index,{name:e.target.value})} /></div><div><Label>Progetto</Label><Select value={item.project || 'custom'} onValueChange={v => patchItem(index,{project:v as QuoteLineItem['project']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['consulting','hotelaccelerator','santaddeo','hotelprofitai','manubot','custom'].map(v => <SelectItem key={v} value={v}>{PROJECT_LABELS[v] || v}</SelectItem>)}</SelectContent></Select></div></div><Button size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_,i)=>i!==index))}><Trash2 className="h-4 w-4" /></Button></div>
         <div><Label>Descrizione</Label><Textarea value={item.description} onChange={e => patchItem(index,{description:e.target.value})} /></div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchItem(index,{quantity:Number(e.target.value)})} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchItem(index,{unit_amount:Number(e.target.value)})} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || 'one_time'} onValueChange={v => patchItem(index,{billing_period:v as QuoteLineItem['billing_period']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['one_time','monthly','quarterly','yearly'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div><Label>Trial giorni</Label><Input type="number" min="0" value={item.trial_days || 0} onChange={e => patchItem(index,{trial_days:Number(e.target.value)})} /></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(calculateQuoteLine(item).amount)} /></div></div>
         <div className="grid sm:grid-cols-3 gap-3"><div><Label>Tipo sconto</Label><Select value={item.discount?.type || 'none'} onValueChange={v => patchItem(index,{discount:v==='none'?null:{type:v as 'percentage'|'fixed',value:item.discount?.value||0}})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Nessuno</SelectItem><SelectItem value="percentage">Percentuale</SelectItem><SelectItem value="fixed">Importo fisso</SelectItem></SelectContent></Select></div><div><Label>Valore sconto</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.value || 0} onChange={e => patchItem(index,{discount:item.discount?{...item.discount,value:Number(e.target.value)}:null})} /></div><div><Label>Durata sconto (mesi)</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.duration_months || ''} onChange={e => patchItem(index,{discount:item.discount?{...item.discount,duration_months:e.target.value?Number(e.target.value):null}:null})} /></div></div>
