@@ -64,6 +64,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   if (requiresOrchestratedSetup(items)) {
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
+      customer_creation: "always",
       payment_method_types: ["card"],
       customer_email: quote.client_email || undefined,
       metadata: { type: "sales_channel_quote_setup", quote_id: quote.id, token },
