@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { enqueueQuoteProvisioning, processQuoteProvisioning } from "@/lib/quotes/provisioning"
+import { orchestrateQuoteAfterSetup } from "@/lib/quotes/stripe-orchestration"
 import type { SalesChannelQuote } from "@/lib/quotes/types"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -41,13 +42,27 @@ export async function POST(request: NextRequest) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session
-      if (session.metadata?.type === "sales_channel_quote") {
-        const quoteId = session.metadata.quote_id
-        if (quoteId) {
-          const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id
-          const stripeSubscriptionId = typeof session.subscription === "string"
-            ? session.subscription
-            : session.subscription?.id
+      const quoteId = session.metadata?.quote_id
+
+      if (quoteId && (session.metadata?.type === "sales_channel_quote" || session.metadata?.type === "sales_channel_quote_setup")) {
+        const { data: currentQuote, error: quoteError } = await supabase
+          .from("sales_channel_quotes")
+          .select("*")
+          .eq("id", quoteId)
+          .single<SalesChannelQuote>()
+        if (quoteError || !currentQuote) throw quoteError || new Error("Preventivo non trovato")
+
+        if (currentQuote.payment_status !== "paid") {
+          let stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id
+          let stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id
+
+          if (session.mode === "setup" && session.metadata?.type === "sales_channel_quote_setup") {
+            const result = await orchestrateQuoteAfterSetup({ stripe, quote: currentQuote, session })
+            stripeCustomerId = result.customerId
+            stripeSubscriptionId = result.subscriptionIds.join(",") || undefined
+          } else if (session.mode === "payment" && session.payment_status !== "paid") {
+            throw new Error(`Checkout payment non completato (${session.payment_status})`)
+          }
 
           const { data: quote, error: updateError } = await supabase
             .from("sales_channel_quotes")
@@ -66,8 +81,6 @@ export async function POST(request: NextRequest) {
           if (updateError) throw updateError
 
           await enqueueQuoteProvisioning(quote as SalesChannelQuote)
-          // Best effort in the same invocation. Every project job is idempotent,
-          // so a retry endpoint/cron can safely resume failed or pending work.
           await processQuoteProvisioning(quoteId)
         }
       }
