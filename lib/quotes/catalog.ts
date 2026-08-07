@@ -75,14 +75,19 @@ function normalize(project: CatalogProject, value: any): QuoteCatalogItem {
 }
 
 async function loadProjectCatalog(project: CatalogProject): Promise<QuoteCatalogItem[]> {
-  const inline = process.env[envName(project, "CATALOG_JSON")]
+  // Santaddeo pricing is dynamic (structure/accommodation/stars/units), so its live
+  // project database is always the source of truth. Never allow a stale inline JSON
+  // override to replace the pricing schema used by the quote builder.
+  const inline = project === "santaddeo" ? undefined : process.env[envName(project, "CATALOG_JSON")]
   if (inline) {
     const parsed = JSON.parse(inline)
     const rows = Array.isArray(parsed) ? parsed : parsed.items ?? parsed.products ?? parsed.plans ?? []
     return rows.map((row: any) => normalize(project, row))
   }
 
-  const url = process.env[envName(project, "CATALOG_URL")] || DEFAULT_CATALOG_URLS[project]
+  const url = project === "santaddeo"
+    ? DEFAULT_CATALOG_URLS.santaddeo
+    : process.env[envName(project, "CATALOG_URL")] || DEFAULT_CATALOG_URLS[project]
   const token = process.env[envName(project, "CATALOG_TOKEN")]
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 8_000)
