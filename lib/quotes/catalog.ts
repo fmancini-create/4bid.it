@@ -19,11 +19,12 @@ export interface QuoteCatalogItem {
   stripe_price_id?: string | null
 }
 
-const PROJECTS = ["santaddeo", "hotelprofitai", "manubot"] as const
+const PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
 type CatalogProject = (typeof PROJECTS)[number]
 
 const DEFAULT_CATALOG_URLS: Record<CatalogProject, string> = {
+  hotelaccelerator: "https://baldznorrxlctucsfsto.supabase.co/functions/v1/quote-catalog",
   santaddeo: "https://aeynirkfixurikshxfov.supabase.co/functions/v1/quote-catalog",
   hotelprofitai: "https://jzfwplsgmcgfqnkkhddc.supabase.co/functions/v1/quote-catalog",
   manubot: "https://bblgrdukgxkszuayzqjt.supabase.co/functions/v1/quote-catalog",
