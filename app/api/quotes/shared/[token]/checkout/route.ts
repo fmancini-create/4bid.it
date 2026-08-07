@@ -44,7 +44,7 @@ function requiresOrchestratedSetup(items: QuoteLineItem[]) {
   return temporary.length !== recurring.length
 }
 
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   if (!stripe) return NextResponse.json({ error: "Stripe non configurato" }, { status: 503 })
 
   const { token } = await params
@@ -84,7 +84,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
 
   const currency = (quote.currency || "eur").toLowerCase()
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
+  const baseUrl = new URL(request.url).origin
   const attemptSeed = previousSession?.id || quote.stripe_session_id || "initial"
   const checkoutIdempotencyKey = `quote:${quote.id}:checkout:${attemptSeed}`
 
