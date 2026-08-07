@@ -12,7 +12,7 @@ alter table public.sales_channel_quotes
 create table if not exists public.sales_channel_quote_provisioning_jobs (
   id uuid primary key default gen_random_uuid(),
   quote_id uuid not null references public.sales_channel_quotes(id) on delete cascade,
-  project text not null check (project in ('santaddeo','hotelprofitai','manubot')),
+  project text not null check (project in ('hotelaccelerator','santaddeo','hotelprofitai','manubot')),
   idempotency_key text not null unique,
   status text not null default 'pending'
     check (status in ('pending','processing','succeeded','failed','manual_action')),
@@ -33,6 +33,7 @@ create index if not exists idx_quote_provisioning_status
 
 alter table public.sales_channel_quote_provisioning_jobs enable row level security;
 revoke all on public.sales_channel_quote_provisioning_jobs from anon, authenticated;
+grant all on public.sales_channel_quote_provisioning_jobs to service_role;
 
 comment on table public.sales_channel_quote_provisioning_jobs is
   'Idempotent provisioning jobs generated after a quote payment is confirmed by Stripe.';
