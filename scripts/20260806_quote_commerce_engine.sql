@@ -14,6 +14,7 @@ create table if not exists public.sales_channel_quote_provisioning_jobs (
   quote_id uuid not null references public.sales_channel_quotes(id) on delete cascade,
   project text not null check (project in ('hotelaccelerator','santaddeo','hotelprofitai','manubot')),
   idempotency_key text not null unique,
+  provisioning_token text,
   status text not null default 'pending'
     check (status in ('pending','processing','succeeded','failed','manual_action')),
   payload jsonb not null default '{}'::jsonb,
@@ -26,6 +27,9 @@ create table if not exists public.sales_channel_quote_provisioning_jobs (
   unique (quote_id, project)
 );
 
+alter table public.sales_channel_quote_provisioning_jobs
+  add column if not exists provisioning_token text;
+
 create index if not exists idx_quote_provisioning_quote_id
   on public.sales_channel_quote_provisioning_jobs(quote_id);
 create index if not exists idx_quote_provisioning_status
@@ -35,5 +39,7 @@ alter table public.sales_channel_quote_provisioning_jobs enable row level securi
 revoke all on public.sales_channel_quote_provisioning_jobs from anon, authenticated;
 grant all on public.sales_channel_quote_provisioning_jobs to service_role;
 
+comment on column public.sales_channel_quote_provisioning_jobs.provisioning_token is
+  'Random per-job capability. Never exposed to the browser; only the target provisioning service receives it.';
 comment on table public.sales_channel_quote_provisioning_jobs is
   'Idempotent provisioning jobs generated after a quote payment is confirmed by Stripe.';
