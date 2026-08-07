@@ -41,6 +41,12 @@ export interface QuoteLineItem {
   support?: QuoteSupportTerms | null
   configuration?: Record<string, unknown>
   catalog_snapshot?: Record<string, unknown>
+  /** If true the customer can include/exclude this item before accepting the quote. */
+  optional?: boolean
+  /** Initial selection shown to the customer for an optional item. Defaults to true. */
+  default_selected?: boolean
+  /** Frozen customer choice after acceptance. Mandatory items are always treated as selected. */
+  customer_selected?: boolean
 }
 
 export interface QuoteRequestedField {
@@ -136,6 +142,12 @@ export interface SalesChannelQuote {
   view_count: number
 }
 
+export function isQuoteLineSelected(item: QuoteLineItem): boolean {
+  if (!item.optional) return true
+  if (typeof item.customer_selected === "boolean") return item.customer_selected
+  return item.default_selected !== false
+}
+
 export function calculateQuoteLine(item: QuoteLineItem): QuoteLineItem {
   const quantity = Math.max(1, Number(item.quantity) || 1)
   const unitAmount = Number(item.unit_amount ?? item.list_amount ?? item.amount) || 0
@@ -157,7 +169,7 @@ export function calculateQuoteLine(item: QuoteLineItem): QuoteLineItem {
 }
 
 export function calculateQuoteTotal(items: QuoteLineItem[]): number {
-  return items.reduce((total, item) => total + calculateQuoteLine(item).amount, 0)
+  return items.reduce((total, item) => total + (isQuoteLineSelected(item) ? calculateQuoteLine(item).amount : 0), 0)
 }
 
 export function formatQuoteAmount(amount: number | null | undefined, currency = "eur"): string {
