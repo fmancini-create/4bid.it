@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { calculateQuoteLine, type QuoteBillingPeriod, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
+import { calculateQuoteLine, isQuoteLineSelected, type QuoteBillingPeriod, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
 
 const secretKey = process.env.STRIPE_SECRET_KEY
 const stripe = secretKey ? new Stripe(secretKey) : null
@@ -75,7 +75,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  const items = (quote.line_items || []).map(calculateQuoteLine)
+  const items = (quote.line_items || []).filter(isQuoteLineSelected).map(calculateQuoteLine)
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
   const oneTimePayableItems = items.filter(item => (!item.billing_period || item.billing_period === "one_time") && item.amount > 0)
   const hasRecurring = recurringItems.length > 0
