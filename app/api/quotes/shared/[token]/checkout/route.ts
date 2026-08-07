@@ -40,11 +40,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   if (!items.length) return NextResponse.json({ error: "Nessun importo pagabile" }, { status: 400 })
 
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
+  const oneTimeItems = items.filter(item => !item.billing_period || item.billing_period === "one_time")
   const hasRecurring = recurringItems.length > 0
   const currency = (quote.currency || "eur").toLowerCase()
 
   // Stripe Checkout applies trial_period_days to the whole subscription, not to individual lines.
-  // Never approximate mixed trials: that would grant free days to products that do not include them.
   const trialSet = new Set(recurringItems.map(item => Math.max(0, Number(item.trial_days) || 0)))
   if (trialSet.size > 1) {
     return NextResponse.json({
@@ -57,8 +57,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const tempDurations = new Set(tempDiscountItems.map(item => Number(item.discount?.duration_months)))
   const tempDiscountTypes = new Set(tempDiscountItems.map(item => item.discount?.type))
 
-  // A single Checkout subscription can safely express one temporary discount policy.
-  // More complex combinations require multiple subscriptions/schedules rather than silently changing the deal.
   if (tempDurations.size > 1 || tempDiscountTypes.size > 1) {
     return NextResponse.json({
       error: "Il preventivo contiene sconti temporanei con durate o tipologie diverse. Per rispettarli esattamente occorrono abbonamenti Stripe separati.",
@@ -69,13 +67,19 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   let checkoutDiscount: Stripe.Checkout.SessionCreateParams.Discount | undefined
   let temporaryDiscountCouponId: string | undefined
   if (tempDiscountItems.length) {
+    // A Checkout coupon can also affect one-time invoice items in subscription mode. Never let a
+    // recurring promotional discount leak into setup/onboarding fees.
+    if (oneTimeItems.length > 0) {
+      return NextResponse.json({
+        error: "Il preventivo combina costi una tantum e uno sconto temporaneo sul canone. Per non scontare anche setup/onboarding occorre il flusso multi-abbonamento.",
+        code: "TEMPORARY_DISCOUNT_WITH_ONE_TIME_REQUIRES_MULTI_SUBSCRIPTION",
+      }, { status: 422 })
+    }
+
     const first = tempDiscountItems[0]
     const durationMonths = Number(first.discount?.duration_months)
     const type = first.discount?.type
     const value = Number(first.discount?.value) || 0
-
-    // Checkout supports discounts at session/subscription level. Therefore the temporary discount can
-    // only be represented directly when every recurring item shares that same temporary discount.
     const everyRecurringSharesDiscount = recurringItems.every(item =>
       hasTemporaryDiscount(item)
       && item.discount?.type === type
@@ -104,9 +108,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(item => {
     const recurring = recurringFor(item.billing_period || "one_time")
-    // Temporary discounts are applied by Stripe coupon to the recurring subscription, so the base
-    // recurring price must be the undiscounted contractual/list amount. Permanent discounts remain
-    // baked into the line amount snapshot.
     const stripeAmount = recurring && hasTemporaryDiscount(item) ? undiscountedAmount(item) : item.amount
     return {
       quantity: 1,
