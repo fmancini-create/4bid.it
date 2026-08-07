@@ -5,6 +5,7 @@ import { decodeCredential, encodeCredential, type QuoteBillingDetails, type Quot
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 const MAX_FIELD_LENGTH = 5000
+const SAAS_PROJECTS = new Set(["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"])
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -24,6 +25,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const paymentMethod = body.payment_method
   if (paymentMethod !== "bonifico" && paymentMethod !== "card") return NextResponse.json({ error: "Metodo di pagamento non valido" }, { status: 400 })
+
+  const lineItems = quote.line_items || []
+  const requiresCard = lineItems.some(item =>
+    SAAS_PROJECTS.has(item.project || "") || (item.billing_period && item.billing_period !== "one_time"),
+  )
+  if (requiresCard && paymentMethod !== "card") {
+    return NextResponse.json({
+      error: "Per prodotti SaaS, trial o canoni ricorrenti è richiesta una carta di credito per attivazione e rinnovi automatici.",
+      code: "CARD_REQUIRED_FOR_SAAS",
+    }, { status: 422 })
+  }
 
   const submitted: Record<string, string> = {}
   const requested = (quote.requested_fields || []) as QuoteRequestedField[]
@@ -62,5 +74,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Preventivo già accettato o errore salvataggio" }, { status: 409 })
   try { await notifyAdminQuoteAccepted(updated, SUPER_ADMIN_EMAIL) } catch (e) { console.error("[quotes] notify accepted error:", e) }
-  return NextResponse.json({ success: true, payment_method: paymentMethod })
+  return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard })
 }
