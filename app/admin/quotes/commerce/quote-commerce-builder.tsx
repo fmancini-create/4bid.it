@@ -31,10 +31,12 @@ type CatalogItem = {
 
 type CatalogGroup = { project: string; items: CatalogItem[]; configured: boolean; error: string | null }
 
+type AccommodationType = "camere" | "appartamenti" | "piazzole"
+
 type StructureOption = {
   value: string
   label: string
-  accommodation_type: "camere" | "appartamenti" | "piazzole"
+  accommodation_type: AccommodationType
   unit_label: string
 }
 
@@ -43,11 +45,11 @@ type SantaddeoConfig = {
   pricing_config_id: string
   pricing_config_name: string
   structure_type: string
-  accommodation_type: "camere" | "appartamenti" | "piazzole"
+  accommodation_type: AccommodationType
   star_rating: number
   accommodations: number
   fee_base_value: number
-  coefficients: Record<"camere" | "appartamenti" | "piazzole", number>
+  coefficients: Record<AccommodationType, number>
   structure_options: StructureOption[]
   unit_label: string
   formula?: string
@@ -66,10 +68,16 @@ const DEFAULT_STRUCTURE_OPTIONS: StructureOption[] = [
   { value: "hotel", label: "Hotel / Albergo", accommodation_type: "camere", unit_label: "camere" },
   { value: "resort", label: "Resort", accommodation_type: "camere", unit_label: "camere" },
   { value: "bb", label: "B&B / Affittacamere", accommodation_type: "camere", unit_label: "camere" },
-  { value: "agriturismo", label: "Agriturismo", accommodation_type: "appartamenti", unit_label: "sistemazioni" },
+  { value: "agriturismo", label: "Agriturismo", accommodation_type: "camere", unit_label: "camere" },
   { value: "residence", label: "Residence / Appartamenti", accommodation_type: "appartamenti", unit_label: "appartamenti" },
   { value: "casa_vacanze", label: "Casa vacanze", accommodation_type: "appartamenti", unit_label: "appartamenti" },
   { value: "campeggio", label: "Campeggio", accommodation_type: "piazzole", unit_label: "piazzole" },
+]
+
+const ACCOMMODATION_OPTIONS: Array<{ value: AccommodationType; label: string; unitLabel: string; singular: string }> = [
+  { value: "camere", label: "Camere", unitLabel: "camere", singular: "camera" },
+  { value: "appartamenti", label: "Appartamenti / unità abitative", unitLabel: "appartamenti", singular: "appartamento" },
+  { value: "piazzole", label: "Piazzole", unitLabel: "piazzole", singular: "piazzola" },
 ]
 
 const emptyItem = (): QuoteLineItem => ({
@@ -91,6 +99,14 @@ function clampUnits(value: unknown) {
   return Math.max(1, Math.round(Number(value) || 1))
 }
 
+function isAccommodationType(value: unknown): value is AccommodationType {
+  return value === "camere" || value === "appartamenti" || value === "piazzole"
+}
+
+function accommodationMeta(type: AccommodationType) {
+  return ACCOMMODATION_OPTIONS.find(option => option.value === type) || ACCOMMODATION_OPTIONS[0]
+}
+
 function isSantaddeoRms(item: Pick<QuoteLineItem, "project" | "kind" | "source_product_id">) {
   return item.project === "santaddeo" && item.kind === "plan" && String(item.source_product_id || "").startsWith("rms-fee:")
 }
@@ -101,7 +117,7 @@ function normalizeSantaddeoConfig(value: unknown): SantaddeoConfig {
   const rawOptions = Array.isArray(raw.structure_options) ? raw.structure_options : DEFAULT_STRUCTURE_OPTIONS
   const options = rawOptions.map((option) => {
     const row = objectValue(option)
-    const accommodationType = row.accommodation_type === "appartamenti" || row.accommodation_type === "piazzole" ? row.accommodation_type : "camere"
+    const accommodationType: AccommodationType = isAccommodationType(row.accommodation_type) ? row.accommodation_type : "camere"
     return {
       value: String(row.value || "hotel"),
       label: String(row.label || row.value || "Hotel / Albergo"),
@@ -110,10 +126,11 @@ function normalizeSantaddeoConfig(value: unknown): SantaddeoConfig {
     } satisfies StructureOption
   })
   const structureType = String(raw.structure_type || options[0]?.value || "hotel")
-  const selectedOption = options.find((option) => option.value === structureType) || options[0] || DEFAULT_STRUCTURE_OPTIONS[0]
-  const accommodationType = raw.accommodation_type === "appartamenti" || raw.accommodation_type === "piazzole"
+  const selectedOption = options.find(option => option.value === structureType) || options[0] || DEFAULT_STRUCTURE_OPTIONS[0]
+  const accommodationType: AccommodationType = isAccommodationType(raw.accommodation_type)
     ? raw.accommodation_type
     : selectedOption.accommodation_type
+  const meta = accommodationMeta(accommodationType)
 
   return {
     pricing_model: "per_accommodation",
@@ -130,7 +147,7 @@ function normalizeSantaddeoConfig(value: unknown): SantaddeoConfig {
       piazzole: Math.max(0, Number(rawCoefficients.piazzole) || 0),
     },
     structure_options: options,
-    unit_label: String(raw.unit_label || selectedOption.unit_label),
+    unit_label: meta.unitLabel,
     formula: raw.formula ? String(raw.formula) : undefined,
   }
 }
@@ -176,9 +193,8 @@ export default function QuoteCommerceBuilder() {
       const previous = normalizeSantaddeoConfig(item.configuration)
       let next = { ...previous, ...patch }
 
-      if (patch.structure_type) {
-        const option = next.structure_options.find((row) => row.value === patch.structure_type) || next.structure_options[0]
-        if (option) next = { ...next, accommodation_type: option.accommodation_type, unit_label: option.unit_label }
+      if (patch.accommodation_type && isAccommodationType(patch.accommodation_type)) {
+        next = { ...next, unit_label: accommodationMeta(patch.accommodation_type).unitLabel }
       }
 
       next.star_rating = clampStars(next.star_rating)
@@ -227,7 +243,8 @@ export default function QuoteCommerceBuilder() {
       if (!isSantaddeoRms(item)) continue
       const config = normalizeSantaddeoConfig(item.configuration)
       if (!config.pricing_config_id) return toast.error("Listino Santaddeo non valido: ricarica il catalogo")
-      if (!config.structure_type || !config.accommodation_type) return toast.error("Seleziona il tipo di struttura Santaddeo")
+      if (!config.structure_type) return toast.error("Seleziona il tipo di struttura Santaddeo")
+      if (!config.accommodation_type) return toast.error("Seleziona il tipo di sistemazioni Santaddeo")
       if (config.star_rating < 1 || config.star_rating > 5) return toast.error("Seleziona la categoria/stelle Santaddeo")
       if (config.accommodations < 1) return toast.error("Inserisci il numero di sistemazioni Santaddeo")
       if (santaddeoUnitPrice(config) <= 0) return toast.error("Il listino Santaddeo restituisce un prezzo non valido")
@@ -277,7 +294,7 @@ export default function QuoteCommerceBuilder() {
     <section className="border rounded-xl p-5 space-y-4 bg-card">
       <div className="flex justify-between items-center"><div><h2 className="font-semibold text-lg">Catalogo prodotti</h2><p className="text-xs text-muted-foreground">I prezzi e le funzionalità arrivano dai database dei singoli progetti e vengono fotografati nel preventivo.</p></div>{loadingCatalog && <span className="text-sm">Caricamento…</span>}</div>
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{!group.items.length && <p className="text-xs text-muted-foreground">Catalogo non configurato</p>}{group.items.map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left border rounded-md p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="text-xs text-muted-foreground">{item.project === "santaddeo" && item.kind === "plan" && item.id.startsWith("rms-fee:") ? "Configura struttura, stelle e sistemazioni" : item.unit_amount > 0 ? `${formatQuoteAmount(item.unit_amount,item.currency)} · ${item.billing_period}` : "Prezzo personalizzabile"}</span></button>)}</div>)}
+        {catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{!group.items.length && <p className="text-xs text-muted-foreground">Catalogo non configurato</p>}{group.items.map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left border rounded-md p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="text-xs text-muted-foreground">{item.project === "santaddeo" && item.kind === "plan" && item.id.startsWith("rms-fee:") ? "Configura struttura, sistemazioni, stelle e quantità" : item.unit_amount > 0 ? `${formatQuoteAmount(item.unit_amount,item.currency)} · ${item.billing_period}` : "Prezzo personalizzabile"}</span></button>)}</div>)}
       </div>
     </section>
 
@@ -287,17 +304,19 @@ export default function QuoteCommerceBuilder() {
         const santaddeo = isSantaddeoRms(item)
         const santaddeoConfig = santaddeo ? normalizeSantaddeoConfig(item.configuration) : null
         const santaddeoPrice = santaddeoConfig ? santaddeoUnitPrice(santaddeoConfig) : 0
+        const accommodation = santaddeoConfig ? accommodationMeta(santaddeoConfig.accommodation_type) : null
         return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
           <div className="flex justify-between gap-3"><div className="grid md:grid-cols-2 gap-3 flex-1"><div><Label>Nome</Label><Input value={item.name || ''} onChange={e => patchItem(index,{name:e.target.value})} /></div><div><Label>Progetto</Label><Select value={item.project || 'custom'} onValueChange={v => patchItem(index,{project:v as QuoteLineItem['project']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['consulting','hotelaccelerator','santaddeo','hotelprofitai','manubot','custom'].map(v => <SelectItem key={v} value={v}>{PROJECT_LABELS[v] || v}</SelectItem>)}</SelectContent></Select></div></div><Button size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_,i)=>i!==index))}><Trash2 className="h-4 w-4" /></Button></div>
           <div><Label>Descrizione</Label><Textarea value={item.description} onChange={e => patchItem(index,{description:e.target.value})} /></div>
 
           {santaddeoConfig ? <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 space-y-4">
-            <div><h3 className="font-semibold">Configurazione struttura Santaddeo</h3><p className="text-xs text-muted-foreground">Il prezzo è calcolato automaticamente dal listino {santaddeoConfig.pricing_config_name}. Non viene inserito manualmente.</p></div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <div className="lg:col-span-2"><Label>Tipo di struttura</Label><Select value={santaddeoConfig.structure_type} onValueChange={value => patchSantaddeoConfig(index,{structure_type:value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{santaddeoConfig.structure_options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
+            <div><h3 className="font-semibold">Configurazione struttura Santaddeo</h3><p className="text-xs text-muted-foreground">Il prezzo è calcolato automaticamente dal listino {santaddeoConfig.pricing_config_name}. Tipo struttura e tipo sistemazione sono indipendenti.</p></div>
+            <div className="grid sm:grid-cols-2 xl:grid-cols-5 gap-3">
+              <div><Label>Tipo di struttura</Label><Select value={santaddeoConfig.structure_type} onValueChange={value => patchSantaddeoConfig(index,{structure_type:value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{santaddeoConfig.structure_options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Tipo di sistemazioni</Label><Select value={santaddeoConfig.accommodation_type} onValueChange={value => patchSantaddeoConfig(index,{accommodation_type:value as AccommodationType})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATION_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Categoria / stelle</Label><Select value={String(santaddeoConfig.star_rating)} onValueChange={value => patchSantaddeoConfig(index,{star_rating:Number(value)})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(stars => <SelectItem key={stars} value={String(stars)}>{stars} {"★".repeat(stars)}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Numero {santaddeoConfig.unit_label}</Label><Input type="number" min="1" value={santaddeoConfig.accommodations} onChange={e => patchSantaddeoConfig(index,{accommodations:Number(e.target.value)})} /></div>
-              <div><Label>Prezzo / {santaddeoConfig.unit_label === "sistemazioni" ? "sistemazione" : santaddeoConfig.unit_label.replace(/e$/, "a")} / mese</Label><Input readOnly value={formatQuoteAmount(santaddeoPrice)} /></div>
+              <div><Label>Prezzo / {accommodation?.singular || "sistemazione"} / mese</Label><Input readOnly value={formatQuoteAmount(santaddeoPrice)} /></div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background border p-3"><span className="text-sm text-muted-foreground">{santaddeoConfig.accommodations} {santaddeoConfig.unit_label} × {formatQuoteAmount(santaddeoPrice)} / mese</span><strong className="text-xl">{formatQuoteAmount(calculateQuoteLine(item).amount)} / mese</strong></div>
           </div> : <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchItem(index,{quantity:Number(e.target.value)})} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchItem(index,{unit_amount:Number(e.target.value)})} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || 'one_time'} onValueChange={v => patchItem(index,{billing_period:v as QuoteLineItem['billing_period']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['one_time','monthly','quarterly','yearly'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div><Label>Trial giorni</Label><Input type="number" min="0" value={item.trial_days || 0} onChange={e => patchItem(index,{trial_days:Number(e.target.value)})} /></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(calculateQuoteLine(item).amount)} /></div></div>}
