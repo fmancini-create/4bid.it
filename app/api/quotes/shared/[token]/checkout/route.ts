@@ -6,9 +6,11 @@ import { calculateQuoteLine, type QuoteBillingPeriod, type SalesChannelQuote } f
 const secretKey = process.env.STRIPE_SECRET_KEY
 const stripe = secretKey ? new Stripe(secretKey) : null
 
-const intervalMap: Partial<Record<QuoteBillingPeriod, Stripe.PriceCreateParams.Recurring.Interval>> = {
-  monthly: "month",
-  yearly: "year",
+function recurringFor(period: QuoteBillingPeriod): Stripe.PriceCreateParams.Recurring | undefined {
+  if (period === "monthly") return { interval: "month" }
+  if (period === "quarterly") return { interval: "month", interval_count: 3 }
+  if (period === "yearly") return { interval: "year" }
+  return undefined
 }
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -29,14 +31,31 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
   const hasRecurring = recurringItems.length > 0
-  const unsupported = recurringItems.find(item => item.billing_period === "quarterly")
-  if (unsupported) return NextResponse.json({ error: "La periodicità trimestrale deve essere convertita in mensile o annuale prima del pagamento" }, { status: 422 })
-
   const currency = (quote.currency || "eur").toLowerCase()
+
+  // Checkout can apply a trial at subscription level, not independently per line item.
+  // Applying the longest trial would silently grant free days to products without that trial.
+  // Therefore a single Checkout subscription is allowed only when every recurring line shares
+  // the same trial. Mixed trials are handled by the post-checkout orchestration path rather than
+  // being approximated here.
+  const trialSet = new Set(recurringItems.map(item => Math.max(0, Number(item.trial_days) || 0)))
+  if (trialSet.size > 1) {
+    return NextResponse.json({
+      error: "Il preventivo contiene periodi di prova diversi tra prodotti ricorrenti. Per evitare addebiti o giorni gratuiti errati, uniforma i trial oppure usa il flusso multi-abbonamento.",
+      code: "MIXED_TRIALS_REQUIRE_MULTI_SUBSCRIPTION",
+    }, { status: 422 })
+  }
+
+  const temporaryDiscounts = recurringItems.filter(item => Number(item.discount?.duration_months) > 0)
+  if (temporaryDiscounts.length) {
+    return NextResponse.json({
+      error: "Sono presenti sconti ricorrenti a durata limitata. Il checkout standard non deve trasformarli in sconti permanenti: usa lo schedule Stripe previsto dal Quote Engine.",
+      code: "TEMPORARY_DISCOUNT_REQUIRES_SCHEDULE",
+    }, { status: 422 })
+  }
+
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(item => {
-    const recurring = item.billing_period && item.billing_period !== "one_time"
-      ? { interval: intervalMap[item.billing_period]! }
-      : undefined
+    const recurring = recurringFor(item.billing_period || "one_time")
     return {
       quantity: 1,
       price_data: {
@@ -52,15 +71,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   })
 
-  const trialDays = hasRecurring ? Math.max(0, ...recurringItems.map(item => Number(item.trial_days) || 0)) : 0
-  const temporaryDiscounts = recurringItems.filter(item => item.discount?.duration_months)
-  if (temporaryDiscounts.length) {
-    return NextResponse.json({
-      error: "Sono presenti sconti ricorrenti a durata limitata. Configura prima lo schedule Stripe oppure rimuovi la durata dello sconto.",
-      code: "TEMPORARY_DISCOUNT_REQUIRES_SCHEDULE",
-    }, { status: 422 })
-  }
-
+  const trialDays = hasRecurring ? [...trialSet][0] ?? 0 : 0
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
   const common: Stripe.Checkout.SessionCreateParams = {
     payment_method_types: ["card"],
