@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, QuoteProject, SalesChannelQuote } from "./types"
 
-const SAAS_PROJECTS = ["santaddeo", "hotelprofitai", "manubot"] as const
+const SAAS_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 type SaasProject = (typeof SAAS_PROJECTS)[number]
 
 function isSaasProject(project?: QuoteProject): project is SaasProject {
