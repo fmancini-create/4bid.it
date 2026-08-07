@@ -18,6 +18,10 @@ function undiscountedAmount(item: QuoteLineItem) {
   return Math.round(quantity * unit * 100) / 100
 }
 
+function stripeCouponName(value: string) {
+  return value.trim().slice(0, 40)
+}
+
 export async function orchestrateQuoteAfterSetup({
   stripe,
   quote,
@@ -41,8 +45,8 @@ export async function orchestrateQuoteAfterSetup({
   })
   await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } })
 
-  const items = (quote.line_items || []).map(calculateQuoteLine).filter(item => item.amount > 0)
-  const oneTimeItems = items.filter(item => !item.billing_period || item.billing_period === "one_time")
+  const items = (quote.line_items || []).map(calculateQuoteLine)
+  const oneTimeItems = items.filter(item => (!item.billing_period || item.billing_period === "one_time") && item.amount > 0)
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
   const currency = (quote.currency || "eur").toLowerCase()
 
@@ -71,6 +75,8 @@ export async function orchestrateQuoteAfterSetup({
     if (!recurring) continue
 
     const baseAmount = hasTemporaryDiscount(item) ? undiscountedAmount(item) : item.amount
+    if (baseAmount < 0) throw new Error(`Importo non valido per ${item.name || item.description}`)
+
     const product = await stripe.products.create({
       name: item.name || item.description,
       description: item.description?.slice(0, 500),
@@ -82,10 +88,10 @@ export async function orchestrateQuoteAfterSetup({
       currency,
       unit_amount: Math.round(baseAmount * 100),
       recurring,
-      metadata: { quote_id: quote.id, line_item_id: item.id },
+      metadata: { quote_id: quote.id, line_item_id: item.id || "" },
     }, { idempotencyKey: `quote:${quote.id}:price:${item.id}` })
 
-    let discounts: Stripe.SubscriptionCreateParams.Discount[] | undefined
+    let discounts: Array<{ coupon: string }> | undefined
     if (hasTemporaryDiscount(item)) {
       const type = item.discount?.type
       const value = Number(item.discount?.value) || 0
@@ -93,11 +99,11 @@ export async function orchestrateQuoteAfterSetup({
       const coupon = await stripe.coupons.create({
         duration: "repeating",
         duration_in_months: durationMonths,
-        ...(type === "percent"
+        ...(type === "percentage"
           ? { percent_off: Math.min(100, Math.max(0, value)) }
           : { amount_off: Math.max(0, Math.round(value * 100)), currency }),
-        metadata: { type: "sales_channel_quote", quote_id: quote.id, line_item_id: item.id },
-        name: `${quote.quote_number || "Preventivo"} - ${item.name} - sconto ${durationMonths} mesi`,
+        metadata: { type: "sales_channel_quote", quote_id: quote.id, line_item_id: item.id || "" },
+        name: stripeCouponName(`${quote.quote_number || "Preventivo"} - ${item.name || "voce"} - ${durationMonths}m`),
       }, { idempotencyKey: `quote:${quote.id}:coupon:${item.id}` })
       discounts = [{ coupon: coupon.id }]
     }
@@ -113,13 +119,13 @@ export async function orchestrateQuoteAfterSetup({
       metadata: {
         type: "sales_channel_quote",
         quote_id: quote.id,
-        line_item_id: item.id,
+        line_item_id: item.id || "",
         project: item.project || "custom",
       },
     }, { idempotencyKey: `quote:${quote.id}:subscription:${item.id}` })
 
     if (subscription.status !== "active" && subscription.status !== "trialing") {
-      throw new Error(`Abbonamento ${item.name} non attivo (${subscription.status})`)
+      throw new Error(`Abbonamento ${item.name || item.description} non attivo (${subscription.status})`)
     }
     subscriptions.push(subscription.id)
   }
