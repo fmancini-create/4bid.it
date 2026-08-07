@@ -32,6 +32,7 @@ export async function orchestrateQuoteAfterSetup({
   const customerId = typeof session.customer === "string" ? session.customer : session.customer.id
   const setupIntentId = typeof session.setup_intent === "string" ? session.setup_intent : session.setup_intent.id
   const setupIntent = await stripe.setupIntents.retrieve(setupIntentId)
+  if (setupIntent.status !== "succeeded") throw new Error(`Setup carta non completato (${setupIntent.status})`)
   if (!setupIntent.payment_method) throw new Error("Metodo di pagamento non disponibile")
   const paymentMethodId = typeof setupIntent.payment_method === "string" ? setupIntent.payment_method : setupIntent.payment_method.id
 
@@ -107,7 +108,7 @@ export async function orchestrateQuoteAfterSetup({
       default_payment_method: paymentMethodId,
       items: [{ price: price.id, quantity: 1 }],
       ...(discounts ? { discounts } : {}),
-      ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
+      ...(trialDays > 0 ? { trial_period_days: trialDays } : { payment_behavior: "error_if_incomplete" }),
       collection_method: "charge_automatically",
       metadata: {
         type: "sales_channel_quote",
@@ -116,6 +117,10 @@ export async function orchestrateQuoteAfterSetup({
         project: item.project || "custom",
       },
     }, { idempotencyKey: `quote:${quote.id}:subscription:${item.id}` })
+
+    if (subscription.status !== "active" && subscription.status !== "trialing") {
+      throw new Error(`Abbonamento ${item.name} non attivo (${subscription.status})`)
+    }
     subscriptions.push(subscription.id)
   }
 
