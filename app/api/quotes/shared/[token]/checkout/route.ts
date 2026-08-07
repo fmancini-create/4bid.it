@@ -23,6 +23,23 @@ function undiscountedAmount(item: QuoteLineItem) {
   return Math.round(quantity * unit * 100) / 100
 }
 
+function requiresOrchestratedSetup(items: QuoteLineItem[]) {
+  const recurring = items.filter(item => item.billing_period && item.billing_period !== "one_time")
+  const oneTime = items.filter(item => !item.billing_period || item.billing_period === "one_time")
+  if (!recurring.length) return false
+
+  const trialSet = new Set(recurring.map(item => Math.max(0, Number(item.trial_days) || 0)))
+  if (trialSet.size > 1) return true
+
+  const temporary = recurring.filter(hasTemporaryDiscount)
+  if (!temporary.length) return false
+  if (oneTime.length > 0) return true
+
+  const signatures = new Set(temporary.map(item => [item.discount?.type, Number(item.discount?.value), Number(item.discount?.duration_months)].join(":")))
+  if (signatures.size > 1) return true
+  return temporary.length !== recurring.length
+}
+
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   if (!stripe) return NextResponse.json({ error: "Stripe non configurato" }, { status: 503 })
 
@@ -40,59 +57,44 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   if (!items.length) return NextResponse.json({ error: "Nessun importo pagabile" }, { status: 400 })
 
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
-  const oneTimeItems = items.filter(item => !item.billing_period || item.billing_period === "one_time")
   const hasRecurring = recurringItems.length > 0
   const currency = (quote.currency || "eur").toLowerCase()
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
 
-  // Stripe Checkout applies trial_period_days to the whole subscription, not to individual lines.
-  const trialSet = new Set(recurringItems.map(item => Math.max(0, Number(item.trial_days) || 0)))
-  if (trialSet.size > 1) {
-    return NextResponse.json({
-      error: "Il preventivo contiene periodi di prova diversi tra prodotti ricorrenti. Per mantenere esattamente le condizioni contrattuali occorrono abbonamenti Stripe separati.",
-      code: "MIXED_TRIALS_REQUIRE_MULTI_SUBSCRIPTION",
-    }, { status: 422 })
+  // Complex deals (mixed trials, partial/heterogeneous temporary discounts, setup fee + temporary
+  // recurring promotion) collect and authenticate the card first. The webhook then creates the exact
+  // one-time PaymentIntent and independent subscriptions, so no commercial condition is approximated.
+  if (requiresOrchestratedSetup(items)) {
+    const session = await stripe.checkout.sessions.create({
+      mode: "setup",
+      payment_method_types: ["card"],
+      customer_email: quote.client_email || undefined,
+      metadata: { type: "sales_channel_quote_setup", quote_id: quote.id },
+      setup_intent_data: { metadata: { type: "sales_channel_quote_setup", quote_id: quote.id } },
+      success_url: `${baseUrl}/preventivo/${token}?paid=processing`,
+      cancel_url: `${baseUrl}/preventivo/${token}`,
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      billing_address_collection: "required",
+      tax_id_collection: { enabled: true },
+    })
+
+    await supabase.from("sales_channel_quotes").update({
+      stripe_session_id: session.id,
+      payment_method: "card",
+      updated_at: new Date().toISOString(),
+    }).eq("id", quote.id)
+
+    return NextResponse.json({ url: session.url, mode: "setup" })
   }
 
   const tempDiscountItems = recurringItems.filter(hasTemporaryDiscount)
-  const tempDurations = new Set(tempDiscountItems.map(item => Number(item.discount?.duration_months)))
-  const tempDiscountTypes = new Set(tempDiscountItems.map(item => item.discount?.type))
-
-  if (tempDurations.size > 1 || tempDiscountTypes.size > 1) {
-    return NextResponse.json({
-      error: "Il preventivo contiene sconti temporanei con durate o tipologie diverse. Per rispettarli esattamente occorrono abbonamenti Stripe separati.",
-      code: "MIXED_TEMPORARY_DISCOUNTS_REQUIRE_MULTI_SUBSCRIPTION",
-    }, { status: 422 })
-  }
-
   let checkoutDiscount: Stripe.Checkout.SessionCreateParams.Discount | undefined
   let temporaryDiscountCouponId: string | undefined
   if (tempDiscountItems.length) {
-    // A Checkout coupon can also affect one-time invoice items in subscription mode. Never let a
-    // recurring promotional discount leak into setup/onboarding fees.
-    if (oneTimeItems.length > 0) {
-      return NextResponse.json({
-        error: "Il preventivo combina costi una tantum e uno sconto temporaneo sul canone. Per non scontare anche setup/onboarding occorre il flusso multi-abbonamento.",
-        code: "TEMPORARY_DISCOUNT_WITH_ONE_TIME_REQUIRES_MULTI_SUBSCRIPTION",
-      }, { status: 422 })
-    }
-
     const first = tempDiscountItems[0]
     const durationMonths = Number(first.discount?.duration_months)
     const type = first.discount?.type
     const value = Number(first.discount?.value) || 0
-    const everyRecurringSharesDiscount = recurringItems.every(item =>
-      hasTemporaryDiscount(item)
-      && item.discount?.type === type
-      && Number(item.discount?.value) === value
-      && Number(item.discount?.duration_months) === durationMonths,
-    )
-    if (!everyRecurringSharesDiscount) {
-      return NextResponse.json({
-        error: "Lo sconto temporaneo riguarda solo alcune voci ricorrenti. Per non scontare prodotti esclusi occorrono abbonamenti Stripe separati.",
-        code: "PARTIAL_TEMPORARY_DISCOUNT_REQUIRES_MULTI_SUBSCRIPTION",
-      }, { status: 422 })
-    }
-
     const coupon = await stripe.coupons.create({
       duration: "repeating",
       duration_in_months: durationMonths,
@@ -124,8 +126,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   })
 
-  const trialDays = hasRecurring ? [...trialSet][0] ?? 0 : 0
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
+  const trialDays = hasRecurring ? Math.max(0, Number(recurringItems[0]?.trial_days) || 0) : 0
   const common: Stripe.Checkout.SessionCreateParams = {
     payment_method_types: ["card"],
     customer_email: quote.client_email || undefined,
