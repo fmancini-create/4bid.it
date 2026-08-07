@@ -1,4 +1,4 @@
-export type QuoteProject = "consulting" | "santaddeo" | "hotelprofitai" | "manubot" | "custom"
+export type QuoteProject = "consulting" | "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot" | "custom"
 export type QuoteBillingPeriod = "one_time" | "monthly" | "quarterly" | "yearly"
 export type QuoteDiscountType = "percentage" | "fixed"
 
