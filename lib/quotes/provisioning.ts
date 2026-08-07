@@ -4,6 +4,13 @@ import type { QuoteLineItem, QuoteProject, SalesChannelQuote } from "./types"
 const SAAS_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 type SaasProject = (typeof SAAS_PROJECTS)[number]
 
+const DEFAULT_PROVISIONING_URLS: Record<SaasProject, string> = {
+  hotelaccelerator: "https://baldznorrxlctucsfsto.supabase.co/functions/v1/quote-provision",
+  santaddeo: "https://aeynirkfixurikshxfov.supabase.co/functions/v1/quote-provision",
+  hotelprofitai: "https://jzfwplsgmcgfqnkkhddc.supabase.co/functions/v1/quote-provision",
+  manubot: "https://bblgrdukgxkszuayzqjt.supabase.co/functions/v1/quote-provision",
+}
+
 function isSaasProject(project?: QuoteProject): project is SaasProject {
   return SAAS_PROJECTS.includes(project as SaasProject)
 }
@@ -72,6 +79,9 @@ export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
 
 export async function processQuoteProvisioning(quoteId: string) {
   const supabase = createAdminClient()
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRole) throw new Error("SUPABASE_SERVICE_ROLE_KEY non configurata")
+
   const { data: jobs, error } = await supabase
     .from("sales_channel_quote_provisioning_jobs")
     .select("*")
@@ -81,17 +91,7 @@ export async function processQuoteProvisioning(quoteId: string) {
 
   for (const job of jobs ?? []) {
     const project = job.project as SaasProject
-    const endpoint = process.env[envName(project, "PROVISIONING_URL")]
-    const secret = process.env[envName(project, "PROVISIONING_TOKEN")]
-
-    if (!endpoint) {
-      await supabase.from("sales_channel_quote_provisioning_jobs").update({
-        status: "manual_action",
-        last_error: `Connettore ${project} non configurato`,
-        updated_at: new Date().toISOString(),
-      }).eq("id", job.id)
-      continue
-    }
+    const endpoint = process.env[envName(project, "PROVISIONING_URL")] || DEFAULT_PROVISIONING_URLS[project]
 
     await supabase.from("sales_channel_quote_provisioning_jobs").update({
       status: "processing",
@@ -100,15 +100,24 @@ export async function processQuoteProvisioning(quoteId: string) {
     }).eq("id", job.id)
 
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": job.idempotency_key,
-          ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
-        },
-        body: JSON.stringify(job.payload),
-      })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 20_000)
+      let response: Response
+      try {
+        response = await fetch(endpoint, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": job.idempotency_key,
+            Authorization: `Bearer ${serviceRole}`,
+          },
+          body: JSON.stringify(job.payload),
+        })
+      } finally {
+        clearTimeout(timeout)
+      }
+
       const body = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(body.error ?? `${response.status} ${response.statusText}`)
 
@@ -122,7 +131,7 @@ export async function processQuoteProvisioning(quoteId: string) {
     } catch (cause: any) {
       await supabase.from("sales_channel_quote_provisioning_jobs").update({
         status: "failed",
-        last_error: cause?.message ?? "Provisioning fallito",
+        last_error: cause?.name === "AbortError" ? "Timeout provisioning" : cause?.message ?? "Provisioning fallito",
         updated_at: new Date().toISOString(),
       }).eq("id", job.id)
     }
