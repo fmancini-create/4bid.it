@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
 import QuoteView from "./quote-view"
-import QuoteCommerceView, { hasCommerceData } from "./quote-commerce-view"
+import QuoteCommerceView from "./quote-commerce-view"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -52,7 +52,9 @@ export default async function PreventivoPage({
 
   const expired = data.expires_at ? new Date(data.expires_at) < new Date() : false
   const lineItems = (data.line_items || []) as QuoteLineItem[]
-  const structuredQuote = lineItems.some(hasCommerceData)
+  const structuredQuote = lineItems.some((item) =>
+    Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support),
+  )
 
   return structuredQuote ? (
     <QuoteCommerceView token={token} quote={data} expired={expired} />
