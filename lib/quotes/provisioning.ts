@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, QuoteProject, SalesChannelQuote } from "./types"
 
@@ -27,6 +28,10 @@ function groupItems(items: QuoteLineItem[]) {
   }, {})
 }
 
+function createProvisioningToken() {
+  return randomBytes(32).toString("base64url")
+}
+
 export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
   const supabase = createAdminClient()
   const grouped = groupItems(quote.line_items ?? [])
@@ -41,6 +46,7 @@ export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
     quote_id: quote.id,
     project,
     idempotency_key: `${quote.id}:${project}`,
+    provisioning_token: createProvisioningToken(),
     status: "pending",
     payload: {
       quote_id: quote.id,
@@ -79,9 +85,6 @@ export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
 
 export async function processQuoteProvisioning(quoteId: string) {
   const supabase = createAdminClient()
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceRole) throw new Error("SUPABASE_SERVICE_ROLE_KEY non configurata")
-
   const { data: jobs, error } = await supabase
     .from("sales_channel_quote_provisioning_jobs")
     .select("*")
@@ -92,6 +95,14 @@ export async function processQuoteProvisioning(quoteId: string) {
   for (const job of jobs ?? []) {
     const project = job.project as SaasProject
     const endpoint = process.env[envName(project, "PROVISIONING_URL")] || DEFAULT_PROVISIONING_URLS[project]
+    if (!job.provisioning_token) {
+      await supabase.from("sales_channel_quote_provisioning_jobs").update({
+        status: "failed",
+        last_error: "Capability di provisioning mancante",
+        updated_at: new Date().toISOString(),
+      }).eq("id", job.id)
+      continue
+    }
 
     await supabase.from("sales_channel_quote_provisioning_jobs").update({
       status: "processing",
@@ -110,9 +121,9 @@ export async function processQuoteProvisioning(quoteId: string) {
           headers: {
             "Content-Type": "application/json",
             "Idempotency-Key": job.idempotency_key,
-            Authorization: `Bearer ${serviceRole}`,
+            Authorization: `Bearer ${job.provisioning_token}`,
           },
-          body: JSON.stringify(job.payload),
+          body: JSON.stringify({ project }),
         })
       } finally {
         clearTimeout(timeout)
