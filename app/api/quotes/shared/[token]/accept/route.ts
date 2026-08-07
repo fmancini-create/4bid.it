@@ -1,7 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { notifyAdminQuoteAccepted } from "@/lib/quotes/email"
-import { decodeCredential, encodeCredential, type QuoteBillingDetails, type QuoteRequestedField, type SalesChannelQuote } from "@/lib/quotes/types"
+import {
+  calculateQuoteLine,
+  calculateQuoteTotal,
+  decodeCredential,
+  encodeCredential,
+  type QuoteBillingDetails,
+  type QuoteRequestedField,
+  type SalesChannelQuote,
+} from "@/lib/quotes/types"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 const MAX_FIELD_LENGTH = 5000
@@ -23,11 +31,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!acceptanceName) return NextResponse.json({ error: "Il nome per l'accettazione è obbligatorio" }, { status: 400 })
   if (body.accepted !== true) return NextResponse.json({ error: "Devi accettare il preventivo e le condizioni" }, { status: 400 })
 
+  const selectedIds = new Set(
+    Array.isArray(body.selected_item_ids)
+      ? body.selected_item_ids.map((value: unknown) => String(value)).filter(Boolean)
+      : [],
+  )
+  const lineItems = (quote.line_items || []).map((item) => {
+    const calculated = calculateQuoteLine(item)
+    const customerSelected = !calculated.optional || (!!calculated.id && selectedIds.has(calculated.id))
+    return { ...calculated, customer_selected: customerSelected }
+  })
+  const selectedItems = lineItems.filter(item => item.customer_selected !== false)
+  if (!selectedItems.length) return NextResponse.json({ error: "Seleziona almeno una voce del preventivo" }, { status: 422 })
+
   const paymentMethod = body.payment_method
   if (paymentMethod !== "bonifico" && paymentMethod !== "card") return NextResponse.json({ error: "Metodo di pagamento non valido" }, { status: 400 })
 
-  const lineItems = quote.line_items || []
-  const requiresCard = lineItems.some(item =>
+  const requiresCard = selectedItems.some(item =>
     SAAS_PROJECTS.has(item.project || "") || (item.billing_period && item.billing_period !== "one_time"),
   )
   if (requiresCard && paymentMethod !== "card") {
@@ -66,13 +86,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null
   const nowIso = new Date().toISOString()
+  const acceptedTotal = calculateQuoteTotal(lineItems)
   const { data: updated, error: updateError } = await supabase.from("sales_channel_quotes").update({
-    submitted_fields: submitted, billing_details: billing, submitted_at: nowIso, accepted_at: nowIso,
-    acceptance_name: acceptanceName, acceptance_ip: ip, payment_method: paymentMethod,
-    payment_status: paymentMethod === "bonifico" ? "awaiting_transfer" : "pending", status: "accepted", updated_at: nowIso,
+    line_items: lineItems,
+    total_amount: acceptedTotal,
+    submitted_fields: submitted,
+    billing_details: billing,
+    submitted_at: nowIso,
+    accepted_at: nowIso,
+    acceptance_name: acceptanceName,
+    acceptance_ip: ip,
+    payment_method: paymentMethod,
+    payment_status: paymentMethod === "bonifico" ? "awaiting_transfer" : "pending",
+    status: "accepted",
+    updated_at: nowIso,
   }).eq("id", quote.id).is("accepted_at", null).select().single<SalesChannelQuote>()
 
   if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Preventivo già accettato o errore salvataggio" }, { status: 409 })
   try { await notifyAdminQuoteAccepted(updated, SUPER_ADMIN_EMAIL) } catch (e) { console.error("[quotes] notify accepted error:", e) }
-  return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard })
+  return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard, total_amount: acceptedTotal })
 }
