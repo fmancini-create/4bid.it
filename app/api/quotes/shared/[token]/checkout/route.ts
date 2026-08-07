@@ -23,9 +23,13 @@ function undiscountedAmount(item: QuoteLineItem) {
   return Math.round(quantity * unit * 100) / 100
 }
 
+function stripeCouponName(value: string) {
+  return value.trim().slice(0, 40)
+}
+
 function requiresOrchestratedSetup(items: QuoteLineItem[]) {
   const recurring = items.filter(item => item.billing_period && item.billing_period !== "one_time")
-  const oneTime = items.filter(item => !item.billing_period || item.billing_period === "one_time")
+  const oneTime = items.filter(item => (!item.billing_period || item.billing_period === "one_time") && item.amount > 0)
   if (!recurring.length) return false
 
   const trialSet = new Set(recurring.map(item => Math.max(0, Number(item.trial_days) || 0)))
@@ -53,8 +57,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
   if (quote.payment_status === "paid") return NextResponse.json({ error: "Pagamento già effettuato" }, { status: 409 })
 
-  // Reuse an existing open Checkout. If Stripe already completed it but our webhook has not yet
-  // finalized the quote, do not create another paid subscription while the first event is processing.
   let previousSession: Stripe.Checkout.Session | null = null
   if (quote.stripe_session_id) {
     try {
@@ -73,11 +75,14 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  const items = (quote.line_items || []).map(calculateQuoteLine).filter(item => item.amount > 0)
-  if (!items.length) return NextResponse.json({ error: "Nessun importo pagabile" }, { status: 400 })
-
+  const items = (quote.line_items || []).map(calculateQuoteLine)
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
+  const oneTimePayableItems = items.filter(item => (!item.billing_period || item.billing_period === "one_time") && item.amount > 0)
   const hasRecurring = recurringItems.length > 0
+  if (!hasRecurring && !oneTimePayableItems.length) {
+    return NextResponse.json({ error: "Il preventivo non contiene importi da addebitare con carta" }, { status: 400 })
+  }
+
   const currency = (quote.currency || "eur").toLowerCase()
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
   const attemptSeed = previousSession?.id || quote.stripe_session_id || "initial"
@@ -122,20 +127,24 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         ? { percent_off: Math.min(100, Math.max(0, value)) }
         : { amount_off: Math.max(0, Math.round(value * 100)), currency }),
       metadata: { type: "sales_channel_quote", quote_id: quote.id },
-      name: `${quote.quote_number || "Preventivo"} - sconto ${durationMonths} mesi`,
+      name: stripeCouponName(`${quote.quote_number || "Preventivo"} - sconto ${durationMonths}m`),
     }, { idempotencyKey: `quote:${quote.id}:checkout-coupon:${attemptSeed}` })
     temporaryDiscountCouponId = coupon.id
     checkoutDiscount = { coupon: coupon.id }
   }
 
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(item => {
+  const checkoutItems = items.filter(item =>
+    (item.billing_period && item.billing_period !== "one_time") || item.amount > 0,
+  )
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = checkoutItems.map(item => {
     const recurring = recurringFor(item.billing_period || "one_time")
     const stripeAmount = recurring && hasTemporaryDiscount(item) ? undiscountedAmount(item) : item.amount
     return {
       quantity: 1,
       price_data: {
         currency,
-        unit_amount: Math.round(stripeAmount * 100),
+        unit_amount: Math.max(0, Math.round(stripeAmount * 100)),
         product_data: {
           name: item.name || item.description,
           description: item.features?.length ? item.features.slice(0, 5).join(" · ").slice(0, 500) : item.description.slice(0, 500),
@@ -169,6 +178,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     ? await stripe.checkout.sessions.create({
         ...common,
         mode: "subscription",
+        payment_method_collection: "always",
         subscription_data: {
           metadata: { type: "sales_channel_quote", quote_id: quote.id },
           ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
