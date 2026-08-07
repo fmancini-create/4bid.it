@@ -53,6 +53,26 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
   if (quote.payment_status === "paid") return NextResponse.json({ error: "Pagamento già effettuato" }, { status: 409 })
 
+  // Reuse an existing open Checkout. If Stripe already completed it but our webhook has not yet
+  // finalized the quote, do not create another paid subscription while the first event is processing.
+  let previousSession: Stripe.Checkout.Session | null = null
+  if (quote.stripe_session_id) {
+    try {
+      previousSession = await stripe.checkout.sessions.retrieve(quote.stripe_session_id)
+      if (previousSession.status === "open" && previousSession.url) {
+        return NextResponse.json({ url: previousSession.url, mode: previousSession.mode, reused: true })
+      }
+      if (previousSession.status === "complete") {
+        return NextResponse.json({
+          error: "Il pagamento è già stato completato ed è in elaborazione. Non avviare un secondo checkout.",
+          code: "CHECKOUT_PROCESSING",
+        }, { status: 409 })
+      }
+    } catch (cause: any) {
+      if (cause?.code !== "resource_missing") throw cause
+    }
+  }
+
   const items = (quote.line_items || []).map(calculateQuoteLine).filter(item => item.amount > 0)
   if (!items.length) return NextResponse.json({ error: "Nessun importo pagabile" }, { status: 400 })
 
@@ -60,6 +80,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const hasRecurring = recurringItems.length > 0
   const currency = (quote.currency || "eur").toLowerCase()
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
+  const attemptSeed = previousSession?.id || quote.stripe_session_id || "initial"
+  const checkoutIdempotencyKey = `quote:${quote.id}:checkout:${attemptSeed}`
 
   if (requiresOrchestratedSetup(items)) {
     const session = await stripe.checkout.sessions.create({
@@ -74,7 +96,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       billing_address_collection: "required",
       tax_id_collection: { enabled: true },
-    })
+    }, { idempotencyKey: checkoutIdempotencyKey })
 
     await supabase.from("sales_channel_quotes").update({
       stripe_session_id: session.id,
@@ -96,12 +118,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     const coupon = await stripe.coupons.create({
       duration: "repeating",
       duration_in_months: durationMonths,
-      ...(type === "percent"
+      ...(type === "percentage"
         ? { percent_off: Math.min(100, Math.max(0, value)) }
         : { amount_off: Math.max(0, Math.round(value * 100)), currency }),
       metadata: { type: "sales_channel_quote", quote_id: quote.id },
       name: `${quote.quote_number || "Preventivo"} - sconto ${durationMonths} mesi`,
-    })
+    }, { idempotencyKey: `quote:${quote.id}:checkout-coupon:${attemptSeed}` })
     temporaryDiscountCouponId = coupon.id
     checkoutDiscount = { coupon: coupon.id }
   }
@@ -151,12 +173,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
           metadata: { type: "sales_channel_quote", quote_id: quote.id },
           ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
         },
-      })
+      }, { idempotencyKey: checkoutIdempotencyKey })
     : await stripe.checkout.sessions.create({
         ...common,
         mode: "payment",
         payment_intent_data: { metadata: { type: "sales_channel_quote", quote_id: quote.id } },
-      })
+      }, { idempotencyKey: checkoutIdempotencyKey })
 
   await supabase.from("sales_channel_quotes").update({
     stripe_session_id: session.id,
