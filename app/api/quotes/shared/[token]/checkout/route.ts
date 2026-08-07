@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { calculateQuoteLine, type QuoteBillingPeriod, type SalesChannelQuote } from "@/lib/quotes/types"
+import { calculateQuoteLine, type QuoteBillingPeriod, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
 
 const secretKey = process.env.STRIPE_SECRET_KEY
 const stripe = secretKey ? new Stripe(secretKey) : null
@@ -11,6 +11,16 @@ function recurringFor(period: QuoteBillingPeriod): Stripe.PriceCreateParams.Recu
   if (period === "quarterly") return { interval: "month", interval_count: 3 }
   if (period === "yearly") return { interval: "year" }
   return undefined
+}
+
+function hasTemporaryDiscount(item: QuoteLineItem) {
+  return Number(item.discount?.duration_months) > 0 && Number(item.discount?.value) > 0
+}
+
+function undiscountedAmount(item: QuoteLineItem) {
+  const quantity = Math.max(0, Number(item.quantity) || 0)
+  const unit = Math.max(0, Number(item.list_amount ?? item.unit_amount) || 0)
+  return Math.round(quantity * unit * 100) / 100
 }
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -33,34 +43,76 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const hasRecurring = recurringItems.length > 0
   const currency = (quote.currency || "eur").toLowerCase()
 
-  // Checkout can apply a trial at subscription level, not independently per line item.
-  // Applying the longest trial would silently grant free days to products without that trial.
-  // Therefore a single Checkout subscription is allowed only when every recurring line shares
-  // the same trial. Mixed trials are handled by the post-checkout orchestration path rather than
-  // being approximated here.
+  // Stripe Checkout applies trial_period_days to the whole subscription, not to individual lines.
+  // Never approximate mixed trials: that would grant free days to products that do not include them.
   const trialSet = new Set(recurringItems.map(item => Math.max(0, Number(item.trial_days) || 0)))
   if (trialSet.size > 1) {
     return NextResponse.json({
-      error: "Il preventivo contiene periodi di prova diversi tra prodotti ricorrenti. Per evitare addebiti o giorni gratuiti errati, uniforma i trial oppure usa il flusso multi-abbonamento.",
+      error: "Il preventivo contiene periodi di prova diversi tra prodotti ricorrenti. Per mantenere esattamente le condizioni contrattuali occorrono abbonamenti Stripe separati.",
       code: "MIXED_TRIALS_REQUIRE_MULTI_SUBSCRIPTION",
     }, { status: 422 })
   }
 
-  const temporaryDiscounts = recurringItems.filter(item => Number(item.discount?.duration_months) > 0)
-  if (temporaryDiscounts.length) {
+  const tempDiscountItems = recurringItems.filter(hasTemporaryDiscount)
+  const tempDurations = new Set(tempDiscountItems.map(item => Number(item.discount?.duration_months)))
+  const tempDiscountTypes = new Set(tempDiscountItems.map(item => item.discount?.type))
+
+  // A single Checkout subscription can safely express one temporary discount policy.
+  // More complex combinations require multiple subscriptions/schedules rather than silently changing the deal.
+  if (tempDurations.size > 1 || tempDiscountTypes.size > 1) {
     return NextResponse.json({
-      error: "Sono presenti sconti ricorrenti a durata limitata. Il checkout standard non deve trasformarli in sconti permanenti: usa lo schedule Stripe previsto dal Quote Engine.",
-      code: "TEMPORARY_DISCOUNT_REQUIRES_SCHEDULE",
+      error: "Il preventivo contiene sconti temporanei con durate o tipologie diverse. Per rispettarli esattamente occorrono abbonamenti Stripe separati.",
+      code: "MIXED_TEMPORARY_DISCOUNTS_REQUIRE_MULTI_SUBSCRIPTION",
     }, { status: 422 })
+  }
+
+  let checkoutDiscount: Stripe.Checkout.SessionCreateParams.Discount | undefined
+  let temporaryDiscountCouponId: string | undefined
+  if (tempDiscountItems.length) {
+    const first = tempDiscountItems[0]
+    const durationMonths = Number(first.discount?.duration_months)
+    const type = first.discount?.type
+    const value = Number(first.discount?.value) || 0
+
+    // Checkout supports discounts at session/subscription level. Therefore the temporary discount can
+    // only be represented directly when every recurring item shares that same temporary discount.
+    const everyRecurringSharesDiscount = recurringItems.every(item =>
+      hasTemporaryDiscount(item)
+      && item.discount?.type === type
+      && Number(item.discount?.value) === value
+      && Number(item.discount?.duration_months) === durationMonths,
+    )
+    if (!everyRecurringSharesDiscount) {
+      return NextResponse.json({
+        error: "Lo sconto temporaneo riguarda solo alcune voci ricorrenti. Per non scontare prodotti esclusi occorrono abbonamenti Stripe separati.",
+        code: "PARTIAL_TEMPORARY_DISCOUNT_REQUIRES_MULTI_SUBSCRIPTION",
+      }, { status: 422 })
+    }
+
+    const coupon = await stripe.coupons.create({
+      duration: "repeating",
+      duration_in_months: durationMonths,
+      ...(type === "percent"
+        ? { percent_off: Math.min(100, Math.max(0, value)) }
+        : { amount_off: Math.max(0, Math.round(value * 100)), currency }),
+      metadata: { type: "sales_channel_quote", quote_id: quote.id },
+      name: `${quote.quote_number || "Preventivo"} - sconto ${durationMonths} mesi`,
+    })
+    temporaryDiscountCouponId = coupon.id
+    checkoutDiscount = { coupon: coupon.id }
   }
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(item => {
     const recurring = recurringFor(item.billing_period || "one_time")
+    // Temporary discounts are applied by Stripe coupon to the recurring subscription, so the base
+    // recurring price must be the undiscounted contractual/list amount. Permanent discounts remain
+    // baked into the line amount snapshot.
+    const stripeAmount = recurring && hasTemporaryDiscount(item) ? undiscountedAmount(item) : item.amount
     return {
       quantity: 1,
       price_data: {
         currency,
-        unit_amount: Math.round(item.amount * 100),
+        unit_amount: Math.round(stripeAmount * 100),
         product_data: {
           name: item.name || item.description,
           description: item.features?.length ? item.features.slice(0, 5).join(" · ").slice(0, 500) : item.description.slice(0, 500),
@@ -77,13 +129,18 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     payment_method_types: ["card"],
     customer_email: quote.client_email || undefined,
     line_items: lineItems,
-    metadata: { type: "sales_channel_quote", quote_id: quote.id },
+    metadata: {
+      type: "sales_channel_quote",
+      quote_id: quote.id,
+      ...(temporaryDiscountCouponId ? { temporary_discount_coupon_id: temporaryDiscountCouponId } : {}),
+    },
     success_url: `${baseUrl}/preventivo/${token}?paid=1`,
     cancel_url: `${baseUrl}/preventivo/${token}`,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     allow_promotion_codes: false,
+    ...(checkoutDiscount ? { discounts: [checkoutDiscount] } : {}),
   }
 
   const session = hasRecurring
