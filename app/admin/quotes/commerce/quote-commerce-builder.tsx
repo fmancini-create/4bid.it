@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { calculateQuoteLine, calculateQuoteTotal, formatQuoteAmount, type QuoteLineItem } from "@/lib/quotes/types"
+import { calculateQuoteLine, calculateQuoteTotal, formatQuoteAmount, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 
 type CatalogItem = {
   id: string
@@ -44,6 +44,7 @@ const emptyItem = (): QuoteLineItem => ({
   id: crypto.randomUUID(), kind: "custom", project: "custom", name: "", description: "",
   quantity: 1, unit_amount: 0, amount: 0, billing_period: "one_time", trial_days: 0,
   features: [], discount: null, support: null, configuration: {}, catalog_snapshot: {},
+  optional: false, default_selected: true,
 })
 
 export default function QuoteCommerceBuilder() {
@@ -68,8 +69,9 @@ export default function QuoteCommerceBuilder() {
 
   const calculated = useMemo(() => items.map(calculateQuoteLine), [items])
   const total = useMemo(() => calculateQuoteTotal(items), [items])
-  const oneTime = calculated.filter(i => i.billing_period === "one_time").reduce((s, i) => s + i.amount, 0)
-  const recurring = calculated.filter(i => i.billing_period !== "one_time")
+  const selectedCalculated = calculated.filter(isQuoteLineSelected)
+  const oneTime = selectedCalculated.filter(i => i.billing_period === "one_time").reduce((s, i) => s + i.amount, 0)
+  const recurring = selectedCalculated.filter(i => i.billing_period !== "one_time")
 
   function patchItem(index: number, patch: Partial<QuoteLineItem>) {
     setItems(current => current.map((item, i) => i === index ? { ...item, ...patch } : item))
@@ -83,6 +85,7 @@ export default function QuoteCommerceBuilder() {
       amount: item.unit_amount, billing_period: item.billing_period, trial_days: item.trial_days || 0,
       support: item.support || null, discount: null,
       configuration: item.configuration_schema || {}, catalog_snapshot: item.raw_snapshot,
+      optional: false, default_selected: true,
     }])
   }
 
@@ -142,12 +145,18 @@ export default function QuoteCommerceBuilder() {
       {items.map((item,index) => <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
         <div className="flex justify-between gap-3"><div className="grid md:grid-cols-2 gap-3 flex-1"><div><Label>Nome</Label><Input value={item.name || ''} onChange={e => patchItem(index,{name:e.target.value})} /></div><div><Label>Progetto</Label><Select value={item.project || 'custom'} onValueChange={v => patchItem(index,{project:v as QuoteLineItem['project']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['consulting','hotelaccelerator','santaddeo','hotelprofitai','manubot','custom'].map(v => <SelectItem key={v} value={v}>{PROJECT_LABELS[v] || v}</SelectItem>)}</SelectContent></Select></div></div><Button size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_,i)=>i!==index))}><Trash2 className="h-4 w-4" /></Button></div>
         <div><Label>Descrizione</Label><Textarea value={item.description} onChange={e => patchItem(index,{description:e.target.value})} /></div>
+
+        <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-2"><Switch checked={!!item.optional} onCheckedChange={optional => patchItem(index,{optional,default_selected:optional ? item.default_selected !== false : true})}/><div><Label>Voce opzionale</Label><p className="text-xs text-muted-foreground">Il cliente può includerla o escluderla prima di accettare.</p></div></div>
+          {item.optional ? <div className="flex items-center gap-2"><Switch checked={item.default_selected !== false} onCheckedChange={default_selected => patchItem(index,{default_selected})}/><div><Label>Preselezionata</Label><p className="text-xs text-muted-foreground">Stato iniziale mostrato al cliente.</p></div></div> : <span className="text-xs font-medium text-primary">Obbligatoria</span>}
+        </div>
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchItem(index,{quantity:Number(e.target.value)})} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchItem(index,{unit_amount:Number(e.target.value)})} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || 'one_time'} onValueChange={v => patchItem(index,{billing_period:v as QuoteLineItem['billing_period']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['one_time','monthly','quarterly','yearly'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div><Label>Trial giorni</Label><Input type="number" min="0" value={item.trial_days || 0} onChange={e => patchItem(index,{trial_days:Number(e.target.value)})} /></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(calculateQuoteLine(item).amount)} /></div></div>
         <div className="grid sm:grid-cols-3 gap-3"><div><Label>Tipo sconto</Label><Select value={item.discount?.type || 'none'} onValueChange={v => patchItem(index,{discount:v==='none'?null:{type:v as 'percentage'|'fixed',value:item.discount?.value||0}})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Nessuno</SelectItem><SelectItem value="percentage">Percentuale</SelectItem><SelectItem value="fixed">Importo fisso</SelectItem></SelectContent></Select></div><div><Label>Valore sconto</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.value || 0} onChange={e => patchItem(index,{discount:item.discount?{...item.discount,value:Number(e.target.value)}:null})} /></div><div><Label>Durata sconto (mesi)</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.duration_months || ''} onChange={e => patchItem(index,{discount:item.discount?{...item.discount,duration_months:e.target.value?Number(e.target.value):null}:null})} /></div></div>
         <div className="grid md:grid-cols-2 gap-3"><div><Label>Funzionalità incluse (una per riga)</Label><Textarea rows={4} value={(item.features||[]).join('\n')} onChange={e => patchItem(index,{features:e.target.value.split('\n').map(x=>x.trim()).filter(Boolean)})} /></div><div><Label>Assistenza / SLA</Label><Textarea rows={4} value={item.support?.notes || ''} onChange={e => patchItem(index,{support:{...(item.support||{}),notes:e.target.value}})} placeholder="Canali, orari, tempi di risposta, account manager…" /></div></div>
       </div>)}
     </section>
 
-    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex flex-wrap justify-between items-center gap-4"><div><p className="text-sm text-muted-foreground">Una tantum: {formatQuoteAmount(oneTime)}</p>{recurring.map((i,k)=><p key={k} className="text-sm text-muted-foreground">{i.name || i.description}: {formatQuoteAmount(i.amount)} / {i.billing_period}</p>)}<p className="text-2xl font-bold">Totale configurato: {formatQuoteAmount(total)}</p></div><div className="flex items-center gap-4"><div className="flex items-center gap-2"><Switch checked={vatIncluded} onCheckedChange={setVatIncluded}/><Label>IVA inclusa</Label></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving?'Salvataggio…':'Crea preventivo'}</Button></div></section>
+    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex flex-wrap justify-between items-center gap-4"><div><p className="text-sm text-muted-foreground">Una tantum inizialmente selezionata: {formatQuoteAmount(oneTime)}</p>{recurring.map((i,k)=><p key={k} className="text-sm text-muted-foreground">{i.name || i.description}: {formatQuoteAmount(i.amount)} / {i.billing_period}</p>)}<p className="text-2xl font-bold">Totale iniziale: {formatQuoteAmount(total)}</p><p className="text-xs text-muted-foreground">Le voci opzionali non preselezionate non concorrono al totale iniziale; il cliente potrà modificarle prima dell'accettazione.</p></div><div className="flex items-center gap-4"><div className="flex items-center gap-2"><Switch checked={vatIncluded} onCheckedChange={setVatIncluded}/><Label>IVA inclusa</Label></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving?'Salvataggio…':'Crea preventivo'}</Button></div></section>
   </div>
 }
