@@ -1,0 +1,46 @@
+name: Quote Engine CI
+
+on:
+  push:
+    branches:
+      - feat/quote-commerce-engine
+  pull_request:
+    branches:
+      - 4bid
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SITE_URL: 'http://localhost:3000'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://vsoqfztobpaxmjbijrhw.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-placeholder'
+          SUPABASE_SERVICE_ROLE_KEY: 'ci-placeholder'
+          RESEND_API_KEY: 're_ci_placeholder'
+          STRIPE_SECRET_KEY: 'sk_test_ci_placeholder'

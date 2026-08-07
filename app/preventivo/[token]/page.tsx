@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import type { SalesChannelQuote } from "@/lib/quotes/types"
+import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
 import QuoteView from "./quote-view"
+import QuoteCommerceView from "./quote-commerce-view"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default async function PreventivoPage({
   const { data, error } = await supabase
     .from("sales_channel_quotes")
     .select(
-      "id, quote_number, created_at, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, first_viewed_at, view_count",
+      "id, quote_number, created_at, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_email, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, first_viewed_at, view_count",
     )
     .eq("token", token)
     .maybeSingle<Partial<SalesChannelQuote>>()
@@ -50,8 +51,14 @@ export default async function PreventivoPage({
   }
 
   const expired = data.expires_at ? new Date(data.expires_at) < new Date() : false
+  const lineItems = (data.line_items || []) as QuoteLineItem[]
+  const structuredQuote = lineItems.some((item) =>
+    Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support),
+  )
 
-  return (
+  return structuredQuote ? (
+    <QuoteCommerceView token={token} quote={data} expired={expired} />
+  ) : (
     <QuoteView token={token} quote={data} expired={expired} />
   )
 }
