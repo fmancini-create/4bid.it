@@ -61,16 +61,13 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const currency = (quote.currency || "eur").toLowerCase()
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
 
-  // Complex deals (mixed trials, partial/heterogeneous temporary discounts, setup fee + temporary
-  // recurring promotion) collect and authenticate the card first. The webhook then creates the exact
-  // one-time PaymentIntent and independent subscriptions, so no commercial condition is approximated.
   if (requiresOrchestratedSetup(items)) {
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
       payment_method_types: ["card"],
       customer_email: quote.client_email || undefined,
-      metadata: { type: "sales_channel_quote_setup", quote_id: quote.id },
-      setup_intent_data: { metadata: { type: "sales_channel_quote_setup", quote_id: quote.id } },
+      metadata: { type: "sales_channel_quote_setup", quote_id: quote.id, token },
+      setup_intent_data: { metadata: { type: "sales_channel_quote_setup", quote_id: quote.id, token } },
       success_url: `${baseUrl}/preventivo/${token}?paid=processing`,
       cancel_url: `${baseUrl}/preventivo/${token}`,
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
