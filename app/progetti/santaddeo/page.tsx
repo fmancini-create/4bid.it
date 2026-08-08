@@ -104,7 +104,7 @@ export default function SantaddeoPage() {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Stato</span>
-                    <span className="text-sm font-bold text-teal-600">In Testing</span>
+                    <span className="text-sm font-bold text-teal-600">Online</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-600 w-full" />
