@@ -20,7 +20,7 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { annualSaving, applyBillingPreference, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { annualSaving, applyBillingPreference, getCommercialMeta, hasAnnualBillingOption, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 import { quoteBrand, quoteBenefits } from "@/lib/quotes/branding"
 import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
 
@@ -112,14 +112,14 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
   const selectedItems = useMemo(() => effectiveItems.filter(item => !item.optional || (!!item.id && selectedIds.has(item.id))), [effectiveItems, selectedIds])
   const recurringParents = selectedItems.filter(i => i.billing_period !== "one_time")
-  const annualEligible = recurringParents.length > 0 && recurringParents.every(item => !!getCommercialMeta(item).billing_options?.yearly)
+  const annualEligible = recurringParents.length > 0 && recurringParents.every(hasAnnualBillingOption)
   const monthlyTotal = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))).map(i => applyBillingPreference(i,"monthly")).filter(i => i.billing_period === "monthly").reduce((s,i)=>s+Number(i.amount||0),0), [rawItems,selectedIds])
   const yearlyTotal = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))).map(i => applyBillingPreference(i,"yearly")).filter(i => i.billing_period === "yearly").reduce((s,i)=>s+Number(i.amount||0),0), [rawItems,selectedIds])
   const annualBenefit = annualSaving(monthlyTotal, yearlyTotal)
   const requiresCard = selectedItems.some(item => SAAS_PROJECTS.has(item.project || "") || (item.billing_period && item.billing_period !== "one_time"))
 
   const [fieldValues,setFieldValues] = useState<Record<string,string>>(() => (quote.submitted_fields as Record<string,string>) || {})
-  const [billing,setBilling] = useState<QuoteBillingDetails>(() => { const saved=(quote.billing_details as QuoteBillingDetails)||{}; return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:saved.address||quote.client_address||"",zip:saved.zip||"",city:saved.city||"",province:saved.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" } })
+  const [billing,setBilling] = useState<QuoteBillingDetails>(() => { const saved=(quote.billing_details as QuoteBillingDetails)||{}; return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:saved.address||quote.client_address||"",zip:saved.zip||"",city:saved.city||quote.client_address||"",province:saved.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" } })
   const [acceptanceName,setAcceptanceName] = useState(quote.acceptance_name || "")
   const [acceptedTerms,setAcceptedTerms] = useState(false)
   const [paymentMethod,setPaymentMethod] = useState<PaymentMethod|null>((quote.payment_method as PaymentMethod)|| (requiresCard ? "card" : null))
@@ -152,7 +152,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
     try{const response=await fetch(`/api/quotes/shared/${token}/accept`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({submitted_fields:fieldValues,billing_details:billing,acceptance_name:acceptanceName.trim(),accepted:true,payment_method:effectivePaymentMethod,selected_item_ids:selectedItems.map(i=>i.id).filter(Boolean),billing_preference:billingPreference})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Accettazione non riuscita");setConfirmedMethod(effectivePaymentMethod);toast.success("Preventivo accettato");if(effectivePaymentMethod==="card")await startCardPayment()}catch(error:any){toast.error(error.message||"Errore nell'accettazione")}finally{setAccepting(false)}
   }
 
-  return <div className="min-h-screen bg-muted/30"><header className="border-b bg-background"><div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6"><Image src="/logo.png" alt="4BID" width={110} height={44} className="h-10 w-auto" priority/><div className="text-right"><p className="text-sm font-semibold">Proposta commerciale</p>{quote.quote_number?<p className="text-xs text-muted-foreground">N. {quote.quote_number}</p>:null}</div></div></header>
+  return <div className="min-h-screen bg-muted/30"><header className="border-b bg-background"><div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6"><Image src="/4bid-colorful-logo.jpg" alt="4BID" width={150} height={60} className="h-11 w-auto object-contain" priority/><div className="text-right"><p className="text-sm font-semibold">Proposta commerciale</p>{quote.quote_number?<p className="text-xs text-muted-foreground">N. {quote.quote_number}</p>:null}</div></div></header>
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       <OfferCountdown expiresAt={quote.expires_at} expired={expired}/>
       {expired?<div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">Questo preventivo è scaduto. Contatta 4BID per riceverne uno aggiornato.</div>:null}
