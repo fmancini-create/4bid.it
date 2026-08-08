@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,7 @@ import {
     type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { getCommercialMeta, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
+import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
 
 type CatalogItem = {
   id: string
@@ -171,6 +171,12 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     setLines(next)
   }
   function moveLine(index: number, direction: -1 | 1) { reorderLine(index, index + direction) }
+  function duplicateLine(index: number) {
+    const result = duplicateQuoteLineAt(lines, index)
+    if (!result.copied) return
+    setLines(result.items)
+    toast.success(result.copied > 1 ? `Voce duplicata con ${result.copied - 1} riga collegata` : "Voce duplicata: la copia è subito sotto l'originale")
+  }
   function hasBase(project: string) { return lines.some(line => line.project === project && line.kind === "plan") }
   function addManual(kind: ManualKind) { setLines([...lines, manualLine(kind)]) }
 
@@ -306,6 +312,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
             <span className="text-xs font-semibold text-muted-foreground">/ {lines.length}</span>
             <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveLine(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="outline" disabled={index === lines.length - 1} onClick={() => moveLine(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="outline" onClick={() => duplicateLine(index)} aria-label={`Duplica ${item.name || "voce"}`} title="Duplica questa voce"><Copy className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>

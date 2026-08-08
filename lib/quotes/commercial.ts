@@ -130,6 +130,40 @@ export function dependencyErrors(items: QuoteLineItem[]): string[] {
   return Array.from(new Set(errors))
 }
 
+function deepCopyLine(item: QuoteLineItem): QuoteLineItem {
+  if (typeof structuredClone === "function") return structuredClone(item)
+  return JSON.parse(JSON.stringify(item)) as QuoteLineItem
+}
+
+/**
+ * Copia una voce assegnandole un identificativo NUOVO.
+ * Obbligatorio: nella vista cliente la selezione lavora su un insieme di id,
+ * quindi due righe con lo stesso id verrebbero scelte e tolte insieme.
+ */
+export function duplicateQuoteLine(source: QuoteLineItem): QuoteLineItem {
+  const copy = deepCopyLine(source)
+  copy.id = crypto.randomUUID()
+  copy.name = `${source.name || source.description || "Voce"} (copia)`
+  return copy
+}
+
+/**
+ * Copia la voce all'indice indicato insieme alle righe che le sono collegate
+ * (setup e servizi con `parent_line_id`), riagganciandole alla copia: lasciarle
+ * puntare all'originale creerebbe due setup sullo stesso modulo.
+ * Le copie vengono inserite subito dopo la voce di partenza.
+ */
+export function duplicateQuoteLineAt(items: QuoteLineItem[], index: number): { items: QuoteLineItem[]; copied: number } {
+  const source = items[index]
+  if (!source) return { items, copied: 0 }
+  const copy = duplicateQuoteLine(source)
+  const children = source.id ? items.filter(item => getCommercialMeta(item).parent_line_id === source.id) : []
+  const copiedChildren = children.map(child => setCommercialMeta(duplicateQuoteLine(child), { parent_line_id: copy.id }))
+  const next = [...items]
+  next.splice(index + 1, 0, copy, ...copiedChildren)
+  return { items: next, copied: 1 + copiedChildren.length }
+}
+
 export function annualSaving(monthly: number, yearly: number): { amount: number; pct: number } {
   const annualized = Math.max(0, monthly) * 12
   const amount = Math.max(0, annualized - Math.max(0, yearly))
