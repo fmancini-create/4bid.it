@@ -7,6 +7,7 @@ import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, Externa
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatQuoteAmount, type SalesChannelQuote } from "@/lib/quotes/types"
+import QuoteSendDialog from "@/components/admin/quote-send-dialog"
 
 const STATUS_META: Record<SalesChannelQuote["status"], { label: string; className: string }> = {
   draft: { label: "Bozza", className: "bg-muted text-muted-foreground" },
@@ -23,7 +24,7 @@ function isUnpaid(q: SalesChannelQuote): boolean {
 export default function QuotesDashboard({ initialQuotes }: { initialQuotes: SalesChannelQuote[] }) {
   const router = useRouter()
   const [quotes, setQuotes] = useState(initialQuotes)
-  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sendQuote, setSendQuote] = useState<SalesChannelQuote | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
 
   async function refresh() {
@@ -31,16 +32,10 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
     if (res.ok) setQuotes(await res.json())
   }
 
-  async function handleSend(q: SalesChannelQuote) {
+  /** L'invio passa dalla finestra, dove si scelgono i destinatari in copia. */
+  function handleSend(q: SalesChannelQuote) {
     if (!q.client_email) return toast.error("Imposta l'email del cliente prima di inviare")
-    setSendingId(q.id)
-    try {
-      const res = await fetch(`/api/quotes/${q.id}/send`, { method: "POST" })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Invio fallito")
-      toast.success(`Preventivo inviato a ${q.client_email}`)
-      await refresh()
-    } catch (e: any) { toast.error(e.message) } finally { setSendingId(null) }
+    setSendQuote(q)
   }
 
   async function handleDelete(q: SalesChannelQuote) {
@@ -137,7 +132,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={() => router.push(`/admin/quotes/edit/${q.id}`)} disabled={q.status === "paid"}><Pencil className="h-4 w-4 mr-1.5" />Modifica</Button>
-            <Button size="sm" onClick={() => handleSend(q)} disabled={sendingId === q.id || !q.client_email}><Send className="h-4 w-4 mr-1.5" />{q.status === "draft" ? "Invia" : "Reinvia"}</Button>
+            <Button size="sm" onClick={() => handleSend(q)} disabled={!q.client_email}><Send className="h-4 w-4 mr-1.5" />{q.status === "draft" ? "Invia" : "Reinvia"}</Button>
             {isUnpaid(q) && q.payment_method === "bonifico" && <Button size="sm" variant="outline" onClick={() => handleConfirmTransfer(q)} disabled={actingId === q.id}><Banknote className="h-4 w-4 mr-1.5" />Bonifico ricevuto</Button>}
             {q.expired_at && <Button size="sm" variant="outline" onClick={() => handleReopen(q)} disabled={actingId === q.id}><RotateCcw className="h-4 w-4 mr-1.5" />Riapri offerta</Button>}
             <Button size="sm" variant="outline" onClick={() => openPreview(q)}><ExternalLink className="h-4 w-4 mr-1.5" />Apri</Button>
@@ -147,5 +142,18 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
         </div>
       })}
     </div>}
+
+    <QuoteSendDialog
+      quote={sendQuote}
+      open={!!sendQuote}
+      onOpenChange={(open) => { if (!open) setSendQuote(null) }}
+      onSent={async (message, gravita) => {
+        // Un avviso di errore resta a lungo: elenca i colleghi da riavvisare a
+        // mano, e sparire dopo pochi secondi ne farebbe perdere i nomi.
+        if (gravita === "errore") toast.error(message, { duration: 15000 })
+        else toast.success(message)
+        await refresh()
+      }}
+    />
   </div>
 }

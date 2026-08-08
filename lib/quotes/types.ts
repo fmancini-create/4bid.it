@@ -105,6 +105,10 @@ export interface SalesChannelQuote {
   client_name: string
   client_company: string | null
   client_email: string | null
+  /** Indirizzi in copia VISIBILE: vengono dichiarati al cliente nell'email. */
+  copy_cc?: string[] | null
+  /** Indirizzi in copia NASCOSTA: il cliente non ne viene informato. */
+  copy_bcc?: string[] | null
   client_vat: string | null
   client_address: string | null
   title: string

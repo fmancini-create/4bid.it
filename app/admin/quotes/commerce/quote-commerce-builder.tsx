@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import CompanyLookupField, { formatCompanyAddress, type CompanyLookupData } from "@/components/admin/company-lookup-field"
 import {
   calculateQuoteLine,
   calculateQuoteTotal,
@@ -195,6 +196,19 @@ export default function QuoteCommerceBuilder() {
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const [saving, setSaving] = useState(false)
   const [client, setClient] = useState({ name: "", company: "", email: "", vat: "", address: "" })
+
+  // I dati camerali NON sovrascrivono cio' che l'operatore ha gia' scritto:
+  // il referente e l'email trattati sono spesso una persona, non l'azienda,
+  // e cancellarli con un clic sarebbe una perdita silenziosa.
+  const applyCompany = (d: CompanyLookupData) => {
+    setClient(v => ({
+      ...v,
+      company: v.company.trim() || d.denominazione || "",
+      vat: d.partitaIva || d.codiceFiscale || v.vat,
+      address: v.address.trim() || formatCompanyAddress(d),
+    }))
+    toast.success(d.cessata ? "Dati compilati - attenzione: azienda non attiva" : "Dati aziendali compilati")
+  }
   const [title, setTitle] = useState("Soluzioni digitali 4Bid")
   const [description, setDescription] = useState("")
   const [paymentTerms, setPaymentTerms] = useState(renewalTerms)
@@ -379,7 +393,9 @@ export default function QuoteCommerceBuilder() {
   return <div className="max-w-7xl mx-auto space-y-8">
     <div className="flex items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Nuovo preventivo commerciale</h1><p className="text-muted-foreground">Catalogo live + voci manuali + dati da richiedere al cliente</p></div><Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button></div>
 
-    <section className="border rounded-xl p-5 space-y-4 bg-card"><h2 className="font-semibold text-lg">Cliente e validità offerta</h2><div className="grid md:grid-cols-2 gap-4">{([['name','Referente'],['company','Azienda'],['email','Email'],['vat','P.IVA / CF'],['address','Indirizzo']] as const).map(([key,label]) => <div key={key} className={key === 'address' ? 'md:col-span-2 space-y-1.5' : 'space-y-1.5'}><Label>{label}</Label><Input type={key === 'email' ? 'email' : 'text'} value={client[key]} onChange={e => setClient(v => ({...v,[key]:e.target.value}))} /></div>)}<div className="space-y-1.5"><Label>Offerta valida fino al *</Label><Input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} /></div></div></section>
+    <section className="border rounded-xl p-5 space-y-4 bg-card"><h2 className="font-semibold text-lg">Cliente e validità offerta</h2><div className="grid md:grid-cols-2 gap-4">{([['name','Referente'],['company','Azienda'],['email','Email']] as const).map(([key,label]) => <div key={key} className="space-y-1.5"><Label>{label}</Label><Input type={key === 'email' ? 'email' : 'text'} value={client[key]} onChange={e => setClient(v => ({...v,[key]:e.target.value}))} /></div>)}
+      <CompanyLookupField value={client.vat} onValueChange={vat => setClient(v => ({ ...v, vat }))} onApply={applyCompany} />
+      <div className="md:col-span-2 space-y-1.5"><Label>Indirizzo</Label><Input value={client.address} onChange={e => setClient(v => ({...v,address:e.target.value}))} /></div><div className="space-y-1.5"><Label>Offerta valida fino al *</Label><Input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} /></div></div></section>
 
     <section className="border rounded-xl p-5 space-y-4 bg-card"><h2 className="font-semibold text-lg">Proposta</h2><div><Label>Titolo</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div><div><Label>Descrizione</Label><Textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></div><div><Label>Condizioni</Label><Textarea rows={4} value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} /></div></section>
 

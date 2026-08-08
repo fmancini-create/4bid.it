@@ -26,8 +26,13 @@ function authoredDescription(quote: SalesChannelQuote) {
   return `<div style="white-space:pre-wrap;margin:14px 0 18px;">${escapeHtml(value)}</div>`
 }
 
-export async function sendQuoteEmail(quote: SalesChannelQuote, link: string) {
+export async function sendQuoteEmail(quote: SalesChannelQuote, link: string, visibleCopies: string[] = []) {
   const greetingName = escapeHtml(quote.client_company || quote.client_name || "Cliente")
+  // Le copie VISIBILI vanno dichiarate: e' esattamente cio' che distingue un CC
+  // da una copia mandata di nascosto. Le copie nascoste non compaiono qui.
+  const copyLine = visibleCopies.length
+    ? `<p style="color:#6b7280;font-size:13px;">Copia di questo preventivo è stata inviata anche a: ${visibleCopies.map(escapeHtml).join(", ")}.</p>`
+    : ""
   const totalRow = quote.total_amount != null
     ? `<p class="total">Importo: ${formatQuoteAmount(quote.total_amount, quote.currency)} ${quote.vat_included ? "(IVA inclusa)" : "(IVA esclusa)"}</p>`
     : ""
@@ -42,7 +47,8 @@ export async function sendQuoteEmail(quote: SalesChannelQuote, link: string) {
     <p>La proposta completa è disponibile nella sua area riservata online. Da lì può consultare i dettagli, scegliere le opzioni disponibili e procedere all'accettazione.</p>
     <div class="info-box">${totalRow}<p style="margin:0;color:#6b7280;">Per garantire tracciabilità e mostrare sempre la versione aggiornata, il preventivo viene gestito online.</p></div>
     <p style="text-align:center;"><a href="${link}" class="button">Visualizza e accetta il preventivo</a><a href="${downloadLink}" class="button secondary">Scarica preventivo</a></p>
-    <p style="color:#6b7280;font-size:13px;">Link personale: ${link}</p>`
+    <p style="color:#6b7280;font-size:13px;">Link personale: ${link}</p>
+    ${copyLine}`
   return sendEmail({ to: quote.client_email!, subject: `Preventivo 4BID: ${quote.title}`, html: baseLayout(quote.title, inner) })
 }
 
