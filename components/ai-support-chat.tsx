@@ -27,6 +27,11 @@ interface LeadState {
     messaggio?: string
   }
   step: "nome" | "email" | "telefono" | "messaggio" | "conferma" | "completato" | null
+  // Rimandati intatti al server a ogni passaggio: senza di questi la domanda
+  // di partenza si perde e il ticket arriva al team senza sapere cosa fosse
+  // stato chiesto.
+  originalQuestion?: string
+  pageContext?: string
 }
 
 interface AISupportChatProps {
@@ -42,6 +47,13 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [leadState, setLeadState] = useState<LeadState | null>(null)
+  // Il server ha risposto nel merito e propone il contatto: mostriamo un
+  // pulsante, senza far partire nessuna raccolta dati da sola.
+  const [offerContact, setOfferContact] = useState(false)
+  // Ultima domanda scritta davvero dall'utente. Serve quando il contatto parte
+  // dal pulsante: il messaggio inviato e' "contattatemi", ma il ticket deve
+  // riportare la domanda vera.
+  const [lastUserQuestion, setLastUserQuestion] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
@@ -66,13 +78,20 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
     return null
   }
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return
+  const handleSendMessage = async (overrideMessage?: string) => {
+    const outgoing = (overrideMessage ?? input).trim()
+    if (!outgoing || isLoading) return
 
-    const userMessage = input.trim()
-    setInput("")
+    const userMessage = outgoing
+    // La domanda vera e' quella digitata: il testo del pulsante non la sostituisce.
+    const domandaVera = overrideMessage ? lastUserQuestion : outgoing
+    if (!overrideMessage) {
+      setInput("")
+      if (!leadState?.isCollecting) setLastUserQuestion(outgoing)
+    }
     setError(null)
     setIsLoading(true)
+    setOfferContact(false)
 
     // Add user message optimistically
     const tempUserMessage: Message = {
@@ -99,6 +118,8 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
           userEmail,
           accountType,
           leadState,
+          pageContext: pathname,
+          originalQuestion: domandaVera,
         }),
       })
 
@@ -125,6 +146,8 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
         setLeadState(data.leadState)
       }
 
+      setOfferContact(Boolean(data.offerContact))
+
       const responseMessage: Message = {
         id: data.messageId || `msg-${Date.now()}`,
         role: data.role || "assistant",
@@ -149,6 +172,10 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Con le tastiere cinese/giapponese/coreana l'Invio conferma la parola in
+    // composizione: inviare qui spedirebbe un messaggio a meta'.
+    if ((e.nativeEvent as any).isComposing || (e as any).keyCode === 229) return
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
@@ -319,6 +346,22 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
                 <span>Msg</span>
                 <span>✓</span>
               </div>
+            </div>
+          )}
+
+          {/* Proposta di contatto: compare DOPO la risposta, non al posto suo */}
+          {offerContact && !leadState?.isCollecting && !isLoading && (
+            <div className="shrink-0 px-3 py-2 md:px-4 border-t bg-muted/50 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground flex-1">Preferisci parlarne con una persona?</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => handleSendMessage("contattatemi")}
+              >
+                Fatemi ricontattare
+              </Button>
             </div>
           )}
 
