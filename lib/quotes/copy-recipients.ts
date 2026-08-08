@@ -117,7 +117,9 @@ function escapeHtml(value: string | null | undefined): string {
     .replace(/'/g, "&#039;")
 }
 
-function corpoCopia(quote: SalesChannelQuote, tipo: "cc" | "bcc"): string {
+/** Esportata perche' la verifica automatica possa controllare che il corpo
+ *  non contenga MAI il token di accettazione. */
+export function corpoCopia(quote: SalesChannelQuote, tipo: "cc" | "bcc"): string {
   const cliente = escapeHtml(quote.client_company || quote.client_name || "—")
   const importo =
     quote.total_amount != null
