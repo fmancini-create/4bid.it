@@ -3,6 +3,7 @@ import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { enqueueQuoteProvisioning, processQuoteProvisioning } from "@/lib/quotes/provisioning"
 import { orchestrateQuoteAfterSetup } from "@/lib/quotes/stripe-orchestration"
+import { notifyQuotePaid } from "@/lib/quotes/payment-confirmed"
 import type { SalesChannelQuote } from "@/lib/quotes/types"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -82,6 +83,15 @@ export async function POST(request: NextRequest) {
 
           await enqueueQuoteProvisioning(quote as SalesChannelQuote)
           await processQuoteProvisioning(quoteId)
+
+          // Conferma al cliente (con le call di avvio) e avviso al superadmin.
+          // Non deve far fallire il webhook: se salta l'email, il pagamento
+          // resta comunque registrato e Stripe non deve riprovare all'infinito.
+          try {
+            await notifyQuotePaid(supabase, quote as SalesChannelQuote)
+          } catch (notifyError) {
+            console.error("[quotes] notify paid error:", notifyError)
+          }
         }
       }
     }

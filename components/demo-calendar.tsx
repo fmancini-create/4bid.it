@@ -9,67 +9,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-type DemoOption = {
-  id: string
-  title: string
-  subtitle?: string
-  durationMin: number
-  scheduleUrl: string
-}
-
-// Link di prenotazione INDIVIDUALI estratti dalla pagina pubblica Google
-// Appointment Scheduling di "CLIENTI 4 BID SRL". Ogni URL apre direttamente il
-// selettore data/ora del singolo prodotto (non la lista combinata di Google).
-const DEMO_OPTIONS: DemoOption[] = [
-  {
-    id: "4bid",
-    title: "Call conoscitiva prodotti 4 Bid",
-    subtitle: "Per conoscere i prodotti 4 Bid — settore Ho.Re.Ca.",
-    durationMin: 30,
-    scheduleUrl:
-      "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0ntKLdBZAS3eBALslBMWopfl8r2J9lfrBy1DciC71ess4MXnG16GgYF0xtGw6pSdXTcS2jAELs?gv=true",
-  },
-  {
-    id: "santaddeo",
-    title: "Demo di Santaddeo RMS",
-    subtitle: "Il revenue management system per il tuo hotel.",
-    durationMin: 60,
-    scheduleUrl:
-      "https://calendar.google.com/calendar/appointments/schedules/AcZssZ1RFQzgy0TK0UScNGWRtIfT9PxQsV9UlXsMB9tszlB6d6Urt0P2oQbDSGsLt4W2PoN7a3YXfO-K?gv=true",
-  },
-  {
-    id: "hotelprofitai",
-    title: "Demo di Hotelprofitai",
-    subtitle: "Il controllo di gestione per le strutture ricettive.",
-    durationMin: 60,
-    scheduleUrl:
-      "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0WdUtY2joxJlB5xyqzPOQoEFDd-hGbnKDdr3dDyZUuuReExfzVVqZv7WoiSgmVcB8LCQYP7D2K?gv=true",
-  },
-  {
-    id: "hotelaccelerator",
-    title: "Demo di Hotelaccelerator",
-    subtitle: "La gestione operativa della tua struttura.",
-    durationMin: 60,
-    scheduleUrl:
-      "https://calendar.google.com/calendar/appointments/schedules/AcZssZ2I-ZUL1DZ2kboYJN-wzPpbXlb4poeyoDqQR8AiGpbp29DXZEn2uNW4ZSgRPDSNi1K9N_jKsUOm?gv=true",
-  },
-  {
-    id: "manubot",
-    title: "Demo di Manubot",
-    subtitle: "L'assistente per task, manutenzioni e housekeeping.",
-    durationMin: 60,
-    scheduleUrl:
-      "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0OSHEnXPY1e2bx3DWy5sq1I7-RXrHJJ-s2ZBr328wXOIy_g7z1cMBcyczfm0U1Z2678emQYKq0?gv=true",
-  },
-]
+import { BOOKING_OPTIONS, type BookingOption } from "@/lib/booking-options"
 
 export function DemoCalendar() {
-  const [selected, setSelected] = useState<DemoOption | null>(null)
+  const [selected, setSelected] = useState<BookingOption | null>(null)
 
   return (
     <>
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
-        {DEMO_OPTIONS.map((option) => (
+        {BOOKING_OPTIONS.map((option) => (
           <li key={option.id} className="flex">
             <button
               type="button"
