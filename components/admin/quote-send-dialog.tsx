@@ -58,11 +58,18 @@ export default function QuoteSendDialog({
         setError(data.error || "Invio fallito")
         return
       }
-      const falliti = data.copies?.failed?.length || 0
+      // Le copie non recapitate vanno elencate PER INDIRIZZO, non contate.
+      // L'email al cliente dichiara gia' i destinatari in copia visibile: se una
+      // copia non parte, il cliente crede informato un collega che non ha
+      // ricevuto nulla. Un "1 non recapitate" non dice a chi riscrivere, e la
+      // finestra si chiude portandosi via l'unica occasione di saperlo.
+      const nonRecapitate: string[] = (data.copies?.failed || [])
+        .map((f: { email?: string }) => f?.email)
+        .filter(Boolean)
       const inviate = data.copies?.sent || 0
       onSent(
-        falliti
-          ? `Preventivo inviato a ${quote.client_email}. ${inviate} copie inviate, ${falliti} non recapitate.`
+        nonRecapitate.length
+          ? `Preventivo inviato a ${quote.client_email}. Copia NON recapitata a: ${nonRecapitate.join(", ")} — avvisali tu, il cliente li crede informati.`
           : inviate
             ? `Preventivo inviato a ${quote.client_email}, con ${inviate} copie.`
             : `Preventivo inviato a ${quote.client_email}.`,
