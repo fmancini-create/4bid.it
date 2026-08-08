@@ -1,5 +1,20 @@
 import type { QuoteBillingPeriod, QuoteProject, QuoteSupportTerms } from "./types"
 
+export interface QuoteCatalogDependency {
+  role?: "base" | "addon"
+  project?: string
+  requires_base?: boolean
+  required_kind?: "plan"
+  linked_project?: string | null
+}
+
+export interface QuoteCatalogAlternativePeriod {
+  billing_period: "monthly" | "yearly"
+  unit_amount: number
+  stripe_price_id?: string | null
+  discount_pct?: number
+}
+
 export interface QuoteCatalogItem {
   id: string
   project: Exclude<QuoteProject, "consulting" | "custom">
@@ -17,6 +32,9 @@ export interface QuoteCatalogItem {
   raw_snapshot: Record<string, unknown>
   source_id?: string
   stripe_price_id?: string | null
+  billing_family?: string
+  alternative_period?: QuoteCatalogAlternativePeriod | null
+  dependency?: QuoteCatalogDependency | null
 }
 
 const PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
@@ -40,6 +58,26 @@ function asBillingPeriod(value: unknown): QuoteBillingPeriod {
   if (value === "quarter") return "quarterly"
   if (value === "year" || value === "annual") return "yearly"
   return "monthly"
+}
+
+function normalizeAlternative(value: any): QuoteCatalogAlternativePeriod | null {
+  if (!value || typeof value !== "object") return null
+  const period = asBillingPeriod(value.billing_period ?? value.interval)
+  if (period !== "monthly" && period !== "yearly") return null
+  const price = Number(value.unit_amount ?? value.price ?? 0)
+  if (!Number.isFinite(price) || price < 0) return null
+  return {
+    billing_period: period,
+    unit_amount: price,
+    stripe_price_id: value.stripe_price_id ?? null,
+    discount_pct: Number.isFinite(Number(value.discount_pct)) ? Number(value.discount_pct) : undefined,
+  }
+}
+
+function inferredDependency(project: CatalogProject, kind: string): QuoteCatalogDependency | null {
+  if (kind === "plan") return { role: "base", project }
+  if (kind === "module") return { role: "addon", project, requires_base: true, required_kind: "plan" }
+  return null
 }
 
 function normalize(project: CatalogProject, value: any): QuoteCatalogItem {
@@ -67,6 +105,9 @@ function normalize(project: CatalogProject, value: any): QuoteCatalogItem {
     version: String(value.version ?? value.updated_at ?? "current"),
     configuration_schema: value.configuration_schema ?? value.options_schema,
     stripe_price_id: value.stripe_price_id ?? null,
+    billing_family: value.billing_family ? String(value.billing_family) : value.source_id ? String(value.source_id) : undefined,
+    alternative_period: normalizeAlternative(value.alternative_period),
+    dependency: value.dependency && typeof value.dependency === "object" ? value.dependency : inferredDependency(project, kind),
     raw_snapshot:
       value.raw_snapshot && typeof value.raw_snapshot === "object"
         ? value.raw_snapshot
@@ -75,19 +116,10 @@ function normalize(project: CatalogProject, value: any): QuoteCatalogItem {
 }
 
 async function loadProjectCatalog(project: CatalogProject): Promise<QuoteCatalogItem[]> {
-  // Santaddeo pricing is dynamic (structure/accommodation/stars/units), so its live
-  // project database is always the source of truth. Never allow a stale inline JSON
-  // override to replace the pricing schema used by the quote builder.
-  const inline = project === "santaddeo" ? undefined : process.env[envName(project, "CATALOG_JSON")]
-  if (inline) {
-    const parsed = JSON.parse(inline)
-    const rows = Array.isArray(parsed) ? parsed : parsed.items ?? parsed.products ?? parsed.plans ?? []
-    return rows.map((row: any) => normalize(project, row))
-  }
-
-  const url = project === "santaddeo"
-    ? DEFAULT_CATALOG_URLS.santaddeo
-    : process.env[envName(project, "CATALOG_URL")] || DEFAULT_CATALOG_URLS[project]
+  // Live project databases are the source of truth for every SaaS catalog. Inline
+  // JSON is intentionally disabled for the four managed products to prevent stale
+  // prices/features from entering commercial quotes.
+  const url = process.env[envName(project, "CATALOG_URL")] || DEFAULT_CATALOG_URLS[project]
   const token = process.env[envName(project, "CATALOG_TOKEN")]
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 8_000)
