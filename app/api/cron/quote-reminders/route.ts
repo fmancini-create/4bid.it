@@ -179,6 +179,19 @@ export async function GET(request: NextRequest) {
         paymentResults.push({ quote: quote.id, skipped: "too_early", elapsedDays: Math.round(elapsedDays), nextThreshold })
         continue
       }
+      // Le soglie contano dall'ACCETTAZIONE: su un preventivo gia' vecchio
+      // (o accettato prima che questi solleciti esistessero) risulterebbero
+      // scadute tutte insieme, e il cliente riceverebbe il secondo sollecito
+      // il giorno dopo il primo. Serve una distanza minima fra un sollecito
+      // e il successivo, misurata sull'ultimo effettivamente inviato.
+      const daysSinceLastReminder = quote.last_payment_reminder_at
+        ? (now - new Date(quote.last_payment_reminder_at).getTime()) / DAY_MS
+        : null
+      const minGap = PAYMENT_REMINDER_DAYS[sentCount] - PAYMENT_REMINDER_DAYS[sentCount - 1]
+      if (daysSinceLastReminder !== null && minGap > 0 && daysSinceLastReminder < minGap) {
+        paymentResults.push({ quote: quote.id, skipped: "reminder_cooldown", daysSinceLastReminder: Math.round(daysSinceLastReminder), minGap })
+        continue
+      }
       // Se l'ultimo avviso partirebbe comunque entro 24 ore, si evita di
       // mandare due email quasi identiche a distanza di poche ore.
       if (hoursToExpiry !== null && hoursToExpiry <= 24) {

@@ -154,7 +154,7 @@ export async function sendQuotePaidEmail(quote: SalesChannelQuote, bookings: Boo
   const greetingName = escapeHtml(quote.client_company || quote.client_name || "Cliente")
   const bookingBlocks = bookings.map(option => `
     <tr><td style="padding:10px 0;border-bottom:1px solid #e5e7eb;">
-      <p style="margin:0 0 2px;font-weight:bold;color:#1a1a1a;">${escapeHtml(option.title)}</p>
+      <p style="margin:0 0 2px;font-weight:bold;color:#1a1a1a;">Avvio configurazione — ${escapeHtml(option.productName)}</p>
       <p style="margin:0 0 10px;color:#6b7280;font-size:13px;">${escapeHtml(option.subtitle || "")} · ${option.durationMin} min · Google Meet</p>
       <a href="${option.scheduleUrl}" class="button" style="margin:0;">Scegli data e ora</a>
     </td></tr>`).join("")
