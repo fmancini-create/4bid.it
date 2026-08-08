@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -201,6 +201,9 @@ export default function QuoteCommerceBuilder() {
   const [vatIncluded, setVatIncluded] = useState(true)
   const [items, setItems] = useState<QuoteLineItem[]>([])
   const [requestedFields, setRequestedFields] = useState<QuoteRequestedField[]>([])
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
+  const [dragArmed, setDragArmed] = useState<number | null>(null)
 
   useEffect(() => {
     fetch("/api/quotes/catalog", { cache: "no-store" })
@@ -230,15 +233,18 @@ export default function QuoteCommerceBuilder() {
     }))
   }
   function patchMeta(index: number, patch: Parameters<typeof setCommercialMeta>[1]) { setItems(current => current.map((item, i) => i === index ? setCommercialMeta(item, patch) : item)) }
-  function moveItem(index: number, direction: -1 | 1) {
+  function reorderItem(from: number, to: number) {
     setItems(current => {
-      const target = index + direction
-      if (target < 0 || target >= current.length) return current
+      if (!Number.isFinite(to) || from < 0 || from >= current.length) return current
+      const target = Math.min(current.length - 1, Math.max(0, to))
+      if (target === from) return current
       const next = [...current]
-      ;[next[index], next[target]] = [next[target], next[index]]
+      const [moved] = next.splice(from, 1)
+      next.splice(target, 0, moved)
       return next
     })
   }
+  function moveItem(index: number, direction: -1 | 1) { reorderItem(index, index + direction) }
   function addManual(kind: ManualKind) { setItems(current => [...current, manualItem(kind)]) }
   function setField(index: number, patch: Partial<QuoteRequestedField>) { setRequestedFields(current => current.map((field, i) => i === index ? { ...field, ...patch } : field)) }
   function addField() { setRequestedFields(current => [...current, { key: newFieldKey(), label: "", type: "credentials", required: true }]) }
@@ -384,14 +390,43 @@ export default function QuoteCommerceBuilder() {
       const annual = yearlyUnit != null ? annualSaving(monthlyUnit, yearlyUnit) : null
       const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
-      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
+      return <div
+        key={item.id || index}
+        draggable={dragArmed === index}
+        onDragStart={e => { e.dataTransfer.effectAllowed = "move"; setDragIndex(index) }}
+        onDragOver={e => { if (dragIndex === null) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDropIndex(index) }}
+        onDrop={e => { if (dragIndex === null) return; e.preventDefault(); reorderItem(dragIndex, index); setDragIndex(null); setDropIndex(null); setDragArmed(null) }}
+        onDragEnd={() => { setDragIndex(null); setDropIndex(null); setDragArmed(null) }}
+        className={`border rounded-xl p-5 bg-card space-y-4 transition-colors ${dragIndex === index ? "opacity-60" : ""} ${dropIndex === index && dragIndex !== null && dragIndex !== index ? "border-primary ring-2 ring-primary/30" : ""}`}
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <button
+            type="button"
+            onMouseDown={() => setDragArmed(index)}
+            onMouseUp={() => setDragArmed(null)}
+            onTouchStart={() => setDragArmed(index)}
+            onTouchEnd={() => setDragArmed(null)}
+            className="flex h-10 w-8 shrink-0 cursor-grab items-center justify-center self-end rounded-md border text-muted-foreground hover:bg-muted active:cursor-grabbing"
+            aria-label={`Trascina ${item.name || "voce"} per riordinare`}
+          ><GripVertical className="h-4 w-4" /></button>
           <div className="grid flex-1 gap-3 md:grid-cols-2">
             <div><Label>Nome</Label><Input value={item.name || ""} onChange={e => patchItem(index, { name: e.target.value })} /></div>
             <div><Label>Progetto / tipo</Label>{isManual ? <Select value={item.project || "custom"} onValueChange={project => patchItem(index, { project: project as QuoteProject })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="hotelaccelerator">HotelAccelerator</SelectItem><SelectItem value="santaddeo">Santaddeo</SelectItem><SelectItem value="hotelprofitai">HotelProfitAI</SelectItem><SelectItem value="manubot">ManuBot</SelectItem><SelectItem value="consulting">Consulenza 4Bid</SelectItem><SelectItem value="custom">Voce manuale</SelectItem></SelectContent></Select> : <Input readOnly value={`${PROJECT_LABELS[item.project || "custom"] || item.project || "custom"} · ${item.kind || "voce"}`} />}</div>
           </div>
           <div className="flex items-center gap-1 self-end" aria-label={`Ordinamento voce ${index + 1}`}>
-            <span className="min-w-14 text-center text-xs font-semibold text-muted-foreground">{index + 1} di {items.length}</span>
+            <Input
+              key={`pos-${index}-${item.id || ""}`}
+              type="number"
+              min="1"
+              max={items.length}
+              defaultValue={index + 1}
+              className="h-10 w-16 text-center"
+              aria-label={`Posizione di ${item.name || "voce"} su ${items.length}`}
+              onFocus={e => e.currentTarget.select()}
+              onBlur={e => reorderItem(index, Number(e.target.value) - 1)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur() } }}
+            />
+            <span className="text-xs font-semibold text-muted-foreground">/ {items.length}</span>
             <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveItem(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="outline" disabled={index === items.length - 1} onClick={() => moveItem(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>

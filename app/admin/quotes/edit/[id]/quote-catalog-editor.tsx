@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -122,6 +122,9 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   const [quote, setQuote] = useState<SalesChannelQuote | null>(null)
   const [catalog, setCatalog] = useState<CatalogGroup[]>([])
   const [saving, setSaving] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
+  const [dragArmed, setDragArmed] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -158,13 +161,16 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
   }
-  function moveLine(index: number, direction: -1 | 1) {
-    const target = index + direction
-    if (target < 0 || target >= lines.length) return
+  function reorderLine(from: number, to: number) {
+    if (!Number.isFinite(to) || from < 0 || from >= lines.length) return
+    const target = Math.min(lines.length - 1, Math.max(0, to))
+    if (target === from) return
     const next = [...lines]
-    ;[next[index], next[target]] = [next[target], next[index]]
+    const [moved] = next.splice(from, 1)
+    next.splice(target, 0, moved)
     setLines(next)
   }
+  function moveLine(index: number, direction: -1 | 1) { reorderLine(index, index + direction) }
   function hasBase(project: string) { return lines.some(line => line.project === project && line.kind === "plan") }
   function addManual(kind: ManualKind) { setLines([...lines, manualLine(kind)]) }
 
@@ -261,14 +267,43 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       const meta = getCommercialMeta(item)
       const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
-      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
+      return <div
+        key={item.id || index}
+        draggable={dragArmed === index}
+        onDragStart={e => { e.dataTransfer.effectAllowed = "move"; setDragIndex(index) }}
+        onDragOver={e => { if (dragIndex === null) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDropIndex(index) }}
+        onDrop={e => { if (dragIndex === null) return; e.preventDefault(); reorderLine(dragIndex, index); setDragIndex(null); setDropIndex(null); setDragArmed(null) }}
+        onDragEnd={() => { setDragIndex(null); setDropIndex(null); setDragArmed(null) }}
+        className={`border rounded-xl p-5 bg-card space-y-4 transition-colors ${dragIndex === index ? "opacity-60" : ""} ${dropIndex === index && dragIndex !== null && dragIndex !== index ? "border-primary ring-2 ring-primary/30" : ""}`}
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <button
+            type="button"
+            onMouseDown={() => setDragArmed(index)}
+            onMouseUp={() => setDragArmed(null)}
+            onTouchStart={() => setDragArmed(index)}
+            onTouchEnd={() => setDragArmed(null)}
+            className="flex h-10 w-8 shrink-0 cursor-grab items-center justify-center self-end rounded-md border text-muted-foreground hover:bg-muted active:cursor-grabbing"
+            aria-label={`Trascina ${item.name || "voce"} per riordinare`}
+          ><GripVertical className="h-4 w-4" /></button>
           <div className="grid flex-1 gap-3 md:grid-cols-2">
             <div><Label>Nome</Label><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div>
             <div><Label>Progetto / tipo</Label>{isManual ? <Select value={item.project || "custom"} onValueChange={project => patchLine(index, { project: project as QuoteProject })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="hotelaccelerator">HotelAccelerator</SelectItem><SelectItem value="santaddeo">Santaddeo</SelectItem><SelectItem value="hotelprofitai">HotelProfitAI</SelectItem><SelectItem value="manubot">ManuBot</SelectItem><SelectItem value="consulting">Consulenza 4BID</SelectItem><SelectItem value="custom">Voce manuale</SelectItem></SelectContent></Select> : <Input readOnly value={`${PROJECT_LABELS[item.project || "custom"] || item.project || "custom"} · ${item.kind || "voce"}`} />}</div>
           </div>
           <div className="flex items-center gap-1 self-end" aria-label={`Ordinamento voce ${index + 1}`}>
-            <span className="min-w-14 text-center text-xs font-semibold text-muted-foreground">{index + 1} di {lines.length}</span>
+            <Input
+              key={`pos-${index}-${item.id || ""}`}
+              type="number"
+              min="1"
+              max={lines.length}
+              defaultValue={index + 1}
+              className="h-10 w-16 text-center"
+              aria-label={`Posizione di ${item.name || "voce"} su ${lines.length}`}
+              onFocus={e => e.currentTarget.select()}
+              onBlur={e => reorderLine(index, Number(e.target.value) - 1)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur() } }}
+            />
+            <span className="text-xs font-semibold text-muted-foreground">/ {lines.length}</span>
             <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveLine(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="outline" disabled={index === lines.length - 1} onClick={() => moveLine(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>
