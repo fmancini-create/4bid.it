@@ -61,21 +61,21 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, onSele
 
   return <article className={`group overflow-hidden rounded-2xl border bg-background transition-all ${active ? "border-primary/35 shadow-sm" : "border-border opacity-60"}`}>
     <div className="border-b bg-gradient-to-r from-muted/60 via-background to-background px-5 py-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ProjectBrand project={item.project} />
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.optional ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{item.optional ? "Puoi scegliere" : "Incluso nella soluzione"}</span>
-          {item.trial_days ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">Provalo {item.trial_days} giorni</span> : null}
-          {isFreeAnnualService ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">OMAGGIO CON ANNUALE</span> : null}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.optional ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{item.optional ? "Puoi scegliere" : "Incluso nella soluzione"}</span>
+        {item.trial_days ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">Provalo {item.trial_days} giorni</span> : null}
+        {isFreeAnnualService ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">OMAGGIO CON ANNUALE</span> : null}
       </div>
     </div>
 
     <div className="space-y-5 p-5">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">{brand.promise}</p>
-          <h3 className="text-xl font-bold tracking-tight">{item.name || item.description}</h3>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">{brand.promise}</p>
+          <div className="flex items-center gap-3">
+            <ProjectBrand project={item.project} compact />
+            <h3 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">{item.name || item.description}</h3>
+          </div>
           {item.name && item.description && item.description !== item.name ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{item.description}</p> : null}
         </div>
         <div className="shrink-0 rounded-xl border bg-muted/20 px-4 py-3 text-left sm:min-w-36 sm:text-right">
@@ -112,9 +112,11 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
   const selectedItems = useMemo(() => effectiveItems.filter(item => !item.optional || (!!item.id && selectedIds.has(item.id))), [effectiveItems, selectedIds])
   const recurringParents = selectedItems.filter(i => i.billing_period !== "one_time")
-  const annualEligible = recurringParents.length > 0 && recurringParents.every(hasAnnualBillingOption)
-  const monthlyTotal = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))).map(i => applyBillingPreference(i,"monthly")).filter(i => i.billing_period === "monthly").reduce((s,i)=>s+Number(i.amount||0),0), [rawItems,selectedIds])
-  const yearlyTotal = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))).map(i => applyBillingPreference(i,"yearly")).filter(i => i.billing_period === "yearly").reduce((s,i)=>s+Number(i.amount||0),0), [rawItems,selectedIds])
+  const selectedRawItems = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))), [rawItems, selectedIds])
+  const annualDrivers = selectedRawItems.filter(i => i.billing_period !== "one_time" && hasAnnualBillingOption(i))
+  const annualEligible = annualDrivers.length > 0
+  const monthlyTotal = annualDrivers.map(i => applyBillingPreference(i, "monthly")).filter(i => i.billing_period === "monthly").reduce((sum, i) => sum + Number(i.amount || 0), 0)
+  const yearlyTotal = annualDrivers.map(i => applyBillingPreference(i, "yearly")).filter(i => i.billing_period === "yearly").reduce((sum, i) => sum + Number(i.amount || 0), 0)
   const annualBenefit = annualSaving(monthlyTotal, yearlyTotal)
   const requiresCard = selectedItems.some(item => SAAS_PROJECTS.has(item.project || "") || (item.billing_period && item.billing_period !== "one_time"))
 
@@ -127,10 +129,10 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const [accepting,setAccepting] = useState(false); const [paying,setPaying] = useState(false)
 
   const totals = useMemo(() => ({
-    oneTime: selectedItems.filter(i=>i.billing_period==="one_time").reduce((s,i)=>s+Number(i.amount||0),0),
-    recurring: selectedItems.filter(i=>i.billing_period===billingPreference).reduce((s,i)=>s+Number(i.amount||0),0),
-    savings: selectedItems.reduce((s,i)=>s+Number(i.discount_amount||0),0),
-  }), [selectedItems,billingPreference])
+    oneTime: selectedItems.filter(i => i.billing_period === "one_time").reduce((sum, i) => sum + Number(i.amount || 0), 0),
+    monthly: selectedItems.filter(i => i.billing_period === "monthly").reduce((sum, i) => sum + Number(i.amount || 0), 0),
+    yearly: selectedItems.filter(i => i.billing_period === "yearly").reduce((sum, i) => sum + Number(i.amount || 0), 0),
+  }), [selectedItems])
 
   function parentSelected(item: QuoteLineItem) { const parent=getCommercialMeta(item).parent_line_id; return !parent || selectedItems.some(i=>i.id===parent) }
   function setItemSelected(item: QuoteLineItem,value:boolean) { if(!item.optional||!item.id||alreadyAccepted)return; setSelectedIds(current=>{const next=new Set(current); value?next.add(item.id!):next.delete(item.id!); return next}); if(value && requiresCard)setPaymentMethod("card") }
@@ -141,7 +143,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
   async function acceptQuote(){
     if(expired)return toast.error("Questo preventivo è scaduto")
-    if(billingPreference==="yearly"&&!annualEligible)return toast.error("La formula annuale non è disponibile per tutte le voci selezionate")
+    if(billingPreference === "yearly" && !annualEligible) return toast.error("La formula annuale non è disponibile per i prodotti selezionati")
     if(!selectedItems.length)return toast.error("Seleziona almeno una voce del preventivo")
     if(!acceptanceName.trim())return toast.error("Inserisci nome e cognome dell'accettante")
     if(!acceptedTerms)return toast.error("Accetta il preventivo e le condizioni")
@@ -160,11 +162,11 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       <section className="overflow-hidden rounded-2xl border bg-card"><div className="bg-primary px-6 py-7 text-primary-foreground"><div className="mb-3 flex items-center gap-2 text-sm font-medium opacity-90"><FileText className="h-4 w-4"/>4BID · Soluzioni digitali e consulenza</div><h1 className="text-3xl font-bold">{quote.title}</h1>{quote.description?<p className="mt-3 whitespace-pre-wrap text-sm opacity-90">{quote.description}</p>:null}</div><div className="grid gap-4 px-6 py-5 text-sm sm:grid-cols-2"><div><p className="text-xs uppercase text-muted-foreground">Cliente</p><p className="mt-1 font-semibold">{quote.client_company||quote.client_name}</p></div><div className="sm:text-right"><p className="text-xs uppercase text-muted-foreground">Validità</p><p className="mt-1 font-medium">{quote.expires_at?`fino al ${new Date(quote.expires_at).toLocaleString("it-IT")}`:"Secondo condizioni indicate"}</p></div></div></section>
 
-      {!alreadyAccepted && recurringParents.length>0?<section className="rounded-2xl border-2 border-primary/20 bg-card p-6"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-semibold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">La tariffa mensile è mostrata di default. Passa all'annuale per vedere il risparmio riservato.</p></div><div className="inline-flex rounded-xl border bg-muted p-1"><button type="button" onClick={()=>setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-semibold ${billingPreference==="monthly"?"bg-background shadow":""}`}>Mensile</button><button type="button" disabled={!annualEligible} onClick={()=>annualEligible&&setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-semibold ${billingPreference==="yearly"?"bg-emerald-600 text-white shadow":""} ${!annualEligible?"opacity-40 cursor-not-allowed":""}`}>Annuale{annualBenefit.amount>0?` · -${annualBenefit.pct}%`:""}</button></div></div>{annualEligible&&annualBenefit.amount>0?<div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">Con la formula annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} rispetto a 12 mensilità.</div>:!annualEligible?<p className="mt-3 text-xs text-muted-foreground">L'annuale non è disponibile per almeno una delle voci ricorrenti selezionate.</p>:null}</section>:null}
+      {!alreadyAccepted && recurringParents.length > 0 ? <section className="rounded-2xl border-2 border-primary/25 bg-card p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-bold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">Confronta subito le due formule. Gli eventuali extra con periodicità fissa restano invariati.</p></div><div className="grid grid-cols-2 rounded-xl border bg-muted p-1" role="group" aria-label="Formula di abbonamento"><button type="button" aria-pressed={billingPreference === "monthly"} onClick={() => setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "monthly" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-background/60 hover:text-foreground"}`}>Mensile</button><button type="button" aria-pressed={billingPreference === "yearly"} disabled={!annualEligible} onClick={() => setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "yearly" ? "bg-emerald-600 text-primary-foreground shadow" : "text-emerald-700 hover:bg-emerald-50"} ${!annualEligible ? "cursor-not-allowed opacity-40" : ""}`}>Annuale{annualBenefit.amount > 0 ? ` · -${annualBenefit.pct}%` : ""}</button></div></div>{annualEligible && annualBenefit.amount > 0 ? <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Scegliendo l&apos;annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} rispetto a 12 mensilità sui prodotti disponibili in entrambe le formule.</div> : !annualEligible ? <p className="mt-3 text-xs text-muted-foreground">La formula annuale non è prevista per i prodotti selezionati.</p> : null}</section> : null}
 
       <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} locked={alreadyAccepted} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
 
-      <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2><div className="flex flex-wrap gap-8">{totals.oneTime>0?<div><p className="text-xs text-muted-foreground">Una tantum</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p></div>:null}<div><p className="text-xs text-muted-foreground">{billingPreference==="yearly"?"Canone annuale":"Canone mensile"}</p><p className="text-2xl font-black">{formatQuoteAmount(totals.recurring,currency)}</p></div></div></div><p className="text-xs text-muted-foreground">{quote.vat_included?"Importi IVA inclusa":"Importi IVA esclusa"}</p></div></section>
+      <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2><div className="flex flex-wrap gap-8">{totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p></div> : null}{totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-2xl font-black">{formatQuoteAmount(totals.monthly,currency)}</p></div> : null}{totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-2xl font-black">{formatQuoteAmount(totals.yearly,currency)}</p></div> : null}</div></div><p className="text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p></div></section>
 
       {quote.payment_terms?<section className="rounded-2xl border bg-card p-6"><h2 className="mb-2 font-semibold">Durata, rinnovo e condizioni</h2><p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{quote.payment_terms}</p></section>:null}
 
