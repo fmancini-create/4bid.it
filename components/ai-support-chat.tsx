@@ -192,7 +192,13 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
       case "telefono":
         return "Inserisci telefono o scrivi 'salta'..."
       case "messaggio":
-        return "Descrivi la tua richiesta..."
+        // Stesso discriminante usato dal server per il testo della domanda
+        // (app/api/ai-support/route.ts): se la domanda di partenza c'e' gia',
+        // il bot chiede "vuoi aggiungere altro?" e un segnaposto che dice
+        // "descrivi la tua richiesta" contraddirebbe la domanda appena letta.
+        return leadState.originalQuestion
+          ? "Aggiungi dettagli, oppure scrivi 'no' per inviare..."
+          : "Descrivi la tua richiesta..."
       case "conferma":
         return "Scrivi 'sì' per confermare o 'no' per annullare..."
       default:
@@ -208,6 +214,7 @@ export default function AISupportChat({ userEmail, accountType }: AISupportChatP
           onClick={() => setIsOpen(true)}
           className="fixed bottom-4 right-4 md:bottom-6 md:right-6 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg hover:scale-110 transition-transform z-50 bg-blue-600 hover:bg-blue-700 text-white"
           size="icon"
+          aria-label="Apri la chat di supporto"
         >
           <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
         </Button>
