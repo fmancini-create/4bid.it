@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Save, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,20 +10,45 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { calculateQuoteLine, calculateQuoteTotal, formatQuoteAmount, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
+import {
+  calculateQuoteLine,
+  calculateQuoteTotal,
+  formatQuoteAmount,
+  type QuoteLineItem,
+  type QuoteRequestedField,
+  type SalesChannelQuote,
+} from "@/lib/quotes/types"
 import { getCommercialMeta, setCommercialMeta, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
 
 type CatalogItem = {
-  id: string; source_id?: string; project: "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot"; kind: "plan" | "module" | "setup" | "service"; name: string; description?: string; features: string[]; unit_amount: number; currency: string; billing_period: "one_time" | "monthly" | "quarterly" | "yearly"; trial_days?: number; configuration_schema?: Record<string, any>; raw_snapshot: Record<string, any>; stripe_price_id?: string | null; billing_family?: string; alternative_period?: BillingOption | null; dependency?: CommercialDependency | null
+  id: string
+  source_id?: string
+  project: "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot"
+  kind: "plan" | "module" | "setup" | "service"
+  name: string
+  description?: string
+  features: string[]
+  unit_amount: number
+  currency: string
+  billing_period: "one_time" | "monthly" | "quarterly" | "yearly"
+  trial_days?: number
+  configuration_schema?: Record<string, any>
+  raw_snapshot: Record<string, any>
+  stripe_price_id?: string | null
+  billing_family?: string
+  alternative_period?: BillingOption | null
+  dependency?: CommercialDependency | null
 }
 type CatalogGroup = { project: string; items: CatalogItem[]; configured: boolean; error: string | null }
+
+type ManualKind = "module" | "setup" | "service" | "consulting" | "custom"
 
 const PROJECT_LABELS: Record<string, string> = {
   hotelaccelerator: "HotelAccelerator",
   santaddeo: "Santaddeo",
   hotelprofitai: "HotelProfitAI",
   manubot: "ManuBot",
-  custom: "Voce libera",
+  custom: "Voce manuale",
   consulting: "Consulenza 4BID",
 }
 
@@ -31,6 +56,15 @@ const ACCOMMODATIONS = [
   { value: "camere", label: "Camere" },
   { value: "appartamenti", label: "Appartamenti / unità abitative" },
   { value: "piazzole", label: "Piazzole" },
+]
+
+const FIELD_TYPES: { value: QuoteRequestedField["type"]; label: string }[] = [
+  { value: "text", label: "Testo breve" },
+  { value: "textarea", label: "Testo lungo" },
+  { value: "credentials", label: "Credenziale (ID + Password)" },
+  { value: "password", label: "Solo password" },
+  { value: "email", label: "Email" },
+  { value: "url", label: "URL / Link" },
 ]
 
 function toLocalDateTime(value?: string | null) {
@@ -45,6 +79,41 @@ function santaddeoPrice(config: Record<string, any>) {
   const type = String(config.accommodation_type || "camere")
   const coeffs = obj(config.coefficients)
   return Math.round((Number(config.fee_base_value) || 0) * (Number(coeffs[type]) || 0) * Math.max(1, Number(config.star_rating) || 1) * 100) / 100
+}
+function newFieldKey() {
+  return `field_${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10)}`
+}
+function manualLine(kind: ManualKind): QuoteLineItem {
+  const recurring = kind === "module"
+  const labels: Record<ManualKind, string> = {
+    module: "Nuovo modulo manuale",
+    setup: "Setup / attivazione",
+    service: "Servizio una tantum",
+    consulting: "Consulenza 4BID",
+    custom: "Voce manuale",
+  }
+  const line: QuoteLineItem = {
+    id: crypto.randomUUID(),
+    kind,
+    project: kind === "consulting" ? "consulting" : "custom",
+    name: labels[kind],
+    description: labels[kind],
+    quantity: 1,
+    unit_amount: 0,
+    amount: 0,
+    billing_period: recurring ? "monthly" : "one_time",
+    trial_days: 0,
+    features: [],
+    discount: null,
+    support: null,
+    configuration: {},
+    catalog_snapshot: { source: "manual" },
+    optional: kind === "module" || kind === "service",
+    default_selected: true,
+  }
+  return recurring
+    ? setCommercialMeta(line, { billing_family: `manual:${line.id}`, billing_options: { monthly: { billing_period: "monthly", unit_amount: 0 } } })
+    : line
 }
 
 export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
@@ -61,6 +130,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   }, [quoteId])
 
   const lines = (quote?.line_items || []) as QuoteLineItem[]
+  const requestedFields = (quote?.requested_fields || []) as QuoteRequestedField[]
   const calculated = useMemo(() => lines.map(calculateQuoteLine), [lines])
   const total = useMemo(() => calculateQuoteTotal(lines), [lines])
 
@@ -68,6 +138,15 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   function setLines(next: QuoteLineItem[]) { patchQuote({ line_items: next, total_amount: calculateQuoteTotal(next) }) }
   function patchLine(index: number, patch: Partial<QuoteLineItem>) { setLines(lines.map((line, i) => i === index ? calculateQuoteLine({ ...line, ...patch }) : line)) }
   function hasBase(project: string) { return lines.some(line => line.project === project && line.kind === "plan") }
+  function addManual(kind: ManualKind) { setLines([...lines, manualLine(kind)]) }
+
+  function setField(index: number, patch: Partial<QuoteRequestedField>) {
+    patchQuote({ requested_fields: requestedFields.map((f, i) => i === index ? { ...f, ...patch } : f) })
+  }
+  function addField() {
+    patchQuote({ requested_fields: [...requestedFields, { key: newFieldKey(), label: "", type: "credentials", required: true }] })
+  }
+  function removeField(index: number) { patchQuote({ requested_fields: requestedFields.filter((_, i) => i !== index) }) }
 
   function addCatalogItem(item: CatalogItem) {
     const dep = item.dependency
@@ -103,10 +182,24 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     patchLine(index, { configuration: config, quantity: Math.max(1, Number(config.accommodations) || 1), unit_amount: unit })
   }
 
+  function changeBilling(index: number, value: QuoteLineItem["billing_period"]) {
+    const line = lines[index]
+    let next = { ...line, billing_period: value }
+    if (value === "monthly" || value === "yearly") {
+      const meta = getCommercialMeta(line)
+      next = setCommercialMeta(next, {
+        billing_family: meta.billing_family || `manual:${line.id || index}`,
+        billing_options: { ...(meta.billing_options || {}), [value]: { billing_period: value, unit_amount: Number(line.unit_amount) || 0, trial_days: line.trial_days } },
+      })
+    }
+    setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
+  }
+
   async function save() {
     if (!quote) return
     if (quote.status === "paid") return toast.error("Un preventivo pagato non può essere modificato")
     if (!quote.client_name?.trim() && !quote.client_company?.trim()) return toast.error("Inserisci almeno referente o azienda")
+    if (requestedFields.some(field => !field.label.trim())) return toast.error("Completa l'etichetta di tutti i dati richiesti al cliente")
     setSaving(true)
     try {
       const res = await fetch(`/api/quotes/${quote.id}`, {
@@ -114,7 +207,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         body: JSON.stringify({
           client_name: quote.client_name, client_company: quote.client_company, client_email: quote.client_email, client_vat: quote.client_vat, client_address: quote.client_address,
           title: quote.title, description: quote.description, payment_terms: quote.payment_terms, vat_included: quote.vat_included, currency: quote.currency,
-          expires_at: quote.expires_at, line_items: lines,
+          expires_at: quote.expires_at, line_items: lines, requested_fields: requestedFields,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -127,19 +220,23 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   if (!quote) return <div className="p-8 text-sm text-muted-foreground">Caricamento preventivo e cataloghi…</div>
 
   return <div className="max-w-7xl mx-auto space-y-7 pb-20">
-    <div className="flex items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Modifica preventivo</h1><p className="text-muted-foreground">Aggiungi prodotti e moduli direttamente dai cataloghi live.</p></div><Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button></div>
+    <div className="flex items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Modifica preventivo</h1><p className="text-muted-foreground">Catalogo live, voci manuali, setup e dati da richiedere al cliente.</p></div><Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button></div>
 
-    <section className="border rounded-xl p-5 bg-card space-y-4"><h2 className="font-semibold text-lg">Cliente e proposta</h2><div className="grid md:grid-cols-2 gap-4"><div><Label>Referente</Label><Input value={quote.client_name || ""} onChange={e => patchQuote({ client_name: e.target.value })} /></div><div><Label>Azienda</Label><Input value={quote.client_company || ""} onChange={e => patchQuote({ client_company: e.target.value })} /></div><div><Label>Email</Label><Input type="email" value={quote.client_email || ""} onChange={e => patchQuote({ client_email: e.target.value })} /></div><div><Label>P.IVA / CF</Label><Input value={quote.client_vat || ""} onChange={e => patchQuote({ client_vat: e.target.value })} /></div><div className="md:col-span-2"><Label>Titolo</Label><Input value={quote.title || ""} onChange={e => patchQuote({ title: e.target.value })} /></div><div className="md:col-span-2"><Label>Testo / descrizione</Label><Textarea rows={4} value={quote.description || ""} onChange={e => patchQuote({ description: e.target.value })} /></div><div><Label>Offerta valida fino al</Label><Input type="datetime-local" value={toLocalDateTime(quote.expires_at)} onChange={e => patchQuote({ expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div><div className="flex items-center gap-2 mt-6"><Switch checked={quote.vat_included ?? true} onCheckedChange={v => patchQuote({ vat_included: v })} /><Label>IVA inclusa</Label></div></div></section>
+    <section className="border rounded-xl p-5 bg-card space-y-4"><h2 className="font-semibold text-lg">Cliente e proposta</h2><div className="grid md:grid-cols-2 gap-4"><div><Label>Referente</Label><Input value={quote.client_name || ""} onChange={e => patchQuote({ client_name: e.target.value })} /></div><div><Label>Azienda</Label><Input value={quote.client_company || ""} onChange={e => patchQuote({ client_company: e.target.value })} /></div><div><Label>Email</Label><Input type="email" value={quote.client_email || ""} onChange={e => patchQuote({ client_email: e.target.value })} /></div><div><Label>P.IVA / CF</Label><Input value={quote.client_vat || ""} onChange={e => patchQuote({ client_vat: e.target.value })} /></div><div className="md:col-span-2"><Label>Indirizzo</Label><Input value={quote.client_address || ""} onChange={e => patchQuote({ client_address: e.target.value })} /></div><div className="md:col-span-2"><Label>Titolo</Label><Input value={quote.title || ""} onChange={e => patchQuote({ title: e.target.value })} /></div><div className="md:col-span-2"><Label>Testo / descrizione</Label><Textarea rows={4} value={quote.description || ""} onChange={e => patchQuote({ description: e.target.value })} /></div><div className="md:col-span-2"><Label>Condizioni</Label><Textarea rows={3} value={quote.payment_terms || ""} onChange={e => patchQuote({ payment_terms: e.target.value })} /></div><div><Label>Offerta valida fino al</Label><Input type="datetime-local" value={toLocalDateTime(quote.expires_at)} onChange={e => patchQuote({ expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div><div className="flex items-center gap-2 mt-6"><Switch checked={quote.vat_included ?? true} onCheckedChange={v => patchQuote({ vat_included: v })} /><Label>IVA inclusa</Label></div></div></section>
 
     <section className="border rounded-xl p-5 bg-card space-y-4"><div><h2 className="font-semibold text-lg">Aggiungi dal catalogo</h2><p className="text-xs text-muted-foreground">Gli add-on rispettano le dipendenze dal software base.</p></div><div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">{catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{group.items.filter(item => item.billing_period !== "yearly" || !group.items.some(other => other.billing_family === item.billing_family && other.billing_period === "monthly")).map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left rounded-md border p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="mt-1 block text-xs text-muted-foreground line-clamp-3">{item.description}</span><span className="mt-2 block text-xs font-medium">{formatQuoteAmount(item.unit_amount, item.currency)} · {item.billing_period === "monthly" ? "mese" : item.billing_period}</span></button>)}</div>)}</div></section>
 
+    <section className="border-2 border-dashed rounded-xl p-5 bg-card space-y-3"><div><h2 className="font-semibold text-lg">Aggiungi manualmente</h2><p className="text-sm text-muted-foreground">Per moduli, setup e servizi non presenti nel catalogo.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => addManual("module")}><Plus className="h-4 w-4 mr-2" />Modulo manuale</Button><Button variant="outline" onClick={() => addManual("setup")}><Plus className="h-4 w-4 mr-2" />Setup / una tantum</Button><Button variant="outline" onClick={() => addManual("service")}><Plus className="h-4 w-4 mr-2" />Servizio</Button><Button variant="outline" onClick={() => addManual("consulting")}><Plus className="h-4 w-4 mr-2" />Consulenza</Button><Button variant="ghost" onClick={() => addManual("custom")}><Plus className="h-4 w-4 mr-2" />Altra voce</Button></div></section>
+
     <section className="space-y-4"><h2 className="font-semibold text-xl">Voci del preventivo</h2>{calculated.map((item, index) => {
       const conf = obj(item.configuration)
-      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4"><div className="flex items-start justify-between gap-3"><div className="flex-1"><div className="text-xs font-bold uppercase text-primary mb-1">{PROJECT_LABELS[item.project || "custom"] || item.project}</div><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div><Button size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button></div><Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
-        {isSantaddeo(item) ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border bg-primary/5 p-4"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div> : <div className="grid sm:grid-cols-3 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchLine(index, { quantity: Number(e.target.value) })} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
+      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4"><div className="flex items-start justify-between gap-3"><div className="flex-1"><div className="text-xs font-bold uppercase text-primary mb-1">{PROJECT_LABELS[item.project || "custom"] || item.project} · {item.kind || "voce"}</div><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div><Button size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button></div><Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
+        {isSantaddeo(item) ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border bg-primary/5 p-4"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div> : <div className="grid sm:grid-cols-4 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchLine(index, { quantity: Number(e.target.value) })} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || "one_time"} onValueChange={v => changeBilling(index, v as QuoteLineItem["billing_period"])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum</SelectItem><SelectItem value="monthly">Mensile</SelectItem><SelectItem value="quarterly">Trimestrale</SelectItem><SelectItem value="yearly">Annuale</SelectItem></SelectContent></Select></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
         <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
       </div>
     })}</section>
+
+    <section className="border rounded-xl p-5 bg-card space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-lg">Dati da richiedere al cliente</h2><p className="text-sm text-muted-foreground">Ripristinato dal vecchio preventivo: credenziali, email, URL, testi e altri dati che il cliente dovrà compilare.</p></div><Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-2" />Aggiungi campo</Button></div>{requestedFields.length === 0 ? <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Nessun dato aggiuntivo richiesto. Usa “Aggiungi campo” per richiedere, ad esempio, accessi Booking.com, Expedia, PMS o dati tecnici.</div> : <div className="space-y-3">{requestedFields.map((field, index) => <div key={field.key || index} className="rounded-lg border p-4 space-y-3"><div className="grid md:grid-cols-[1fr_220px_auto] gap-3 items-end"><div><Label>Etichetta campo</Label><Input value={field.label} onChange={e => setField(index, { label: e.target.value })} placeholder="Es. Credenziali Booking.com" /></div><div><Label>Tipo</Label><Select value={field.type} onValueChange={value => setField(index, { type: value as QuoteRequestedField["type"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent></Select></div><Button size="icon" variant="ghost" onClick={() => removeField(index)}><X className="h-4 w-4" /></Button></div><div><Label>Indicazioni per il cliente (facoltative)</Label><Input value={field.help || ""} onChange={e => setField(index, { help: e.target.value })} placeholder="Es. Inserire username e password dell'account amministratore" /></div><div className="flex items-center gap-2"><Switch checked={field.required} onCheckedChange={required => setField(index, { required })} /><Label>Obbligatorio</Label></div></div>)}</div>}</section>
 
     <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex items-center justify-between gap-4"><div><p className="text-sm text-muted-foreground">Totale attuale</p><p className="text-2xl font-bold">{formatQuoteAmount(total, quote.currency)}</p></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
   </div>
