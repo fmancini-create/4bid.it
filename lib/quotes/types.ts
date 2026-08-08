@@ -110,6 +110,9 @@ export interface SalesChannelQuote {
   title: string
   description: string | null
   payment_terms: string | null
+  /** Copie delle condizioni: tipizzate come sconosciute per non creare un ciclo con terms.ts; si leggono con parseContractTerms. */
+  contract_terms?: unknown
+  accepted_terms?: unknown
   line_items: QuoteLineItem[]
   total_amount: number | null
   deposit_amount: number | null

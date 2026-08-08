@@ -24,7 +24,7 @@ export default async function PreventivoPage({
   const { data, error } = await supabase
     .from("sales_channel_quotes")
     .select(
-      "id, quote_number, created_at, title, description, payment_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_email, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, first_viewed_at, view_count",
+      "id, quote_number, created_at, title, description, payment_terms, contract_terms, accepted_terms, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_email, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, first_viewed_at, view_count",
     )
     .eq("token", token)
     .maybeSingle<Partial<SalesChannelQuote>>()

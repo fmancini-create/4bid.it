@@ -3,6 +3,8 @@ import { randomUUID } from "crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { dependencyErrors } from "@/lib/quotes/commercial"
 import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+import { quoteTermsProjects } from "@/lib/quotes/terms"
+import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -68,7 +70,12 @@ export async function POST(request: NextRequest) {
   const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
   const validDays = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000))
 
+  // Le condizioni seguono i prodotti: si copiano dai progetti presenti nel
+  // preventivo, come gia' avviene per listini e moduli.
+  const contractTerms = await fetchContractTerms(quoteTermsProjects(lineItems))
+
   const insert = {
+    contract_terms: contractTerms,
     quote_number: quoteNumber,
     client_name: body.client_name ?? "",
     client_company: body.client_company ?? null,

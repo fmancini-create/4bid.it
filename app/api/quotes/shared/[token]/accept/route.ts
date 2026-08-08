@@ -11,6 +11,8 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { acceptanceDeclaration, economicTerms, mergeContractTerms, missingTermsProjects, parseContractTerms, quoteTermsProjects, termsLabel } from "@/lib/quotes/terms"
+import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 const MAX_FIELD_LENGTH = 5000
@@ -105,7 +107,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null
   const nowIso = new Date().toISOString()
   const acceptedTotal = calculateQuoteTotal(lineItems)
+
+  // Prova di cosa e' stato accettato. Il testo viene dalla copia conservata sul
+  // preventivo (o, se manca, da una lettura fatta ora): mai dal browser, che
+  // potrebbe mandare un testo diverso da quello mostrato.
+  let contractTerms = parseContractTerms(quote.contract_terms)
+  const projects = quoteTermsProjects(selectedItems)
+  if (projects.some(project => !contractTerms?.projects.some(entry => entry.project === project))) {
+    contractTerms = mergeContractTerms(contractTerms, await fetchContractTerms(projects))
+  }
+  const missing = missingTermsProjects(selectedItems, contractTerms)
+  if (missing.length) {
+    return NextResponse.json({
+      error: `Non è possibile accettare: le condizioni contrattuali di ${missing.map(termsLabel).join(", ")} non sono disponibili in questo momento. Riprova fra poco o contatta 4BID.`,
+      code: "TERMS_UNAVAILABLE",
+    }, { status: 409 })
+  }
+
+  const acceptedTerms = {
+    version: 1 as const,
+    accepted_at: nowIso,
+    acceptance_name: acceptanceName,
+    acceptance_ip: ip,
+    billing_preference: billingPreference,
+    declaration: acceptanceDeclaration(contractTerms),
+    economic: economicTerms(selectedItems, billingPreference, quote.currency || "eur", { expiresAt: quote.expires_at, vatIncluded: quote.vat_included }),
+    projects: (contractTerms?.projects || [])
+      .filter(entry => projects.includes(entry.project))
+      .map(entry => ({ project: entry.project, label: entry.label, url: entry.url, title: entry.title, version: entry.version, hash: entry.hash, characters: entry.characters, fetched_at: entry.fetched_at, text: entry.text })),
+    payment_terms_note: quote.payment_terms || null,
+  }
   const { data: updated, error: updateError } = await supabase.from("sales_channel_quotes").update({
+    contract_terms: contractTerms,
+    accepted_terms: acceptedTerms,
     line_items: lineItems,
     total_amount: acceptedTotal,
     submitted_fields: submitted,
