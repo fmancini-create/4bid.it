@@ -218,7 +218,16 @@ export default function QuoteCommerceBuilder() {
   const oneTime = calculated.filter(i => isQuoteLineSelected(i) && i.billing_period === "one_time").reduce((s, i) => s + i.amount, 0)
   const recurring = calculated.filter(i => isQuoteLineSelected(i) && i.billing_period !== "one_time")
 
-  function patchItem(index: number, patch: Partial<QuoteLineItem>) { setItems(current => current.map((item, i) => i === index ? { ...item, ...patch } : item)) }
+  function patchItem(index: number, patch: Partial<QuoteLineItem>) {
+    setItems(current => current.map((item, i) => {
+      if (i !== index) return item
+      const next = { ...item, ...patch }
+      if (item.kind === "setup" && item.billing_period === "one_time" && patch.unit_amount != null) {
+        return setCommercialMeta(next, { normal_price: Math.max(0, Number(patch.unit_amount) || 0) })
+      }
+      return next
+    }))
+  }
   function patchMeta(index: number, patch: Parameters<typeof setCommercialMeta>[1]) { setItems(current => current.map((item, i) => i === index ? setCommercialMeta(item, patch) : item)) }
   function addManual(kind: ManualKind) { setItems(current => [...current, manualItem(kind)]) }
   function setField(index: number, patch: Partial<QuoteRequestedField>) { setRequestedFields(current => current.map((field, i) => i === index ? { ...field, ...patch } : field)) }
