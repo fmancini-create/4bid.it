@@ -136,6 +136,75 @@ export function annualSaving(monthly: number, yearly: number): { amount: number;
   return { amount, pct: annualized > 0 ? Math.round((amount / annualized) * 1000) / 10 : 0 }
 }
 
+const round2 = (value: number) => Math.round((Number(value) || 0) * 100) / 100
+
+export type AnnualSetupPromo = { mode: "discount" | "free"; normalPrice: number; annualPrice: number; saving: number; pct: number }
+
+/** Agevolazione annuale di una voce una tantum (setup, servizi manuali): va letta sulla riga grezza, non su quella già convertita. */
+export function annualSetupPromo(item: QuoteLineItem): AnnualSetupPromo | null {
+  if (item.billing_period !== "one_time") return null
+  const mode = resolveAnnualSetupMode(getCommercialMeta(item))
+  if (mode === "full") return null
+  const normalPrice = round2(applyBillingPreference(item, "monthly").amount || 0)
+  const annualPrice = round2(applyBillingPreference(item, "yearly").amount || 0)
+  const saving = round2(Math.max(0, normalPrice - annualPrice))
+  if (saving <= 0) return null
+  return { mode, normalPrice, annualPrice, saving, pct: normalPrice > 0 ? Math.round((saving / normalPrice) * 1000) / 10 : 0 }
+}
+
+export type AnnualComparison = {
+  eligible: boolean
+  monthlyScenario: number
+  yearlyScenario: number
+  recurringSaving: number
+  setupSaving: number
+  amount: number
+  pct: number
+}
+
+/**
+ * Confronto sul primo anno fra le due formule.
+ * Comprende i canoni disponibili in entrambe le formule e le voci una tantum
+ * (setup, servizi manuali) che con l'annuale sono scontate o in omaggio.
+ */
+export function annualComparison(items: QuoteLineItem[]): AnnualComparison {
+  let monthlyScenario = 0
+  let yearlyScenario = 0
+  let recurringSaving = 0
+  let setupSaving = 0
+  let eligible = false
+  for (const item of items) {
+    if (item.billing_period === "one_time") {
+      const promo = annualSetupPromo(item)
+      if (!promo) continue
+      monthlyScenario += promo.normalPrice
+      yearlyScenario += promo.annualPrice
+      setupSaving += promo.saving
+      continue
+    }
+    if (!hasAnnualBillingOption(item)) continue
+    const monthly = applyBillingPreference(item, "monthly")
+    const yearly = applyBillingPreference(item, "yearly")
+    if (monthly.billing_period !== "monthly" || yearly.billing_period !== "yearly") continue
+    eligible = true
+    const annualized = (Number(monthly.amount) || 0) * 12
+    const yearlyAmount = Number(yearly.amount) || 0
+    monthlyScenario += annualized
+    yearlyScenario += yearlyAmount
+    recurringSaving += Math.max(0, annualized - yearlyAmount)
+  }
+  const amount = round2(Math.max(0, monthlyScenario - yearlyScenario))
+  return {
+    eligible,
+    monthlyScenario: round2(monthlyScenario),
+    yearlyScenario: round2(yearlyScenario),
+    recurringSaving: round2(recurringSaving),
+    setupSaving: round2(setupSaving),
+    amount,
+    pct: monthlyScenario > 0 ? Math.round((amount / monthlyScenario) * 1000) / 10 : 0,
+  }
+}
+
 export function createCommercialServiceLine(parent: QuoteLineItem, service: "configuration_support" | "full_setup", config: CommercialServiceConfig): QuoteLineItem | null {
   if (!config.enabled) return null
   const price = Math.max(0, Number(config.price) || 0)

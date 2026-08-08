@@ -20,7 +20,7 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { annualSaving, applyBillingPreference, getCommercialMeta, hasAnnualBillingOption, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 import { quoteBrand, quoteBenefits } from "@/lib/quotes/branding"
 import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
 
@@ -47,16 +47,18 @@ function OfferCountdown({ expiresAt, expired }: { expiresAt?: string | null; exp
   </section>
 }
 
-function LineItemCard({ item, currency, selected, locked, parentSelected, onSelectedChange }: { item: QuoteLineItem; currency: string; selected: boolean; locked: boolean; parentSelected: boolean; onSelectedChange: (value: boolean) => void }) {
+function LineItemCard({ item, currency, selected, locked, parentSelected, promo, billingPreference, annualEligible, onSelectedChange, onChooseAnnual }: { item: QuoteLineItem; currency: string; selected: boolean; locked: boolean; parentSelected: boolean; promo: AnnualSetupPromo | null; billingPreference: QuoteBillingPreference; annualEligible: boolean; onSelectedChange: (value: boolean) => void; onChooseAnnual: () => void }) {
   const calculated = calculateQuoteLine(item)
   const listAmount = Number(calculated.list_amount ?? 0)
   const discountAmount = Number(calculated.discount_amount ?? 0)
   const hasDiscount = discountAmount > 0 && listAmount > calculated.amount
   const period = periodNames[calculated.billing_period || "one_time"] || calculated.billing_period
-  const meta = getCommercialMeta(item)
   const brand = quoteBrand(item.project)
   const benefits = quoteBenefits(item, 3)
-  const isFreeAnnualService = calculated.billing_period === "one_time" && meta.free_on_annual && Number(calculated.amount || 0) === 0
+  const yearlyView = billingPreference === "yearly"
+  const isFreeAnnualService = !!promo && promo.mode === "free" && yearlyView
+  const showsAnnualDiscount = !!promo && promo.mode === "discount" && yearlyView
+  const promoTitle = promo?.mode === "free" ? "In omaggio con la formula annuale" : `Scontato del ${promo?.pct}% con la formula annuale`
   const active = selected && parentSelected
 
   return <article className={`group overflow-hidden rounded-2xl border bg-background transition-all ${active ? "border-primary/35 shadow-sm" : "border-border opacity-60"}`}>
@@ -64,7 +66,7 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, onSele
       <div className="flex flex-wrap items-center justify-end gap-2">
         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.optional ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{item.optional ? "Puoi scegliere" : "Incluso nella soluzione"}</span>
         {item.trial_days ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">Provalo {item.trial_days} giorni</span> : null}
-        {isFreeAnnualService ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">OMAGGIO CON ANNUALE</span> : null}
+        {promo ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{promo.mode === "free" ? "OMAGGIO CON ANNUALE" : `-${promo.pct}% CON ANNUALE`}</span> : null}
       </div>
     </div>
 
@@ -79,14 +81,27 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, onSele
           {item.name && item.description && item.description !== item.name ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{item.description}</p> : null}
         </div>
         <div className="shrink-0 rounded-xl border bg-muted/20 px-4 py-3 text-left sm:min-w-36 sm:text-right">
-          {hasDiscount || isFreeAnnualService ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(listAmount || Number(meta.normal_price || 0), currency)}</div> : null}
+          {isFreeAnnualService || showsAnnualDiscount ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(promo!.normalPrice, currency)}</div> : hasDiscount ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(listAmount, currency)}</div> : null}
           <div className={`text-2xl font-black ${isFreeAnnualService ? "text-emerald-700" : ""}`}>{isFreeAnnualService ? "OMAGGIO" : formatQuoteAmount(calculated.amount, currency)}</div>
           <div className="text-xs text-muted-foreground">{calculated.billing_period === "one_time" ? "una tantum" : `/${period}`}</div>
           {hasDiscount ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(discountAmount, currency)}{item.discount?.type === "percentage" ? ` (${item.discount.value}%)` : ""}</div> : null}
+          {showsAnnualDiscount ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(promo!.saving, currency)} con l&apos;annuale</div> : null}
+          {promo && !yearlyView ? <div className="mt-1 text-xs font-bold text-emerald-700">Con l&apos;annuale: {promo.mode === "free" ? "OMAGGIO" : formatQuoteAmount(promo.annualPrice, currency)}</div> : null}
         </div>
       </div>
 
       {(calculated.quantity || 1) > 1 ? <p className="text-xs text-muted-foreground">Quantità: <strong className="text-foreground">{calculated.quantity}</strong>{calculated.unit_amount != null ? ` × ${formatQuoteAmount(calculated.unit_amount, currency)}` : ""}</p> : null}
+
+      {promo && !yearlyView && !locked ? <div className="flex flex-col gap-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100"><Sparkles className="h-4 w-4 text-emerald-700" /></span>
+          <div>
+            <p className="font-bold text-emerald-900">{promoTitle}</p>
+            <p className="text-sm text-emerald-800">Ora in formula mensile costa {formatQuoteAmount(promo.normalPrice, currency)}. Con l&apos;annuale {promo.mode === "free" ? "non ti viene addebitato" : `scende a ${formatQuoteAmount(promo.annualPrice, currency)}`}: risparmi {formatQuoteAmount(promo.saving, currency)}.</p>
+          </div>
+        </div>
+        {annualEligible && !locked ? <button type="button" onClick={onChooseAnnual} className="shrink-0 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">Passa all&apos;annuale</button> : null}
+      </div> : null}
 
       {benefits.length ? <div className="rounded-xl bg-muted/35 p-4"><p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Cosa ottieni</p><div className="grid gap-2 sm:grid-cols-3">{benefits.map((benefit,index) => <div key={`${benefit}-${index}`} className="flex items-start gap-2 text-sm font-medium"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-700" /></span><span>{benefit}</span></div>)}</div></div> : null}
 
@@ -113,11 +128,12 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const selectedItems = useMemo(() => effectiveItems.filter(item => !item.optional || (!!item.id && selectedIds.has(item.id))), [effectiveItems, selectedIds])
   const recurringParents = selectedItems.filter(i => i.billing_period !== "one_time")
   const selectedRawItems = useMemo(() => rawItems.filter(i => !i.optional || (!!i.id && selectedIds.has(i.id))), [rawItems, selectedIds])
-  const annualDrivers = selectedRawItems.filter(i => i.billing_period !== "one_time" && hasAnnualBillingOption(i))
-  const annualEligible = annualDrivers.length > 0
-  const monthlyTotal = annualDrivers.map(i => applyBillingPreference(i, "monthly")).filter(i => i.billing_period === "monthly").reduce((sum, i) => sum + Number(i.amount || 0), 0)
-  const yearlyTotal = annualDrivers.map(i => applyBillingPreference(i, "yearly")).filter(i => i.billing_period === "yearly").reduce((sum, i) => sum + Number(i.amount || 0), 0)
-  const annualBenefit = annualSaving(monthlyTotal, yearlyTotal)
+  const annualBenefit = useMemo(() => annualComparison(selectedRawItems), [selectedRawItems])
+  const annualEligible = annualBenefit.eligible
+  const savingDetail = [
+    annualBenefit.recurringSaving > 0 ? `${formatQuoteAmount(annualBenefit.recurringSaving, currency)} sui canoni` : null,
+    annualBenefit.setupSaving > 0 ? `${formatQuoteAmount(annualBenefit.setupSaving, currency)} su setup e servizi una tantum` : null,
+  ].filter(Boolean).join(" + ")
   const requiresCard = selectedItems.some(item => SAAS_PROJECTS.has(item.project || "") || (item.billing_period && item.billing_period !== "one_time"))
 
   const [fieldValues,setFieldValues] = useState<Record<string,string>>(() => (quote.submitted_fields as Record<string,string>) || {})
@@ -134,6 +150,11 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
     yearly: selectedItems.filter(i => i.billing_period === "yearly").reduce((sum, i) => sum + Number(i.amount || 0), 0),
   }), [selectedItems])
 
+  function chooseAnnual() {
+    if (!annualEligible || alreadyAccepted) return
+    setBillingPreference("yearly")
+    document.getElementById("formula-abbonamento")?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
   function parentSelected(item: QuoteLineItem) { const parent=getCommercialMeta(item).parent_line_id; return !parent || selectedItems.some(i=>i.id===parent) }
   function setItemSelected(item: QuoteLineItem,value:boolean) { if(!item.optional||!item.id||alreadyAccepted)return; setSelectedIds(current=>{const next=new Set(current); value?next.add(item.id!):next.delete(item.id!); return next}); if(value && requiresCard)setPaymentMethod("card") }
   function setBillingField(key:keyof QuoteBillingDetails,value:string){setBilling(current=>({...current,[key]:value}))}
@@ -162,9 +183,9 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       <section className="overflow-hidden rounded-2xl border bg-card"><div className="bg-primary px-6 py-7 text-primary-foreground"><div className="mb-3 flex items-center gap-2 text-sm font-medium opacity-90"><FileText className="h-4 w-4"/>4BID · Soluzioni digitali e consulenza</div><h1 className="text-3xl font-bold">{quote.title}</h1>{quote.description?<p className="mt-3 whitespace-pre-wrap text-sm opacity-90">{quote.description}</p>:null}</div><div className="grid gap-4 px-6 py-5 text-sm sm:grid-cols-2"><div><p className="text-xs uppercase text-muted-foreground">Cliente</p><p className="mt-1 font-semibold">{quote.client_company||quote.client_name}</p></div><div className="sm:text-right"><p className="text-xs uppercase text-muted-foreground">Validità</p><p className="mt-1 font-medium">{quote.expires_at?`fino al ${new Date(quote.expires_at).toLocaleString("it-IT")}`:"Secondo condizioni indicate"}</p></div></div></section>
 
-      {!alreadyAccepted && recurringParents.length > 0 ? <section className="rounded-2xl border-2 border-primary/25 bg-card p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-bold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">Confronta subito le due formule. Gli eventuali extra con periodicità fissa restano invariati.</p></div><div className="grid grid-cols-2 rounded-xl border bg-muted p-1" role="group" aria-label="Formula di abbonamento"><button type="button" aria-pressed={billingPreference === "monthly"} onClick={() => setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "monthly" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-background/60 hover:text-foreground"}`}>Mensile</button><button type="button" aria-pressed={billingPreference === "yearly"} disabled={!annualEligible} onClick={() => setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "yearly" ? "bg-emerald-600 text-primary-foreground shadow" : "text-emerald-700 hover:bg-emerald-50"} ${!annualEligible ? "cursor-not-allowed opacity-40" : ""}`}>Annuale{annualBenefit.amount > 0 ? ` · -${annualBenefit.pct}%` : ""}</button></div></div>{annualEligible && annualBenefit.amount > 0 ? <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Scegliendo l&apos;annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} rispetto a 12 mensilità sui prodotti disponibili in entrambe le formule.</div> : !annualEligible ? <p className="mt-3 text-xs text-muted-foreground">La formula annuale non è prevista per i prodotti selezionati.</p> : null}</section> : null}
+      {!alreadyAccepted && recurringParents.length > 0 ? <section id="formula-abbonamento" className="rounded-2xl border-2 border-primary/25 bg-card p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-bold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">Il confronto comprende i canoni e anche setup e servizi una tantum agevolati con l&apos;annuale.</p></div><div className="grid grid-cols-2 rounded-xl border bg-muted p-1" role="group" aria-label="Formula di abbonamento"><button type="button" aria-pressed={billingPreference === "monthly"} onClick={() => setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "monthly" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-background/60 hover:text-foreground"}`}>Mensile</button><button type="button" aria-pressed={billingPreference === "yearly"} disabled={!annualEligible} onClick={() => setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "yearly" ? "bg-emerald-600 text-primary-foreground shadow" : "text-emerald-700 hover:bg-emerald-50"} ${!annualEligible ? "cursor-not-allowed opacity-40" : ""}`}>Annuale{annualBenefit.amount > 0 ? ` · -${annualBenefit.pct}%` : ""}</button></div></div>{annualEligible && annualBenefit.amount > 0 ? <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Scegliendo l&apos;annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} sul primo anno{savingDetail ? `: ${savingDetail}` : ""}.</div> : !annualEligible ? <p className="mt-3 text-xs text-muted-foreground">La formula annuale non è prevista per i prodotti selezionati.</p> : null}</section> : null}
 
-      <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} locked={alreadyAccepted} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
+      <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} locked={alreadyAccepted} promo={annualSetupPromo(rawItems[index] || item)} billingPreference={billingPreference} annualEligible={annualEligible} onChooseAnnual={chooseAnnual} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
 
       <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2><div className="flex flex-wrap gap-8">{totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p></div> : null}{totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-2xl font-black">{formatQuoteAmount(totals.monthly,currency)}</p></div> : null}{totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-2xl font-black">{formatQuoteAmount(totals.yearly,currency)}</p></div> : null}</div></div><p className="text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p></div></section>
 
