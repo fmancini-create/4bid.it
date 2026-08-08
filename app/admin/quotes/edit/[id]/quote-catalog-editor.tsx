@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,9 @@ import {
   calculateQuoteLine,
   calculateQuoteTotal,
   formatQuoteAmount,
-  type QuoteLineItem,
-  type QuoteRequestedField,
+    type QuoteLineItem,
+    type QuoteProject,
+    type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { getCommercialMeta, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
@@ -157,6 +158,13 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
   }
+  function moveLine(index: number, direction: -1 | 1) {
+    const target = index + direction
+    if (target < 0 || target >= lines.length) return
+    const next = [...lines]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    setLines(next)
+  }
   function hasBase(project: string) { return lines.some(line => line.project === project && line.kind === "plan") }
   function addManual(kind: ManualKind) { setLines([...lines, manualLine(kind)]) }
 
@@ -251,8 +259,22 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     <section className="space-y-4"><h2 className="font-semibold text-xl">Voci del preventivo</h2>{calculated.map((item, index) => {
       const conf = obj(item.configuration)
       const meta = getCommercialMeta(item)
+      const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
-      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4"><div className="flex items-start justify-between gap-3"><div className="flex-1"><div className="text-xs font-bold uppercase text-primary mb-1">{PROJECT_LABELS[item.project || "custom"] || item.project} · {item.kind || "voce"}</div><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div><Button size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button></div><Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
+      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="grid flex-1 gap-3 md:grid-cols-2">
+            <div><Label>Nome</Label><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div>
+            <div><Label>Progetto / tipo</Label>{isManual ? <Select value={item.project || "custom"} onValueChange={project => patchLine(index, { project: project as QuoteProject })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="hotelaccelerator">HotelAccelerator</SelectItem><SelectItem value="santaddeo">Santaddeo</SelectItem><SelectItem value="hotelprofitai">HotelProfitAI</SelectItem><SelectItem value="manubot">ManuBot</SelectItem><SelectItem value="consulting">Consulenza 4BID</SelectItem><SelectItem value="custom">Voce manuale</SelectItem></SelectContent></Select> : <Input readOnly value={`${PROJECT_LABELS[item.project || "custom"] || item.project || "custom"} · ${item.kind || "voce"}`} />}</div>
+          </div>
+          <div className="flex items-center gap-1 self-end" aria-label={`Ordinamento voce ${index + 1}`}>
+            <span className="min-w-14 text-center text-xs font-semibold text-muted-foreground">{index + 1} di {lines.length}</span>
+            <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveLine(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="outline" disabled={index === lines.length - 1} onClick={() => moveLine(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        </div>
+        <Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
         {isSantaddeo(item) ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border bg-primary/5 p-4"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div> : <div className="grid sm:grid-cols-4 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchLine(index, { quantity: Number(e.target.value) })} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || "one_time"} onValueChange={v => changeBilling(index, v as QuoteLineItem["billing_period"])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum</SelectItem><SelectItem value="monthly">Mensile</SelectItem><SelectItem value="quarterly">Trimestrale</SelectItem><SelectItem value="yearly">Annuale</SelectItem></SelectContent></Select></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
         {item.kind === "setup" && item.billing_period === "one_time" ? <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><div className="flex items-center justify-between gap-3"><div><strong>Agevolazione setup con piano annuale</strong><p className="text-xs text-muted-foreground">Scegli se il setup resta a prezzo pieno, viene scontato o azzerato quando il cliente seleziona la quota annuale.</p></div><Switch checked={setupAnnualMode !== "full"} onCheckedChange={enabled => patchSetupAnnualPolicy(index, enabled ? "free" : "full")} /></div>{setupAnnualMode !== "full" ? <div className="grid sm:grid-cols-2 gap-3"><div><Label>Trattamento con annuale</Label><Select value={setupAnnualMode} onValueChange={value => patchSetupAnnualPolicy(index, value as AnnualSetupMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="discount">Scontato</SelectItem><SelectItem value="free">Azzerato / omaggio</SelectItem></SelectContent></Select></div>{setupAnnualMode === "discount" ? <div><Label>Sconto setup %</Label><Input type="number" min="0" max="100" step="0.1" value={meta.annual_setup_discount_pct || 0} onChange={e => patchSetupAnnualPolicy(index, "discount", Number(e.target.value))} /></div> : <div className="flex items-end"><p className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Setup azzerato con formula annuale</p></div>}</div> : <p className="text-xs text-muted-foreground">Disattivato: il setup viene addebitato per intero anche con formula annuale.</p>}</div> : null}
         <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
