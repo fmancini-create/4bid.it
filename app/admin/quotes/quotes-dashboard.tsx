@@ -131,7 +131,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
             {q.accepted_at && <span className="inline-flex items-center gap-1 text-amber-700"><CheckCircle2 className="h-3.5 w-3.5" />Accettato da {q.acceptance_name}</span>}
             {q.status === "sent" && !q.accepted_at && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />In attesa di accettazione</span>}
             {q.paid_at && <span className="inline-flex items-center gap-1 text-green-800"><CheckCircle2 className="h-3.5 w-3.5" />Pagato {new Date(q.paid_at).toLocaleDateString("it-IT")}</span>}
-            {isUnpaid(q) && <span className="inline-flex items-center gap-1 text-orange-800"><Clock className="h-3.5 w-3.5" />Accettato ma non pagato{(q.payment_reminder_count || 0) > 0 ? ` · ${q.payment_reminder_count} solleciti` : ""}{q.expires_at ? ` · scade ${new Date(q.expires_at).toLocaleDateString("it-IT")}` : ""}</span>}
+            {isUnpaid(q) && !q.expired_at && <span className="inline-flex items-center gap-1 text-orange-800"><Clock className="h-3.5 w-3.5" />Accettato ma non pagato{(q.payment_reminder_count || 0) > 0 ? ` · ${q.payment_reminder_count} solleciti` : ""}{q.expires_at ? ` · scade ${new Date(q.expires_at).toLocaleDateString("it-IT")}` : ""}</span>}
             {q.expired_at && <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3.5 w-3.5" />Decaduta per mancato pagamento</span>}
           </div>
 
