@@ -1,5 +1,5 @@
 import Stripe from "stripe"
-import { calculateQuoteLine, type QuoteBillingPeriod, type QuoteLineItem, type SalesChannelQuote } from "./types"
+import { calculateQuoteLine, isQuoteLineSelected, type QuoteBillingPeriod, type QuoteLineItem, type SalesChannelQuote } from "./types"
 
 function recurringFor(period: QuoteBillingPeriod): Stripe.PriceCreateParams.Recurring | undefined {
   if (period === "monthly") return { interval: "month" }
@@ -13,9 +13,8 @@ function hasTemporaryDiscount(item: QuoteLineItem) {
 }
 
 function undiscountedAmount(item: QuoteLineItem) {
-  const quantity = Math.max(0, Number(item.quantity) || 0)
-  const unit = Math.max(0, Number(item.list_amount ?? item.unit_amount) || 0)
-  return Math.round(quantity * unit * 100) / 100
+  const calculated = calculateQuoteLine(item)
+  return Math.max(0, Math.round(Number(calculated.list_amount ?? calculated.amount ?? 0) * 100) / 100)
 }
 
 function stripeCouponName(value: string) {
@@ -45,7 +44,9 @@ export async function orchestrateQuoteAfterSetup({
   })
   await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } })
 
-  const items = (quote.line_items || []).map(calculateQuoteLine)
+  // At acceptance every optional line receives customer_selected. The orchestrator
+  // must charge only the frozen customer selection, exactly like standard Checkout.
+  const items = (quote.line_items || []).filter(isQuoteLineSelected).map(calculateQuoteLine)
   const oneTimeItems = items.filter(item => (!item.billing_period || item.billing_period === "one_time") && item.amount > 0)
   const recurringItems = items.filter(item => item.billing_period && item.billing_period !== "one_time")
   const currency = (quote.currency || "eur").toLowerCase()
