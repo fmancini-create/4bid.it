@@ -147,7 +147,13 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   )
 
   const [fieldValues,setFieldValues] = useState<Record<string,string>>(() => (quote.submitted_fields as Record<string,string>) || {})
-  const [billing,setBilling] = useState<QuoteBillingDetails>(() => { const saved=(quote.billing_details as QuoteBillingDetails)||{}; return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:saved.address||quote.client_address||"",zip:saved.zip||"",city:saved.city||quote.client_address||"",province:saved.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" } })
+  // `client_address` e' l'indirizzo su UNA riga ("via - CAP citta (PROV)"): va
+  // solo nel campo Indirizzo. Finiva anche in Citta', che quindi mostrava
+  // l'indirizzo completo mentre CAP e Provincia restavano vuoti: dati giusti
+  // nei campi sbagliati, il tipo di errore che si copia poi in fattura.
+  // I pezzi separati arrivano da `billing_details`, precompilato dal controllo
+  // P.IVA al momento della creazione del preventivo.
+  const [billing,setBilling] = useState<QuoteBillingDetails>(() => { const saved=(quote.billing_details as QuoteBillingDetails)||{}; return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:saved.address||quote.client_address||"",zip:saved.zip||"",city:saved.city||"",province:saved.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" } })
   const [acceptanceName,setAcceptanceName] = useState(quote.acceptance_name || "")
   const [acceptedTerms,setAcceptedTerms] = useState(false)
   const [paymentMethod,setPaymentMethod] = useState<PaymentMethod|null>((quote.payment_method as PaymentMethod)|| (requiresCard ? "card" : null))

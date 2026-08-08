@@ -75,8 +75,24 @@ export async function POST(request: NextRequest) {
   // preventivo, come gia' avviene per listini e moduli.
   const contractTerms = await fetchContractTerms(quoteTermsProjects(lineItems))
 
+  // Precompilazione dalla visura: si accettano SOLO le chiavi previste dal
+  // modulo di fatturazione. Copiare l'oggetto cosi' com'e' lascerebbe scrivere
+  // campi arbitrari dentro una colonna che poi viene riletta e stampata.
+  const CHIAVI_FATTURAZIONE = ["company", "vat", "tax_code", "address", "zip", "city", "province", "sdi_code", "pec", "reference"] as const
+  const billingIn = body.billing_details && typeof body.billing_details === "object" && !Array.isArray(body.billing_details)
+    ? (body.billing_details as Record<string, unknown>)
+    : null
+  const billingDetails = billingIn
+    ? Object.fromEntries(
+        CHIAVI_FATTURAZIONE
+          .map(k => [k, typeof billingIn[k] === "string" ? (billingIn[k] as string).trim() : ""])
+          .filter(([, v]) => v !== ""),
+      )
+    : {}
+
   const insert = {
     contract_terms: contractTerms,
+    billing_details: billingDetails,
     quote_number: quoteNumber,
     client_name: body.client_name ?? "",
     client_company: body.client_company ?? null,
