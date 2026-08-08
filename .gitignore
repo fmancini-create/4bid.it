@@ -25,3 +25,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# file temporanei di verifica: in questo progetto le scritture vengono
+# committate e pushate automaticamente, e il repo e' PUBBLICO. Un file
+# di appoggio con dentro un token finisce online prima che si possa
+# cancellarlo: la regola deve esistere PRIMA di crearlo.
+scripts/.*
+*.token
+.token-*
