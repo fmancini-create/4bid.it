@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, GripVertical, Plus, Save, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +23,7 @@ import {
   annualSaving,
   createCommercialServiceLine,
   dependencyErrors,
+  duplicateQuoteLineAt,
   getCommercialMeta,
   setCommercialMeta,
   type AnnualSetupMode,
@@ -245,6 +246,10 @@ export default function QuoteCommerceBuilder() {
     })
   }
   function moveItem(index: number, direction: -1 | 1) { reorderItem(index, index + direction) }
+  function duplicateItem(index: number) {
+    setItems(current => duplicateQuoteLineAt(current, index).items)
+    toast.success("Voce duplicata: la copia è subito sotto l'originale")
+  }
   function addManual(kind: ManualKind) { setItems(current => [...current, manualItem(kind)]) }
   function setField(index: number, patch: Partial<QuoteRequestedField>) { setRequestedFields(current => current.map((field, i) => i === index ? { ...field, ...patch } : field)) }
   function addField() { setRequestedFields(current => [...current, { key: newFieldKey(), label: "", type: "credentials", required: true }]) }
@@ -429,6 +434,7 @@ export default function QuoteCommerceBuilder() {
             <span className="text-xs font-semibold text-muted-foreground">/ {items.length}</span>
             <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveItem(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="outline" disabled={index === items.length - 1} onClick={() => moveItem(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="outline" onClick={() => duplicateItem(index)} aria-label={`Duplica ${item.name || "voce"}`} title="Duplica questa voce"><Copy className="h-4 w-4" /></Button>
             <Button type="button" size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>

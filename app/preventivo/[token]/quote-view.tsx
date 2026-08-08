@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import ContractTermsSection, { acceptanceLabel } from "./contract-terms-section"
+import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
 import {
   decodeCredential,
   encodeCredential,
@@ -277,14 +279,11 @@ export default function QuoteView({ token, quote, expired }: Props) {
         )}
 
         {/* Condizioni di pagamento */}
-        {quote.payment_terms && (
-          <section className="bg-card border border-border rounded-lg p-6">
-            <h2 className="font-semibold mb-3">Condizioni di pagamento</h2>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {quote.payment_terms}
-            </p>
-          </section>
-        )}
+      <ContractTermsSection
+        terms={parseContractTerms(quote.contract_terms)}
+        economic={economicTerms(lineItems, "monthly", quote.currency || "eur", { expiresAt: quote.expires_at, vatIncluded: quote.vat_included })}
+        paymentTerms={quote.payment_terms}
+      />
 
         {/* Dati richiesti al cliente */}
         {requestedFields.length > 0 && (
@@ -458,7 +457,7 @@ export default function QuoteView({ token, quote, expired }: Props) {
                 className="mt-0.5"
               />
               <span className="text-sm text-muted-foreground">
-                Dichiaro di accettare il preventivo e le relative condizioni di pagamento.
+                {acceptanceLabel(parseContractTerms(quote.contract_terms))}
               </span>
             </label>
 

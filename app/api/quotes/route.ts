@@ -3,6 +3,8 @@ import { randomUUID } from "crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { dependencyErrors } from "@/lib/quotes/commercial"
 import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+import { quoteTermsProjects } from "@/lib/quotes/terms"
+import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -66,9 +68,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "La scadenza del preventivo deve essere futura" }, { status: 400 })
   }
   const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
-  const validDays = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000))
+  // La validita' vive in expires_at: la colonna valid_days non esiste in tabella
+  // e il suo inserimento faceva fallire con 500 ogni creazione di preventivo.
+
+  // Le condizioni seguono i prodotti: si copiano dai progetti presenti nel
+  // preventivo, come gia' avviene per listini e moduli.
+  const contractTerms = await fetchContractTerms(quoteTermsProjects(lineItems))
 
   const insert = {
+    contract_terms: contractTerms,
     quote_number: quoteNumber,
     client_name: body.client_name ?? "",
     client_company: body.client_company ?? null,
@@ -84,7 +92,6 @@ export async function POST(request: NextRequest) {
     vat_included: body.vat_included ?? true,
     currency: body.currency || "eur",
     requested_fields: Array.isArray(body.requested_fields) ? body.requested_fields : [],
-    valid_days: validDays,
     expires_at: expiresAt,
     status: "draft",
     provisioning_status: "not_required",
