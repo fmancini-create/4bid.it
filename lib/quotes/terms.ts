@@ -12,9 +12,19 @@ export const PROJECT_TERMS_SOURCES = {
   santaddeo: { label: "Santaddeo", url: "https://www.santaddeo.com/termini" },
   hotelprofitai: { label: "HotelProfitAI", url: "https://www.hotelprofitai.com/termini" },
   manubot: { label: "ManuBot", url: "https://www.manubot.it/termini" },
+  "4bid": { label: "4BID (servizi e consulenze)", url: "https://www.4bid.it/terms" },
 } as const
 
 export type TermsProject = keyof typeof PROJECT_TERMS_SOURCES
+
+/**
+ * Voci fuori dai progetti SaaS (consulenze, sviluppi su misura, voci manuali)
+ * ricadono qui. Senza questa fonte le loro condizioni sarebbero SCARTATE in
+ * silenzio: verificato su dati reali, 11 voci su preventivi esistenti hanno
+ * project "custom", "consulenza" o nessun progetto. Non e' un caso di
+ * confine: e' la maggioranza delle voci scritte a mano.
+ */
+export const BASE_TERMS_PROJECT = "4bid" as const
 
 export type TermsBlock = { type: "heading" | "paragraph" | "item"; text: string }
 
@@ -53,13 +63,28 @@ export function isTermsProject(value: unknown): value is TermsProject {
 
 export function termsLabel(project: TermsProject) { return PROJECT_TERMS_SOURCES[project].label }
 
-/** Progetti realmente presenti nel preventivo: nessuna condizione di prodotti non offerti. */
+/**
+ * Progetti di cui servono le condizioni: quelli realmente presenti nel
+ * preventivo, piu' le condizioni base 4BID se anche UNA sola voce non
+ * appartiene a un progetto SaaS. Una voce senza condizioni non deve poter
+ * passare inosservata: e' il caso piu' comune (consulenze e voci scritte a
+ * mano), non l'eccezione.
+ */
 export function quoteTermsProjects(items: QuoteLineItem[] | null | undefined): TermsProject[] {
   const found: TermsProject[] = []
+  let needsBase = false
   for (const item of items || []) {
-    const project = item?.project
-    if (isTermsProject(project) && !found.includes(project)) found.push(project)
+    if (!item) continue
+    // "consulting", "custom", un progetto sconosciuto o l'assenza di progetto
+    // ricadono tutti sulle condizioni base 4BID.
+    const project: string | undefined = item.project
+    if (isTermsProject(project) && project !== BASE_TERMS_PROJECT) {
+      if (!found.includes(project)) found.push(project)
+    } else {
+      needsBase = true
+    }
   }
+  if (needsBase && !found.includes(BASE_TERMS_PROJECT)) found.push(BASE_TERMS_PROJECT)
   return found
 }
 
