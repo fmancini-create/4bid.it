@@ -34,6 +34,32 @@ export function formatCompanyAddress(d: CompanyLookupData): string {
   return [riga1, riga2].filter(Boolean).join(" - ")
 }
 
+/**
+ * I dati di fatturazione tenuti SEPARATI, come li chiede il modulo che il
+ * cliente compila per accettare il preventivo.
+ *
+ * Il registro fornisce via, CAP, citta' e provincia gia' distinti: unirli in
+ * una sola riga e basta significa buttarli via e costringere il cliente a
+ * riscriverli a mano, con il rischio di sbagliare proprio i dati che poi
+ * finiscono in fattura.
+ */
+export function companyToBillingDetails(d: CompanyLookupData): Record<string, string> {
+  const campi: Record<string, string> = {
+    company: d.denominazione || "",
+    vat: d.partitaIva || "",
+    tax_code: d.codiceFiscale || "",
+    address: d.indirizzo || "",
+    zip: d.cap || "",
+    city: d.citta || "",
+    province: d.provincia || "",
+    sdi_code: d.codiceSdi || "",
+    pec: d.pec || "",
+  }
+  // Le chiavi vuote non si salvano: un valore vuoto memorizzato sembrerebbe
+  // un dato gia' verificato e assente, invece che un dato mai ottenuto.
+  return Object.fromEntries(Object.entries(campi).filter(([, v]) => v.trim() !== ""))
+}
+
 export default function CompanyLookupField({
   value,
   onValueChange,

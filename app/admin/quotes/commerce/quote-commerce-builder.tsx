@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import CompanyLookupField, { formatCompanyAddress, type CompanyLookupData } from "@/components/admin/company-lookup-field"
+import CompanyLookupField, { formatCompanyAddress, companyToBillingDetails, type CompanyLookupData } from "@/components/admin/company-lookup-field"
 import {
   calculateQuoteLine,
   calculateQuoteTotal,
@@ -196,6 +196,10 @@ export default function QuoteCommerceBuilder() {
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const [saving, setSaving] = useState(false)
   const [client, setClient] = useState({ name: "", company: "", email: "", vat: "", address: "" })
+  // Il registro restituisce CAP, citta' e provincia gia' separati, ma il
+  // preventivo salvava solo l'indirizzo su una riga: quei pezzi andavano persi
+  // e il cliente doveva riscriverli a mano nel modulo di accettazione.
+  const [billingDetails, setBillingDetails] = useState<Record<string, string> | null>(null)
 
   // I dati camerali NON sovrascrivono cio' che l'operatore ha gia' scritto:
   // il referente e l'email trattati sono spesso una persona, non l'azienda,
@@ -207,6 +211,7 @@ export default function QuoteCommerceBuilder() {
       vat: d.partitaIva || d.codiceFiscale || v.vat,
       address: v.address.trim() || formatCompanyAddress(d),
     }))
+    setBillingDetails(companyToBillingDetails(d))
     toast.success(d.cessata ? "Dati compilati - attenzione: azienda non attiva" : "Dati aziendali compilati")
   }
   const [title, setTitle] = useState("Soluzioni digitali 4Bid")
@@ -381,7 +386,7 @@ export default function QuoteCommerceBuilder() {
     try {
       const res = await fetch("/api/quotes", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_name: client.name, client_company: client.company || null, client_email: client.email || null, client_vat: client.vat || null, client_address: client.address || null, title, description, payment_terms: paymentTerms || renewalTerms, line_items: expanded, vat_included: vatIncluded, currency: "eur", requested_fields: requestedFields, expires_at: new Date(expiresAt).toISOString() }),
+        body: JSON.stringify({ client_name: client.name, client_company: client.company || null, client_email: client.email || null, client_vat: client.vat || null, client_address: client.address || null, billing_details: billingDetails, title, description, payment_terms: paymentTerms || renewalTerms, line_items: expanded, vat_included: vatIncluded, currency: "eur", requested_fields: requestedFields, expires_at: new Date(expiresAt).toISOString() }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Salvataggio fallito")
