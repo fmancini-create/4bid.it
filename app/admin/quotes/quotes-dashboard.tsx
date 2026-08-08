@@ -147,7 +147,13 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
       quote={sendQuote}
       open={!!sendQuote}
       onOpenChange={(open) => { if (!open) setSendQuote(null) }}
-      onSent={async (message) => { toast.success(message); await refresh() }}
+      onSent={async (message, gravita) => {
+        // Un avviso di errore resta a lungo: elenca i colleghi da riavvisare a
+        // mano, e sparire dopo pochi secondi ne farebbe perdere i nomi.
+        if (gravita === "errore") toast.error(message, { duration: 15000 })
+        else toast.success(message)
+        await refresh()
+      }}
     />
   </div>
 }

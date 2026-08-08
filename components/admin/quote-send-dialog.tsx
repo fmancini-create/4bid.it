@@ -24,7 +24,7 @@ export default function QuoteSendDialog({
   quote: SalesChannelQuote | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSent: (message: string) => void
+  onSent: (message: string, gravita: "successo" | "errore") => void
 }) {
   const [cc, setCc] = useState("")
   const [bcc, setBcc] = useState("")
@@ -67,13 +67,22 @@ export default function QuoteSendDialog({
         .map((f: { email?: string }) => f?.email)
         .filter(Boolean)
       const inviate = data.copies?.sent || 0
-      onSent(
-        nonRecapitate.length
-          ? `Preventivo inviato a ${quote.client_email}. Copia NON recapitata a: ${nonRecapitate.join(", ")} — avvisali tu, il cliente li crede informati.`
-          : inviate
-            ? `Preventivo inviato a ${quote.client_email}, con ${inviate} copie.`
+      // La gravita' deve corrispondere all'esito: un avviso verde con la spunta
+      // dice "tutto a posto" a colpo d'occhio, e chi non legge il testo non si
+      // accorge che una copia non e' partita.
+      if (nonRecapitate.length) {
+        onSent(
+          `Preventivo inviato a ${quote.client_email}, ma la copia NON è arrivata a: ${nonRecapitate.join(", ")} — avvisali tu, il cliente li crede informati.`,
+          "errore",
+        )
+      } else {
+        onSent(
+          inviate
+            ? `Preventivo inviato a ${quote.client_email}, con ${inviate === 1 ? "1 copia" : `${inviate} copie`}.`
             : `Preventivo inviato a ${quote.client_email}.`,
-      )
+          "successo",
+        )
+      }
       onOpenChange(false)
     } catch (e: any) {
       setError(e?.message || "Invio fallito")
