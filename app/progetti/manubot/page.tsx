@@ -121,11 +121,11 @@ export default function ManubotPage() {
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Avanzamento</span>
-                    <span className="text-sm font-bold text-orange-600">90%</span>
+                    <span className="text-sm font-medium text-gray-700">Stato</span>
+                    <span className="text-sm font-bold text-orange-600">Online</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-orange-500 to-amber-600 w-[90%]" />
+                    <div className="h-full w-full bg-gradient-to-r from-orange-500 to-amber-600" />
                   </div>
                 </div>
                 <div className="pt-4 space-y-2">
