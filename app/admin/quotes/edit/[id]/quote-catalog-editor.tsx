@@ -1,0 +1,146 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { calculateQuoteLine, calculateQuoteTotal, formatQuoteAmount, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
+import { getCommercialMeta, setCommercialMeta, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
+
+type CatalogItem = {
+  id: string; source_id?: string; project: "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot"; kind: "plan" | "module" | "setup" | "service"; name: string; description?: string; features: string[]; unit_amount: number; currency: string; billing_period: "one_time" | "monthly" | "quarterly" | "yearly"; trial_days?: number; configuration_schema?: Record<string, any>; raw_snapshot: Record<string, any>; stripe_price_id?: string | null; billing_family?: string; alternative_period?: BillingOption | null; dependency?: CommercialDependency | null
+}
+type CatalogGroup = { project: string; items: CatalogItem[]; configured: boolean; error: string | null }
+
+const PROJECT_LABELS: Record<string, string> = {
+  hotelaccelerator: "HotelAccelerator",
+  santaddeo: "Santaddeo",
+  hotelprofitai: "HotelProfitAI",
+  manubot: "ManuBot",
+  custom: "Voce libera",
+  consulting: "Consulenza 4BID",
+}
+
+const ACCOMMODATIONS = [
+  { value: "camere", label: "Camere" },
+  { value: "appartamenti", label: "Appartamenti / unità abitative" },
+  { value: "piazzole", label: "Piazzole" },
+]
+
+function toLocalDateTime(value?: string | null) {
+  if (!value) return ""
+  const d = new Date(value)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+function obj(v: unknown): Record<string, any> { return v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, any> : {} }
+function isSantaddeo(item: QuoteLineItem) { return item.project === "santaddeo" && item.kind === "plan" && String(item.source_product_id || "").startsWith("rms-fee:") }
+function santaddeoPrice(config: Record<string, any>) {
+  const type = String(config.accommodation_type || "camere")
+  const coeffs = obj(config.coefficients)
+  return Math.round((Number(config.fee_base_value) || 0) * (Number(coeffs[type]) || 0) * Math.max(1, Number(config.star_rating) || 1) * 100) / 100
+}
+
+export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
+  const router = useRouter()
+  const [quote, setQuote] = useState<SalesChannelQuote | null>(null)
+  const [catalog, setCatalog] = useState<CatalogGroup[]>([])
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/quotes/${quoteId}`, { cache: "no-store" }).then(async r => { if (!r.ok) throw new Error("Preventivo non trovato"); return r.json() }),
+      fetch("/api/quotes/catalog", { cache: "no-store" }).then(async r => { if (!r.ok) throw new Error("Catalogo non disponibile"); return r.json() }),
+    ]).then(([q, c]) => { setQuote(q); setCatalog(Array.isArray(c) ? c : c.projects ?? []) }).catch(e => toast.error(e.message))
+  }, [quoteId])
+
+  const lines = (quote?.line_items || []) as QuoteLineItem[]
+  const calculated = useMemo(() => lines.map(calculateQuoteLine), [lines])
+  const total = useMemo(() => calculateQuoteTotal(lines), [lines])
+
+  function patchQuote(patch: Partial<SalesChannelQuote>) { setQuote(current => current ? { ...current, ...patch } : current) }
+  function setLines(next: QuoteLineItem[]) { patchQuote({ line_items: next, total_amount: calculateQuoteTotal(next) }) }
+  function patchLine(index: number, patch: Partial<QuoteLineItem>) { setLines(lines.map((line, i) => i === index ? calculateQuoteLine({ ...line, ...patch }) : line)) }
+  function hasBase(project: string) { return lines.some(line => line.project === project && line.kind === "plan") }
+
+  function addCatalogItem(item: CatalogItem) {
+    const dep = item.dependency
+    if (dep?.requires_base && !hasBase(dep.project || item.project)) return toast.error(`Prima aggiungi il piano base ${PROJECT_LABELS[dep.project || item.project] || dep.project}`)
+    if (dep?.linked_project && !hasBase(dep.linked_project)) return toast.error(`Questo modulo richiede anche ${PROJECT_LABELS[dep.linked_project] || dep.linked_project}`)
+
+    const options: Partial<Record<"monthly" | "yearly", BillingOption>> = {}
+    if (item.billing_period === "monthly" || item.billing_period === "yearly") options[item.billing_period] = { billing_period: item.billing_period, unit_amount: item.unit_amount, stripe_price_id: item.stripe_price_id, trial_days: item.trial_days }
+    if (item.alternative_period) options[item.alternative_period.billing_period] = item.alternative_period
+
+    let line: QuoteLineItem = {
+      id: crypto.randomUUID(), kind: item.kind, project: item.project, source_product_id: item.id, name: item.name, description: item.description || item.name,
+      features: item.features || [], quantity: 1, unit_amount: item.unit_amount, amount: item.unit_amount, billing_period: item.billing_period === "yearly" && options.monthly ? "monthly" : item.billing_period,
+      trial_days: item.trial_days || 0, configuration: item.configuration_schema || {}, catalog_snapshot: item.raw_snapshot || {}, optional: item.kind === "module", default_selected: true,
+    }
+    line = setCommercialMeta(line, { billing_family: item.billing_family || item.source_id || item.id, billing_options: options, dependency: dep || null })
+
+    if (item.project === "santaddeo" && item.kind === "plan" && String(item.id).startsWith("rms-fee:")) {
+      const conf = obj(item.configuration_schema)
+      const accommodation = String(conf.accommodation_type || "camere")
+      const updated = { ...conf, structure_type: conf.structure_type || "hotel", accommodation_type: accommodation, star_rating: Number(conf.star_rating) || 3, accommodations: Number(conf.accommodations) || 1 }
+      const unit = santaddeoPrice(updated)
+      line = { ...line, configuration: updated, quantity: updated.accommodations, unit_amount: unit, amount: unit * updated.accommodations }
+      line = setCommercialMeta(line, { ...getCommercialMeta(line), billing_options: { monthly: { billing_period: "monthly", unit_amount: unit, trial_days: line.trial_days } } })
+    }
+    setLines([...lines, calculateQuoteLine(line)])
+  }
+
+  function patchSantaddeo(index: number, patch: Record<string, any>) {
+    const line = lines[index]
+    const config = { ...obj(line.configuration), ...patch }
+    const unit = santaddeoPrice(config)
+    patchLine(index, { configuration: config, quantity: Math.max(1, Number(config.accommodations) || 1), unit_amount: unit })
+  }
+
+  async function save() {
+    if (!quote) return
+    if (quote.status === "paid") return toast.error("Un preventivo pagato non può essere modificato")
+    if (!quote.client_name?.trim() && !quote.client_company?.trim()) return toast.error("Inserisci almeno referente o azienda")
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          client_name: quote.client_name, client_company: quote.client_company, client_email: quote.client_email, client_vat: quote.client_vat, client_address: quote.client_address,
+          title: quote.title, description: quote.description, payment_terms: quote.payment_terms, vat_included: quote.vat_included, currency: quote.currency,
+          expires_at: quote.expires_at, line_items: lines,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Salvataggio fallito")
+      toast.success("Preventivo aggiornato")
+      router.push("/admin/quotes"); router.refresh()
+    } catch (e: any) { toast.error(e.message) } finally { setSaving(false) }
+  }
+
+  if (!quote) return <div className="p-8 text-sm text-muted-foreground">Caricamento preventivo e cataloghi…</div>
+
+  return <div className="max-w-7xl mx-auto space-y-7 pb-20">
+    <div className="flex items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Modifica preventivo</h1><p className="text-muted-foreground">Aggiungi prodotti e moduli direttamente dai cataloghi live.</p></div><Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button></div>
+
+    <section className="border rounded-xl p-5 bg-card space-y-4"><h2 className="font-semibold text-lg">Cliente e proposta</h2><div className="grid md:grid-cols-2 gap-4"><div><Label>Referente</Label><Input value={quote.client_name || ""} onChange={e => patchQuote({ client_name: e.target.value })} /></div><div><Label>Azienda</Label><Input value={quote.client_company || ""} onChange={e => patchQuote({ client_company: e.target.value })} /></div><div><Label>Email</Label><Input type="email" value={quote.client_email || ""} onChange={e => patchQuote({ client_email: e.target.value })} /></div><div><Label>P.IVA / CF</Label><Input value={quote.client_vat || ""} onChange={e => patchQuote({ client_vat: e.target.value })} /></div><div className="md:col-span-2"><Label>Titolo</Label><Input value={quote.title || ""} onChange={e => patchQuote({ title: e.target.value })} /></div><div className="md:col-span-2"><Label>Testo / descrizione</Label><Textarea rows={4} value={quote.description || ""} onChange={e => patchQuote({ description: e.target.value })} /></div><div><Label>Offerta valida fino al</Label><Input type="datetime-local" value={toLocalDateTime(quote.expires_at)} onChange={e => patchQuote({ expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div><div className="flex items-center gap-2 mt-6"><Switch checked={quote.vat_included ?? true} onCheckedChange={v => patchQuote({ vat_included: v })} /><Label>IVA inclusa</Label></div></div></section>
+
+    <section className="border rounded-xl p-5 bg-card space-y-4"><div><h2 className="font-semibold text-lg">Aggiungi dal catalogo</h2><p className="text-xs text-muted-foreground">Gli add-on rispettano le dipendenze dal software base.</p></div><div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">{catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{group.items.filter(item => item.billing_period !== "yearly" || !group.items.some(other => other.billing_family === item.billing_family && other.billing_period === "monthly")).map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left rounded-md border p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="mt-1 block text-xs text-muted-foreground line-clamp-3">{item.description}</span><span className="mt-2 block text-xs font-medium">{formatQuoteAmount(item.unit_amount, item.currency)} · {item.billing_period === "monthly" ? "mese" : item.billing_period}</span></button>)}</div>)}</div></section>
+
+    <section className="space-y-4"><h2 className="font-semibold text-xl">Voci del preventivo</h2>{calculated.map((item, index) => {
+      const conf = obj(item.configuration)
+      return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4"><div className="flex items-start justify-between gap-3"><div className="flex-1"><div className="text-xs font-bold uppercase text-primary mb-1">{PROJECT_LABELS[item.project || "custom"] || item.project}</div><Input value={item.name || ""} onChange={e => patchLine(index, { name: e.target.value })} /></div><Button size="icon" variant="ghost" onClick={() => setLines(lines.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button></div><Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
+        {isSantaddeo(item) ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border bg-primary/5 p-4"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div> : <div className="grid sm:grid-cols-3 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchLine(index, { quantity: Number(e.target.value) })} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
+        <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
+      </div>
+    })}</section>
+
+    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex items-center justify-between gap-4"><div><p className="text-sm text-muted-foreground">Totale attuale</p><p className="text-2xl font-bold">{formatQuoteAmount(total, quote.currency)}</p></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
+  </div>
+}
