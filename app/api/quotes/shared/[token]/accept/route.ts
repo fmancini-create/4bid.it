@@ -10,7 +10,7 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { applyBillingPreference, dependencyErrors, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 const MAX_FIELD_LENGTH = 5000
@@ -39,11 +39,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       : [],
   )
 
-  const lineItems = (quote.line_items || []).map((item) => {
+  let lineItems = (quote.line_items || []).map((item) => {
     const preferred = applyBillingPreference(calculateQuoteLine(item), billingPreference)
     const customerSelected = !preferred.optional || (!!preferred.id && selectedIds.has(preferred.id))
     return { ...preferred, customer_selected: customerSelected }
   })
+
+  // A setup/configuration service can never survive without its parent module.
+  // The client UI visually disables it; the server also normalizes stale selections
+  // so an old checkbox state can never be charged by Stripe.
+  const activeIds = new Set(lineItems.filter(item => item.customer_selected !== false).map(item => item.id).filter(Boolean))
+  lineItems = lineItems.map(item => {
+    const parentId = getCommercialMeta(item).parent_line_id
+    return parentId && !activeIds.has(parentId) ? { ...item, customer_selected: false } : item
+  })
+
   const selectedItems = lineItems.filter(item => item.customer_selected !== false)
   if (!selectedItems.length) return NextResponse.json({ error: "Seleziona almeno una voce del preventivo" }, { status: 422 })
 
