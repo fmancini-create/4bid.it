@@ -60,9 +60,24 @@ export function resolveAnnualSetupMode(meta: CommercialMeta): AnnualSetupMode {
   return meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
 }
 
+export function hasAnnualBillingOption(item: QuoteLineItem): boolean {
+  const meta = getCommercialMeta(item)
+  if (meta.billing_options?.yearly) return true
+  return item.project === "santaddeo" && item.billing_period !== "one_time" && !!meta.billing_options?.monthly
+}
+
 export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBillingPreference): QuoteLineItem {
   const meta = getCommercialMeta(item)
-  const option = meta.billing_options?.[preference]
+  let option = meta.billing_options?.[preference]
+  if (!option && preference === "yearly" && item.project === "santaddeo" && item.billing_period !== "one_time" && meta.billing_options?.monthly) {
+    const monthly = meta.billing_options.monthly
+    option = {
+      billing_period: "yearly",
+      unit_amount: Math.round(Math.max(0, Number(monthly.unit_amount) || 0) * 12 * 100) / 100,
+      trial_days: monthly.trial_days,
+      discount_pct: 0,
+    }
+  }
   let next = { ...item }
   if (option && item.billing_period !== "one_time") {
     next = {
