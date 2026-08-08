@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Plus, Save, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import {
   formatQuoteAmount,
   isQuoteLineSelected,
   type QuoteLineItem,
+  type QuoteProject,
   type QuoteRequestedField,
 } from "@/lib/quotes/types"
 import {
@@ -229,6 +230,15 @@ export default function QuoteCommerceBuilder() {
     }))
   }
   function patchMeta(index: number, patch: Parameters<typeof setCommercialMeta>[1]) { setItems(current => current.map((item, i) => i === index ? setCommercialMeta(item, patch) : item)) }
+  function moveItem(index: number, direction: -1 | 1) {
+    setItems(current => {
+      const target = index + direction
+      if (target < 0 || target >= current.length) return current
+      const next = [...current]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
   function addManual(kind: ManualKind) { setItems(current => [...current, manualItem(kind)]) }
   function setField(index: number, patch: Partial<QuoteRequestedField>) { setRequestedFields(current => current.map((field, i) => i === index ? { ...field, ...patch } : field)) }
   function addField() { setRequestedFields(current => [...current, { key: newFieldKey(), label: "", type: "credentials", required: true }]) }
@@ -375,7 +385,18 @@ export default function QuoteCommerceBuilder() {
       const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
       return <div key={item.id || index} className="border rounded-xl p-5 bg-card space-y-4">
-        <div className="flex justify-between gap-3"><div className="grid md:grid-cols-2 gap-3 flex-1"><div><Label>Nome</Label><Input value={item.name || ''} onChange={e => patchItem(index,{name:e.target.value})} /></div><div><Label>Progetto / tipo</Label><Input readOnly value={`${PROJECT_LABELS[item.project || 'custom'] || item.project || 'custom'} · ${item.kind || 'voce'}`} /></div></div><Button size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_,i)=>i!==index))}><Trash2 className="h-4 w-4" /></Button></div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="grid flex-1 gap-3 md:grid-cols-2">
+            <div><Label>Nome</Label><Input value={item.name || ""} onChange={e => patchItem(index, { name: e.target.value })} /></div>
+            <div><Label>Progetto / tipo</Label>{isManual ? <Select value={item.project || "custom"} onValueChange={project => patchItem(index, { project: project as QuoteProject })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="hotelaccelerator">HotelAccelerator</SelectItem><SelectItem value="santaddeo">Santaddeo</SelectItem><SelectItem value="hotelprofitai">HotelProfitAI</SelectItem><SelectItem value="manubot">ManuBot</SelectItem><SelectItem value="consulting">Consulenza 4Bid</SelectItem><SelectItem value="custom">Voce manuale</SelectItem></SelectContent></Select> : <Input readOnly value={`${PROJECT_LABELS[item.project || "custom"] || item.project || "custom"} · ${item.kind || "voce"}`} />}</div>
+          </div>
+          <div className="flex items-center gap-1 self-end" aria-label={`Ordinamento voce ${index + 1}`}>
+            <span className="min-w-14 text-center text-xs font-semibold text-muted-foreground">{index + 1} di {items.length}</span>
+            <Button type="button" size="icon" variant="outline" disabled={index === 0} onClick={() => moveItem(index, -1)} aria-label={`Sposta ${item.name || "voce"} su`}><ArrowUp className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="outline" disabled={index === items.length - 1} onClick={() => moveItem(index, 1)} aria-label={`Sposta ${item.name || "voce"} giù`}><ArrowDown className="h-4 w-4" /></Button>
+            <Button type="button" size="icon" variant="ghost" onClick={() => setItems(v => v.filter((_, i) => i !== index))} aria-label={`Elimina ${item.name || "voce"}`}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        </div>
         <div><Label>Descrizione</Label><Textarea value={item.description} onChange={e => patchItem(index,{description:e.target.value})} /></div>
 
         {santaddeo ? <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><h3 className="font-semibold">Configurazione Santaddeo</h3><div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3"><div><Label>Tipo struttura</Label><Select value={santaddeo.structure_type} onValueChange={v => patchSantaddeo(index,{structure_type:v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{santaddeo.structure_options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={santaddeo.accommodation_type} onValueChange={v => patchSantaddeo(index,{accommodation_type:v as AccommodationType})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Categoria / stelle</Label><Select value={String(santaddeo.star_rating)} onValueChange={v => patchSantaddeo(index,{star_rating:Number(v)})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(s => <SelectItem key={s} value={String(s)}>{s} {"★".repeat(s)}</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={santaddeo.accommodations} onChange={e => patchSantaddeo(index,{accommodations:Number(e.target.value)})} /></div><div><Label>Prezzo / {accommodationSingular(santaddeo.accommodation_type)} / mese</Label><Input readOnly value={formatQuoteAmount(santaddeoUnitPrice(santaddeo))} /></div></div></div> : <div className={`grid gap-3 ${isManual ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchItem(index,{quantity:Number(e.target.value)})} /></div><div><Label>{item.billing_period === 'one_time' ? 'Prezzo unitario' : 'Canone unitario'}</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => { const value=Number(e.target.value); patchItem(index,{unit_amount:value}); if(item.kind==='setup') patchMeta(index,{normal_price:value}); if(item.billing_period==='monthly') patchMeta(index,{billing_options:{...(meta.billing_options||{}),monthly:{...(meta.billing_options?.monthly||{billing_period:'monthly'}),billing_period:'monthly',unit_amount:value}}}) }} /></div>{isManual && <div><Label>Periodicità</Label><Select value={item.billing_period || 'one_time'} onValueChange={v => changeBilling(index, v as QuoteLineItem['billing_period'])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum</SelectItem><SelectItem value="monthly">Mensile</SelectItem><SelectItem value="quarterly">Trimestrale</SelectItem><SelectItem value="yearly">Annuale</SelectItem></SelectContent></Select></div>}<div><Label>Trial giorni</Label><Input type="number" min="0" value={item.trial_days || 0} onChange={e => patchItem(index,{trial_days:Number(e.target.value)})} /></div></div>}
