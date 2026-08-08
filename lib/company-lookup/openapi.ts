@@ -130,7 +130,15 @@ function mapCompany(raw: Record<string, any>): CompanyLookupData {
     codiceSdi: testo(raw.sdiCode, raw.sdi),
     // Un'azienda cessata o in liquidazione non va trattata come una attiva:
     // e' proprio l'informazione per cui si fa il controllo prima di vendere.
-    cessata: Boolean(stato && !/^ACTIVE$/i.test(stato)),
+    //
+    // Il fornitore risponde in ITALIANO: ATTIVA, CESSATA, INATTIVA, SOSPESA,
+    // REGISTRATA, IN ISCRIZIONE. Confrontare con l'inglese "ACTIVE" non
+    // combaciava con nessuno di questi, quindi ogni azienda - anche una
+    // perfettamente attiva - veniva marcata come non attiva: un allarme rosso
+    // su tutti i controlli, che a forza di essere sempre acceso non viene piu'
+    // guardato proprio quando l'azienda e' davvero cessata.
+    // Accettiamo anche "ACTIVE" nel caso il fornitore risponda in inglese.
+    cessata: Boolean(stato && !/^\s*(ATTIVA|ACTIVE)\s*$/i.test(stato)),
   }
 }
 
