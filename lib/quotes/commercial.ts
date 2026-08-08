@@ -77,14 +77,19 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
 }
 
 export function hasBaseForProject(items: QuoteLineItem[], project: string): boolean {
-  return items.some(item => item.project === project && item.kind === "plan")
+  return items.some(item => item.project === project && item.kind === "plan" && item.customer_selected !== false)
 }
 
 export function dependencyErrors(items: QuoteLineItem[]): string[] {
   const selected = items.filter(item => item.customer_selected !== false)
+  const selectedIds = new Set(selected.map(item => item.id).filter(Boolean))
   const errors: string[] = []
   for (const item of selected) {
-    const dep = getCommercialMeta(item).dependency
+    const meta = getCommercialMeta(item)
+    if (meta.parent_line_id && !selectedIds.has(meta.parent_line_id)) {
+      errors.push(`${item.name || item.description} richiede il modulo a cui è collegato`)
+    }
+    const dep = meta.dependency
     if (!dep?.requires_base) continue
     const project = dep.project || item.project
     if (project && !hasBaseForProject(selected, project)) errors.push(`${item.name || item.description} richiede un piano base ${project}`)
