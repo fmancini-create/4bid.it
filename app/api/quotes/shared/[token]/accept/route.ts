@@ -10,6 +10,7 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
+import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 const MAX_FIELD_LENGTH = 5000
@@ -31,18 +32,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!acceptanceName) return NextResponse.json({ error: "Il nome per l'accettazione è obbligatorio" }, { status: 400 })
   if (body.accepted !== true) return NextResponse.json({ error: "Devi accettare il preventivo e le condizioni" }, { status: 400 })
 
+  const billingPreference: QuoteBillingPreference = body.billing_preference === "yearly" ? "yearly" : "monthly"
   const selectedIds = new Set(
     Array.isArray(body.selected_item_ids)
       ? body.selected_item_ids.map((value: unknown) => String(value)).filter(Boolean)
       : [],
   )
-  const lineItems = (quote.line_items || []).map((item) => {
-    const calculated = calculateQuoteLine(item)
-    const customerSelected = !calculated.optional || (!!calculated.id && selectedIds.has(calculated.id))
-    return { ...calculated, customer_selected: customerSelected }
+
+  let lineItems = (quote.line_items || []).map((item) => {
+    const preferred = applyBillingPreference(calculateQuoteLine(item), billingPreference)
+    const customerSelected = !preferred.optional || (!!preferred.id && selectedIds.has(preferred.id))
+    return { ...preferred, customer_selected: customerSelected }
   })
+
+  // A setup/configuration service can never survive without its parent module.
+  // The client UI visually disables it; the server also normalizes stale selections
+  // so an old checkbox state can never be charged by Stripe.
+  const activeIds = new Set(lineItems.filter(item => item.customer_selected !== false).map(item => item.id).filter(Boolean))
+  lineItems = lineItems.map(item => {
+    const parentId = getCommercialMeta(item).parent_line_id
+    return parentId && !activeIds.has(parentId) ? { ...item, customer_selected: false } : item
+  })
+
   const selectedItems = lineItems.filter(item => item.customer_selected !== false)
   if (!selectedItems.length) return NextResponse.json({ error: "Seleziona almeno una voce del preventivo" }, { status: 422 })
+
+  const dependencies = dependencyErrors(selectedItems)
+  if (dependencies.length) {
+    return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies, code: "MISSING_BASE_PRODUCT" }, { status: 422 })
+  }
 
   const paymentMethod = body.payment_method
   if (paymentMethod !== "bonifico" && paymentMethod !== "card") return NextResponse.json({ error: "Metodo di pagamento non valido" }, { status: 400 })
@@ -104,5 +122,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Preventivo già accettato o errore salvataggio" }, { status: 409 })
   try { await notifyAdminQuoteAccepted(updated, SUPER_ADMIN_EMAIL) } catch (e) { console.error("[quotes] notify accepted error:", e) }
-  return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard, total_amount: acceptedTotal })
+  return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard, total_amount: acceptedTotal, billing_preference: billingPreference })
 }

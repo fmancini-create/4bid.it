@@ -1,7 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
+import { dependencyErrors } from "@/lib/quotes/commercial"
 import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function validateTieredQuantity(item: QuoteLineItem): string | null {
+  const config = objectValue(item.configuration)
+  if (config.pricing_model !== "tiered_per_seat") return null
+  const quantity = Math.max(1, Number(item.quantity) || 1)
+  const min = Math.max(1, Number(config.min_quantity) || 1)
+  const rawMax = config.max_quantity
+  const max = rawMax == null || rawMax === "" ? null : Math.max(min, Number(rawMax) || min)
+  if (quantity < min || (max != null && quantity > max)) {
+    const range = max == null ? `${min}+` : min === max ? `${min}` : `${min}-${max}`
+    return `${item.name || item.description}: la fascia selezionata è valida per ${range} operatori, ma la quantità impostata è ${quantity}.`
+  }
+  return null
+}
 
 export async function GET() {
   const supabase = createAdminClient()
@@ -27,10 +46,27 @@ export async function POST(request: NextRequest) {
     .map((item: QuoteLineItem) => calculateQuoteLine({
       ...item,
       id: item.id || randomUUID(),
-      // The imported source data is intentionally retained as a contractual
-      // snapshot, so future catalog changes do not rewrite an issued quote.
       catalog_snapshot: item.catalog_snapshot ?? {},
     }))
+
+  const dependencyProblems = dependencyErrors(lineItems)
+  if (dependencyProblems.length) {
+    return NextResponse.json({ error: dependencyProblems[0], code: "INVALID_PRODUCT_DEPENDENCY" }, { status: 422 })
+  }
+  for (const item of lineItems) {
+    const tierError = validateTieredQuantity(item)
+    if (tierError) return NextResponse.json({ error: tierError, code: "INVALID_TIER_QUANTITY" }, { status: 422 })
+  }
+
+  const requestedExpiry = body.expires_at ? new Date(String(body.expires_at)) : null
+  if (requestedExpiry && Number.isNaN(requestedExpiry.getTime())) {
+    return NextResponse.json({ error: "Data di validità non valida" }, { status: 400 })
+  }
+  if (requestedExpiry && requestedExpiry.getTime() <= Date.now()) {
+    return NextResponse.json({ error: "La scadenza del preventivo deve essere futura" }, { status: 400 })
+  }
+  const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
+  const validDays = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000))
 
   const insert = {
     quote_number: quoteNumber,
@@ -48,6 +84,8 @@ export async function POST(request: NextRequest) {
     vat_included: body.vat_included ?? true,
     currency: body.currency || "eur",
     requested_fields: Array.isArray(body.requested_fields) ? body.requested_fields : [],
+    valid_days: validDays,
+    expires_at: expiresAt,
     status: "draft",
     provisioning_status: "not_required",
     token: randomUUID(),
