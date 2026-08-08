@@ -27,10 +27,18 @@ export async function POST(request: NextRequest) {
     .map((item: QuoteLineItem) => calculateQuoteLine({
       ...item,
       id: item.id || randomUUID(),
-      // The imported source data is intentionally retained as a contractual
-      // snapshot, so future catalog changes do not rewrite an issued quote.
       catalog_snapshot: item.catalog_snapshot ?? {},
     }))
+
+  const requestedExpiry = body.expires_at ? new Date(String(body.expires_at)) : null
+  if (requestedExpiry && Number.isNaN(requestedExpiry.getTime())) {
+    return NextResponse.json({ error: "Data di validità non valida" }, { status: 400 })
+  }
+  if (requestedExpiry && requestedExpiry.getTime() <= Date.now()) {
+    return NextResponse.json({ error: "La scadenza del preventivo deve essere futura" }, { status: 400 })
+  }
+  const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
+  const validDays = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000))
 
   const insert = {
     quote_number: quoteNumber,
@@ -48,6 +56,8 @@ export async function POST(request: NextRequest) {
     vat_included: body.vat_included ?? true,
     currency: body.currency || "eur",
     requested_fields: Array.isArray(body.requested_fields) ? body.requested_fields : [],
+    valid_days: validDays,
+    expires_at: expiresAt,
     status: "draft",
     provisioning_status: "not_required",
     token: randomUUID(),
