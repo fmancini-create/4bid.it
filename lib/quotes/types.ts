@@ -138,8 +138,20 @@ export interface SalesChannelQuote {
   provisioned_at?: string | null
   sent_at: string | null
   expires_at: string | null
+  /** Solleciti di ACCETTAZIONE (prima che il cliente dica di si'). */
   reminder_count: number
   last_reminder_at: string | null
+  /** Conferma di accettazione inviata al cliente. */
+  acceptance_email_sent_at?: string | null
+  /** Conferma di pagamento inviata al cliente: evita doppioni se Stripe rimanda l'evento. */
+  payment_confirmation_sent_at?: string | null
+  /** Solleciti di PAGAMENTO (dopo l'accettazione): percorso distinto da reminder_count. */
+  payment_reminder_count?: number
+  last_payment_reminder_at?: string | null
+  final_notice_sent_at?: string | null
+  /** Decadenza per mancato pagamento: il pagamento resta bloccato finche' un admin non riapre. */
+  expired_at?: string | null
+  reopened_at?: string | null
   first_viewed_at: string | null
   last_viewed_at: string | null
   view_count: number

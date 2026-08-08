@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { notifyAdminQuoteAccepted } from "@/lib/quotes/email"
+import { notifyAdminQuoteAccepted, sendQuoteAcceptedEmail } from "@/lib/quotes/email"
 import {
   calculateQuoteLine,
   calculateQuoteTotal,
@@ -156,5 +156,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Preventivo già accettato o errore salvataggio" }, { status: 409 })
   try { await notifyAdminQuoteAccepted(updated, SUPER_ADMIN_EMAIL) } catch (e) { console.error("[quotes] notify accepted error:", e) }
+
+  // Conferma al CLIENTE con invito a pagare entro la scadenza. Finora veniva
+  // avvisato solo l'admin: chi accettava non riceveva nulla.
+  if (updated.client_email) {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+    const link = `${baseUrl.replace(/\/$/, "")}/preventivo/${token}`
+    try {
+      const sent = await sendQuoteAcceptedEmail(updated, link)
+      if (sent.success) {
+        await supabase.from("sales_channel_quotes").update({ acceptance_email_sent_at: new Date().toISOString() }).eq("id", updated.id)
+      } else {
+        console.error("[quotes] accepted email non inviata:", sent.error)
+      }
+    } catch (e) {
+      console.error("[quotes] accepted email error:", e)
+    }
+  }
   return NextResponse.json({ success: true, payment_method: paymentMethod, card_required: requiresCard, total_amount: acceptedTotal, billing_preference: billingPreference })
 }

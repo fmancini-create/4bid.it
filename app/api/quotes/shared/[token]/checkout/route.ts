@@ -56,6 +56,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   if (quote.payment_status === "paid") return NextResponse.json({ error: "Pagamento già effettuato" }, { status: 409 })
 
+  // L'offerta decade se non viene pagata entro la scadenza: senza questo
+  // controllo si sarebbe potuto pagare a prezzi congelati anche molto tempo
+  // dopo. `expired_at` viene messo dal cron; la scadenza si controlla comunque
+  // qui, perche' fra un passaggio del cron e l'altro passano fino a 24 ore.
+  const expired = quote.expired_at || (quote.expires_at && new Date(quote.expires_at) < new Date())
+  if (expired) {
+    return NextResponse.json({
+      error: "Questa offerta è scaduta e non è più possibile completare il pagamento. Contatti 4BID per riceverne una aggiornata.",
+      code: "QUOTE_EXPIRED",
+    }, { status: 410 })
+  }
+
   let previousSession: Stripe.Checkout.Session | null = null
   if (quote.stripe_session_id) {
     try {
