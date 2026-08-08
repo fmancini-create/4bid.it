@@ -62,7 +62,7 @@ export default function ProjectsSection() {
       tagline: "The Smart Maintenance Assistant",
       description:
         "Il sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram.",
-      logo: "/manubot-logo.jpg",
+      logo: "/manubot-logo-new.png",
       icon: Rocket,
       color: "from-orange-500 to-amber-600",
       progress: "On line",

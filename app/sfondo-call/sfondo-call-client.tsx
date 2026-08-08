@@ -106,7 +106,7 @@ export default function SfondoCallClient() {
 
               {/* Manubot */}
               <div className="relative w-full h-32">
-                <Image src="/manubot-logo.jpg" alt="Manubot" fill className="object-contain" priority />
+                <Image src="/manubot-logo-new.png" alt="Manubot" fill className="object-contain" priority />
               </div>
             </div>
           </div>

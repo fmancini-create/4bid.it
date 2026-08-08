@@ -27,8 +27,8 @@ export const QUOTE_BRANDS: Record<string, QuoteBrand> = {
   manubot: {
     name: "ManuBot",
     short: "M",
-    logo: "https://www.manubot.it/manubot-logo.png",
-    mark: "https://www.manubot.it/manubot-mark.png",
+    logo: "/manubot-logo-new.png",
+    mark: "/manubot-mark-new.png",
     promise: "Meno chat, fogli e telefonate: porta le attività operative in un flusso tracciabile, condiviso e più semplice da governare.",
   },
   consulting: {

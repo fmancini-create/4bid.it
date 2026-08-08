@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     siteName: "4BID.IT",
     images: [
       {
-        url: "https://www.4bid.it/manubot-logo.jpg",
+        url: "https://www.4bid.it/manubot-logo-new.png",
         width: 1200,
         height: 630,
         alt: "MANUBOT Logo",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MANUBOT - Sistema Smart di Gestione Manutenzioni",
     description: "Gestione manutenzioni via WhatsApp e Telegram con dashboard completa",
-    images: ["https://www.4bid.it/manubot-logo.jpg"],
+    images: ["https://www.4bid.it/manubot-logo-new.png"],
   },
   alternates: {
     canonical: "https://www.4bid.it/progetti/manubot",
@@ -65,7 +65,7 @@ export default function ManubotPage() {
         title="MANUBOT - Sistema Gestione Manutenzioni"
         description="Sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram per hotel e strutture ricettive"
         url="https://www.4bid.it/progetti/manubot"
-        image="https://www.4bid.it/manubot-logo.jpg"
+        image="https://www.4bid.it/manubot-logo-new.png"
         breadcrumbs={[
           { name: "Home", url: "https://www.4bid.it" },
           { name: "Progetti", url: "https://www.4bid.it/#projects" },
@@ -100,7 +100,7 @@ export default function ManubotPage() {
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Image src="/manubot-logo.jpg" alt="MANUBOT Logo" width={500} height={200} className="mb-8 max-w-md" />
+              <Image src="/manubot-logo-new.png" alt="MANUBOT Logo" width={500} height={200} className="mb-8 max-w-md" />
               <h1 className="text-5xl font-bold text-gray-900 mb-6">The Smart Maintenance Assistant</h1>
               <p className="text-xl text-gray-600 leading-relaxed mb-8">
                 Il sistema universale di gestione e automazione delle manutenzioni che parla la lingua di tutti:

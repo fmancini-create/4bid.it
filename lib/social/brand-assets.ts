@@ -45,7 +45,7 @@ const BRANDS: BrandAsset[] = [
   },
   {
     key: "manubot",
-    asset: "/manubot-logo.jpg",
+    asset: "/manubot-logo-new.png",
     keywords: ["manubot", "governante", "housekeeping", "manutenzion"],
     domains: ["manubot.it", "manubot"],
   },
