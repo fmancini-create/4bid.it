@@ -14,6 +14,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
 
   if (error || !quote) return NextResponse.json({ error: "Preventivo non trovato" }, { status: 404 })
 
+  const now = new Date().toISOString()
+  await supabase.from("sales_channel_quotes").update({
+    view_count: Number(quote.view_count || 0) + 1,
+    last_viewed_at: now,
+    ...(quote.first_viewed_at ? {} : { first_viewed_at: now }),
+  }).eq("id", quote.id)
+
   const pdf = await generateQuotePdf(quote)
   const safeNumber = (quote.quote_number || "preventivo").replace(/[^a-zA-Z0-9-_]/g, "-")
   return new NextResponse(pdf, {
