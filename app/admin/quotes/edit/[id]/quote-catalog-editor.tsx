@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import CompanyLookupField, { formatCompanyAddress, type CompanyLookupData } from "@/components/admin/company-lookup-field"
 import {
   calculateQuoteLine,
   calculateQuoteTotal,
@@ -139,6 +140,19 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   const total = useMemo(() => calculateQuoteTotal(lines), [lines])
 
   function patchQuote(patch: Partial<SalesChannelQuote>) { setQuote(current => current ? { ...current, ...patch } : current) }
+
+  // Su un preventivo GIA' ESISTENTE i campi sono quasi sempre pieni: qui il
+  // rischio di cancellare dati corretti e' piu' alto che in creazione, percio'
+  // si riempie solo cio' che e' vuoto. La partita IVA e' l'unica che si
+  // allinea, perche' e' proprio il dato appena verificato.
+  function applyCompany(d: CompanyLookupData) {
+    patchQuote({
+      client_company: quote?.client_company?.trim() || d.denominazione || null,
+      client_vat: d.partitaIva || d.codiceFiscale || quote?.client_vat || null,
+      client_address: quote?.client_address?.trim() || formatCompanyAddress(d) || null,
+    })
+    toast.success(d.cessata ? "Dati compilati - attenzione: azienda non attiva" : "Dati aziendali compilati")
+  }
   function setLines(next: QuoteLineItem[]) { patchQuote({ line_items: next, total_amount: calculateQuoteTotal(next) }) }
   function patchLine(index: number, patch: Partial<QuoteLineItem>) {
     setLines(lines.map((line, i) => {
@@ -262,7 +276,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   return <div className="max-w-7xl mx-auto space-y-7 pb-20">
     <div className="flex items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Modifica preventivo</h1><p className="text-muted-foreground">Catalogo live, voci manuali, setup e dati da richiedere al cliente.</p></div><Button variant="outline" onClick={() => router.push("/admin/quotes")}><ArrowLeft className="h-4 w-4 mr-2" />Indietro</Button></div>
 
-    <section className="border rounded-xl p-5 bg-card space-y-4"><h2 className="font-semibold text-lg">Cliente e proposta</h2><div className="grid md:grid-cols-2 gap-4"><div><Label>Referente</Label><Input value={quote.client_name || ""} onChange={e => patchQuote({ client_name: e.target.value })} /></div><div><Label>Azienda</Label><Input value={quote.client_company || ""} onChange={e => patchQuote({ client_company: e.target.value })} /></div><div><Label>Email</Label><Input type="email" value={quote.client_email || ""} onChange={e => patchQuote({ client_email: e.target.value })} /></div><div><Label>P.IVA / CF</Label><Input value={quote.client_vat || ""} onChange={e => patchQuote({ client_vat: e.target.value })} /></div><div className="md:col-span-2"><Label>Indirizzo</Label><Input value={quote.client_address || ""} onChange={e => patchQuote({ client_address: e.target.value })} /></div><div className="md:col-span-2"><Label>Titolo</Label><Input value={quote.title || ""} onChange={e => patchQuote({ title: e.target.value })} /></div><div className="md:col-span-2"><Label>Testo / descrizione</Label><Textarea rows={4} value={quote.description || ""} onChange={e => patchQuote({ description: e.target.value })} /></div><div className="md:col-span-2"><Label>Condizioni</Label><Textarea rows={3} value={quote.payment_terms || ""} onChange={e => patchQuote({ payment_terms: e.target.value })} /></div><div><Label>Offerta valida fino al</Label><Input type="datetime-local" value={toLocalDateTime(quote.expires_at)} onChange={e => patchQuote({ expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div><div className="flex items-center gap-2 mt-6"><Switch checked={quote.vat_included ?? true} onCheckedChange={v => patchQuote({ vat_included: v })} /><Label>IVA inclusa</Label></div></div></section>
+    <section className="border rounded-xl p-5 bg-card space-y-4"><h2 className="font-semibold text-lg">Cliente e proposta</h2><div className="grid md:grid-cols-2 gap-4"><div><Label>Referente</Label><Input value={quote.client_name || ""} onChange={e => patchQuote({ client_name: e.target.value })} /></div><div><Label>Azienda</Label><Input value={quote.client_company || ""} onChange={e => patchQuote({ client_company: e.target.value })} /></div><div><Label>Email</Label><Input type="email" value={quote.client_email || ""} onChange={e => patchQuote({ client_email: e.target.value })} /></div><CompanyLookupField value={quote.client_vat || ""} onValueChange={v => patchQuote({ client_vat: v })} onApply={applyCompany} /><div className="md:col-span-2"><Label>Indirizzo</Label><Input value={quote.client_address || ""} onChange={e => patchQuote({ client_address: e.target.value })} /></div><div className="md:col-span-2"><Label>Titolo</Label><Input value={quote.title || ""} onChange={e => patchQuote({ title: e.target.value })} /></div><div className="md:col-span-2"><Label>Testo / descrizione</Label><Textarea rows={4} value={quote.description || ""} onChange={e => patchQuote({ description: e.target.value })} /></div><div className="md:col-span-2"><Label>Condizioni</Label><Textarea rows={3} value={quote.payment_terms || ""} onChange={e => patchQuote({ payment_terms: e.target.value })} /></div><div><Label>Offerta valida fino al</Label><Input type="datetime-local" value={toLocalDateTime(quote.expires_at)} onChange={e => patchQuote({ expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div><div className="flex items-center gap-2 mt-6"><Switch checked={quote.vat_included ?? true} onCheckedChange={v => patchQuote({ vat_included: v })} /><Label>IVA inclusa</Label></div></div></section>
 
     <section className="border rounded-xl p-5 bg-card space-y-4"><div><h2 className="font-semibold text-lg">Aggiungi dal catalogo</h2><p className="text-xs text-muted-foreground">Gli add-on rispettano le dipendenze dal software base.</p></div><div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">{catalog.map(group => <div key={group.project} className="border rounded-lg p-3 space-y-2"><h3 className="font-semibold">{PROJECT_LABELS[group.project] || group.project}</h3>{group.error && <p className="text-xs text-destructive">{group.error}</p>}{group.items.filter(item => item.billing_period !== "yearly" || !group.items.some(other => other.billing_family === item.billing_family && other.billing_period === "monthly")).map(item => <button type="button" key={item.id} onClick={() => addCatalogItem(item)} className="w-full text-left rounded-md border p-3 hover:bg-muted"><span className="font-medium block">{item.name}</span><span className="mt-1 block text-xs text-muted-foreground line-clamp-3">{item.description}</span><span className="mt-2 block text-xs font-medium">{formatQuoteAmount(item.unit_amount, item.currency)} · {item.billing_period === "monthly" ? "mese" : item.billing_period}</span></button>)}</div>)}</div></section>
 

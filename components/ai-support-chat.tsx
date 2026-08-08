@@ -32,6 +32,9 @@ interface LeadState {
   // stato chiesto.
   originalQuestion?: string
   pageContext?: string
+  /** Nome ed email presi dal preventivo aperto: non sono stati chiesti all'utente. */
+  prefilledFromQuote?: boolean
+  quoteNumber?: string
 }
 
 interface AISupportChatProps {

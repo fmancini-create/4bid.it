@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { buildQuoteChatContext, extractQuoteToken, type QuoteChatContext } from "@/lib/quotes/chat-context"
 import { generateText } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-smtp"
@@ -26,6 +27,10 @@ interface LeadCollectionState {
   originalQuestion?: string
   /** Da quale pagina e' partita la richiesta (utile al team che prende in carico). */
   pageContext?: string
+  /** Nome ed email arrivano dal preventivo: non li abbiamo chiesti all'utente. */
+  prefilledFromQuote?: boolean
+  /** Numero del preventivo da cui nasce il ticket. */
+  quoteNumber?: string
 }
 
 /**
@@ -163,6 +168,12 @@ function getLeadCollectionPrompt(state: LeadCollectionState): string {
     case "email":
       return `👋 Piacere di conoscerti, **${state.collectedData.nome}**!\n\n📧 **Qual è la tua email?**`
     case "telefono":
+      // Se nome ed email arrivano dal preventivo, questo e' il PRIMO messaggio
+      // della raccolta: va detto quali dati stiamo gia' usando, altrimenti
+      // sembra che la chat parta a meta' e chieda il telefono dal nulla.
+      if (state.prefilledFromQuote) {
+        return `${reason}\n\n📝 Uso i dati del tuo preventivo:\n\n👤 **${state.collectedData.nome}**\n📧 ${state.collectedData.email}\n\n📱 **Vuoi lasciare anche un numero di telefono?**\n_(opzionale, scrivi "salta" per saltare)_`
+      }
       return `✅ Perfetto!\n\n📱 **Qual è il tuo numero di telefono?**\n_(opzionale, scrivi "salta" per saltare)_`
     case "messaggio":
       // Se la domanda di partenza c'e' gia', non la richiediamo: chiedere di
@@ -443,12 +454,51 @@ async function smartRetrieveKnowledge(supabase: any, query: string): Promise<{ i
   }
 }
 
+/**
+ * Freno allo spam.
+ *
+ * La chat scrive in `contacts`, la stessa tabella dei contatti veri, e finora
+ * non aveva alcun filtro: fra i ticket ricevuti ce ne sono di palesemente
+ * automatici. Qui il limite e' per indirizzo di rete e vale su una finestra
+ * mobile, tenuto in memoria del processo: non regge un attacco distribuito,
+ * ma ferma il caso reale osservato (uno script che ripete invii).
+ */
+const RICHIESTE_PER_MINUTO = 12
+const finestraRichieste = new Map<string, number[]>()
+
+function troppeRichieste(chiave: string): boolean {
+  const ora = Date.now()
+  const precedenti = (finestraRichieste.get(chiave) || []).filter((t) => ora - t < 60_000)
+  precedenti.push(ora)
+  finestraRichieste.set(chiave, precedenti)
+
+  // Evita che la mappa cresca senza fine su un processo di lunga durata.
+  if (finestraRichieste.size > 5_000) {
+    for (const [k, v] of finestraRichieste) {
+      if (!v.some((t) => ora - t < 60_000)) finestraRichieste.delete(k)
+    }
+  }
+
+  return precedenti.length > RICHIESTE_PER_MINUTO
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
 
     const body = await request.json()
     const { message, conversationId, userEmail, accountType, leadState, pageContext, originalQuestion } = body
+
+    const indirizzo =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "sconosciuto"
+
+    if (troppeRichieste(indirizzo)) {
+      console.log("[v0] Rate limit chat AI per:", indirizzo)
+      return NextResponse.json(
+        { error: "Troppi messaggi in poco tempo. Attendi un minuto e riprova." },
+        { status: 429 },
+      )
+    }
 
     console.log("[v0] AI Support - Received:", {
       message,
@@ -503,6 +553,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio: " + userMsgError.message }, { status: 500 })
     }
 
+    // Il preventivo aperto dall'utente. Serve a due cose: rispondere nel merito
+    // invece di dire "non ho informazioni", e non richiedere nome ed email che
+    // il preventivo contiene gia'.
+    const quoteToken = extractQuoteToken(pageContext)
+    const quoteContext: QuoteChatContext | null = quoteToken ? await buildQuoteChatContext(quoteToken) : null
+
+    if (quoteToken) {
+      console.log("[v0] Contesto preventivo:", quoteContext ? quoteContext.quoteNumber || "trovato" : "non trovato")
+    }
+
     let currentLeadState: LeadCollectionState = {
       isCollecting: false,
       reason: null,
@@ -523,6 +583,8 @@ export async function POST(request: Request) {
         // che stiamo correggendo.
         originalQuestion: leadState.originalQuestion,
         pageContext: leadState.pageContext || pageContext || undefined,
+        prefilledFromQuote: leadState.prefilledFromQuote,
+        quoteNumber: leadState.quoteNumber,
       }
       console.log("[v0] Restored lead state from client:", currentLeadState)
     }
@@ -542,7 +604,13 @@ export async function POST(request: Request) {
           lowerMessage === "confermo"
         ) {
           // Save to contacts table
-          const provenienza = currentLeadState.pageContext ? `\nPagina: ${currentLeadState.pageContext}` : ""
+          const provenienza = [
+            currentLeadState.quoteNumber ? `Preventivo: ${currentLeadState.quoteNumber}` : null,
+            currentLeadState.pageContext ? `Pagina: ${currentLeadState.pageContext}` : null,
+          ]
+            .filter(Boolean)
+            .map((r) => `\n${r}`)
+            .join("")
 
           const { error: contactError } = await supabase.from("contacts").insert({
             name: currentLeadState.collectedData.nome,
@@ -579,6 +647,7 @@ export async function POST(request: Request) {
                     <p><strong>📛 Nome:</strong> ${currentLeadState.collectedData.nome}</p>
                     <p><strong>📧 Email:</strong> ${currentLeadState.collectedData.email}</p>
                     <p><strong>📱 Telefono:</strong> ${currentLeadState.collectedData.telefono || "Non fornito"}</p>
+                    ${currentLeadState.quoteNumber ? `<p><strong>🧾 Preventivo:</strong> ${currentLeadState.quoteNumber}</p>` : ""}
                     ${currentLeadState.pageContext ? `<p><strong>📄 Pagina di provenienza:</strong> ${currentLeadState.pageContext}</p>` : ""}
                   </div>
                   
@@ -726,6 +795,8 @@ export async function POST(request: Request) {
           step: currentLeadState.step,
           originalQuestion: currentLeadState.originalQuestion,
           pageContext: currentLeadState.pageContext,
+          prefilledFromQuote: currentLeadState.prefilledFromQuote,
+          quoteNumber: currentLeadState.quoteNumber,
         },
       })
     }
@@ -744,13 +815,21 @@ export async function POST(request: Request) {
       const domandaVera =
         typeof originalQuestion === "string" && originalQuestion.trim() ? originalQuestion.trim() : message.trim()
 
+      // Chi guarda un preventivo ci ha gia' dato nome ed email: richiederli
+      // significa trattare un cliente come uno sconosciuto.
+      const daPreventivo = Boolean(quoteContext?.clientName && quoteContext?.clientEmail)
+
       const newLeadState: LeadCollectionState = {
         isCollecting: true,
         reason: "consulenza",
-        collectedData: {},
-        step: "nome",
+        collectedData: daPreventivo
+          ? { nome: quoteContext!.clientName!, email: quoteContext!.clientEmail! }
+          : {},
+        step: daPreventivo ? "telefono" : "nome",
         originalQuestion: domandaVera,
         pageContext: typeof pageContext === "string" ? pageContext : undefined,
+        prefilledFromQuote: daPreventivo,
+        quoteNumber: quoteContext?.quoteNumber || undefined,
       }
 
       const leadPrompt = getLeadCollectionPrompt(newLeadState)
@@ -784,6 +863,11 @@ export async function POST(request: Request) {
 
     const { knowledgeBase, sources } = await buildDynamicKnowledgeBase(supabase, message)
 
+    // Il preventivo va DOPO la knowledge base: quest'ultima impone "usa solo le
+    // informazioni qui sopra", regola che senza questa aggiunta faceva
+    // rispondere "non ho informazioni" proprio sulle domande del preventivo.
+    const systemPrompt = quoteContext ? `${knowledgeBase}\n\n${quoteContext.prompt}` : knowledgeBase
+
     // Generate AI response
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4o-mini",
@@ -791,7 +875,7 @@ export async function POST(request: Request) {
       // AI SDK 5: l'opzione si chiama maxOutputTokens. Con "maxTokens" il
       // limite veniva silenziosamente ignorato e la risposta non aveva tetto.
       maxOutputTokens: 500,
-      system: knowledgeBase,
+      system: systemPrompt,
       prompt: `Cronologia conversazione:\n${conversationHistory}\n\nNuova domanda utente: ${message}\n\nRispondi in italiano, in modo conciso e utile. Se usi informazioni specifiche dalla knowledge base, includi le fonti alla fine.`,
     })
 
