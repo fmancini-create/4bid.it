@@ -1,6 +1,7 @@
 import { calculateQuoteLine, type QuoteLineItem } from "./types"
 
 export type QuoteBillingPreference = "monthly" | "yearly"
+export type AnnualSetupMode = "full" | "discount" | "free"
 
 export type BillingOption = {
   billing_period: QuoteBillingPreference
@@ -22,6 +23,8 @@ export type CommercialServiceConfig = {
   enabled?: boolean
   price?: number
   free_on_annual?: boolean
+  annual_setup_mode?: AnnualSetupMode
+  annual_setup_discount_pct?: number
 }
 
 export type CommercialMeta = {
@@ -34,6 +37,8 @@ export type CommercialMeta = {
   parent_line_id?: string
   free_on_annual?: boolean
   normal_price?: number
+  annual_setup_mode?: AnnualSetupMode
+  annual_setup_discount_pct?: number
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -49,6 +54,10 @@ export function getCommercialMeta(item: QuoteLineItem): CommercialMeta {
 export function setCommercialMeta(item: QuoteLineItem, patch: Partial<CommercialMeta>): QuoteLineItem {
   const configuration = asObject(item.configuration)
   return { ...item, configuration: { ...configuration, commercial: { ...getCommercialMeta(item), ...patch } } }
+}
+
+export function resolveAnnualSetupMode(meta: CommercialMeta): AnnualSetupMode {
+  return meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
 }
 
 export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBillingPreference): QuoteLineItem {
@@ -68,10 +77,18 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
       },
     }
   }
-  if (item.billing_period === "one_time" && meta.free_on_annual && preference === "yearly") {
-    next = { ...next, unit_amount: 0, list_amount: Number(meta.normal_price ?? item.unit_amount ?? item.amount ?? 0), amount: 0 }
-  } else if (item.billing_period === "one_time" && meta.normal_price != null) {
-    next = { ...next, unit_amount: Math.max(0, Number(meta.normal_price) || 0) }
+  if (item.billing_period === "one_time") {
+    const normalPrice = Math.max(0, Number(meta.normal_price ?? item.unit_amount ?? item.amount ?? 0) || 0)
+    const mode = resolveAnnualSetupMode(meta)
+    if (preference === "yearly" && mode === "free") {
+      next = { ...next, unit_amount: 0, list_amount: normalPrice, amount: 0 }
+    } else if (preference === "yearly" && mode === "discount") {
+      const pct = Math.min(100, Math.max(0, Number(meta.annual_setup_discount_pct) || 0))
+      const discounted = Math.round(normalPrice * (1 - pct / 100) * 100) / 100
+      next = { ...next, unit_amount: discounted, list_amount: normalPrice, amount: discounted }
+    } else if (meta.normal_price != null) {
+      next = { ...next, unit_amount: normalPrice }
+    }
   }
   return calculateQuoteLine(next)
 }
@@ -109,6 +126,7 @@ export function createCommercialServiceLine(parent: QuoteLineItem, service: "con
   const price = Math.max(0, Number(config.price) || 0)
   const label = service === "configuration_support" ? "Supporto alla configurazione" : "Setup completo"
   const id = `${parent.id || crypto.randomUUID()}:${service}`
+  const annualMode = config.annual_setup_mode ?? (config.free_on_annual ? "free" : "full")
   return setCommercialMeta({
     id,
     kind: service === "full_setup" ? "setup" : "service",
@@ -134,7 +152,9 @@ export function createCommercialServiceLine(parent: QuoteLineItem, service: "con
   }, {
     service_type: service,
     parent_line_id: parent.id,
-    free_on_annual: !!config.free_on_annual,
+    free_on_annual: annualMode === "free",
+    annual_setup_mode: annualMode,
+    annual_setup_discount_pct: Math.min(100, Math.max(0, Number(config.annual_setup_discount_pct) || 0)),
     normal_price: price,
   })
 }
