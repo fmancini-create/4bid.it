@@ -95,7 +95,7 @@ const products: Product[] = [
     description:
       "Sistema universale di gestione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram.",
     pullQuote: "Apri un ticket di manutenzione con un messaggio.",
-    logo: "/manubot-logo.jpg",
+    logo: "/manubot-logo-new.png",
     url: "manubot.it",
     status: "online",
     productIcon: Bot,

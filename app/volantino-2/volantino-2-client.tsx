@@ -90,7 +90,7 @@ const products: Product[] = [
     tagline: "The Smart Maintenance Assistant",
     description:
       "Sistema universale di gestione delle manutenzioni che parla la lingua di tutti: WhatsApp e Telegram.",
-    logo: "/manubot-logo.jpg",
+    logo: "/manubot-logo-new.png",
     url: "manubot.it",
     status: "online",
     productIcon: Bot,
