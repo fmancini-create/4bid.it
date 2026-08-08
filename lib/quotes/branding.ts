@@ -12,16 +12,19 @@ export const QUOTE_BRANDS: Record<string, QuoteBrand> = {
   hotelaccelerator: {
     name: "HotelAccelerator",
     short: "HA",
+    logo: "/hotel-accelerator-logo.jpg",
     promise: "Un unico ecosistema per ridurre passaggi manuali e trasformare più richieste in opportunità gestibili.",
   },
   santaddeo: {
     name: "Santaddeo",
     short: "S",
+    logo: "/santaddeo-logo.png",
     promise: "Decisioni tariffarie più rapide e basate sui dati, con più controllo su domanda, prezzi e ricavi.",
   },
   hotelprofitai: {
     name: "HotelProfitAI",
     short: "HP",
+    logo: "/hotelprofit-ai-logo.png",
     promise: "Costi, margini e KPI finalmente leggibili: individua dove intervenire prima che il margine si perda.",
   },
   manubot: {

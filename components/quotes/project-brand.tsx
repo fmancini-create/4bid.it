@@ -10,7 +10,7 @@ export function ProjectBrand({ project, compact = false }: { project?: string | 
         <img
           src={brand.logo}
           alt={brand.name}
-          className={compact ? "h-7 w-auto max-w-[126px] object-contain" : "h-9 w-auto max-w-[170px] object-contain"}
+          className={compact ? "h-9 w-auto max-w-32 shrink-0 object-contain sm:h-10 sm:max-w-36" : "h-9 w-auto max-w-44 object-contain"}
         />
       ) : (
         <div className={`${compact ? "h-7 w-7 text-[10px]" : "h-9 w-9 text-xs"} flex shrink-0 items-center justify-center rounded-lg border bg-background font-black tracking-tight shadow-sm`}>
