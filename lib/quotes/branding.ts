@@ -37,11 +37,13 @@ export const QUOTE_BRANDS: Record<string, QuoteBrand> = {
   consulting: {
     name: "4BID Consulting",
     short: "4B",
+    logo: "/logo.png",
     promise: "Competenze operative e strategiche per trasformare i dati in decisioni e risultati misurabili.",
   },
   custom: {
     name: "4BID",
     short: "4B",
+    logo: "/logo.png",
     promise: "Una soluzione costruita intorno alle esigenze reali della tua struttura.",
   },
 }

@@ -5,9 +5,32 @@ import QuoteView from "./quote-view"
 import QuoteCommerceView from "./quote-commerce-view"
 import type { Metadata } from "next"
 
+const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
+const PREVENTIVO_DESCRIPTION =
+  "La tua proposta commerciale su misura: prodotti, prezzi, omaggi e condizioni. Aprila per configurarla e accettarla online."
+
 export const metadata: Metadata = {
-  title: "Preventivo 4BID",
+  title: PREVENTIVO_TITLE,
+  description: PREVENTIVO_DESCRIPTION,
   robots: { index: false, follow: false },
+  // OG dedicato al preventivo: cosi' su WhatsApp/social il titolo dice "il tuo
+  // preventivo" invece del claim generico ereditato dal layout, e l'immagine ha
+  // un URL nuovo (WhatsApp la riscarica da zero invece di riusare quella vecchia
+  // in cache, che appariva ruotata).
+  openGraph: {
+    title: PREVENTIVO_TITLE,
+    description: PREVENTIVO_DESCRIPTION,
+    type: "website",
+    locale: "it_IT",
+    siteName: "4BID.IT",
+    images: [{ url: "/og-preventivo-4bid.png", width: 1024, height: 1024, alt: PREVENTIVO_TITLE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PREVENTIVO_TITLE,
+    description: PREVENTIVO_DESCRIPTION,
+    images: ["/og-preventivo-4bid.png"],
+  },
 }
 
 export default async function PreventivoPage({
