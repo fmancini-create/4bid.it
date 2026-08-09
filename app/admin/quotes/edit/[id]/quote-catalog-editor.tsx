@@ -15,12 +15,14 @@ import {
   calculateQuoteLine,
   calculateQuoteTotal,
   formatQuoteAmount,
+  isQuoteLineSelected,
     type QuoteLineItem,
     type QuoteProject,
     type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { duplicateQuoteLineAt, getCommercialMeta, getIncludedCredits, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency, type IncludedCreditsRecharge } from "@/lib/quotes/commercial"
+import GroupPricingReference from "../../commerce/group-pricing-reference"
 
 type CatalogItem = {
   id: string
@@ -145,6 +147,26 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   // Prodotti gia' presenti nel preventivo in modifica: servono a colorare di
   // verde le card di catalogo corrispondenti, come nel builder di creazione.
   const selectedCatalogIds = useMemo(() => new Set(lines.filter(l => l.source_product_id).map(l => catalogKey(l.project, l.kind, l.source_product_id))), [lines])
+  // Totale ricorrente configurato normalizzato AL MESE (solo voci selezionate):
+  // il riferimento gruppo confronta canoni omogenei a prescindere dalla cadenza.
+  const configuredMonthlyTotal = useMemo(() => calculated.reduce((sum, item) => {
+    if (!isQuoteLineSelected(item)) return sum
+    if (item.billing_period === "monthly") return sum + item.amount
+    if (item.billing_period === "quarterly") return sum + item.amount / 3
+    if (item.billing_period === "yearly") return sum + item.amount / 12
+    return sum
+  }, 0), [calculated])
+  // Riferimento "singola struttura": piano ricorrente piu' economico a catalogo,
+  // normalizzato al mese. Stessa logica del builder di creazione.
+  const suggestedReferenceMonthly = useMemo(() => {
+    let min = 0
+    for (const group of catalog) for (const it of group.items || []) {
+      if (it.kind !== "plan" || !(it.unit_amount > 0)) continue
+      const monthly = it.billing_period === "yearly" ? it.unit_amount / 12 : it.billing_period === "quarterly" ? it.unit_amount / 3 : it.billing_period === "monthly" ? it.unit_amount : 0
+      if (monthly > 0 && (min === 0 || monthly < min)) min = monthly
+    }
+    return Math.round(min * 100) / 100
+  }, [catalog])
 
   function patchQuote(patch: Partial<SalesChannelQuote>) { setQuote(current => current ? { ...current, ...patch } : current) }
 
@@ -374,6 +396,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     })}</section>
 
     <section className="border rounded-xl p-5 bg-card space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-lg">Dati da richiedere al cliente</h2><p className="text-sm text-muted-foreground">Ripristinato dal vecchio preventivo: credenziali, email, URL, testi e altri dati che il cliente dovrà compilare.</p></div><Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-2" />Aggiungi campo</Button></div>{requestedFields.length === 0 ? <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Nessun dato aggiuntivo richiesto. Usa “Aggiungi campo” per richiedere, ad esempio, accessi Booking.com, Expedia, PMS o dati tecnici.</div> : <div className="space-y-3">{requestedFields.map((field, index) => <div key={field.key || index} className="rounded-lg border p-4 space-y-3"><div className="grid md:grid-cols-[1fr_220px_auto] gap-3 items-end"><div><Label>Etichetta campo</Label><Input value={field.label} onChange={e => setField(index, { label: e.target.value })} placeholder="Es. Credenziali Booking.com" /></div><div><Label>Tipo</Label><Select value={field.type} onValueChange={value => setField(index, { type: value as QuoteRequestedField["type"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent></Select></div><Button size="icon" variant="ghost" onClick={() => removeField(index)}><X className="h-4 w-4" /></Button></div><div><Label>Indicazioni per il cliente (facoltative)</Label><Input value={field.help || ""} onChange={e => setField(index, { help: e.target.value })} placeholder="Es. Inserire username e password dell'account amministratore" /></div><div className="flex items-center gap-2"><Switch checked={field.required} onCheckedChange={required => setField(index, { required })} /><Label>Obbligatorio</Label></div></div>)}</div>}</section>
+
+    <GroupPricingReference configuredMonthlyTotal={configuredMonthlyTotal} suggestedReferenceMonthly={suggestedReferenceMonthly} />
 
     <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex items-center justify-between gap-4"><div><p className="text-sm text-muted-foreground">Totale attuale</p><p className="text-2xl font-bold">{formatQuoteAmount(total, quote.currency)}</p></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
   </div>
