@@ -33,6 +33,31 @@ type PaymentMethod = "bonifico" | "card"
 const SAAS_PROJECTS = new Set(["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"])
 const periodNames: Record<string, string> = { one_time: "una tantum", monthly: "mese", yearly: "anno" }
 
+// Indirizzo su UNA riga ("VIA ... - CAP CITTA (PROV)") scomposto nei campi
+// separati del modulo di fatturazione. E' un RIPIEGO: serve quando il
+// preventivo non ha gia' i pezzi distinti in `billing_details` (es. creato
+// prima che il controllo P.IVA li salvasse separati). Senza, CAP/Citta/
+// Provincia restano vuoti e l'indirizzo intero finisce nel solo campo
+// Indirizzo — i dati giusti nei campi sbagliati, che il cliente poi conferma.
+function splitAddressLine(line: string): { address: string; zip: string; city: string; province: string } {
+  const result = { address: "", zip: "", city: "", province: "" }
+  let rest = (line || "").trim()
+  if (!rest) return result
+  // Provincia: sigla di 2 lettere tra parentesi a fine riga, es. "(GE)".
+  const prov = rest.match(/\(([A-Za-z]{2})\)\s*$/)
+  if (prov && prov.index != null) { result.province = prov[1].toUpperCase(); rest = rest.slice(0, prov.index).trim() }
+  // CAP: 5 cifre. Cio' che precede e' la via, cio' che segue e' la citta'.
+  const zip = rest.match(/\b(\d{5})\b/)
+  if (zip && zip.index != null) {
+    result.zip = zip[1]
+    result.address = rest.slice(0, zip.index).replace(/[-\s]+$/, "").trim()
+    result.city = rest.slice(zip.index + zip[1].length).replace(/^[-\s]+/, "").trim()
+  } else {
+    result.address = rest
+  }
+  return result
+}
+
 function hasCommerceData(item: QuoteLineItem) { return Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support || item.optional || getCommercialMeta(item).billing_options) }
 
 function OfferCountdown({ expiresAt, expired }: { expiresAt?: string | null; expired: boolean }) {
@@ -190,7 +215,15 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   // nei campi sbagliati, il tipo di errore che si copia poi in fattura.
   // I pezzi separati arrivano da `billing_details`, precompilato dal controllo
   // P.IVA al momento della creazione del preventivo.
-  const [billing,setBilling] = useState<QuoteBillingDetails>(() => { const saved=(quote.billing_details as QuoteBillingDetails)||{}; return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:saved.address||quote.client_address||"",zip:saved.zip||"",city:saved.city||"",province:saved.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" } })
+  const [billing,setBilling] = useState<QuoteBillingDetails>(() => {
+    const saved=(quote.billing_details as QuoteBillingDetails)||{}
+    // Se i pezzi separati ci sono, ci si fida di quelli. Altrimenti si scompone
+    // l'indirizzo su una riga (billing_details.address o client_address) cosi'
+    // CAP/Citta/Provincia arrivano precompilati invece di restare vuoti.
+    const hasParts = Boolean((saved.zip||"").trim() || (saved.city||"").trim() || (saved.province||"").trim())
+    const parsed = hasParts ? null : splitAddressLine(saved.address||quote.client_address||"")
+    return { company:saved.company||quote.client_company||"",vat:saved.vat||quote.client_vat||"",tax_code:saved.tax_code||"",address:parsed?.address||saved.address||quote.client_address||"",zip:saved.zip||parsed?.zip||"",city:saved.city||parsed?.city||"",province:saved.province||parsed?.province||"",sdi_code:saved.sdi_code||"",pec:saved.pec||"",reference:saved.reference||quote.client_name||"" }
+  })
   const [acceptanceName,setAcceptanceName] = useState(quote.acceptance_name || "")
   const [acceptedTerms,setAcceptedTerms] = useState(false)
   const [paymentMethod,setPaymentMethod] = useState<PaymentMethod|null>((quote.payment_method as PaymentMethod)|| (requiresCard ? "card" : null))
