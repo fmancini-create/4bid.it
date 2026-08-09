@@ -13,7 +13,6 @@ import { Switch } from "@/components/ui/switch"
 import CompanyLookupField, { formatCompanyAddress, companyToBillingDetails, type CompanyLookupData } from "@/components/admin/company-lookup-field"
 import {
   calculateQuoteLine,
-  calculateQuoteTotal,
   formatQuoteAmount,
   isQuoteLineSelected,
   type QuoteLineItem,
@@ -240,9 +239,20 @@ export default function QuoteCommerceBuilder() {
     items: group.items.filter(item => item.billing_period !== "yearly" || !group.items.some(other => other.billing_family === item.billing_family && other.billing_period === "monthly")),
   })), [catalog])
   const calculated = useMemo(() => items.map(calculateQuoteLine), [items])
-  const total = useMemo(() => calculateQuoteTotal(items), [items])
   const oneTime = calculated.filter(i => isQuoteLineSelected(i) && i.billing_period === "one_time").reduce((s, i) => s + i.amount, 0)
-  const recurring = calculated.filter(i => isQuoteLineSelected(i) && i.billing_period !== "one_time")
+  // I canoni NON si sommano fra periodi diversi: mensile e annuale sono importi
+  // con cadenza diversa, quindi vanno raggruppati per periodo (come nella vista
+  // cliente). Il vecchio "Totale configurato" faceva mensile + annuale + una
+  // tantum in un unico numero privo di significato: e' l'errore segnalato.
+  const recurringByPeriod = calculated.reduce<Record<string, number>>((acc, i) => {
+    if (!isQuoteLineSelected(i) || i.billing_period === "one_time") return acc
+    acc[i.billing_period] = (acc[i.billing_period] || 0) + i.amount
+    return acc
+  }, {})
+  const firstYearTotal = oneTime
+    + (recurringByPeriod.monthly || 0) * 12
+    + (recurringByPeriod.quarterly || 0) * 4
+    + (recurringByPeriod.yearly || 0)
 
   function patchItem(index: number, patch: Partial<QuoteLineItem>) {
     setItems(current => current.map((item, i) => {
@@ -497,7 +507,7 @@ export default function QuoteCommerceBuilder() {
 
     <section className="border rounded-xl p-5 bg-card space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-lg">Dati da richiedere al cliente</h2><p className="text-sm text-muted-foreground">Credenziali, email, URL, testi o altri dati necessari dopo l'accettazione.</p></div><Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-2" />Aggiungi campo</Button></div>{requestedFields.length === 0 ? <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Nessun dato aggiuntivo richiesto. Puoi chiedere, ad esempio, accessi Booking.com, Expedia, PMS o dati tecnici.</div> : <div className="space-y-3">{requestedFields.map((field,index) => <div key={field.key} className="rounded-lg border p-4 space-y-3"><div className="grid md:grid-cols-[1fr_220px_auto] gap-3 items-end"><div><Label>Etichetta campo</Label><Input value={field.label} onChange={e => setField(index,{label:e.target.value})} placeholder="Es. Credenziali Booking.com" /></div><div><Label>Tipo</Label><Select value={field.type} onValueChange={v => setField(index,{type:v as QuoteRequestedField['type']})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent></Select></div><Button size="icon" variant="ghost" onClick={() => setRequestedFields(current => current.filter((_,i)=>i!==index))}><X className="h-4 w-4" /></Button></div><div><Label>Indicazioni per il cliente (facoltative)</Label><Input value={field.help || ''} onChange={e => setField(index,{help:e.target.value})} placeholder="Es. Inserire username e password dell'account amministratore" /></div><div className="flex items-center gap-2"><Switch checked={field.required} onCheckedChange={required => setField(index,{required})}/><Label>Obbligatorio</Label></div></div>)}</div>}</section>
 
-    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex flex-wrap justify-between items-center gap-4"><div><p className="text-sm text-muted-foreground">Una tantum: {formatQuoteAmount(oneTime)}</p>{recurring.map((i,k)=><p key={k} className="text-sm text-muted-foreground">{i.name || i.description}: {formatQuoteAmount(i.amount)} / {i.billing_period === 'yearly' ? 'anno' : i.billing_period === 'quarterly' ? 'trimestre' : 'mese'}</p>)}<p className="text-2xl font-bold">Totale configurato: {formatQuoteAmount(total)}</p><p className="text-xs text-muted-foreground">Scadenza: {expiresAt ? new Date(expiresAt).toLocaleString('it-IT') : '—'}</p></div><div className="flex items-center gap-4"><div className="flex items-center gap-2"><Switch checked={vatIncluded} onCheckedChange={setVatIncluded}/><Label>IVA inclusa</Label></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving?'Salvataggio…':'Crea preventivo'}</Button></div></section>
+    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex flex-wrap justify-between items-center gap-4"><div className="space-y-1"><div className="flex flex-wrap items-end gap-x-6 gap-y-1">{oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum</p><p className="text-lg font-bold">{formatQuoteAmount(oneTime)}</p></div> : null}{(recurringByPeriod.monthly || 0) > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-lg font-bold">{formatQuoteAmount(recurringByPeriod.monthly)}<span className="text-xs font-normal text-muted-foreground"> /mese</span></p></div> : null}{(recurringByPeriod.quarterly || 0) > 0 ? <div><p className="text-xs text-muted-foreground">Canone trimestrale</p><p className="text-lg font-bold">{formatQuoteAmount(recurringByPeriod.quarterly)}<span className="text-xs font-normal text-muted-foreground"> /trim.</span></p></div> : null}{(recurringByPeriod.yearly || 0) > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-lg font-bold">{formatQuoteAmount(recurringByPeriod.yearly)}<span className="text-xs font-normal text-muted-foreground"> /anno</span></p></div> : null}</div><p className="text-sm"><span className="text-muted-foreground">Totale primo anno: </span><strong>{formatQuoteAmount(firstYearTotal)}</strong> <span className="text-xs text-muted-foreground">(una tantum + canoni per 12 mesi)</span></p><p className="text-xs text-muted-foreground">Scadenza: {expiresAt ? new Date(expiresAt).toLocaleString('it-IT') : '—'}</p></div><div className="flex items-center gap-4"><div className="flex items-center gap-2"><Switch checked={vatIncluded} onCheckedChange={setVatIncluded}/><Label>IVA inclusa</Label></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving?'Salvataggio…':'Crea preventivo'}</Button></div></section>
   </div>
 }
 
