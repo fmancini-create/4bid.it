@@ -77,6 +77,7 @@ export function Header() {
     { label: "PROGETTI IN SVILUPPO", href: "/#projects" },
     { label: "APP SVILUPPATE", href: "/#app" },
     { label: "PROPONI LA TUA IDEA", href: "/proponi-idea" },
+    { label: "LAVORA CON NOI", href: "/lavora-con-noi" },
     { label: "PRENOTA DEMO", href: "/prenota-demo" },
     { label: "CONTATTACI", href: "/#contact" },
   ]

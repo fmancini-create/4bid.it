@@ -118,7 +118,13 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
     }
   }
   if (item.billing_period === "one_time") {
-    const normalPrice = Math.max(0, Number(meta.normal_price ?? item.unit_amount ?? item.amount ?? 0) || 0)
+    // `normal_price` e' il prezzo pieno del setup/servizio. Su alcuni preventivi
+    // storici e' rimasto a 0 pur avendo un unit_amount valido (es. 100): in quel
+    // caso NON va usato come prezzo, altrimenti la voce esce a "0,00 €". Si usa
+    // solo quando e' positivo, con ripiego su unit_amount/amount.
+    const rawNormal = Number(meta.normal_price)
+    const hasNormal = Number.isFinite(rawNormal) && rawNormal > 0
+    const normalPrice = Math.max(0, (hasNormal ? rawNormal : Number(item.unit_amount ?? item.amount ?? 0)) || 0)
     const mode = resolveAnnualSetupMode(meta)
     if (preference === "yearly" && mode === "free") {
       next = { ...next, unit_amount: 0, list_amount: normalPrice, amount: 0 }
@@ -126,7 +132,7 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
       const pct = Math.min(100, Math.max(0, Number(meta.annual_setup_discount_pct) || 0))
       const discounted = Math.round(normalPrice * (1 - pct / 100) * 100) / 100
       next = { ...next, unit_amount: discounted, list_amount: normalPrice, amount: discounted }
-    } else if (meta.normal_price != null) {
+    } else {
       next = { ...next, unit_amount: normalPrice }
     }
   }
