@@ -24,6 +24,78 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic"
 
+const SITE_URL = "https://www.4bid.it"
+
+const HIRING_ORG = {
+  "@type": "Organization",
+  name: "4 Bid Srl",
+  sameAs: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
+}
+
+/** Map free-text Italian employment types to schema.org employmentType enums. */
+function toEmploymentType(value: string | null): string | undefined {
+  if (!value) return undefined
+  const v = value.toLowerCase()
+  if (v.includes("full")) return "FULL_TIME"
+  if (v.includes("part")) return "PART_TIME"
+  if (v.includes("stage") || v.includes("tiroc")) return "INTERN"
+  if (v.includes("freelance") || v.includes("collabor") || v.includes("partita iva") || v.includes("p.iva"))
+    return "CONTRACTOR"
+  if (v.includes("tempo") || v.includes("indetermin") || v.includes("determin")) return "FULL_TIME"
+  return undefined
+}
+
+/**
+ * Build a Google-compliant JobPosting for each open position so the careers page
+ * is eligible for the Google for Jobs rich result. Remote/undefined locations
+ * fall back to TELECOMMUTE with Italy as the applicant location requirement,
+ * which Google accepts in place of a physical jobLocation address.
+ */
+function buildJobPostingSchemas(positions: JobPosition[]) {
+  return positions.map((p) => {
+    const employmentType = toEmploymentType(p.employment_type)
+    const isRemote = !p.location || /remot|smart|ovunque|italia/i.test(p.location)
+    const schema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title: p.title,
+      description: p.description || p.summary || p.title,
+      datePosted: p.created_at,
+      dateModified: p.updated_at,
+      hiringOrganization: HIRING_ORG,
+      directApply: true,
+      url: `${SITE_URL}/lavora-con-noi#posizioni`,
+      identifier: {
+        "@type": "PropertyValue",
+        name: "4 Bid Srl",
+        value: p.slug,
+      },
+    }
+    if (employmentType) schema.employmentType = employmentType
+    if (p.department) schema.occupationalCategory = p.department
+    if (isRemote) {
+      schema.jobLocationType = "TELECOMMUTE"
+      schema.applicantLocationRequirements = { "@type": "Country", name: "IT" }
+    } else {
+      schema.jobLocation = {
+        "@type": "Place",
+        address: { "@type": "PostalAddress", addressLocality: p.location, addressCountry: "IT" },
+      }
+    }
+    return schema
+  })
+}
+
+const BREADCRUMB_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+    { "@type": "ListItem", position: 2, name: "Lavora con noi", item: `${SITE_URL}/lavora-con-noi` },
+  ],
+}
+
 const CULTURE = [
   { icon: Boxes, title: "Prodotti SaaS", text: "Più piattaforme che condividono tecnologia, competenze e filosofia." },
   { icon: Cpu, title: "AI e automazione", text: "Usiamo intelligenza artificiale e automazione per risolvere problemi reali." },
@@ -42,9 +114,21 @@ export default async function CareersPage() {
     .order("sort_order", { ascending: true })
 
   const positions = (data ?? []) as JobPosition[]
+  const jobPostingSchemas = buildJobPostingSchemas(positions)
 
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_SCHEMA) }}
+      />
+      {jobPostingSchemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
       <Header />
 
       <main className="pt-20">
