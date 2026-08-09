@@ -228,9 +228,19 @@ export async function GET(request: NextRequest) {
       }
 
       // Esegui il lotto tramite l'endpoint di invio collaudato.
+      //
+      // /api/dem/send e' protetto da `rifiutaSeNonAutorizzato`, che accetta le
+      // chiamate automatiche SOLO con `Authorization: Bearer ${CRON_SECRET}`.
+      // Senza questo header la guardia (aggiunta il 03/08) rispondeva
+      // "Non autorizzato" e il cron, pur girando, non spediva nulla: i due
+      // presidi si annullavano a vicenda. Inoltriamo quindi il segreto.
+      const cronSecret = process.env.CRON_SECRET
       const res = await fetch(`${baseUrl}/api/dem/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+        },
         body: JSON.stringify({ campaign_id: campaign.id, batch_size: toSend }),
       })
       const payload = await res.json().catch(() => ({}))
