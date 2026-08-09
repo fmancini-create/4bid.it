@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { enqueueQuoteProvisioning, processQuoteProvisioning } from "@/lib/quotes/provisioning"
+import { enqueueQuoteProvisioning, processQuoteProvisioning, provisionQuoteRenewal } from "@/lib/quotes/provisioning"
 import { orchestrateQuoteAfterSetup } from "@/lib/quotes/stripe-orchestration"
 import { notifyQuotePaid } from "@/lib/quotes/payment-confirmed"
 import type { SalesChannelQuote } from "@/lib/quotes/types"
@@ -91,6 +91,34 @@ export async function POST(request: NextRequest) {
             await notifyQuotePaid(supabase, quote as SalesChannelQuote)
           } catch (notifyError) {
             console.error("[quotes] notify paid error:", notifyError)
+          }
+        }
+      }
+    } else if (event.type === "invoice.paid") {
+      // RINNOVO dell'abbonamento: ri-accredita i crediti inclusi ricorrenti.
+      // Solo "subscription_cycle" e' un rinnovo vero; "subscription_create" e'
+      // la prima fattura, gia' coperta dall'attivazione (checkout.session.completed).
+      const invoice = event.data.object as Stripe.Invoice
+      if (invoice.billing_reason === "subscription_cycle") {
+        // In Stripe 20.x il subscription id vive sotto invoice.parent, non piu'
+        // come campo di primo livello.
+        const sub = invoice.parent?.subscription_details?.subscription
+        const subId = typeof sub === "string" ? sub : sub?.id
+        if (subId) {
+          // stripe_subscription_id puo' contenere piu' id separati da virgola
+          // (setup multi-abbonamento): il match a sottostringa li copre tutti.
+          const { data: quote } = await supabase
+            .from("sales_channel_quotes")
+            .select("*")
+            .ilike("stripe_subscription_id", `%${subId}%`)
+            .eq("status", "paid")
+            .maybeSingle<SalesChannelQuote>()
+          if (quote) {
+            try {
+              await provisionQuoteRenewal(quote, invoice.id!)
+            } catch (renewalError) {
+              console.error("[quotes] renewal provisioning error:", renewalError)
+            }
           }
         }
       }
