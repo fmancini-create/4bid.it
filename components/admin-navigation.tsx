@@ -35,6 +35,7 @@ interface AdminNavigationProps {
 export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: AdminNavigationProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [pendingPress, setPendingPress] = useState(0)
+  const [pendingApplications, setPendingApplications] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -42,6 +43,14 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (active && d && typeof d.pending === "number") setPendingPress(d.pending)
+      })
+      .catch(() => {})
+    // Unhandled applications ("nuova") shown as a red dot on Candidature so a new
+    // arrival is visible even if the notification email is filtered or delayed.
+    fetch("/api/admin/job-applications?count=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (active && d && typeof d.pending === "number") setPendingApplications(d.pending)
       })
       .catch(() => {})
     return () => {
@@ -211,6 +220,14 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
           >
             <Briefcase className="h-5 w-5 text-primary shrink-0" />
             <span className="font-medium text-sm sm:text-base">Candidature</span>
+            {pendingApplications > 0 && (
+              <span
+                className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold"
+                aria-label={`${pendingApplications} nuove candidature`}
+              >
+                {pendingApplications}
+              </span>
+            )}
           </a>
 
           <a

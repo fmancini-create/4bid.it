@@ -24,6 +24,7 @@ import {
   Briefcase,
 } from "lucide-react"
 import Link from "next/link"
+import { ShareInvite } from "@/components/careers/share-invite"
 import { type JobPosition, SPONTANEOUS_SLUG, SPONTANEOUS_LABEL, type JobExtraField } from "@/lib/jobs/types"
 
 const MAX_CV_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -298,6 +299,14 @@ export function CareersContent({ positions }: Props) {
               </div>
             </article>
           </div>
+
+          {/* Referral: invite someone suitable even before applying. */}
+          <div className="mx-auto mt-8 max-w-5xl">
+            <ShareInvite
+              title="Non fa per te ma conosci la persona giusta?"
+              subtitle="Aiutaci a trovarla: inoltra questa pagina a un amico o un collega che pensi abbia le caratteristiche adatte."
+            />
+          </div>
         </div>
       </section>
 
@@ -318,6 +327,13 @@ export function CareersContent({ positions }: Props) {
                 <Button asChild variant="outline" className="mt-6 bg-transparent">
                   <Link href="/">Torna alla home</Link>
                 </Button>
+
+                <div className="mt-8 border-t border-gray-100 pt-6 text-left">
+                  <ShareInvite
+                    title="Conosci qualcuno di adatto?"
+                    subtitle="Se pensi che un amico o un collega possa essere la persona giusta per 4 Bid, inoltragli questa pagina."
+                  />
+                </div>
               </div>
             ) : (
               <>
