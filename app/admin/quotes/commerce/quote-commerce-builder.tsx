@@ -26,11 +26,13 @@ import {
   dependencyErrors,
   duplicateQuoteLineAt,
   getCommercialMeta,
+  getIncludedCredits,
   setCommercialMeta,
   type AnnualSetupMode,
   type BillingOption,
   type CommercialDependency,
   type CommercialServiceConfig,
+  type IncludedCreditsRecharge,
 } from "@/lib/quotes/commercial"
 
 type CatalogItem = {
@@ -466,6 +468,23 @@ export default function QuoteCommerceBuilder() {
         {item.billing_period !== "one_time" ? <div className="rounded-lg border p-4 bg-muted/20 space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><strong>Formula abbonamento</strong><p className="text-xs text-muted-foreground">Mensile mostrato di default al cliente. Annuale configurabile.</p></div>{annual && annual.amount > 0 ? <span className="text-sm font-semibold text-emerald-700">Annuale: risparmio {formatQuoteAmount(annual.amount)} ({annual.pct}%)</span> : null}</div><div className="grid sm:grid-cols-3 gap-3"><div><Label>Mensile</Label><Input readOnly value={formatQuoteAmount(monthlyUnit)} /></div><div><Label>Sconto annuale %</Label><Input type="number" min="0" max="100" step="0.1" value={annual?.pct ?? ''} placeholder="Imposta per attivare annuale" onChange={e => setAnnualDiscount(index,Number(e.target.value))} /></div><div><Label>Annuale</Label><Input readOnly value={yearlyUnit != null ? formatQuoteAmount(yearlyUnit) : 'Non configurato'} /></div></div></div> : null}
 
         {item.kind === "setup" && item.billing_period === "one_time" ? <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><div className="flex items-center justify-between gap-3"><div><strong>Agevolazione setup con piano annuale</strong><p className="text-xs text-muted-foreground">Decidi dal Superadmin se il setup resta pieno, viene scontato o azzerato quando il cliente sceglie l'annuale.</p></div><Switch checked={setupAnnualMode !== "full"} onCheckedChange={enabled => setSetupAnnualPolicy(index, enabled ? "free" : "full")} /></div>{setupAnnualMode !== "full" ? <div className="grid sm:grid-cols-2 gap-3"><div><Label>Trattamento con annuale</Label><Select value={setupAnnualMode} onValueChange={value => setSetupAnnualPolicy(index, value as AnnualSetupMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="discount">Scontato</SelectItem><SelectItem value="free">Azzerato / omaggio</SelectItem></SelectContent></Select></div>{setupAnnualMode === "discount" ? <div><Label>Sconto setup %</Label><Input type="number" min="0" max="100" step="0.1" value={meta.annual_setup_discount_pct || 0} onChange={e => setSetupAnnualPolicy(index,"discount",Number(e.target.value))} /></div> : <div className="flex items-end"><p className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Setup azzerato con formula annuale</p></div>}</div> : <p className="text-xs text-muted-foreground">Disattivato: il setup viene addebitato per intero anche con formula annuale.</p>}</div> : null}
+
+        {item.project === "hotelprofitai" ? (() => {
+          const credits = getIncludedCredits(item)
+          return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <strong>Crediti inclusi nel pacchetto</strong>
+                <p className="text-xs text-muted-foreground">Per gli addon a consumo (es. Analisi aziende): il sistema ricarica automaticamente questi crediti all'attivazione. I consumi extra restano a carico del cliente. Voce informativa, non sommata al totale.</p>
+              </div>
+              <Switch checked={!!credits} onCheckedChange={enabled => patchMeta(index, { included_credits: enabled ? { amount: credits?.amount || 0, recharge: credits?.recharge || "one_time" } : null })} />
+            </div>
+            {credits ? <div className="grid sm:grid-cols-2 gap-3">
+              <div><Label>Crediti inclusi (€)</Label><Input type="number" min="0" step="0.01" value={credits.amount || 0} onChange={e => patchMeta(index, { included_credits: { amount: Math.max(0, Number(e.target.value) || 0), recharge: credits.recharge } })} /></div>
+              <div><Label>Ricarica</Label><Select value={credits.recharge} onValueChange={value => patchMeta(index, { included_credits: { amount: credits.amount, recharge: value as IncludedCreditsRecharge } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum all'attivazione</SelectItem><SelectItem value="recurring">Ad ogni rinnovo</SelectItem></SelectContent></Select></div>
+            </div> : <p className="text-xs text-muted-foreground">Disattivato: nessun credito incluso viene ricaricato automaticamente.</p>}
+          </div>
+        })() : null}
 
         {item.kind === "module" ? <div className="grid lg:grid-cols-2 gap-4"><ServiceBox label="Supporto alla configurazione" config={meta.configuration_support || {}} onChange={patch => patchService(index,"configuration_support",patch)} /><ServiceBox label="Setup completo" config={meta.full_setup || {}} onChange={patch => patchService(index,"full_setup",patch)} /></div> : null}
 

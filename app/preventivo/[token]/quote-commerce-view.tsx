@@ -22,7 +22,7 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, getIncludedCredits, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 import { quoteBrand, quoteBenefits } from "@/lib/quotes/branding"
 import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
 
@@ -106,6 +106,18 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, promo,
       </div> : null}
 
       {benefits.length ? <div className="rounded-xl bg-muted/35 p-4"><p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Cosa ottieni</p><div className="grid gap-2 sm:grid-cols-3">{benefits.map((benefit,index) => <div key={`${benefit}-${index}`} className="flex items-start gap-2 text-sm font-medium"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-700" /></span><span>{benefit}</span></div>)}</div></div> : null}
+
+      {(() => {
+        const credits = getIncludedCredits(item)
+        if (!credits) return null
+        return <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10"><Sparkles className="h-4 w-4 text-primary" /></span>
+          <div>
+            <p className="font-bold">Crediti inclusi: {formatQuoteAmount(credits.amount, currency)}</p>
+            <p className="text-sm text-muted-foreground">Ricaricati automaticamente {credits.recharge === "recurring" ? "ad ogni rinnovo" : "all'attivazione"} e già compresi nel prezzo. I consumi oltre questa soglia si pagano a parte, in autonomia.</p>
+          </div>
+        </div>
+      })()}
 
       {item.support && Object.values(item.support).some(Boolean) ? <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 text-sm"><div className="mb-1 flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> Non sei lasciato solo</div><p className="text-muted-foreground">{item.support.notes || item.support.level || "Assistenza inclusa secondo condizioni indicate."}</p></div> : null}
 

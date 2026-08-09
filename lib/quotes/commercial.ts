@@ -3,6 +3,16 @@ import { calculateQuoteLine, type QuoteLineItem } from "./types"
 export type QuoteBillingPreference = "monthly" | "yearly"
 export type AnnualSetupMode = "full" | "discount" | "free"
 
+// Crediti a consumo compresi in un addon (es. "Analisi aziende" di HotelProfitAI).
+// `amount` e' l'allowance in euro ricaricata automaticamente; `recharge` decide se
+// l'accredito avviene una sola volta all'attivazione oppure ad ogni rinnovo.
+// Voce informativa: NON entra nei totali del preventivo (gia' compresa nel pacchetto).
+export type IncludedCreditsRecharge = "one_time" | "recurring"
+export type IncludedCredits = {
+  amount: number
+  recharge: IncludedCreditsRecharge
+}
+
 export type BillingOption = {
   billing_period: QuoteBillingPreference
   unit_amount: number
@@ -39,6 +49,7 @@ export type CommercialMeta = {
   normal_price?: number
   annual_setup_mode?: AnnualSetupMode
   annual_setup_discount_pct?: number
+  included_credits?: IncludedCredits | null
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -58,6 +69,20 @@ export function setCommercialMeta(item: QuoteLineItem, patch: Partial<Commercial
 
 export function resolveAnnualSetupMode(meta: CommercialMeta): AnnualSetupMode {
   return meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
+}
+
+/**
+ * Legge e normalizza i crediti inclusi di una voce.
+ * Ritorna null se non configurati o se l'importo non e' positivo, cosi' UI e
+ * condizioni economiche non mostrano righe vuote. Non tocca i totali.
+ */
+export function getIncludedCredits(item: QuoteLineItem): IncludedCredits | null {
+  const raw = getCommercialMeta(item).included_credits
+  if (!raw) return null
+  const amount = Math.max(0, Number(raw.amount) || 0)
+  if (amount <= 0) return null
+  const recharge: IncludedCreditsRecharge = raw.recharge === "recurring" ? "recurring" : "one_time"
+  return { amount, recharge }
 }
 
 export function hasAnnualBillingOption(item: QuoteLineItem): boolean {
