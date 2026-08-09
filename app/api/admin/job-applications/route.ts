@@ -3,11 +3,26 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import { getAdminUser } from "@/lib/jobs/admin-guard"
 import { APPLICATION_STATUSES, type ApplicationStatus } from "@/lib/jobs/types"
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await getAdminUser())) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
   }
   const admin = createAdminClient()
+
+  // Lightweight badge count for the admin navigation (?count=1): number of
+  // still-unhandled applications (status "nuova"). head:true returns count only.
+  const { searchParams } = new URL(request.url)
+  if (searchParams.get("count")) {
+    const { count, error } = await admin
+      .from("job_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "nuova")
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ pending: count || 0 })
+  }
+
   const { data, error } = await admin
     .from("job_applications")
     .select("*")

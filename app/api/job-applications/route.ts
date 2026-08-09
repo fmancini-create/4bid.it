@@ -218,7 +218,15 @@ export async function POST(request: Request) {
           </div>`,
         replyTo: "info@4bid.it",
       })
+    } catch (emailError) {
+      console.error("[v0] candidate confirmation email error:", emailError)
+    }
 
+    // Admin notification is business-critical: it gets its OWN try/catch so a
+    // problem with the candidate confirmation can never skip it, and we inspect
+    // the return value because sendEmail never throws — it returns { success } —
+    // so a silent SMTP rejection would otherwise leave nobody notified.
+    try {
       const answersRows = Object.entries(answers)
         .filter(([, v]) => String(v ?? "").trim())
         .map(
@@ -227,7 +235,7 @@ export async function POST(request: Request) {
         )
         .join("")
 
-      await sendEmail({
+      const adminResult = await sendEmail({
         to: "f.mancini@4bid.it",
         subject: `🧑‍💼 Nuova candidatura: ${positionLabel} — ${first_name} ${last_name}`,
         html: `
@@ -260,8 +268,13 @@ export async function POST(request: Request) {
           </div>`,
         replyTo: email,
       })
+      if (!adminResult?.success) {
+        console.error("[v0] admin job-application notification NOT delivered:", adminResult?.error)
+      } else {
+        console.log("[v0] admin job-application notification sent:", adminResult.messageId)
+      }
     } catch (emailError) {
-      console.error("[v0] job application email error:", emailError)
+      console.error("[v0] admin job-application notification error:", emailError)
     }
 
     return NextResponse.json({ id: data.id, status: data.status }, { status: 201 })
