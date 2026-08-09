@@ -84,6 +84,8 @@ export async function GET(request: NextRequest) {
       click_count: "click_count",
       error_message: "error_message",
       created_at: "created_at",
+      sent_at: "sent_at",
+      first_open_at: "first_open_at",
     }
     const sortColumn = SORTABLE[searchParams.get("sort") || ""] || "created_at"
     const sortAsc = (searchParams.get("dir") || "asc") !== "desc"

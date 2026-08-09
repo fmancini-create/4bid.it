@@ -375,6 +375,18 @@ interface CampaignStats {
   }
 }
 
+// Format an ISO timestamp as an Italian date+time on two lines (date over time).
+// Returns "-" when the value is missing so empty cells stay tidy.
+function formatDateTime(iso: string | null | undefined): { data: string; ora: string } | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return {
+    data: d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    ora: d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+  }
+}
+
 // Map a clicked URL to a short, human-friendly label (e.g. "santaddeo.com")
 function siteLabelFromUrl(rawUrl: string): string {
   try {
@@ -1592,6 +1604,8 @@ export default function DemDashboard({
                         <SortHeader column="nome" label="Nome" className="hidden sm:table-cell" />
                         <SortHeader column="nome_azienda" label="Azienda" className="hidden md:table-cell" />
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden lg:table-cell">Località</th>
+                        <SortHeader column="sent_at" label="Inviata" className="hidden md:table-cell" />
+                        <SortHeader column="first_open_at" label="Aperta" className="hidden md:table-cell" />
                         <SortHeader column="open_count" label="Aperture" align="center" />
                         <SortHeader column="click_count" label="Click" align="center" />
                         <th className="text-left py-2 px-3 text-muted-foreground font-medium hidden md:table-cell">Link cliccato</th>
@@ -1625,6 +1639,30 @@ export default function DemDashboard({
                           <td className="py-2 px-3 text-foreground hidden md:table-cell">{r.nome_azienda || "-"}</td>
                           <td className="py-2 px-3 text-foreground hidden lg:table-cell">
                             {r.citta ? (r.provincia ? `${r.citta} (${r.provincia})` : r.citta) : "-"}
+                          </td>
+                          <td className="py-2 px-3 text-foreground hidden md:table-cell whitespace-nowrap">
+                            {(() => {
+                              const dt = formatDateTime(r.sent_at)
+                              if (!dt) return <span className="text-muted-foreground">-</span>
+                              return (
+                                <span className="flex flex-col leading-tight">
+                                  <span>{dt.data}</span>
+                                  <span className="text-xs text-muted-foreground">{dt.ora}</span>
+                                </span>
+                              )
+                            })()}
+                          </td>
+                          <td className="py-2 px-3 text-foreground hidden md:table-cell whitespace-nowrap">
+                            {(() => {
+                              const dt = formatDateTime(r.first_open_at)
+                              if (!dt) return <span className="text-muted-foreground">-</span>
+                              return (
+                                <span className="flex flex-col leading-tight">
+                                  <span>{dt.data}</span>
+                                  <span className="text-xs text-muted-foreground">{dt.ora}</span>
+                                </span>
+                              )
+                            })()}
                           </td>
                           <td className="py-2 px-3 text-center text-foreground">{r.open_count || 0}</td>
                           <td className="py-2 px-3 text-center text-foreground">{r.click_count || 0}</td>
@@ -1681,7 +1719,7 @@ export default function DemDashboard({
                       {stats.recipients.length === 0 && (
                         <tr>
                           <td
-                            colSpan={canEditRecipients ? 10 : 9}
+                            colSpan={canEditRecipients ? 12 : 11}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nessun destinatario corrisponde ai filtri selezionati.
