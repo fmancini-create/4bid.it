@@ -60,6 +60,16 @@ function splitAddressLine(line: string): { address: string; zip: string; city: s
 
 function hasCommerceData(item: QuoteLineItem) { return Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support || item.optional || getCommercialMeta(item).billing_options) }
 
+// Gruppo "a scelta": le voci che condividono lo stesso modulo padre e sono
+// entrambe servizi di attivazione (Supporto alla configurazione / Setup
+// completo) sono ALTERNATIVE. Il cliente ne sceglie UNA sola, non entrambe:
+// pagare sia l'affiancamento sia il setup completo dello stesso modulo non ha
+// senso. Ritorna null quando la voce non fa parte di un gruppo a scelta.
+function choiceGroupKey(item: QuoteLineItem): string | null {
+  const meta = getCommercialMeta(item)
+  return meta.service_type && meta.parent_line_id ? `svc:${meta.parent_line_id}` : null
+}
+
 function OfferCountdown({ expiresAt, expired }: { expiresAt?: string | null; expired: boolean }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(id) }, [])
@@ -75,7 +85,7 @@ function OfferCountdown({ expiresAt, expired }: { expiresAt?: string | null; exp
   </section>
 }
 
-function LineItemCard({ item, currency, selected, locked, parentSelected, promo, billingPreference, annualEligible, onSelectedChange, onChooseAnnual }: { item: QuoteLineItem; currency: string; selected: boolean; locked: boolean; parentSelected: boolean; promo: AnnualSetupPromo | null; billingPreference: QuoteBillingPreference; annualEligible: boolean; onSelectedChange: (value: boolean) => void; onChooseAnnual: () => void }) {
+function LineItemCard({ item, currency, selected, locked, parentSelected, choiceGroup, promo, billingPreference, annualEligible, onSelectedChange, onChooseAnnual }: { item: QuoteLineItem; currency: string; selected: boolean; locked: boolean; parentSelected: boolean; choiceGroup: boolean; promo: AnnualSetupPromo | null; billingPreference: QuoteBillingPreference; annualEligible: boolean; onSelectedChange: (value: boolean) => void; onChooseAnnual: () => void }) {
   const calculated = calculateQuoteLine(item)
   const listAmount = Number(calculated.list_amount ?? 0)
   const discountAmount = Number(calculated.discount_amount ?? 0)
@@ -92,7 +102,7 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, promo,
   return <article className={`group overflow-hidden rounded-2xl border bg-background transition-all ${active ? "border-primary/35 shadow-sm" : "border-border opacity-60"}`}>
     <div className="border-b bg-gradient-to-r from-muted/60 via-background to-background px-5 py-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.optional ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{item.optional ? "Puoi scegliere" : "Incluso nella soluzione"}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.optional ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{choiceGroup ? "Scegli una sola opzione" : item.optional ? "Puoi scegliere" : "Incluso nella soluzione"}</span>
         {item.trial_days ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">Provalo {item.trial_days} giorni</span> : null}
         {promo ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{promo.mode === "free" ? "OMAGGIO CON ANNUALE" : `-${promo.pct}% CON ANNUALE`}</span> : null}
       </div>
@@ -148,7 +158,7 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, promo,
       {item.support && Object.values(item.support).some(Boolean) ? <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 text-sm"><div className="mb-1 flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> Non sei lasciato solo</div><p className="text-muted-foreground">{item.support.notes || item.support.level || "Assistenza inclusa secondo condizioni indicate."}</p></div> : null}
 
       {item.optional && !locked ? <button type="button" disabled={!parentSelected} onClick={() => onSelectedChange(!selected)} className={`flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-bold transition ${selected && parentSelected ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"} ${!parentSelected ? "cursor-not-allowed opacity-50" : ""}`}>
-        {selected && parentSelected ? <><CheckCircle2 className="h-4 w-4" /> Scelto — clicca per rimuovere</> : <><Sparkles className="h-4 w-4" /> Aggiungi alla mia soluzione</>}
+        {selected && parentSelected ? <><CheckCircle2 className="h-4 w-4" /> Scelto — clicca per rimuovere</> : <><Sparkles className="h-4 w-4" /> {choiceGroup ? "Scegli questa opzione" : "Aggiungi alla mia soluzione"}</>}
       </button> : !item.optional ? <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Questa voce fa parte della soluzione proposta</div> : null}
     </div>
   </article>
@@ -187,7 +197,19 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const acceptedPreference: QuoteBillingPreference = rawItems.some(i => i.billing_period === "yearly") && !rawItems.some(i => i.billing_period === "monthly") ? "yearly" : "monthly"
   const [billingPreference, setBillingPreference] = useState<QuoteBillingPreference>(acceptedPreference)
   const effectiveItems = useMemo(() => alreadyAccepted ? rawItems : rawItems.map(item => applyBillingPreference(item, billingPreference)), [alreadyAccepted, rawItems, billingPreference])
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(rawItems.filter(item => !item.optional || (alreadyAccepted ? item.customer_selected !== false : item.default_selected !== false)).map(item => item.id).filter((id): id is string => !!id)))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    const initial = new Set(rawItems.filter(item => !item.optional || (alreadyAccepted ? item.customer_selected !== false : item.default_selected !== false)).map(item => item.id).filter((id): id is string => !!id))
+    // Sicurezza: se per dati storici entrambe le alternative di un gruppo a
+    // scelta risultassero pre-selezionate, ne teniamo solo la prima. Cosi' la
+    // regola "una sola" vale gia' al primo render, non solo dopo un click.
+    const seen = new Set<string>()
+    for (const item of rawItems) {
+      const key = choiceGroupKey(item)
+      if (!key || !item.id || !initial.has(item.id)) continue
+      if (seen.has(key)) initial.delete(item.id); else seen.add(key)
+    }
+    return initial
+  })
 
   const selectedItems = useMemo(() => effectiveItems.filter(item => !item.optional || (!!item.id && selectedIds.has(item.id))), [effectiveItems, selectedIds])
   const recurringParents = selectedItems.filter(i => i.billing_period !== "one_time")
@@ -242,7 +264,20 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
     document.getElementById("formula-abbonamento")?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
   function parentSelected(item: QuoteLineItem) { const parent=getCommercialMeta(item).parent_line_id; return !parent || selectedItems.some(i=>i.id===parent) }
-  function setItemSelected(item: QuoteLineItem,value:boolean) { if(!item.optional||!item.id||alreadyAccepted)return; setSelectedIds(current=>{const next=new Set(current); value?next.add(item.id!):next.delete(item.id!); return next}); if(value && requiresCard)setPaymentMethod("card") }
+  function setItemSelected(item: QuoteLineItem,value:boolean) {
+    if(!item.optional||!item.id||alreadyAccepted)return
+    const groupKey = choiceGroupKey(item)
+    setSelectedIds(current=>{
+      const next=new Set(current)
+      if(value){
+        // Scegliendo un'alternativa, le altre dello stesso gruppo si escludono.
+        if(groupKey) for(const other of rawItems) if(other.id && other.id!==item.id && choiceGroupKey(other)===groupKey) next.delete(other.id)
+        next.add(item.id!)
+      } else next.delete(item.id!)
+      return next
+    })
+    if(value && requiresCard)setPaymentMethod("card")
+  }
   function setBillingField(key:keyof QuoteBillingDetails,value:string){setBilling(current=>({...current,[key]:value}))}
   function setCredentialPart(key:string,part:"id"|"password",value:string){const current=decodeCredential(fieldValues[key]);setFieldValues(values=>({...values,[key]:encodeCredential(part==="id"?value:current.id,part==="password"?value:current.password)}))}
 
@@ -271,7 +306,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       {!alreadyAccepted && recurringParents.length > 0 ? <section id="formula-abbonamento" className="rounded-2xl border-2 border-primary/25 bg-card p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-bold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">Il confronto comprende i canoni e anche setup e servizi una tantum agevolati con l&apos;annuale.</p></div><div className="grid grid-cols-2 rounded-xl border bg-muted p-1" role="group" aria-label="Formula di abbonamento"><button type="button" aria-pressed={billingPreference === "monthly"} onClick={() => setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "monthly" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-background/60 hover:text-foreground"}`}>Mensile</button><button type="button" aria-pressed={billingPreference === "yearly"} disabled={!annualEligible} onClick={() => setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "yearly" ? "bg-emerald-600 text-primary-foreground shadow" : "text-emerald-700 hover:bg-emerald-50"} ${!annualEligible ? "cursor-not-allowed opacity-40" : ""}`}>Annuale{annualBenefit.amount > 0 ? ` · -${annualBenefit.pct}%` : ""}</button></div></div>{annualEligible && annualBenefit.amount > 0 ? <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Scegliendo l&apos;annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} sul primo anno{savingDetail ? `: ${savingDetail}` : ""}.</div> : !annualEligible ? <p className="mt-3 text-xs text-muted-foreground">La formula annuale non è prevista per i prodotti selezionati.</p> : null}</section> : null}
 
-      <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} locked={alreadyAccepted} promo={annualSetupPromo(rawItems[index] || item)} billingPreference={billingPreference} annualEligible={annualEligible} onChooseAnnual={chooseAnnual} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
+      <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} choiceGroup={choiceGroupKey(item)!==null} locked={alreadyAccepted} promo={annualSetupPromo(rawItems[index] || item)} billingPreference={billingPreference} annualEligible={annualEligible} onChooseAnnual={chooseAnnual} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
 
       {(() => {
         const firstYear = totals.oneTime + totals.monthly * 12 + totals.yearly
