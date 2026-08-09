@@ -33,7 +33,9 @@ export interface GroupPricingReferenceProps {
 }
 
 export default function GroupPricingReference({ configuredMonthlyTotal, suggestedReferenceMonthly }: GroupPricingReferenceProps) {
-  const [enabled, setEnabled] = useState(false)
+  // Aperto di default: i suggerimenti di prezzo devono essere subito visibili
+  // all'operatore, non nascosti dietro un interruttore da scoprire.
+  const [enabled, setEnabled] = useState(true)
   const [drivers, setDrivers] = useState<GroupDrivers>({ structures: 0, rooms: 0, users: 0, months: 12 })
   const [reference, setReference] = useState<number>(0)
   const [referenceTouched, setReferenceTouched] = useState(false)
