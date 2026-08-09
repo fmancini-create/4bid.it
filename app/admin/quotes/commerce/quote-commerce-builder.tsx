@@ -329,6 +329,11 @@ export default function QuoteCommerceBuilder() {
 
   function hasBase(project: string) { return items.some(i => i.project === project && i.kind === "plan") }
   function addCatalogItem(item: CatalogItem) {
+    // Un prodotto di catalogo entra una sola volta: senza questa guardia un clic
+    // accidentale (o doppio) creava due voci con lo stesso source_product_id, e
+    // cancellandone una la card restava verde perche' l'altra manteneva l'id.
+    // Per una seconda copia si usa il pulsante "Duplica" sulla voce.
+    if (selectedCatalogIds.has(item.id)) return toast.error("Prodotto già nel preventivo: modificalo o eliminalo dall'elenco delle voci, oppure usa Duplica per una seconda copia.")
     const dep = item.dependency
     if (dep?.requires_base && !hasBase(dep.project || item.project)) return toast.error(`Prima seleziona un piano base ${PROJECT_LABELS[dep.project || item.project] || dep.project || item.project}`)
     if (dep?.linked_project && ["santaddeo", "hotelprofitai", "manubot"].includes(dep.linked_project) && !hasBase(dep.linked_project)) return toast.error(`Questo modulo richiede anche l'attivazione ${PROJECT_LABELS[dep.linked_project] || dep.linked_project}`)

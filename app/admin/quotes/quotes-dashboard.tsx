@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, FileText, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
@@ -26,6 +26,11 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
   const [quotes, setQuotes] = useState(initialQuotes)
   const [sendQuote, setSendQuote] = useState<SalesChannelQuote | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
+
+  // Tornando dall'editor con router.refresh() il server rimanda i preventivi
+  // aggiornati come nuovo prop: senza risincronizzare lo stato locale la lista
+  // resterebbe ferma ai dati vecchi e le modifiche non si vedrebbero.
+  useEffect(() => { setQuotes(initialQuotes) }, [initialQuotes])
 
   async function refresh() {
     const res = await fetch("/api/quotes", { cache: "no-store" })
