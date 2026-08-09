@@ -181,7 +181,44 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Modifiche alla Privacy Policy</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                9. Candidature e Selezione del Personale
+              </h2>
+              <p>
+                Quando invii una candidatura tramite la pagina{" "}
+                <Link href="/lavora-con-noi" className="text-amber-600 underline">
+                  Lavora con noi
+                </Link>
+                , 4 Bid SRL tratta i dati personali che ci fornisci (tra cui nome, cognome, email, telefono, città,
+                profili professionali come LinkedIn o GitHub, curriculum vitae ed eventuali informazioni contenute nella
+                tua presentazione) per le seguenti finalità:
+              </p>
+              <ul className="list-disc pl-6 mt-4 space-y-2">
+                <li>valutazione della candidatura e gestione del processo di selezione;</li>
+                <li>eventuale contatto per colloqui e per la prosecuzione dell&apos;iter di selezione;</li>
+                <li>
+                  conservazione della candidatura per future opportunità coerenti con il tuo profilo, previo consenso.
+                </li>
+              </ul>
+              <p className="mt-4">
+                <strong>Base giuridica:</strong> il trattamento si fonda sul consenso espresso al momento dell&apos;invio
+                della candidatura e sull&apos;esecuzione di misure precontrattuali adottate su tua richiesta.
+              </p>
+              <p className="mt-4">
+                <strong>Isolamento dei dati:</strong> le candidature e i CV sono conservati separatamente dai dati
+                operativi dei prodotti e dei clienti di 4 Bid; i CV sono archiviati in uno spazio privato non accessibile
+                pubblicamente e consultabile solo dal personale autorizzato alla selezione.
+              </p>
+              <p className="mt-4">
+                <strong>Conservazione:</strong> i dati di candidatura sono conservati per il tempo necessario alla
+                selezione e, in caso di consenso, fino a un massimo di 24 mesi per eventuali future opportunità, salvo
+                revoca anticipata. Puoi richiedere in qualsiasi momento la cancellazione dei tuoi dati scrivendo a{" "}
+                <strong>info@4bid.it</strong>.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Modifiche alla Privacy Policy</h2>
               <p>
                 Il Titolare si riserva il diritto di apportare modifiche alla presente privacy policy in qualunque
                 momento. Gli Utenti sono invitati a consultare periodicamente questa pagina.
@@ -189,7 +226,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Contatti</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Contatti</h2>
               <p>
                 Per qualsiasi domanda relativa alla presente Privacy Policy, contattare:
                 <br />
