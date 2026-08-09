@@ -1,5 +1,5 @@
 import type { QuoteLineItem } from "./types"
-import { annualSetupPromo, getCommercialMeta, type QuoteBillingPreference } from "./commercial"
+import { annualSetupPromo, getCommercialMeta, getIncludedCredits, type QuoteBillingPreference } from "./commercial"
 
 /**
  * Condizioni contrattuali: la fonte e' il singolo progetto, esattamente come per
@@ -178,6 +178,15 @@ export function economicTerms(
 
   const dependent = selected.filter(item => getCommercialMeta(item).parent_line_id)
   if (dependent.length) lines.push("I servizi di attivazione e configurazione sono collegati al modulo di riferimento: senza quel modulo non vengono attivati ne' addebitati.")
+
+  // Crediti inclusi negli addon a consumo: allowance gia' compresa nel prezzo,
+  // percio' non aggiunta ai totali. La riga rende esplicito nello snapshot
+  // accettato che i consumi eccedenti sono a carico del cliente.
+  for (const item of selected) {
+    const credits = getIncludedCredits(item)
+    if (!credits) continue
+    lines.push(`${item.name || item.description}: ${euro(credits.amount, currency)} di crediti a consumo inclusi, ricaricati automaticamente ${credits.recharge === "recurring" ? "ad ogni rinnovo" : "all'attivazione"} e gia' compresi nel prezzo; i consumi eccedenti sono addebitati a parte, a consumo.`)
+  }
 
   lines.push(options.vatIncluded === false ? "Gli importi indicati sono IVA esclusa." : "Gli importi indicati sono IVA inclusa.")
   if (options.expiresAt) {

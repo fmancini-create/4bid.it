@@ -20,7 +20,7 @@ import {
     type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
+import { duplicateQuoteLineAt, getCommercialMeta, getIncludedCredits, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency, type IncludedCreditsRecharge } from "@/lib/quotes/commercial"
 
 type CatalogItem = {
   id: string
@@ -174,6 +174,19 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       free_on_annual: mode === "free",
     })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
+  }
+  // Crediti inclusi (addon a consumo): allowance informativa, non tocca i totali.
+  // enabled=false azzera il campo; altrimenti salva importo e tipo di ricarica.
+  function patchIncludedCredits(index: number, patch: { enabled?: boolean; amount?: number; recharge?: IncludedCreditsRecharge }) {
+    const line = lines[index]
+    const current = getIncludedCredits(line)
+    if (patch.enabled === false) {
+      setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { included_credits: null }) : row))
+      return
+    }
+    const amount = Math.max(0, Number(patch.amount ?? current?.amount ?? 0) || 0)
+    const recharge: IncludedCreditsRecharge = patch.recharge ?? current?.recharge ?? "one_time"
+    setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { included_credits: { amount, recharge } }) : row))
   }
   function reorderLine(from: number, to: number) {
     if (!Number.isFinite(to) || from < 0 || from >= lines.length) return
@@ -333,6 +346,22 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         <Textarea rows={3} value={item.description || ""} onChange={e => patchLine(index, { description: e.target.value })} />
         {isSantaddeo(item) ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border bg-primary/5 p-4"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div> : <div className="grid sm:grid-cols-4 gap-3"><div><Label>Quantità</Label><Input type="number" min="1" value={item.quantity || 1} onChange={e => patchLine(index, { quantity: Number(e.target.value) })} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || "one_time"} onValueChange={v => changeBilling(index, v as QuoteLineItem["billing_period"])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum</SelectItem><SelectItem value="monthly">Mensile</SelectItem><SelectItem value="quarterly">Trimestrale</SelectItem><SelectItem value="yearly">Annuale</SelectItem></SelectContent></Select></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
         {item.kind === "setup" && item.billing_period === "one_time" ? <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><div className="flex items-center justify-between gap-3"><div><strong>Agevolazione setup con piano annuale</strong><p className="text-xs text-muted-foreground">Scegli se il setup resta a prezzo pieno, viene scontato o azzerato quando il cliente seleziona la quota annuale.</p></div><Switch checked={setupAnnualMode !== "full"} onCheckedChange={enabled => patchSetupAnnualPolicy(index, enabled ? "free" : "full")} /></div>{setupAnnualMode !== "full" ? <div className="grid sm:grid-cols-2 gap-3"><div><Label>Trattamento con annuale</Label><Select value={setupAnnualMode} onValueChange={value => patchSetupAnnualPolicy(index, value as AnnualSetupMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="discount">Scontato</SelectItem><SelectItem value="free">Azzerato / omaggio</SelectItem></SelectContent></Select></div>{setupAnnualMode === "discount" ? <div><Label>Sconto setup %</Label><Input type="number" min="0" max="100" step="0.1" value={meta.annual_setup_discount_pct || 0} onChange={e => patchSetupAnnualPolicy(index, "discount", Number(e.target.value))} /></div> : <div className="flex items-end"><p className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Setup azzerato con formula annuale</p></div>}</div> : <p className="text-xs text-muted-foreground">Disattivato: il setup viene addebitato per intero anche con formula annuale.</p>}</div> : null}
+        {item.project === "hotelprofitai" ? (() => {
+          const credits = getIncludedCredits(item)
+          return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <strong>Crediti inclusi nel pacchetto</strong>
+                <p className="text-xs text-muted-foreground">Per gli addon a consumo (es. Analisi aziende): il sistema ricarica automaticamente questi crediti all'attivazione. I consumi extra restano a carico del cliente. Voce informativa, non sommata al totale.</p>
+              </div>
+              <Switch checked={!!credits} onCheckedChange={enabled => patchIncludedCredits(index, { enabled })} />
+            </div>
+            {credits ? <div className="grid sm:grid-cols-2 gap-3">
+              <div><Label>Crediti inclusi (€)</Label><Input type="number" min="0" step="0.01" value={credits.amount || 0} onChange={e => patchIncludedCredits(index, { amount: Number(e.target.value) })} /></div>
+              <div><Label>Ricarica</Label><Select value={credits.recharge} onValueChange={value => patchIncludedCredits(index, { recharge: value as IncludedCreditsRecharge })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum all'attivazione</SelectItem><SelectItem value="recurring">Ad ogni rinnovo</SelectItem></SelectContent></Select></div>
+            </div> : <p className="text-xs text-muted-foreground">Disattivato: nessun credito incluso viene ricaricato automaticamente.</p>}
+          </div>
+        })() : null}
         <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
       </div>
     })}</section>

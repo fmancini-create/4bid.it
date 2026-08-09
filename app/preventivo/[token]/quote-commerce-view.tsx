@@ -22,9 +22,10 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, getIncludedCredits, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
 import { quoteBrand, quoteBenefits } from "@/lib/quotes/branding"
 import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
+import { QUOTE_SELLER, QUOTE_SELLER_ADDRESS_LINE } from "@/lib/quotes/company"
 
 type Props = { token: string; quote: Partial<SalesChannelQuote>; expired: boolean }
 type PaymentMethod = "bonifico" | "card"
@@ -107,6 +108,18 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, promo,
 
       {benefits.length ? <div className="rounded-xl bg-muted/35 p-4"><p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Cosa ottieni</p><div className="grid gap-2 sm:grid-cols-3">{benefits.map((benefit,index) => <div key={`${benefit}-${index}`} className="flex items-start gap-2 text-sm font-medium"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-700" /></span><span>{benefit}</span></div>)}</div></div> : null}
 
+      {(() => {
+        const credits = getIncludedCredits(item)
+        if (!credits) return null
+        return <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10"><Sparkles className="h-4 w-4 text-primary" /></span>
+          <div>
+            <p className="font-bold">Crediti inclusi: {formatQuoteAmount(credits.amount, currency)}</p>
+            <p className="text-sm text-muted-foreground">Ricaricati automaticamente {credits.recharge === "recurring" ? "ad ogni rinnovo" : "all'attivazione"} e già compresi nel prezzo. I consumi oltre questa soglia si pagano a parte, in autonomia.</p>
+          </div>
+        </div>
+      })()}
+
       {item.support && Object.values(item.support).some(Boolean) ? <div className="rounded-lg border border-primary/10 bg-primary/5 p-3 text-sm"><div className="mb-1 flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> Non sei lasciato solo</div><p className="text-muted-foreground">{item.support.notes || item.support.level || "Assistenza inclusa secondo condizioni indicate."}</p></div> : null}
 
       {item.optional && !locked ? <button type="button" disabled={!parentSelected} onClick={() => onSelectedChange(!selected)} className={`flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-bold transition ${selected && parentSelected ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"} ${!parentSelected ? "cursor-not-allowed opacity-50" : ""}`}>
@@ -122,6 +135,30 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const requestedFields = (quote.requested_fields || []) as QuoteRequestedField[]
   const rawItems = ((quote.line_items || []) as QuoteLineItem[]).map(calculateQuoteLine)
   const currency = quote.currency || "eur"
+  // Dati cliente da mostrare in intestazione: si leggono dai campi del
+  // preventivo con fallback su billing_details (precompilato dal controllo
+  // P.IVA in fase di creazione). Il referente e' una persona, distinta dalla
+  // ragione sociale, quindi va esposto a parte.
+  const bd = (quote.billing_details as QuoteBillingDetails) || {}
+  const clientCompany = quote.client_company || bd.company || quote.client_name || ""
+  const clientVat = quote.client_vat || bd.vat || ""
+  const clientTaxCode = bd.tax_code || ""
+  const clientAddressLine = bd.address
+    ? [bd.address, [bd.zip, bd.city].filter(Boolean).join(" "), bd.province ? `(${bd.province})` : ""].filter(Boolean).join(" - ")
+    : (quote.client_address || "")
+  const clientReference = bd.reference || quote.client_name || ""
+  const clientEmail = quote.client_email || ""
+  const clientSdi = bd.sdi_code || ""
+  const clientPec = bd.pec || ""
+  const clientDetails: Array<{ label: string; value: string }> = [
+    { label: "P.IVA", value: clientVat },
+    { label: "Codice fiscale", value: clientTaxCode },
+    { label: "Indirizzo", value: clientAddressLine },
+    { label: "Referente", value: clientReference },
+    { label: "Email", value: clientEmail },
+    { label: "Codice SDI", value: clientSdi },
+    { label: "PEC", value: clientPec },
+  ].filter(d => d.value && d.value.trim())
   const acceptedPreference: QuoteBillingPreference = rawItems.some(i => i.billing_period === "yearly") && !rawItems.some(i => i.billing_period === "monthly") ? "yearly" : "monthly"
   const [billingPreference, setBillingPreference] = useState<QuoteBillingPreference>(acceptedPreference)
   const effectiveItems = useMemo(() => alreadyAccepted ? rawItems : rawItems.map(item => applyBillingPreference(item, billingPreference)), [alreadyAccepted, rawItems, billingPreference])
@@ -197,13 +234,35 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
       {expired?<div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">Questo preventivo è scaduto. Contatta 4BID per riceverne uno aggiornato.</div>:null}
       {alreadyPaid?<div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900"><CheckCircle2 className="h-5 w-5"/>Pagamento confermato. L'attivazione dei servizi selezionati è stata avviata.</div>:null}
 
-      <section className="overflow-hidden rounded-2xl border bg-card"><div className="bg-primary px-6 py-7 text-primary-foreground"><div className="mb-3 flex items-center gap-2 text-sm font-medium opacity-90"><FileText className="h-4 w-4"/>4BID · Soluzioni digitali e consulenza</div><h1 className="text-3xl font-bold">{quote.title}</h1>{quote.description?<p className="mt-3 whitespace-pre-wrap text-sm opacity-90">{quote.description}</p>:null}</div><div className="grid gap-4 px-6 py-5 text-sm sm:grid-cols-2"><div><p className="text-xs uppercase text-muted-foreground">Cliente</p><p className="mt-1 font-semibold">{quote.client_company||quote.client_name}</p></div><div className="sm:text-right"><p className="text-xs uppercase text-muted-foreground">Validità</p><p className="mt-1 font-medium">{quote.expires_at?`fino al ${new Date(quote.expires_at).toLocaleString("it-IT")}`:"Secondo condizioni indicate"}</p></div></div></section>
+      <section className="overflow-hidden rounded-2xl border bg-card"><div className="bg-primary px-6 py-7 text-primary-foreground"><div className="mb-3 flex items-center gap-2 text-sm font-medium opacity-90"><FileText className="h-4 w-4"/>4BID · Soluzioni digitali e consulenza</div><h1 className="text-3xl font-bold">{quote.title}</h1>{quote.description?<p className="mt-3 whitespace-pre-wrap text-sm opacity-90">{quote.description}</p>:null}</div><div className="px-6 py-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase text-muted-foreground">Cliente</p><p className="mt-1 text-lg font-semibold">{clientCompany}</p></div><div className="sm:text-right"><p className="text-xs uppercase text-muted-foreground">Validità</p><p className="mt-1 font-medium">{quote.expires_at?`fino al ${new Date(quote.expires_at).toLocaleString("it-IT")}`:"Secondo condizioni indicate"}</p></div></div>{clientDetails.length?<dl className="mt-4 grid gap-x-6 gap-y-2 border-t pt-4 text-sm sm:grid-cols-2">{clientDetails.map(d=><div key={d.label} className="flex flex-col"><dt className="text-xs uppercase tracking-wide text-muted-foreground">{d.label}</dt><dd className="font-medium break-words">{d.value}</dd></div>)}</dl>:null}</div></section>
 
       {!alreadyAccepted && recurringParents.length > 0 ? <section id="formula-abbonamento" className="rounded-2xl border-2 border-primary/25 bg-card p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary"/><h2 className="text-xl font-bold">Scegli la formula di abbonamento</h2></div><p className="mt-1 text-sm text-muted-foreground">Il confronto comprende i canoni e anche setup e servizi una tantum agevolati con l&apos;annuale.</p></div><div className="grid grid-cols-2 rounded-xl border bg-muted p-1" role="group" aria-label="Formula di abbonamento"><button type="button" aria-pressed={billingPreference === "monthly"} onClick={() => setBillingPreference("monthly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "monthly" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-background/60 hover:text-foreground"}`}>Mensile</button><button type="button" aria-pressed={billingPreference === "yearly"} disabled={!annualEligible} onClick={() => setBillingPreference("yearly")} className={`rounded-lg px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${billingPreference === "yearly" ? "bg-emerald-600 text-primary-foreground shadow" : "text-emerald-700 hover:bg-emerald-50"} ${!annualEligible ? "cursor-not-allowed opacity-40" : ""}`}>Annuale{annualBenefit.amount > 0 ? ` · -${annualBenefit.pct}%` : ""}</button></div></div>{annualEligible && annualBenefit.amount > 0 ? <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Scegliendo l&apos;annuale risparmi {formatQuoteAmount(annualBenefit.amount,currency)} sul primo anno{savingDetail ? `: ${savingDetail}` : ""}.</div> : !annualEligible ? <p className="mt-3 text-xs text-muted-foreground">La formula annuale non è prevista per i prodotti selezionati.</p> : null}</section> : null}
 
       <section className="space-y-4"><div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary"/><div><h2 className="text-xl font-semibold">Costruisci la soluzione più adatta alla tua struttura</h2>{rawItems.some(i=>i.optional)&&!alreadyAccepted?<p className="text-sm text-muted-foreground">Le voci essenziali sono già incluse; puoi aggiungere gli extra che generano più valore per il tuo team.</p>:null}</div></div>{effectiveItems.map((item,index)=><LineItemCard key={item.id||index} item={item} currency={currency} selected={!item.optional||!!item.id&&selectedIds.has(item.id)} parentSelected={parentSelected(item)} locked={alreadyAccepted} promo={annualSetupPromo(rawItems[index] || item)} billingPreference={billingPreference} annualEligible={annualEligible} onChooseAnnual={chooseAnnual} onSelectedChange={value=>setItemSelected(item,value)}/>)}</section>
 
-      <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2><div className="flex flex-wrap gap-8">{totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p></div> : null}{totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-2xl font-black">{formatQuoteAmount(totals.monthly,currency)}</p></div> : null}{totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-2xl font-black">{formatQuoteAmount(totals.yearly,currency)}</p></div> : null}</div></div><p className="text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p></div></section>
+      {(() => {
+        const firstYear = totals.oneTime + totals.monthly * 12 + totals.yearly
+        const mixed = totals.monthly > 0 && totals.yearly > 0
+        return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2>
+              <div className="flex flex-wrap gap-x-8 gap-y-3">
+                {totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum (setup)</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p><p className="text-[11px] text-muted-foreground">addebito una sola volta</p></div> : null}
+                {totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-2xl font-black">{formatQuoteAmount(totals.monthly,currency)}<span className="text-sm font-normal text-muted-foreground"> /mese</span></p><p className="text-[11px] text-muted-foreground">addebito ogni mese</p></div> : null}
+                {totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-2xl font-black">{formatQuoteAmount(totals.yearly,currency)}<span className="text-sm font-normal text-muted-foreground"> /anno</span></p><p className="text-[11px] text-muted-foreground">addebito una volta l&apos;anno</p></div> : null}
+              </div>
+              {mixed ? <p className="mt-3 max-w-xl text-xs text-muted-foreground">Alcune voci sono disponibili solo in formula mensile: per questo vedi sia un canone annuale sia un canone mensile. Il totale sotto li comprende entrambi.</p> : null}
+            </div>
+            <div className="lg:text-right">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Totale primo anno</p>
+              <p className="text-2xl font-black">{formatQuoteAmount(firstYear,currency)}</p>
+              <p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi</p>
+              <p className="mt-1 text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p>
+            </div>
+          </div>
+        </section>
+      })()}
 
       <ContractTermsSection terms={contractTerms} economic={economicLines} paymentTerms={quote.payment_terms} />
 
@@ -215,6 +274,17 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       {alreadyAccepted&&!alreadyPaid&&confirmedMethod==="card"?<section className="rounded-2xl border border-primary/20 bg-card p-6 text-center"><h2 className="font-semibold">Preventivo accettato</h2><p className="mb-4 text-sm text-muted-foreground">Completa il pagamento per avviare automaticamente l'attivazione.</p><Button size="lg" onClick={startCardPayment} disabled={paying}>{paying?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<CreditCard className="mr-2 h-4 w-4"/>}Vai al pagamento</Button></section>:null}
       {alreadyAccepted&&!alreadyPaid&&confirmedMethod==="bonifico"?<section className="rounded-2xl border bg-card p-6"><div className="mb-3 flex items-center gap-2"><Banknote className="h-5 w-5 text-primary"/><h2 className="font-semibold">Coordinate per il bonifico</h2></div><div className="space-y-1 text-sm"><p><strong>Beneficiario:</strong> {QUOTE_BANK_DETAILS.holder}</p><p><strong>Banca:</strong> {QUOTE_BANK_DETAILS.bank}</p><p><strong>IBAN:</strong> <span className="font-mono">{QUOTE_BANK_DETAILS.iban}</span></p><p><strong>Causale:</strong> {quoteTransferReason(quote.quote_number,token.slice(0,8))}</p></div></section>:null}
+      <section className="rounded-2xl border bg-card p-6">
+        <div className="mb-3 flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><h2 className="font-semibold">Proposta emessa da</h2></div>
+        <div className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <div className="flex flex-col"><span className="text-xs uppercase tracking-wide text-muted-foreground">Ragione sociale</span><span className="font-medium">{QUOTE_SELLER.legalName}</span></div>
+          <div className="flex flex-col"><span className="text-xs uppercase tracking-wide text-muted-foreground">P.IVA</span><span className="font-medium">{QUOTE_SELLER.vat}</span></div>
+          <div className="flex flex-col sm:col-span-2"><span className="text-xs uppercase tracking-wide text-muted-foreground">Sede legale</span><span className="font-medium">{QUOTE_SELLER_ADDRESS_LINE}</span></div>
+          <div className="flex flex-col"><span className="text-xs uppercase tracking-wide text-muted-foreground">Email</span><a href={`mailto:${QUOTE_SELLER.email}`} className="font-medium text-primary hover:underline">{QUOTE_SELLER.email}</a></div>
+          <div className="flex flex-col"><span className="text-xs uppercase tracking-wide text-muted-foreground">Sito</span><a href={`https://${QUOTE_SELLER.website}`} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline">{QUOTE_SELLER.website}</a></div>
+        </div>
+        <p className="mt-4 text-xs text-muted-foreground">{QUOTE_SELLER.tagline}</p>
+      </section>
     </main>
   </div>
 }
