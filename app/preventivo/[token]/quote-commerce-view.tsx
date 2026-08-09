@@ -88,14 +88,29 @@ function OfferCountdown({ expiresAt, expired }: { expiresAt?: string | null; exp
 function LineItemCard({ item, currency, selected, locked, parentSelected, choiceGroup, promo, billingPreference, annualEligible, onSelectedChange, onChooseAnnual }: { item: QuoteLineItem; currency: string; selected: boolean; locked: boolean; parentSelected: boolean; choiceGroup: boolean; promo: AnnualSetupPromo | null; billingPreference: QuoteBillingPreference; annualEligible: boolean; onSelectedChange: (value: boolean) => void; onChooseAnnual: () => void }) {
   const calculated = calculateQuoteLine(item)
   const listAmount = Number(calculated.list_amount ?? 0)
-  const discountAmount = Number(calculated.discount_amount ?? 0)
-  const hasDiscount = discountAmount > 0 && listAmount > calculated.amount
   const period = periodNames[calculated.billing_period || "one_time"] || calculated.billing_period
   const brand = quoteBrand(item.project)
   const benefits = quoteBenefits(item, 3)
   const yearlyView = billingPreference === "yearly"
   const isFreeAnnualService = !!promo && promo.mode === "free" && yearlyView
   const showsAnnualDiscount = !!promo && promo.mode === "discount" && yearlyView
+  // Prezzo pieno da barrare (doppia sbarra) nella vista corrente. Combina i due
+  // risparmi possibili, cosi' il barrato compare sia in mensile sia in annuale:
+  //  - sconto manuale -> si parte dal listino prima dello sconto (listAmount)
+  //  - formula annuale su voci ricorrenti -> riferimento = canone mensile x 12,
+  //    che in vista annuale altrimenti non si vedrebbe (prezzo "liscio").
+  const meta = getCommercialMeta(item)
+  const qty = calculated.quantity || 1
+  const monthlyUnit = Number(meta.billing_options?.monthly?.unit_amount ?? 0)
+  const isRecurring = calculated.billing_period !== "one_time"
+  let strikeAmount = showsAnnualDiscount ? promo!.normalPrice : listAmount
+  if (!isFreeAnnualService && yearlyView && isRecurring && monthlyUnit > 0) {
+    const annualizedFull = Math.round(monthlyUnit * 12 * qty * 100) / 100
+    if (annualizedFull > strikeAmount) strikeAmount = annualizedFull
+  }
+  const showStrike = !isFreeAnnualService && strikeAmount > calculated.amount + 0.005
+  const strikeSaving = Math.round((strikeAmount - calculated.amount) * 100) / 100
+  const strikeSavingPct = strikeAmount > 0 ? Math.round((strikeSaving / strikeAmount) * 100) : 0
   const promoTitle = promo?.mode === "free" ? "In omaggio con la formula annuale" : `Scontato del ${promo?.pct}% con la formula annuale`
   const active = selected && parentSelected
 
@@ -119,11 +134,10 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, choice
           {item.name && item.description && item.description !== item.name ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{item.description}</p> : null}
         </div>
         <div className="shrink-0 rounded-xl border bg-muted/20 px-4 py-3 text-left sm:min-w-36 sm:text-right">
-          {isFreeAnnualService || showsAnnualDiscount ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(promo!.normalPrice, currency)}</div> : hasDiscount ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(listAmount, currency)}</div> : null}
+          {isFreeAnnualService ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(promo!.normalPrice, currency)}</div> : showStrike ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(strikeAmount, currency)}</div> : null}
           <div className={`text-2xl font-black ${isFreeAnnualService ? "text-emerald-700" : ""}`}>{isFreeAnnualService ? "OMAGGIO" : formatQuoteAmount(calculated.amount, currency)}</div>
           <div className="text-xs text-muted-foreground">{calculated.billing_period === "one_time" ? "una tantum" : `/${period}`}</div>
-          {hasDiscount ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(discountAmount, currency)}{item.discount?.type === "percentage" ? ` (${item.discount.value}%)` : ""}</div> : null}
-          {showsAnnualDiscount ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(promo!.saving, currency)} con l&apos;annuale</div> : null}
+          {showStrike ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(strikeSaving, currency)}{strikeSavingPct > 0 ? ` (${strikeSavingPct}%)` : ""}</div> : null}
           {promo && !yearlyView ? <div className="mt-1 text-xs font-bold text-emerald-700">Con l&apos;annuale: {promo.mode === "free" ? "OMAGGIO" : formatQuoteAmount(promo.annualPrice, currency)}</div> : null}
         </div>
       </div>
