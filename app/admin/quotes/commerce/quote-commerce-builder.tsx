@@ -250,7 +250,7 @@ export default function QuoteCommerceBuilder() {
   // cliente). Il vecchio "Totale configurato" faceva mensile + annuale + una
   // tantum in un unico numero privo di significato: e' l'errore segnalato.
   const recurringByPeriod = calculated.reduce<Record<string, number>>((acc, i) => {
-    if (!isQuoteLineSelected(i) || i.billing_period === "one_time") return acc
+    if (!isQuoteLineSelected(i) || !i.billing_period || i.billing_period === "one_time") return acc
     acc[i.billing_period] = (acc[i.billing_period] || 0) + i.amount
     return acc
   }, {})
