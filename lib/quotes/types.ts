@@ -168,14 +168,12 @@ export function isQuoteLineSelected(item: QuoteLineItem): boolean {
 }
 
 export function calculateQuoteLine(item: QuoteLineItem): QuoteLineItem {
-  // Setup e servizi una tantum sono tariffe FLAT: un solo intervento 4BID, che
-  // NON scala con la quantita' del modulo a cui si riferiscono. Esempio reale:
-  // una "Supporto alla configurazione" per un gruppo di 46 hotel deve restare
-  // il suo prezzo pieno, non 46 volte tanto. Senza questo vincolo la quantita'
-  // del modulo padre (n. camere/strutture/operatori) veniva ereditata dalla
-  // riga di servizio e il prezzo a front end usciva gonfiato (es. 100 -> 4600).
-  const isFlatOneTime = item.billing_period === "one_time" && (item.kind === "setup" || item.kind === "service")
-  const quantity = isFlatOneTime ? 1 : Math.max(1, Number(item.quantity) || 1)
+  // Ogni voce moltiplica per la quantita' impostata, incluse setup e servizi
+  // una tantum. NOTA: un setup agganciato in automatico a un modulo puo'
+  // ereditare la quantita' del modulo padre (n. camere/strutture/operatori) e
+  // quindi gonfiarsi; l'operatore deve impostare a mano la quantita' corretta
+  // (di norma 1) su quelle righe.
+  const quantity = Math.max(1, Number(item.quantity) || 1)
   const unitAmount = Number(item.unit_amount ?? item.list_amount ?? item.amount) || 0
   const listAmount = unitAmount * quantity
   let discountAmount = 0
