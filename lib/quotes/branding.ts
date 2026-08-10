@@ -52,6 +52,28 @@ export function quoteBrand(project?: string | null): QuoteBrand {
   return QUOTE_BRANDS[project || "custom"] || QUOTE_BRANDS.custom
 }
 
+export type QuoteBrandAccent = {
+  // Classi Tailwind STATICHE (letterali): necessarie perche' Tailwind non
+  // rileva classi costruite dinamicamente. Ogni software ha un colore proprio
+  // per riconoscere a colpo d'occhio a quale prodotto appartiene una voce.
+  border: string
+  chip: string
+  label: string
+}
+
+const QUOTE_BRAND_ACCENTS: Record<string, QuoteBrandAccent> = {
+  hotelaccelerator: { border: "border-blue-400 bg-blue-50/40", chip: "bg-blue-100 text-blue-800 border border-blue-200", label: "text-blue-700" },
+  santaddeo: { border: "border-amber-400 bg-amber-50/40", chip: "bg-amber-100 text-amber-800 border border-amber-200", label: "text-amber-700" },
+  hotelprofitai: { border: "border-emerald-400 bg-emerald-50/40", chip: "bg-emerald-100 text-emerald-800 border border-emerald-200", label: "text-emerald-700" },
+  manubot: { border: "border-violet-400 bg-violet-50/40", chip: "bg-violet-100 text-violet-800 border border-violet-200", label: "text-violet-700" },
+  consulting: { border: "border-slate-300 bg-slate-50/60", chip: "bg-slate-100 text-slate-700 border border-slate-200", label: "text-slate-600" },
+  custom: { border: "border-slate-300 bg-slate-50/60", chip: "bg-slate-100 text-slate-700 border border-slate-200", label: "text-slate-600" },
+}
+
+export function quoteBrandAccent(project?: string | null): QuoteBrandAccent {
+  return QUOTE_BRAND_ACCENTS[project || "custom"] || QUOTE_BRAND_ACCENTS.custom
+}
+
 export function quoteBenefits(item: Pick<QuoteLineItem, "features" | "project">, limit = 3): string[] {
   const features = (item.features || []).map(value => String(value).trim()).filter(Boolean)
   if (features.length) return features.slice(0, limit)
