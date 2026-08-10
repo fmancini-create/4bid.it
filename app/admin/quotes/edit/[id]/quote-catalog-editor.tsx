@@ -191,6 +191,18 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       if (line.kind === "setup" && line.billing_period === "one_time" && patch.unit_amount != null) {
         next = setCommercialMeta(next, { normal_price: Math.max(0, Number(patch.unit_amount) || 0) })
       }
+      // Le voci ricorrenti conservano il canone anche in `billing_options`, da cui
+      // la vista cliente deriva il prezzo col toggle mensile/annuale. Se qui si
+      // cambia prezzo o periodicita' senza aggiornare quella struttura, il
+      // cliente vedrebbe il vecchio valore (o 0). Riallineiamo l'opzione del
+      // periodo corrente al prezzo appena impostato.
+      if (next.billing_period !== "one_time" && (patch.unit_amount != null || patch.billing_period != null)) {
+        const period = next.billing_period
+        if (period === "monthly" || period === "yearly") {
+          const opts = getCommercialMeta(next).billing_options || {}
+          next = setCommercialMeta(next, { billing_options: { ...opts, [period]: { ...(opts[period] || {}), billing_period: period, unit_amount: Math.max(0, Number(next.unit_amount) || 0) } } })
+        }
+      }
       return calculateQuoteLine(next)
     }))
   }
