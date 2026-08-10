@@ -145,7 +145,22 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
   const lines = (quote?.line_items || []) as QuoteLineItem[]
   const requestedFields = (quote?.requested_fields || []) as QuoteRequestedField[]
   const calculated = useMemo(() => lines.map(calculateQuoteLine), [lines])
-  const total = useMemo(() => calculateQuoteTotal(lines), [lines])
+  // Totali RAGGRUPPATI PER PERIODO, come la vista cliente. Sommare una tantum,
+  // mensile e annuale in un unico numero (il vecchio `calculateQuoteTotal`)
+  // produce una cifra che sul front NON esiste (per XENA: 680 setup + 707,30 di
+  // UN mese = 1387,30). Qui si mostrano separati + "Totale primo anno" = una
+  // tantum + canoni x 12 mesi, identico al box "Il tuo investimento".
+  const periodTotals = useMemo(() => {
+    const g = { oneTime: 0, monthly: 0, quarterly: 0, yearly: 0 }
+    for (const item of calculated) {
+      if (!isQuoteLineSelected(item)) continue
+      if (item.billing_period === "monthly") g.monthly += item.amount
+      else if (item.billing_period === "quarterly") g.quarterly += item.amount
+      else if (item.billing_period === "yearly") g.yearly += item.amount
+      else g.oneTime += item.amount
+    }
+    return { ...g, firstYear: g.oneTime + g.monthly * 12 + g.quarterly * 4 + g.yearly }
+  }, [calculated])
   // Prodotti gia' presenti nel preventivo in modifica: servono a colorare di
   // verde le card di catalogo corrispondenti, come nel builder di creazione.
   const selectedCatalogIds = useMemo(() => new Set(lines.filter(l => l.source_product_id).map(l => catalogKey(l.project, l.kind, l.source_product_id))), [lines])
@@ -424,6 +439,14 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
 
     <GroupPricingReference configuredMonthlyTotal={configuredMonthlyTotal} suggestedReferenceMonthly={suggestedReferenceMonthly} />
 
-    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex items-center justify-between gap-4"><div><p className="text-sm text-muted-foreground">Totale attuale</p><p className="text-2xl font-bold">{formatQuoteAmount(total, quote.currency)}</p></div><Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
+    <section className="sticky bottom-4 border rounded-xl p-5 bg-background/95 backdrop-blur shadow-lg flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        {periodTotals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum (setup)</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.oneTime, quote.currency)}</p></div> : null}
+        {periodTotals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.monthly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /mese</span></p></div> : null}
+        {periodTotals.quarterly > 0 ? <div><p className="text-xs text-muted-foreground">Canone trimestrale</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.quarterly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /trim.</span></p></div> : null}
+        {periodTotals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.yearly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /anno</span></p></div> : null}
+        <div className="border-l pl-8"><p className="text-xs uppercase tracking-wide text-muted-foreground">Totale primo anno</p><p className="text-2xl font-black">{formatQuoteAmount(periodTotals.firstYear, quote.currency)}</p><p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi · {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}</p></div>
+      </div>
+      <Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
   </div>
 }
