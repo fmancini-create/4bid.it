@@ -50,6 +50,11 @@ export type CommercialMeta = {
   annual_setup_mode?: AnnualSetupMode
   annual_setup_discount_pct?: number
   included_credits?: IncludedCredits | null
+  // Sconto % applicato al PAGAMENTO ANTICIPATO (annuale) di un piano/modulo
+  // ricorrente. Da qui si deriva `billing_options.yearly.unit_amount`
+  // (= canone x 12 scontato). Serve anche a ricalcolare il prezzo annuale se poi
+  // cambia il canone mensile, evitando che resti un valore obsoleto.
+  annual_plan_discount_pct?: number
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -199,6 +204,40 @@ export function duplicateQuoteLineAt(items: QuoteLineItem[], index: number): { i
   const next = [...items]
   next.splice(index + 1, 0, copy, ...copiedChildren)
   return { items: next, copied: 1 + copiedChildren.length }
+}
+
+/**
+ * Sincronizza l'opzione di PAGAMENTO ANTICIPATO (annuale) di un piano/modulo
+ * ricorrente a partire dallo sconto% (`annual_plan_discount_pct`) e dal canone
+ * mensile corrente (`unit_amount`). Scrive `billing_options.yearly.unit_amount`
+ * = canone x 12 scontato, cosi' la vista cliente puo' offrire la formula annuale.
+ *
+ * - Se lo sconto e' nullo/assente rimuove del tutto l'opzione annuale: un'opzione
+ *   annuale a prezzo 0 verrebbe ignorata da `applyBillingPreference` (bug del
+ *   "verde a 0€") e il selettore mostrerebbe una formula fantasma.
+ * - Si applica solo ai canoni mensili non-santaddeo (l'annuale santaddeo e'
+ *   sintetizzato ×12 altrove) e mai alle voci una tantum.
+ */
+export function syncAnnualPlanPrice(item: QuoteLineItem): QuoteLineItem {
+  if (item.billing_period !== "monthly") return item
+  const meta = getCommercialMeta(item)
+  const pct = Math.min(100, Math.max(0, Number(meta.annual_plan_discount_pct) || 0))
+  const monthly = Math.max(0, Number(item.unit_amount) || 0)
+  const options = { ...(meta.billing_options || {}) }
+  if (pct <= 0 || monthly <= 0) {
+    if (!options.yearly) return item
+    delete options.yearly
+    return setCommercialMeta(item, { billing_options: options })
+  }
+  const yearlyPrice = round2(monthly * 12 * (1 - pct / 100))
+  options.monthly = options.monthly || { billing_period: "monthly", unit_amount: 0, trial_days: item.trial_days }
+  options.yearly = {
+    billing_period: "yearly",
+    unit_amount: yearlyPrice,
+    stripe_price_id: meta.billing_options?.yearly?.stripe_price_id ?? null,
+    discount_pct: pct,
+  }
+  return setCommercialMeta(item, { billing_family: meta.billing_family || `manual:${item.id}`, billing_options: options })
 }
 
 export function annualSaving(monthly: number, yearly: number): { amount: number; pct: number } {

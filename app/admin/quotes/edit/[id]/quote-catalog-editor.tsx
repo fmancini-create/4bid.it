@@ -21,7 +21,7 @@ import {
     type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, type AnnualSetupMode, type BillingOption, type CommercialDependency, type IncludedCreditsRecharge } from "@/lib/quotes/commercial"
+import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, syncAnnualPlanPrice, type AnnualSetupMode, type BillingOption, type CommercialDependency, type IncludedCreditsRecharge } from "@/lib/quotes/commercial"
 import GroupPricingReference from "../../commerce/group-pricing-reference"
 import { QuantityInput } from "../../quantity-input"
 import { quoteBrandAccent } from "@/lib/quotes/branding"
@@ -219,6 +219,10 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           next = setCommercialMeta(next, { billing_options: { ...opts, [period]: { ...(opts[period] || {}), billing_period: period, unit_amount: Math.max(0, Number(next.unit_amount) || 0) } } })
         }
       }
+      // Se e' impostato uno sconto per pagamento anticipato, il prezzo annuale
+      // (canone x 12 scontato) va ricalcolato ogni volta che cambia il canone
+      // mensile, altrimenti resterebbe un valore obsoleto salvato in precedenza.
+      next = syncAnnualPlanPrice(next)
       return calculateQuoteLine(next)
     }))
   }
@@ -232,6 +236,20 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       free_on_annual: mode === "free",
     })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
+  }
+  // Sconto sul PAGAMENTO ANTICIPATO (annuale) di un piano/modulo ricorrente.
+  // Salva la percentuale in meta e lascia che `syncAnnualPlanPrice` derivi il
+  // prezzo annuale (canone x 12 scontato) in `billing_options.yearly`, da cui la
+  // vista cliente offre la formula "paga subito". enabled=false azzera lo sconto
+  // e rimuove l'opzione annuale (niente formula fantasma a 0€).
+  function patchAnnualPlan(index: number, patch: { enabled?: boolean; pct?: number }) {
+    const line = lines[index]
+    const meta = getCommercialMeta(line)
+    const pct = patch.enabled === false
+      ? 0
+      : Math.min(100, Math.max(0, Number(patch.pct ?? meta.annual_plan_discount_pct) || 0))
+    const withMeta = setCommercialMeta(line, { annual_plan_discount_pct: pct })
+    setLines(lines.map((row, i) => i === index ? calculateQuoteLine(syncAnnualPlanPrice(withMeta)) : row))
   }
   // Crediti inclusi (addon a consumo): allowance informativa, non tocca i totali.
   // enabled=false azzera il campo; altrimenti salva importo e tipo di ricarica.
@@ -408,6 +426,32 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         {isSantaddeo(item) ? <div className="space-y-3 rounded-lg border bg-primary/5 p-4"><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3"><div><Label>Tipo struttura</Label><Select value={String(conf.structure_type || "hotel")} onValueChange={v => patchSantaddeo(index, { structure_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["hotel","resort","bb","agriturismo","residence","casa_vacanze","campeggio"].map(v => <SelectItem key={v} value={v}>{v.replace(/_/g," ")}</SelectItem>)}</SelectContent></Select></div><div><Label>Tipo sistemazioni</Label><Select value={String(conf.accommodation_type || "camere")} onValueChange={v => patchSantaddeo(index, { accommodation_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ACCOMMODATIONS.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent></Select></div><div><Label>Stelle</Label><Select value={String(conf.star_rating || 3)} onValueChange={v => patchSantaddeo(index, { star_rating: Number(v) })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(v => <SelectItem key={v} value={String(v)}>{v}★</SelectItem>)}</SelectContent></Select></div><div><Label>Numero sistemazioni</Label><Input type="number" min="1" value={conf.accommodations || item.quantity || 1} onChange={e => patchSantaddeo(index, { accommodations: Number(e.target.value) })} /></div></div><div className="flex flex-wrap items-end justify-between gap-3 border-t border-primary/20 pt-3"><div><Label>Canone per sistemazione</Label><Input readOnly value={`${formatQuoteAmount(item.unit_amount || 0, quote.currency)} / mese`} /><p className="mt-1 text-xs text-muted-foreground">Calcolato da tipo struttura, sistemazioni e stelle</p></div><div className="text-right"><p className="text-xs text-muted-foreground">{`${item.quantity || conf.accommodations || 1} × ${formatQuoteAmount(item.unit_amount || 0, quote.currency)} / mese`}</p><p className="text-lg font-semibold text-foreground">{`${formatQuoteAmount(item.amount, quote.currency)} / mese`}</p></div></div></div> : <div className="grid sm:grid-cols-4 gap-3"><div><Label>Quantità</Label><QuantityInput value={item.quantity || 1} onCommit={n => patchLine(index, { quantity: n })} aria-label={`Quantità di ${item.name || "voce"}`} /></div><div><Label>Prezzo unitario</Label><Input type="number" min="0" step="0.01" value={item.unit_amount || 0} onChange={e => patchLine(index, { unit_amount: Number(e.target.value) })} /></div><div><Label>Periodicità</Label><Select value={item.billing_period || "one_time"} onValueChange={v => changeBilling(index, v as QuoteLineItem["billing_period"])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="one_time">Una tantum</SelectItem><SelectItem value="monthly">Mensile</SelectItem><SelectItem value="quarterly">Trimestrale</SelectItem><SelectItem value="yearly">Annuale</SelectItem></SelectContent></Select></div><div><Label>Totale voce</Label><Input readOnly value={formatQuoteAmount(item.amount, quote.currency)} /></div></div>}
         {!isSantaddeo(item) ? <div className="grid sm:grid-cols-3 gap-3"><div><Label>Tipo sconto</Label><Select value={item.discount?.type || "none"} onValueChange={v => patchLine(index, { discount: v === "none" ? null : { type: v as "percentage" | "fixed", value: item.discount?.value || 0 } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Nessuno</SelectItem><SelectItem value="percentage">Percentuale</SelectItem><SelectItem value="fixed">Importo fisso</SelectItem></SelectContent></Select></div><div><Label>Valore sconto</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.value || 0} onChange={e => patchLine(index, { discount: item.discount ? { ...item.discount, value: Number(e.target.value) } : null })} /></div><div><Label>Durata sconto (mesi)</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.duration_months || ""} onChange={e => patchLine(index, { discount: item.discount ? { ...item.discount, duration_months: e.target.value ? Number(e.target.value) : null } : null })} /></div></div> : null}
         {item.kind === "setup" && item.billing_period === "one_time" ? <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><div className="flex items-center justify-between gap-3"><div><strong>Agevolazione setup con piano annuale</strong><p className="text-xs text-muted-foreground">Scegli se il setup resta a prezzo pieno, viene scontato o azzerato quando il cliente seleziona la quota annuale.</p></div><Switch checked={setupAnnualMode !== "full"} onCheckedChange={enabled => patchSetupAnnualPolicy(index, enabled ? "free" : "full")} /></div>{setupAnnualMode !== "full" ? <div className="grid sm:grid-cols-2 gap-3"><div><Label>Trattamento con annuale</Label><Select value={setupAnnualMode} onValueChange={value => patchSetupAnnualPolicy(index, value as AnnualSetupMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="discount">Scontato</SelectItem><SelectItem value="free">Azzerato / omaggio</SelectItem></SelectContent></Select></div>{setupAnnualMode === "discount" ? <div><Label>Sconto setup %</Label><Input type="number" min="0" max="100" step="0.1" value={meta.annual_setup_discount_pct || 0} onChange={e => patchSetupAnnualPolicy(index, "discount", Number(e.target.value))} /></div> : <div className="flex items-end"><p className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Setup azzerato con formula annuale</p></div>}</div> : <p className="text-xs text-muted-foreground">Disattivato: il setup viene addebitato per intero anche con formula annuale.</p>}</div> : null}
+        {item.billing_period === "monthly" && !isSantaddeo(item) ? (() => {
+          // Sconto sul PAGAMENTO ANTICIPATO (annuale). Il canone mensile e' su
+          // item.unit_amount; il prezzo annuale = canone x 12 scontato e finisce
+          // in billing_options.yearly (derivato da syncAnnualPlanPrice). Lo stato
+          // "attivo" e' pct > 0: un'opzione annuale a 0 non e' un vero prezzo.
+          const pct = Math.min(100, Math.max(0, Number(meta.annual_plan_discount_pct) || 0))
+          const enabled = pct > 0
+          const monthly = Math.max(0, Number(item.unit_amount) || 0)
+          const annualFull = Math.round(monthly * 12 * 100) / 100
+          const annualPrice = Math.round(annualFull * (1 - pct / 100) * 100) / 100
+          const saving = Math.round((annualFull - annualPrice) * 100) / 100
+          return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <strong>Sconto per pagamento anticipato (annuale)</strong>
+                <p className="text-xs text-muted-foreground">Se il cliente sceglie di pagare subito l&apos;intero anno invece del canone mensile, applica uno sconto sul totale annuale ({formatQuoteAmount(annualFull, quote.currency)}).</p>
+              </div>
+              <Switch checked={enabled} onCheckedChange={on => patchAnnualPlan(index, { enabled: on, pct: on ? pct || 10 : 0 })} />
+            </div>
+            {enabled ? <div className="grid sm:grid-cols-3 gap-3">
+              <div><Label>Sconto pagamento anticipato %</Label><Input type="number" min="0" max="100" step="0.1" value={pct} onChange={e => patchAnnualPlan(index, { pct: Number(e.target.value) })} />{monthly <= 0 ? <p className="mt-1 text-xs text-amber-600">Imposta prima il canone mensile.</p> : null}</div>
+              <div><Label>Prezzo annuale scontato</Label><Input readOnly value={formatQuoteAmount(annualPrice, quote.currency)} /></div>
+              <div><Label>Risparmio cliente</Label><Input readOnly value={`${formatQuoteAmount(saving, quote.currency)} / anno`} /></div>
+            </div> : <p className="text-xs text-muted-foreground">Disattivato: il cliente vede solo il canone mensile, nessuna formula annuale.</p>}
+          </div>
+        })() : null}
         {item.project === "hotelprofitai" ? (() => {
           // Stato dello switch e dei campi dal meta GREZZO: `getIncludedCredits`
           // ritorna null con importo 0 (giusto per totali/provisioning), ma qui

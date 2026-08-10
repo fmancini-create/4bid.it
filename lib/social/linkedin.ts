@@ -6,6 +6,63 @@ interface LinkedInPostResult {
   error?: string
 }
 
+interface LinkedInRefreshResult {
+  success: boolean
+  accessToken?: string
+  expiresIn?: number // secondi
+  refreshToken?: string
+  error?: string
+}
+
+/**
+ * Rinnova l'access token LinkedIn usando il refresh_token.
+ * Funziona SOLO se l'app LinkedIn ha abilitato i "programmatic refresh tokens"
+ * e se il refresh_token e' stato salvato in fase di connessione. In caso
+ * contrario l'unica via e' riconnettere l'account manualmente (OAuth).
+ */
+export async function refreshLinkedInToken(refreshToken: string): Promise<LinkedInRefreshResult> {
+  try {
+    const clientId = process.env.LINKEDIN_CLIENT_ID
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET
+    if (!clientId || !clientSecret) {
+      return { success: false, error: "LINKEDIN_CLIENT_ID/SECRET mancanti" }
+    }
+
+    const response = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    })
+
+    const text = await response.text()
+    console.log("[v0] LinkedIn refresh status:", response.status)
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`
+      try {
+        const j = JSON.parse(text)
+        msg = j.error_description || j.error || msg
+      } catch {}
+      return { success: false, error: msg }
+    }
+
+    const data = JSON.parse(text)
+    return {
+      success: true,
+      accessToken: data.access_token,
+      expiresIn: data.expires_in,
+      // LinkedIn ruota anche il refresh_token: se ne arriva uno nuovo va salvato.
+      refreshToken: data.refresh_token || refreshToken,
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Errore sconosciuto" }
+  }
+}
+
 export async function publishToLinkedInOrganization(
   accessToken: string,
   organizationId: string,
