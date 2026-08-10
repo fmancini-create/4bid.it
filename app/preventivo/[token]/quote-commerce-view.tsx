@@ -337,19 +337,20 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
         const firstYear = totals.oneTime + totals.monthly * 12 + totals.yearly
         const mixed = totals.monthly > 0 && totals.yearly > 0
         // Costo per struttura/asset/utente: solo se il piano Corporate selezionato
-        // ha valorizzato i relativi limiti (totale gruppo). Ripartisce il totale
-        // primo anno sul numero di strutture, asset e utenti inclusi. Puramente
-        // informativo, per far percepire il costo unitario dell'offerta.
+        // ha valorizzato i relativi limiti (totale gruppo). Ripartisce SOLO il
+        // costo ricorrente annualizzato (canoni mensili x12 + canoni annuali),
+        // ESCLUSO il setup una tantum: mostra il costo unitario dell'abbonamento.
+        const recurringYearly = totals.monthly * 12 + totals.yearly
         const corporate = selectedItems.find(i => i.project === "manubot" && i.kind === "plan" && /corporate/i.test(i.name || ""))
         const corpMeta = corporate ? getCommercialMeta(corporate) : null
         const perUnit: Array<{ label: string; value: string }> = []
-        if (corpMeta && firstYear > 0) {
+        if (corpMeta && recurringYearly > 0) {
           const structures = Number(corporate!.quantity) || 0
           const assets = Number(corpMeta.corporate_max_assets) || 0
           const users = Number(corpMeta.corporate_max_users) || 0
-          if (structures > 0) perUnit.push({ label: "per struttura", value: formatQuoteAmount(firstYear / structures, currency) })
-          if (assets > 0) perUnit.push({ label: "per asset", value: formatQuoteAmount(firstYear / assets, currency) })
-          if (users > 0) perUnit.push({ label: "per utente", value: formatQuoteAmount(firstYear / users, currency) })
+          if (structures > 0) perUnit.push({ label: "per struttura", value: formatQuoteAmount(recurringYearly / structures, currency) })
+          if (assets > 0) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringYearly / assets, currency) })
+          if (users > 0) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringYearly / users, currency) })
         }
         return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -370,7 +371,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
             </div>
           </div>
           {perUnit.length ? <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
-            <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo primo anno ripartito</p>
+            <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo abbonamento annuo ripartito<span className="normal-case font-normal"> (solo canoni, escluso setup)</span></p>
             {perUnit.map(u => <div key={u.label}><p className="text-base font-bold">{u.value}</p><p className="text-[11px] text-muted-foreground">{u.label}</p></div>)}
           </div> : null}
         </section>
