@@ -75,6 +75,24 @@ interface SocialAccount {
   is_active: boolean
   created_at: string
   page_id?: string | null // Added page_id
+  token_expires_at?: string | null // scadenza token: usata per lo stato reale
+}
+
+type TokenStatus = "ok" | "expiring" | "expired"
+
+/**
+ * Stato REALE del token, non solo is_active. Prima la dashboard mostrava
+ * "attivo/verde" basandosi solo su is_active: un token scaduto (es. LinkedIn
+ * scaduto il 19/06) appariva collegato mentre la pubblicazione falliva. Qui
+ * si guarda token_expires_at: scaduto, in scadenza (<7 giorni) oppure ok.
+ */
+function tokenStatus(account?: SocialAccount): TokenStatus {
+  if (!account?.token_expires_at) return "ok" // scadenza ignota: non allarmare
+  const exp = new Date(account.token_expires_at).getTime()
+  const now = Date.now()
+  if (exp <= now) return "expired"
+  if (exp - now < 7 * 24 * 60 * 60 * 1000) return "expiring"
+  return "ok"
 }
 
 interface SocialPost {
@@ -675,6 +693,10 @@ export default function SocialMediaDashboard({
                 const Icon = platformIcons[platform as keyof typeof platformIcons]
                 const platformAccounts = accounts.filter((a) => a.platform === platform)
                 const isConnected = platformAccounts.some((a) => a.is_active)
+                const activeAccount = platformAccounts.find((a) => a.is_active)
+                const status = isConnected ? tokenStatus(activeAccount) : "ok"
+                const isExpired = isConnected && status === "expired"
+                const isExpiring = isConnected && status === "expiring"
                 const displayName =
                   platform === "linkedin" && isConnected
                     ? `${platformAccounts[0]?.account_name || platform} (Pagina)`
@@ -684,7 +706,13 @@ export default function SocialMediaDashboard({
                   <div
                     key={platform}
                     className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border ${
-                      isConnected ? "border-primary bg-primary/5" : "border-dashed"
+                      isExpired
+                        ? "border-red-400 bg-red-50"
+                        : isExpiring
+                          ? "border-amber-400 bg-amber-50"
+                          : isConnected
+                            ? "border-primary bg-primary/5"
+                            : "border-dashed"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -700,10 +728,15 @@ export default function SocialMediaDashboard({
                         <p className="text-[10px] sm:text-sm text-muted-foreground truncate max-w-[100px] sm:max-w-none">
                           {isConnected ? displayName : "Non collegato"}
                         </p>
+                        {isExpired ? (
+                          <p className="text-[10px] sm:text-xs font-semibold text-red-600">Token scaduto · riconnetti</p>
+                        ) : isExpiring ? (
+                          <p className="text-[10px] sm:text-xs font-semibold text-amber-600">In scadenza · riconnetti</p>
+                        ) : null}
                       </div>
                     </div>
                     <Button
-                      variant={isConnected ? "outline" : "default"}
+                      variant={isExpired ? "destructive" : isConnected ? "outline" : "default"}
                       size="sm"
                       onClick={() => {
                         if (platform === "facebook") {

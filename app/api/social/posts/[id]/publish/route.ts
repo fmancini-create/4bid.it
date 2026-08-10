@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
-import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
+import { publishToLinkedInWithFallback, refreshLinkedInToken } from "@/lib/social/linkedin"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -118,8 +118,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               errors.push("Instagram: pubblicazione in sviluppo")
             }
           } else if (platform === "linkedin") {
+            // Auto-rinnovo: il token LinkedIn dura ~60 giorni. Se e' scaduto (o
+            // scade entro 24h) e abbiamo un refresh_token, lo rinnoviamo e
+            // aggiorniamo il DB PRIMA di pubblicare, cosi' la pubblicazione non
+            // fallisce con EXPIRED_ACCESS_TOKEN. Senza refresh_token si procede
+            // col token attuale: se scaduto, l'errore chiedera' di riconnettere.
+            let linkedinToken = account.access_token
+            const expMs = account.token_expires_at ? new Date(account.token_expires_at).getTime() : 0
+            const expiringSoon = !expMs || expMs - Date.now() < 24 * 60 * 60 * 1000
+            if (expiringSoon && account.refresh_token) {
+              console.log("[v0] LinkedIn token scaduto/in scadenza: tentativo di refresh")
+              const refreshed = await refreshLinkedInToken(account.refresh_token)
+              if (refreshed.success && refreshed.accessToken) {
+                linkedinToken = refreshed.accessToken
+                await supabase
+                  .from("social_accounts")
+                  .update({
+                    access_token: refreshed.accessToken,
+                    refresh_token: refreshed.refreshToken || account.refresh_token,
+                    token_expires_at: new Date(Date.now() + (refreshed.expiresIn || 0) * 1000).toISOString(),
+                  })
+                  .eq("id", account.id)
+                console.log("[v0] LinkedIn token rinnovato con successo")
+              } else {
+                console.log("[v0] LinkedIn refresh fallito:", refreshed.error)
+              }
+            }
+
             const result = await publishToLinkedInWithFallback(
-              account.access_token,
+              linkedinToken,
               account.account_id, // Organization ID (110665381)
               account.page_id, // Person URN (salvato come page_id per LinkedIn)
               post.content,

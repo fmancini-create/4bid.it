@@ -56,8 +56,13 @@ export async function GET(request: NextRequest) {
     const tokenData = JSON.parse(tokenText)
     const accessToken = tokenData.access_token
     const expiresIn = tokenData.expires_in // in secondi
+    // LinkedIn restituisce il refresh_token SOLO se l'app ha abilitato i
+    // "programmatic refresh tokens". Se presente lo salviamo: consente
+    // l'auto-rinnovo prima della pubblicazione, evitando che ogni ~60 giorni
+    // la pubblicazione si blocchi con EXPIRED_ACCESS_TOKEN.
+    const refreshToken = tokenData.refresh_token || null
 
-    console.log("[v0] LinkedIn OAuth: got access token, expires in:", expiresIn)
+    console.log("[v0] LinkedIn OAuth: got access token, expires in:", expiresIn, "| refresh_token:", refreshToken ? "present" : "ABSENT (app senza refresh abilitato)")
 
     // Nome fisso della pagina (niente chiamata /userinfo perche' non abbiamo lo scope OpenID)
     const userName = "4BID"
@@ -76,6 +81,7 @@ export async function GET(request: NextRequest) {
       account_id: LINKEDIN_ORGANIZATION_ID,
       page_id: LINKEDIN_ORGANIZATION_ID,
       access_token: accessToken,
+      refresh_token: refreshToken,
       token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
       is_active: true,
     })
