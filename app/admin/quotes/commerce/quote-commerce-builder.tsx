@@ -273,17 +273,31 @@ export default function QuoteCommerceBuilder() {
   // gonfiava il per-struttura (es. 63,40) e lo confrontava con un piano diverso.
   const basePlans = calculated.filter(i => isQuoteLineSelected(i) && i.kind === "plan" && i.billing_period && i.billing_period !== "one_time")
   const configuredMonthlyTotal = basePlans.reduce((s, i) => s + toMonthly(i.amount, i.billing_period as "monthly" | "quarterly" | "yearly"), 0)
-  // Riferimento "singola struttura" = LISTINO PIENO del piano base per struttura
-  // (unit_amount, prima dello sconto di riga), normalizzato al mese. Cosi' il
-  // per-struttura configurato (scontato) si confronta col listino pieno dello
-  // STESSO piano. Editabile nel pannello. Se piu' piani base, si sommano.
-  const suggestedReferenceMonthly = Math.round(
-    basePlans.reduce((s, i) => {
-      const qty = Number(i.quantity) || 1
-      const listPerStructure = (Number(i.list_amount) || Number(i.unit_amount) * qty) / qty
-      return s + toMonthly(listPerStructure, i.billing_period as "monthly" | "quarterly" | "yearly")
-    }, 0) * 100,
-  ) / 100
+  // Riferimento "singola struttura": NON il Corporate (quello e' cio' che stiamo
+  // quotando), ma il piano IMMEDIATAMENTE SOTTO con le stesse funzioni — il
+  // Business — spalmato sulle strutture che copre. Business costa 199 €/mese e
+  // include `max_companies` strutture (oggi 3) -> 199/3 = 66,33 €/struttura. Cosi'
+  // il per-struttura del gruppo si confronta con "quanto costerebbe stando sul
+  // miglior piano a listino". Preso dinamicamente dal catalogo (prezzo e limite),
+  // niente hardcode. Editabile nel pannello.
+  const suggestedReferenceMonthly = (() => {
+    const refProject = basePlans[0]?.project ?? "manubot"
+    let best: { monthly: number; maxCompanies: number } | null = null
+    for (const group of catalog) for (const it of group.items || []) {
+      if (it.project !== refProject || it.kind !== "plan") continue
+      // Escludi il Corporate (prezzo custom 0) e le voci senza prezzo.
+      if (/corporate/i.test(it.name || "") || !(it.unit_amount > 0)) continue
+      const monthly = toMonthly(it.unit_amount, it.billing_period as "monthly" | "quarterly" | "yearly")
+      if (monthly <= 0) continue
+      const cfg = (it.configuration_schema || {}) as Record<string, unknown>
+      const raw = (it.raw_snapshot || {}) as Record<string, unknown>
+      const maxCompanies = Math.max(1, Number(cfg.max_companies ?? raw.max_companies) || 1)
+      // "subito sotto Corporate" = il piano a listino piu' alto: prendi il max.
+      if (!best || monthly > best.monthly) best = { monthly, maxCompanies }
+    }
+    if (!best) return 0
+    return Math.round((best.monthly / best.maxCompanies) * 100) / 100
+  })()
 
   function patchItem(index: number, patch: Partial<QuoteLineItem>) {
     setItems(current => current.map((item, i) => {
