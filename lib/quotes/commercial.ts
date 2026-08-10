@@ -55,6 +55,12 @@ export type CommercialMeta = {
   // (= canone x 12 scontato). Serve anche a ricalcolare il prezzo annuale se poi
   // cambia il canone mensile, evitando che resti un valore obsoleto.
   annual_plan_discount_pct?: number
+  // Limiti inclusi nel piano Corporate (Manubot), riferiti all'INTERO GRUPPO:
+  // numero massimo di asset (es. camere/oggetti gestiti) e di utenti compresi.
+  // Solo informativi in vista cliente ("Asset inclusi / Utenti inclusi"), non
+  // entrano nei totali. Vuoti/0 = non mostrati.
+  corporate_max_assets?: number
+  corporate_max_users?: number
 }
 
 function asObject(value: unknown): Record<string, unknown> {
