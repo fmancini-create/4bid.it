@@ -116,11 +116,19 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
   // l'override vale solo quando l'opzione ha un importo positivo; altrimenti si
   // tiene il prezzo della riga.
   if (option && Number(option.unit_amount) > 0 && item.billing_period !== "one_time") {
+    // Lo sconto di riga (`discount`, es. -20% per 12 mesi) e' la promo del CANONE
+    // MENSILE. Il prezzo dell'opzione ANNUALE ha gia' il proprio sconto
+    // incorporato (`discount_pct`, es. 30% -> 65x12x0,70=546): riapplicare qui il
+    // 20% mensile produrrebbe un DOPPIO sconto (546 -> 436,80). Quindi, quando si
+    // passa all'annuale e l'opzione porta un suo sconto, si azzera lo sconto di
+    // riga. Se l'annuale e' solo canone x 12 senza sconto proprio, la promo resta.
+    const annualHasOwnDiscount = preference === "yearly" && Number(option.discount_pct) > 0
     next = {
       ...next,
       billing_period: option.billing_period,
       unit_amount: Math.max(0, Number(option.unit_amount) || 0),
       trial_days: option.trial_days ?? item.trial_days,
+      discount: annualHasOwnDiscount ? undefined : item.discount,
       catalog_snapshot: {
         ...(item.catalog_snapshot || {}),
         accepted_billing_preference: preference,
