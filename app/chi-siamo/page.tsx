@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
 import { EntityLinks } from "@/components/entity-links"
 import { entitySchemaLinks } from "@/lib/seo/entities"
+import { LandingVideos } from "@/components/video/landing-videos"
 
 export const metadata = {
   title: "Chi siamo - 4BID, Revenue Management e Tecnologia per l'Hospitality | 4BID.IT",
@@ -284,6 +285,13 @@ export default function ChiSiamoPage() {
           </div>
         </div>
       </section>
+
+      {/* Testimonianze video dei clienti */}
+      <LandingVideos
+        tags={["testimonianze"]}
+        title="Le testimonianze dei nostri clienti"
+        subtitle="Le voci di chi ha scelto 4BID per la propria struttura."
+      />
 
       {/* FAQ */}
       <section className="py-20 bg-muted/30">

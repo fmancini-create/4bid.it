@@ -9,6 +9,7 @@ import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
 import { ContactButton } from "@/components/contact-button"
+import { LandingVideos } from "@/components/video/landing-videos"
 
 export const metadata: Metadata = {
   title: "Consulenza Revenue Management Hotel: Aumenta Ricavi +30% | 4BID.IT",
@@ -285,6 +286,13 @@ export default function ConsulenzaRevenueManagementPage() {
           </div>
         </div>
       </section>
+
+      {/* Testimonianze video dei clienti */}
+      <LandingVideos
+        tags={["testimonianze"]}
+        title="Le testimonianze dei nostri clienti"
+        subtitle="Chi ha lavorato con 4BID racconta i risultati ottenuti."
+      />
 
       {/* Pricing Model */}
       <section className="py-20">
