@@ -223,7 +223,10 @@ export async function proxy(request: NextRequest) {
       //    addition to www.google-analytics.com. Measured on every page load:
       //    2 blocked requests per navigation.
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.google.com https://region1.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
-      "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://calendar.google.com",
+      // youtube-nocookie.com e' il dominio "privacy-enhanced" usato dalla facade
+      // dei video (Video guide): senza di esso Chrome blocca l'iframe al click
+      // mostrando "Questi contenuti sono bloccati".
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://calendar.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
