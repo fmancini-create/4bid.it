@@ -348,9 +348,11 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
           const structures = Number(corporate!.quantity) || 0
           const assets = Number(corpMeta.corporate_max_assets) || 0
           const users = Number(corpMeta.corporate_max_users) || 0
-          if (structures > 0) perUnit.push({ label: "per struttura", value: formatQuoteAmount(recurringYearly / structures, currency) })
-          if (assets > 0) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringYearly / assets, currency) })
-          if (users > 0) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringYearly / users, currency) })
+          // Ogni voce e' mostrata solo se il relativo selettore e' attivo (default
+          // attivo se mai impostato) E il valore ha senso (>0).
+          if (structures > 0 && corpMeta.corporate_show_per_structure !== false) perUnit.push({ label: "per struttura", value: formatQuoteAmount(recurringYearly / structures, currency) })
+          if (assets > 0 && corpMeta.corporate_show_per_asset !== false) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringYearly / assets, currency) })
+          if (users > 0 && corpMeta.corporate_show_per_user !== false) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringYearly / users, currency) })
         }
         return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

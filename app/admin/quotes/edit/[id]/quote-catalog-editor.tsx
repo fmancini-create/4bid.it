@@ -459,6 +459,10 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           // cliente accanto al numero di strutture (quantity). Vuoti = nascosti.
           const maxAssets = Number(meta.corporate_max_assets) || 0
           const maxUsers = Number(meta.corporate_max_users) || 0
+          // Default retrocompatibile: se il flag non e' mai stato impostato, mostra.
+          const showStructure = meta.corporate_show_per_structure !== false
+          const showAsset = meta.corporate_show_per_asset !== false
+          const showUser = meta.corporate_show_per_user !== false
           return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
             <div>
               <strong>Limiti inclusi nel piano Corporate (totale gruppo)</strong>
@@ -467,6 +471,12 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
             <div className="grid sm:grid-cols-2 gap-3">
               <div><Label>Asset inclusi (max, gruppo)</Label><Input type="number" min="0" value={maxAssets || ""} placeholder="es. 1600" onChange={e => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_max_assets: Number(e.target.value) || 0 }) : row))} /></div>
               <div><Label>Utenti inclusi (max, gruppo)</Label><Input type="number" min="0" value={maxUsers || ""} placeholder="es. 60" onChange={e => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_max_users: Number(e.target.value) || 0 }) : row))} /></div>
+            </div>
+            <div className="space-y-2 border-t border-primary/20 pt-3">
+              <p className="text-xs font-medium text-muted-foreground">Mostra nel riepilogo cliente il costo abbonamento annuo ripartito:</p>
+              <div className="flex items-center justify-between gap-3"><Label className="font-normal">Prezzo per struttura</Label><Switch checked={showStructure} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_structure: v }) : row))} /></div>
+              <div className="flex items-center justify-between gap-3"><Label className="font-normal">Prezzo per asset {maxAssets <= 0 ? <span className="text-muted-foreground">(imposta prima gli asset)</span> : null}</Label><Switch checked={showAsset} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_asset: v }) : row))} /></div>
+              <div className="flex items-center justify-between gap-3"><Label className="font-normal">Prezzo per utente {maxUsers <= 0 ? <span className="text-muted-foreground">(imposta prima gli utenti)</span> : null}</Label><Switch checked={showUser} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_user: v }) : row))} /></div>
             </div>
           </div>
         })() : null}

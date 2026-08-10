@@ -10,6 +10,7 @@ import Contact from "@/components/contact"
 import { Footer } from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
+import { LatestVideos } from "@/components/latest-videos"
 
 export const metadata: Metadata = {
   title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
@@ -63,6 +64,7 @@ export default function Home() {
       <Portfolio />
       <ProjectsSection />
       <AppsSection />
+      <LatestVideos limit={3} />
       <About />
       <Contact />
       <Footer />

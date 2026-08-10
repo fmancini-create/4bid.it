@@ -185,10 +185,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/parlano-di-noi`,
+      "url": `${baseUrl}/parlano-di-noi`,
       lastModified,
       changeFrequency: "daily" as const,
       priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/video-guide`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/privacy`,
