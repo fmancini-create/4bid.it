@@ -134,9 +134,13 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, choice
           {item.name && item.description && item.description !== item.name ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{item.description}</p> : null}
         </div>
         <div className="shrink-0 rounded-xl border bg-muted/20 px-4 py-3 text-left sm:min-w-36 sm:text-right">
-          {isFreeAnnualService ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(promo!.normalPrice, currency)}</div> : showStrike ? <div className="text-sm text-muted-foreground line-through">{formatQuoteAmount(strikeAmount, currency)}</div> : null}
-          <div className={`text-2xl font-black ${isFreeAnnualService ? "text-emerald-700" : ""}`}>{isFreeAnnualService ? "OMAGGIO" : formatQuoteAmount(calculated.amount, currency)}</div>
+          {/* Prezzo NUOVO evidenziato: verde quando c'e' un risparmio (sconto
+              manuale in mensile, oppure formula annuale). */}
+          <div className={`text-2xl font-black ${isFreeAnnualService || showStrike ? "text-emerald-700" : ""}`}>{isFreeAnnualService ? "OMAGGIO" : formatQuoteAmount(calculated.amount, currency)}</div>
           <div className="text-xs text-muted-foreground">{calculated.billing_period === "one_time" ? "una tantum" : `/${period}`}</div>
+          {/* Riferimento BARRATO sotto il nuovo prezzo. In vista annuale il
+              riferimento e' il costo annualizzato pagando mese per mese. */}
+          {isFreeAnnualService ? <div className="mt-1 text-sm text-muted-foreground line-through">{formatQuoteAmount(promo!.normalPrice, currency)}</div> : showStrike ? <div className="mt-1 text-sm text-muted-foreground line-through">{formatQuoteAmount(strikeAmount, currency)}{yearlyView && isRecurring ? <span className="ml-1 text-[11px] no-underline">a rate mensili</span> : null}</div> : null}
           {showStrike ? <div className="mt-1 text-xs font-bold text-emerald-700">Risparmi {formatQuoteAmount(strikeSaving, currency)}{strikeSavingPct > 0 ? ` (${strikeSavingPct}%)` : ""}</div> : null}
           {promo && !yearlyView ? <div className="mt-1 text-xs font-bold text-emerald-700">Con l&apos;annuale: {promo.mode === "free" ? "OMAGGIO" : formatQuoteAmount(promo.annualPrice, currency)}</div> : null}
         </div>
