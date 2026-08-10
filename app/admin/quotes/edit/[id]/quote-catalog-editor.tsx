@@ -440,8 +440,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <strong>Sconto per pagamento anticipato (annuale)</strong>
-                <p className="text-xs text-muted-foreground">Se il cliente sceglie di pagare subito l&apos;intero anno invece del canone mensile, applica uno sconto sul totale annuale ({formatQuoteAmount(annualFull, quote.currency)}).</p>
+                <strong>Agevolazione canone con piano annuale</strong>
+                <p className="text-xs text-muted-foreground">Sconto applicato quando il cliente sceglie di pagare subito l&apos;intero anno invece del canone mensile (base annuale {formatQuoteAmount(annualFull, quote.currency)} = canone × 12 mesi).</p>
               </div>
               <Switch checked={enabled} onCheckedChange={on => patchAnnualPlan(index, { enabled: on, pct: on ? pct || 10 : 0 })} />
             </div>
