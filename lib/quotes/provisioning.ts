@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { isQuoteLineSelected, type QuoteLineItem, type QuoteProject, type SalesChannelQuote } from "./types"
-import { getIncludedCredits } from "./commercial"
+import { getIncludedCredits, getCommercialMeta } from "./commercial"
 
 const SAAS_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 type SaasProject = (typeof SAAS_PROJECTS)[number]
@@ -31,6 +31,32 @@ function groupItems(items: QuoteLineItem[]) {
 
 function createProvisioningToken() {
   return randomBytes(32).toString("base64url")
+}
+
+/**
+ * Contratto ESPLICITO dei limiti che il SaaS deve APPLICARE (non solo mostrare).
+ * I limiti vivono in `configuration.commercial` della riga (fragile da leggere
+ * lato ricevitore): qui li normalizziamo in un blocco `entitlements` cosi' il
+ * SaaS legge un contratto stabile invece di scavare nel meta. Oggi valorizzato
+ * per Manubot (piano Corporate, limiti riferiti all'INTERO GRUPPO). `null` = il
+ * commerciale non ha impostato un tetto -> il SaaS decide la sua policy di
+ * default, ma il campo esiste sempre per non dover indovinare.
+ */
+function buildEntitlements(project: SaasProject, items: QuoteLineItem[]): Record<string, unknown> | undefined {
+  if (project !== "manubot") return undefined
+  const corporate = items.find((it) => it.kind === "plan" && /corporate/i.test(it.name || ""))
+  if (!corporate) return undefined
+  const meta = getCommercialMeta(corporate)
+  const maxAssets = Number(meta.corporate_max_assets) || 0
+  const maxUsers = Number(meta.corporate_max_users) || 0
+  return {
+    plan: "corporate",
+    scope: "group", // i limiti sono complessivi per l'intero gruppo, non per struttura
+    structures: Number(corporate.quantity) || 1,
+    max_assets: maxAssets > 0 ? maxAssets : null,
+    max_users: maxUsers > 0 ? maxUsers : null,
+    enforcement: "hard", // il SaaS deve BLOCCARE la creazione oltre il tetto, non solo avvisare
+  }
 }
 
 export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
@@ -66,6 +92,7 @@ export async function enqueueQuoteProvisioning(quote: SalesChannelQuote) {
         stripe_session_id: quote.stripe_session_id,
         currency: quote.currency,
       },
+      entitlements: buildEntitlements(project, items),
       items,
     },
   }))
@@ -216,6 +243,7 @@ export async function provisionQuoteRenewal(quote: SalesChannelQuote, cycleId: s
         stripe_session_id: quote.stripe_session_id,
         currency: quote.currency,
       },
+      entitlements: buildEntitlements(project, items),
       items,
     },
   }))
