@@ -61,6 +61,13 @@ export type CommercialMeta = {
   // entrano nei totali. Vuoti/0 = non mostrati.
   corporate_max_assets?: number
   corporate_max_users?: number
+  // Interruttori per la vista cliente: mostrare o no il costo ripartito
+  // "per struttura / per asset / per utente" nel riepilogo. `undefined` = mostrato
+  // (default retrocompatibile). Il valore per asset/utente compare comunque solo
+  // se il relativo limite e' valorizzato (>0).
+  corporate_show_per_structure?: boolean
+  corporate_show_per_asset?: boolean
+  corporate_show_per_user?: boolean
 }
 
 function asObject(value: unknown): Record<string, unknown> {
