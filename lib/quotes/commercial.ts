@@ -55,6 +55,12 @@ export type CommercialMeta = {
   // (= canone x 12 scontato). Serve anche a ricalcolare il prezzo annuale se poi
   // cambia il canone mensile, evitando che resti un valore obsoleto.
   annual_plan_discount_pct?: number
+  // Limiti inclusi nel piano Corporate (Manubot), riferiti all'INTERO GRUPPO:
+  // numero massimo di asset (es. camere/oggetti gestiti) e di utenti compresi.
+  // Solo informativi in vista cliente ("Asset inclusi / Utenti inclusi"), non
+  // entrano nei totali. Vuoti/0 = non mostrati.
+  corporate_max_assets?: number
+  corporate_max_users?: number
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -116,11 +122,21 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
   // l'override vale solo quando l'opzione ha un importo positivo; altrimenti si
   // tiene il prezzo della riga.
   if (option && Number(option.unit_amount) > 0 && item.billing_period !== "one_time") {
+    // Lo sconto di riga (`discount`, es. -20%/-10% per 12 mesi) e' la promo del
+    // CANONE MENSILE. Le due formule (mensile scontato vs annuale) sono
+    // ALTERNATIVE, non cumulabili: sul piano ANNUALE la promo mensile NON si
+    // applica mai. Che il prezzo annuale abbia uno sconto proprio incorporato
+    // (Corporate 546 = 65x12x0,70) o sia la tariffa annuale di catalogo
+    // (SuperGovernante 100, Housekeeping 30), riapplicare qui la promo mensile
+    // darebbe un DOPPIO sconto. Quindi passando all'annuale si azzera lo sconto
+    // di riga; sul mensile resta invariato.
+    const dropMonthlyPromo = preference === "yearly"
     next = {
       ...next,
       billing_period: option.billing_period,
       unit_amount: Math.max(0, Number(option.unit_amount) || 0),
       trial_days: option.trial_days ?? item.trial_days,
+      discount: dropMonthlyPromo ? undefined : item.discount,
       catalog_snapshot: {
         ...(item.catalog_snapshot || {}),
         accepted_billing_preference: preference,
@@ -137,12 +153,17 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
     const hasNormal = Number.isFinite(rawNormal) && rawNormal > 0
     const normalPrice = Math.max(0, (hasNormal ? rawNormal : Number(item.unit_amount ?? item.amount ?? 0)) || 0)
     const mode = resolveAnnualSetupMode(meta)
+    // Anche per il setup l'agevolazione annuale (gratis o -60%) e' ALTERNATIVA
+    // allo sconto di riga del setup (-20%), non cumulabile: sul piano annuale
+    // l'agevolazione si calcola sul prezzo pieno (`normalPrice`) e lo sconto di
+    // riga viene azzerato, altrimenti si sommerebbe (250 -60% = 100, poi -20% =
+    // 80 -> net -68%, sbagliato). Sul mensile lo sconto di riga resta invariato.
     if (preference === "yearly" && mode === "free") {
-      next = { ...next, unit_amount: 0, list_amount: normalPrice, amount: 0 }
+      next = { ...next, unit_amount: 0, list_amount: normalPrice, amount: 0, discount: undefined }
     } else if (preference === "yearly" && mode === "discount") {
       const pct = Math.min(100, Math.max(0, Number(meta.annual_setup_discount_pct) || 0))
       const discounted = Math.round(normalPrice * (1 - pct / 100) * 100) / 100
-      next = { ...next, unit_amount: discounted, list_amount: normalPrice, amount: discounted }
+      next = { ...next, unit_amount: discounted, list_amount: normalPrice, amount: discounted, discount: undefined }
     } else {
       next = { ...next, unit_amount: normalPrice }
     }

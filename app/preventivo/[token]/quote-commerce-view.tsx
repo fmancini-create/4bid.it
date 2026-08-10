@@ -143,6 +143,17 @@ function LineItemCard({ item, currency, selected, locked, parentSelected, choice
       </div>
 
       {(calculated.quantity || 1) > 1 ? <p className="text-xs text-muted-foreground">Quantità: <strong className="text-foreground">{calculated.quantity}</strong>{calculated.unit_amount != null ? ` × ${formatQuoteAmount(calculated.unit_amount, currency)}` : ""}</p> : null}
+      {(() => {
+        // Limiti Corporate (totale gruppo): mostrati solo se valorizzati (>0).
+        const maxAssets = Number(meta.corporate_max_assets) || 0
+        const maxUsers = Number(meta.corporate_max_users) || 0
+        if (maxAssets <= 0 && maxUsers <= 0) return null
+        return <p className="text-xs text-muted-foreground">
+          {maxAssets > 0 ? <>Asset inclusi: <strong className="text-foreground">{maxAssets.toLocaleString("it-IT")}</strong></> : null}
+          {maxAssets > 0 && maxUsers > 0 ? " · " : null}
+          {maxUsers > 0 ? <>Utenti inclusi: <strong className="text-foreground">{maxUsers.toLocaleString("it-IT")}</strong></> : null}
+        </p>
+      })()}
 
       {promo && !yearlyView && !locked ? <div className="flex flex-col gap-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">

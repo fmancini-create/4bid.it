@@ -440,8 +440,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <strong>Sconto per pagamento anticipato (annuale)</strong>
-                <p className="text-xs text-muted-foreground">Se il cliente sceglie di pagare subito l&apos;intero anno invece del canone mensile, applica uno sconto sul totale annuale ({formatQuoteAmount(annualFull, quote.currency)}).</p>
+                <strong>Agevolazione canone con piano annuale</strong>
+                <p className="text-xs text-muted-foreground">Sconto applicato quando il cliente sceglie di pagare subito l&apos;intero anno invece del canone mensile (base annuale {formatQuoteAmount(annualFull, quote.currency)} = canone × 12 mesi).</p>
               </div>
               <Switch checked={enabled} onCheckedChange={on => patchAnnualPlan(index, { enabled: on, pct: on ? pct || 10 : 0 })} />
             </div>
@@ -450,6 +450,24 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
               <div><Label>Prezzo annuale scontato</Label><Input readOnly value={formatQuoteAmount(annualPrice, quote.currency)} /></div>
               <div><Label>Risparmio cliente</Label><Input readOnly value={`${formatQuoteAmount(saving, quote.currency)} / anno`} /></div>
             </div> : <p className="text-xs text-muted-foreground">Disattivato: il cliente vede solo il canone mensile, nessuna formula annuale.</p>}
+          </div>
+        })() : null}
+        {item.project === "manubot" && item.kind === "plan" && /corporate/i.test(item.name || "") ? (() => {
+          // Limiti inclusi nel piano Corporate, riferiti all'INTERO GRUPPO:
+          // asset max (es. camere/oggetti) e utenti max. Solo informativi: non
+          // toccano i totali. Salvati in commercial_meta e mostrati in vista
+          // cliente accanto al numero di strutture (quantity). Vuoti = nascosti.
+          const maxAssets = Number(meta.corporate_max_assets) || 0
+          const maxUsers = Number(meta.corporate_max_users) || 0
+          return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div>
+              <strong>Limiti inclusi nel piano Corporate (totale gruppo)</strong>
+              <p className="text-xs text-muted-foreground">Numero massimo di asset e utenti compresi nel piano per l&apos;intero gruppo ({item.quantity || 1} strutture). Mostrati al cliente sotto la quantità; lascia 0 per non mostrarli.</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div><Label>Asset inclusi (max, gruppo)</Label><Input type="number" min="0" value={maxAssets || ""} placeholder="es. 1600" onChange={e => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_max_assets: Number(e.target.value) || 0 }) : row))} /></div>
+              <div><Label>Utenti inclusi (max, gruppo)</Label><Input type="number" min="0" value={maxUsers || ""} placeholder="es. 60" onChange={e => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_max_users: Number(e.target.value) || 0 }) : row))} /></div>
+            </div>
           </div>
         })() : null}
         {item.project === "hotelprofitai" ? (() => {
