@@ -115,7 +115,7 @@ export default function GroupPricingReference({ configuredMonthlyTotal, suggeste
         <div className="space-y-1.5">
           <Label>Canone mensile di riferimento / struttura</Label>
           <Input type="number" min="0" step="0.01" value={reference || ""} onChange={e => { setReferenceTouched(true); setReference(Math.max(0, Number(e.target.value) || 0)) }} placeholder="listino singola struttura" />
-          <p className="text-xs text-muted-foreground">{referenceTouched ? "Valore personalizzato." : "Precompilato dal piano piu' economico a catalogo."} Il "miglior piano precedente".</p>
+          <p className="text-xs text-muted-foreground">{referenceTouched ? "Valore personalizzato." : "Precompilato dal listino pieno del piano base per struttura."} Il listino della singola struttura, prima dello sconto volume.</p>
         </div>
         <div className="space-y-1.5">
           <Label>Sconto volume applicato %</Label>

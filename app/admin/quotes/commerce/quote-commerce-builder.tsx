@@ -33,6 +33,7 @@ import {
   type IncludedCreditsRecharge,
 } from "@/lib/quotes/commercial"
 import GroupPricingReference from "./group-pricing-reference"
+import { toMonthly } from "@/lib/quotes/group-pricing"
 import { QuantityInput } from "../quantity-input"
 
 type CatalogItem = {
@@ -265,23 +266,24 @@ export default function QuoteCommerceBuilder() {
     + (recurringByPeriod.quarterly || 0) * 4
     + (recurringByPeriod.yearly || 0)
 
-  // Totale ricorrente configurato normalizzato AL MESE: il riferimento gruppo
-  // confronta canoni omogenei, indipendentemente dalla cadenza delle voci.
-  const configuredMonthlyTotal = (recurringByPeriod.monthly || 0)
-    + (recurringByPeriod.quarterly || 0) / 3
-    + (recurringByPeriod.yearly || 0) / 12
-  // Riferimento "singola struttura" precompilato: il piano ricorrente piu'
-  // economico a catalogo, normalizzato al mese. E' un suggerimento, l'operatore
-  // puo' sovrascriverlo nel pannello.
-  const suggestedReferenceMonthly = useMemo(() => {
-    let min = 0
-    for (const group of catalog) for (const it of group.items || []) {
-      if (it.kind !== "plan" || !(it.unit_amount > 0)) continue
-      const monthly = it.billing_period === "yearly" ? it.unit_amount / 12 : it.billing_period === "quarterly" ? it.unit_amount / 3 : it.billing_period === "monthly" ? it.unit_amount : 0
-      if (monthly > 0 && (min === 0 || monthly < min)) min = monthly
-    }
-    return Math.round(min * 100) / 100
-  }, [catalog])
+  // Riferimento gruppo: confronto OMOGENEO piano-vs-piano. Al numeratore entra
+  // SOLO il piano base (kind === "plan") con lo sconto applicato; i moduli
+  // (SuperGovernante, Housekeeping, ecc.) NON fanno parte del confronto perche'
+  // non hanno un "listino singola struttura" corrispondente. Sommare tutto
+  // gonfiava il per-struttura (es. 63,40) e lo confrontava con un piano diverso.
+  const basePlans = calculated.filter(i => isQuoteLineSelected(i) && i.kind === "plan" && i.billing_period && i.billing_period !== "one_time")
+  const configuredMonthlyTotal = basePlans.reduce((s, i) => s + toMonthly(i.amount, i.billing_period as "monthly" | "quarterly" | "yearly"), 0)
+  // Riferimento "singola struttura" = LISTINO PIENO del piano base per struttura
+  // (unit_amount, prima dello sconto di riga), normalizzato al mese. Cosi' il
+  // per-struttura configurato (scontato) si confronta col listino pieno dello
+  // STESSO piano. Editabile nel pannello. Se piu' piani base, si sommano.
+  const suggestedReferenceMonthly = Math.round(
+    basePlans.reduce((s, i) => {
+      const qty = Number(i.quantity) || 1
+      const listPerStructure = (Number(i.list_amount) || Number(i.unit_amount) * qty) / qty
+      return s + toMonthly(listPerStructure, i.billing_period as "monthly" | "quarterly" | "yearly")
+    }, 0) * 100,
+  ) / 100
 
   function patchItem(index: number, patch: Partial<QuoteLineItem>) {
     setItems(current => current.map((item, i) => {
