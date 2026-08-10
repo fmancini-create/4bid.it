@@ -104,7 +104,13 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
     }
   }
   let next = { ...item }
-  if (option && item.billing_period !== "one_time") {
+  // Un billing_option con prezzo 0 NON e' un prezzo valido: e' una voce di
+  // catalogo a prezzo personalizzato (es. ManuBot Corporate) il cui canone
+  // viene poi impostato a mano su `unit_amount`. Se lo usassimo come override,
+  // la voce uscirebbe a "0,00 €" pur avendo un prezzo reale sulla riga. Quindi
+  // l'override vale solo quando l'opzione ha un importo positivo; altrimenti si
+  // tiene il prezzo della riga.
+  if (option && Number(option.unit_amount) > 0 && item.billing_period !== "one_time") {
     next = {
       ...next,
       billing_period: option.billing_period,
