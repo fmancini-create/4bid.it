@@ -37,6 +37,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/fetch-youtube-videos",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/seo-snapshot",
       "schedule": "0 7 * * *"
     },

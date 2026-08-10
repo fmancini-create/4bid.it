@@ -72,6 +72,7 @@ export function Header() {
     { label: "PORTFOLIO", href: "/#portfolio" },
     { label: "REVENUE MANAGEMENT", href: "/soluzioni-revenue-management" },
     { label: "BLOG", href: "/blog" },
+    { label: "VIDEO GUIDE", href: "/video-guide" },
     { label: "PARLANO DI NOI", href: "/parlano-di-noi" },
     { label: "CHI SIAMO", href: "/#about" },
     { label: "PROGETTI IN SVILUPPO", href: "/#projects" },
