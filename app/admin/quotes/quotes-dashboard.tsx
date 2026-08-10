@@ -6,6 +6,10 @@ import { toast } from "sonner"
 import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, FileText, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatQuoteAmount, type SalesChannelQuote } from "@/lib/quotes/types"
 import QuoteSendDialog from "@/components/admin/quote-send-dialog"
 
@@ -26,6 +30,13 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
   const [quotes, setQuotes] = useState(initialQuotes)
   const [sendQuote, setSendQuote] = useState<SalesChannelQuote | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
+  // Dialoghi React (non bloccanti). I nativi confirm()/prompt() bloccano il
+  // main thread finche' restano aperti: quel tempo viene conteggiato come durata
+  // dell'handler del click e faceva scattare l'avviso INP (UI bloccata ~2.5s).
+  const [deleteQuote, setDeleteQuote] = useState<SalesChannelQuote | null>(null)
+  const [transferQuote, setTransferQuote] = useState<SalesChannelQuote | null>(null)
+  const [reopenQuote, setReopenQuote] = useState<SalesChannelQuote | null>(null)
+  const [reopenDate, setReopenDate] = useState("")
 
   // Tornando dall'editor con router.refresh() il server rimanda i preventivi
   // aggiornati come nuovo prop: senza risincronizzare lo stato locale la lista
@@ -43,8 +54,8 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
     setSendQuote(q)
   }
 
-  async function handleDelete(q: SalesChannelQuote) {
-    if (!confirm(`Eliminare il preventivo di ${q.client_company || q.client_name}?`)) return
+  async function runDelete(q: SalesChannelQuote) {
+    setDeleteQuote(null)
     const res = await fetch(`/api/quotes/${q.id}`, { method: "DELETE" })
     if (!res.ok) return toast.error("Eliminazione fallita")
     setQuotes(prev => prev.filter(x => x.id !== q.id))
@@ -52,8 +63,8 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
   }
 
   /** Un bonifico incassato non arriva da Stripe: va confermato a mano. */
-  async function handleConfirmTransfer(q: SalesChannelQuote) {
-    if (!confirm(`Confermare di aver ricevuto il pagamento di ${q.client_company || q.client_name}?\n\nIl cliente riceverà la conferma con i link per prenotare le call di avvio.`)) return
+  async function runConfirmTransfer(q: SalesChannelQuote) {
+    setTransferQuote(null)
     setActingId(q.id)
     try {
       const res = await fetch(`/api/quotes/${q.id}/payment`, {
@@ -67,16 +78,22 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
     } catch (e: any) { toast.error(e.message) } finally { setActingId(null) }
   }
 
-  /** Riapre un'offerta decaduta con una nuova scadenza. */
-  async function handleReopen(q: SalesChannelQuote) {
-    const suggested = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10)
-    const answer = prompt(`Nuova scadenza per l'offerta di ${q.client_company || q.client_name} (AAAA-MM-GG):`, suggested)
-    if (!answer) return
+  /** Apre il dialogo per scegliere la nuova scadenza di un'offerta decaduta. */
+  function handleReopen(q: SalesChannelQuote) {
+    setReopenDate(new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10))
+    setReopenQuote(q)
+  }
+
+  /** Riapre un'offerta decaduta con la nuova scadenza scelta nel dialogo. */
+  async function runReopen() {
+    const q = reopenQuote
+    if (!q || !reopenDate) return
+    setReopenQuote(null)
     setActingId(q.id)
     try {
       const res = await fetch(`/api/quotes/${q.id}/payment`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "reopen", expires_at: new Date(`${answer}T23:59:59`).toISOString() }),
+        body: JSON.stringify({ action: "reopen", expires_at: new Date(`${reopenDate}T23:59:59`).toISOString() }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Riapertura non riuscita")
@@ -138,15 +155,58 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
           <div className="flex flex-wrap gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={() => router.push(`/admin/quotes/edit/${q.id}`)} disabled={q.status === "paid"}><Pencil className="h-4 w-4 mr-1.5" />Modifica</Button>
             <Button size="sm" onClick={() => handleSend(q)} disabled={!q.client_email}><Send className="h-4 w-4 mr-1.5" />{q.status === "draft" ? "Invia" : "Reinvia"}</Button>
-            {isUnpaid(q) && q.payment_method === "bonifico" && <Button size="sm" variant="outline" onClick={() => handleConfirmTransfer(q)} disabled={actingId === q.id}><Banknote className="h-4 w-4 mr-1.5" />Bonifico ricevuto</Button>}
+            {isUnpaid(q) && q.payment_method === "bonifico" && <Button size="sm" variant="outline" onClick={() => setTransferQuote(q)} disabled={actingId === q.id}><Banknote className="h-4 w-4 mr-1.5" />Bonifico ricevuto</Button>}
             {q.expired_at && <Button size="sm" variant="outline" onClick={() => handleReopen(q)} disabled={actingId === q.id}><RotateCcw className="h-4 w-4 mr-1.5" />Riapri offerta</Button>}
             <Button size="sm" variant="outline" onClick={() => openPreview(q)}><ExternalLink className="h-4 w-4 mr-1.5" />Apri</Button>
             <Button size="sm" variant="outline" onClick={() => copyLink(q)}><Copy className="h-4 w-4 mr-1.5" />Copia link</Button>
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(q)} disabled={q.status === "paid"}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteQuote(q)} disabled={q.status === "paid"}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>
           </div>
         </div>
       })}
     </div>}
+
+    <AlertDialog open={!!deleteQuote} onOpenChange={(open) => { if (!open) setDeleteQuote(null) }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminare il preventivo?</AlertDialogTitle>
+          <AlertDialogDescription>{deleteQuote ? `Il preventivo di ${deleteQuote.client_company || deleteQuote.client_name || "questo intestatario"} verrà eliminato definitivamente.` : ""}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteQuote && runDelete(deleteQuote)}>Elimina</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={!!transferQuote} onOpenChange={(open) => { if (!open) setTransferQuote(null) }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confermare il pagamento ricevuto?</AlertDialogTitle>
+          <AlertDialogDescription>{transferQuote ? `Confermi di aver ricevuto il pagamento di ${transferQuote.client_company || transferQuote.client_name || "questo cliente"}? Il cliente riceverà la conferma con i link per prenotare le call di avvio.` : ""}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogAction onClick={() => transferQuote && runConfirmTransfer(transferQuote)}>Conferma</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <Dialog open={!!reopenQuote} onOpenChange={(open) => { if (!open) setReopenQuote(null) }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Riapri offerta</DialogTitle>
+          <DialogDescription>{reopenQuote ? `Imposta la nuova scadenza per l'offerta di ${reopenQuote.client_company || reopenQuote.client_name || "questo cliente"}.` : ""}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="reopen-date">Nuova scadenza</Label>
+          <Input id="reopen-date" type="date" value={reopenDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setReopenDate(e.target.value)} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setReopenQuote(null)}>Annulla</Button>
+          <Button onClick={runReopen} disabled={!reopenDate}>Riapri</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <QuoteSendDialog
       quote={sendQuote}
