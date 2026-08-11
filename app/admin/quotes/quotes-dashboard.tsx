@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, FileText, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
+import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, EyeOff, FileText, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -37,6 +37,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
   const [transferQuote, setTransferQuote] = useState<SalesChannelQuote | null>(null)
   const [reopenQuote, setReopenQuote] = useState<SalesChannelQuote | null>(null)
   const [reopenDate, setReopenDate] = useState("")
+  const [resetQuote, setResetQuote] = useState<SalesChannelQuote | null>(null)
 
   // Tornando dall'editor con router.refresh() il server rimanda i preventivi
   // aggiornati come nuovo prop: senza risincronizzare lo stato locale la lista
@@ -102,6 +103,18 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
     } catch (e: any) { toast.error(e.message) } finally { setActingId(null) }
   }
 
+  /** Azzera il contatore visite: la lista torna a mostrare "Non ancora aperto". */
+  async function runResetViews(q: SalesChannelQuote) {
+    setResetQuote(null)
+    setActingId(q.id)
+    try {
+      const res = await fetch(`/api/quotes/${q.id}/reset-views`, { method: "POST" })
+      if (!res.ok) throw new Error("Azzeramento non riuscito")
+      setQuotes(prev => prev.map(x => x.id === q.id ? { ...x, view_count: 0, first_viewed_at: null, last_viewed_at: null } : x))
+      toast.success("Visite azzerate")
+    } catch (e: any) { toast.error(e.message) } finally { setActingId(null) }
+  }
+
   function openPreview(q: SalesChannelQuote) {
     if (!q.token) return toast.error("Link non disponibile")
     window.open(`/preventivo/${q.token}?preview=1`, "_blank", "noopener,noreferrer")
@@ -159,6 +172,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
             {q.expired_at && <Button size="sm" variant="outline" onClick={() => handleReopen(q)} disabled={actingId === q.id}><RotateCcw className="h-4 w-4 mr-1.5" />Riapri offerta</Button>}
             <Button size="sm" variant="outline" onClick={() => openPreview(q)}><ExternalLink className="h-4 w-4 mr-1.5" />Apri</Button>
             <Button size="sm" variant="outline" onClick={() => copyLink(q)}><Copy className="h-4 w-4 mr-1.5" />Copia link</Button>
+            {q.first_viewed_at && <Button size="sm" variant="outline" onClick={() => setResetQuote(q)} disabled={actingId === q.id}><EyeOff className="h-4 w-4 mr-1.5" />Azzera visite</Button>}
             <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteQuote(q)} disabled={q.status === "paid"}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>
           </div>
         </div>
@@ -207,6 +221,19 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!resetQuote} onOpenChange={(open) => { if (!open) setResetQuote(null) }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Azzerare le visite?</AlertDialogTitle>
+          <AlertDialogDescription>{resetQuote ? `Il conteggio delle aperture del preventivo di ${resetQuote.client_company || resetQuote.client_name || "questo intestatario"} tornerà a zero e risulterà "Non ancora aperto". Non modifica il preventivo né avvisa il cliente.` : ""}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogAction onClick={() => resetQuote && runResetViews(resetQuote)}>Azzera</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <QuoteSendDialog
       quote={sendQuote}
