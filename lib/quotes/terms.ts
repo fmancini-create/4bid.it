@@ -124,7 +124,7 @@ export function mergeContractTerms(previous: QuoteContractTerms | null, fresh: Q
  */
 export function acceptanceDeclaration(terms: QuoteContractTerms | null): string {
   const nomi = (terms?.projects || []).map(entry => entry.version ? `${entry.label} (aggiornate al ${entry.version})` : entry.label)
-  const base = "Confermo di aver letto e accettato il preventivo, la durata selezionata, il rinnovo automatico e le condizioni economiche riportate qui sopra"
+  const base = "Confermo di aver letto e accettato il preventivo, la durata selezionata, il rinnovo automatico, le condizioni economiche e le condizioni generali di 4BID S.r.l. riportate qui sopra"
   if (!nomi.length) return `${base}.`
   const elenco = nomi.length === 1 ? nomi[0] : `${nomi.slice(0, -1).join(", ")} e ${nomi[nomi.length - 1]}`
   return `${base}, insieme alle condizioni contrattuali di ${elenco}, riportate per esteso in questa pagina.`
@@ -133,6 +133,26 @@ export function acceptanceDeclaration(terms: QuoteContractTerms | null): string 
 /** Progetti inclusi nel preventivo per i quali non esiste alcuna copia delle condizioni. */
 export function missingTermsProjects(items: QuoteLineItem[], terms: QuoteContractTerms | null): TermsProject[] {
   return quoteTermsProjects(items).filter(project => !terms?.projects.some(entry => entry.project === project))
+}
+
+/**
+ * Condizioni generali di 4BID S.r.l. Sono SEMPRE presenti in ogni preventivo
+ * (indipendentemente dai prodotti) e congelate nello snapshot all'accettazione:
+ * costituiscono la liberatoria di 4BID su malfunzionamenti, downtime da
+ * aggiornamenti/manutenzione, servizi di terze parti e forza maggiore, cosi' da
+ * escludere contestazioni per eventi non imputabili a 4BID. Vivono qui, accanto
+ * a economicTerms, perche' la stessa lista deve finire sia a schermo sia nella
+ * copia conservata dal server: la prova deve dire, parola per parola, cio' che
+ * il cliente ha letto e accettato.
+ */
+export function generalConditions(): string[] {
+  return [
+    "I servizi sono forniti da 4BID S.r.l. \u00absecondo disponibilit\u00e0\u00bb. 4BID S.r.l. si impegna a garantire la massima continuit\u00e0 e affidabilit\u00e0, ma non garantisce che il funzionamento sia ininterrotto o del tutto esente da errori.",
+    "Il Cliente prende atto e accetta che il servizio possa essere temporaneamente sospeso, rallentato o interrotto per attivit\u00e0 di manutenzione ordinaria o straordinaria, aggiornamenti, migrazioni, interventi di sicurezza o miglioramenti tecnici. Ove possibile tali attivit\u00e0 sono comunicate con ragionevole preavviso; quelle urgenti o legate alla sicurezza possono essere eseguite senza preavviso.",
+    "4BID S.r.l. non \u00e8 responsabile per malfunzionamenti, indisponibilit\u00e0, perdita di dati, cali di prestazioni o danni, diretti o indiretti, derivanti da: (a) aggiornamenti, manutenzione o evoluzioni dei propri sistemi; (b) guasti, sospensioni, limitazioni o modifiche di servizi, API o infrastrutture di terze parti (a titolo esemplificativo: hosting, connettivit\u00e0, PMS, channel manager, gateway di pagamento, provider di messaggistica e fornitori cloud); (c) cause di forza maggiore o eventi comunque non imputabili a 4BID S.r.l., inclusi guasti di rete, attacchi informatici, interruzioni di energia elettrica ed eventi naturali; (d) uso improprio, errato o non conforme del servizio da parte del Cliente o di terzi.",
+    "Le interruzioni o i disservizi riconducibili alle attivit\u00e0 e alle cause sopra indicate non danno diritto a rimborsi, indennizzi, riduzioni del canone o risoluzione anticipata del contratto.",
+    "In ogni caso, ove una responsabilit\u00e0 di 4BID S.r.l. dovesse essere accertata, essa sar\u00e0 limitata all'importo effettivamente corrisposto dal Cliente per il servizio interessato nei 3 (tre) mesi precedenti l'evento, restando esclusi danni indiretti, mancati guadagni e perdite di opportunit\u00e0.",
+  ]
 }
 
 const euro = (value: number, currency: string) =>
@@ -159,7 +179,7 @@ export function economicTerms(
     lines.push(billingPreference === "yearly"
       ? "Formula annuale: i canoni dei servizi in abbonamento sono fatturati in un'unica soluzione per 12 mesi di servizio."
       : "Formula mensile: i canoni dei servizi in abbonamento sono fatturati ogni mese.")
-    lines.push("Gli abbonamenti si rinnovano automaticamente alla scadenza del periodo scelto. Puoi disdire il rinnovo prima della scadenza del periodo in corso, senza penali: il servizio resta attivo fino al termine del periodo gia' pagato.")
+    lines.push("Gli abbonamenti si rinnovano automaticamente alla scadenza del periodo scelto. La disdetta va comunicata per iscritto, senza penali, entro i seguenti termini: per gli abbonamenti mensili almeno 7 giorni prima della scadenza; per gli abbonamenti annuali almeno 30 giorni prima della normale scadenza. In assenza di disdetta entro tali termini, il servizio si rinnova automaticamente per un ulteriore periodo pari a quello scelto. In ogni caso il servizio resta attivo fino al termine del periodo gia' pagato.")
     lines.push("Per i servizi in abbonamento e' richiesta una carta di credito, usata per l'attivazione e per i rinnovi automatici.")
     const trial = recurring.filter(item => Number(item.trial_days) > 0)
     for (const item of trial) lines.push(`${item.name || item.description}: periodo di prova di ${Number(item.trial_days)} giorni prima del primo addebito del canone.`)

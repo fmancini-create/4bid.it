@@ -139,7 +139,71 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Link a Siti Esterni</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                7. Continuità del Servizio, Manutenzione e Aggiornamenti
+              </h2>
+              <p>
+                I servizi e i software di 4 BID SRL sono forniti &laquo;secondo disponibilit&agrave;&raquo;. 4 BID SRL si
+                impegna a garantire la massima continuit&agrave; e affidabilit&agrave;, ma non garantisce che il
+                funzionamento sia ininterrotto o del tutto esente da errori.
+              </p>
+              <p className="mt-4">
+                Il Cliente prende atto e accetta che il servizio possa essere temporaneamente sospeso, rallentato o
+                interrotto per attivit&agrave; di manutenzione ordinaria o straordinaria, aggiornamenti, migrazioni,
+                interventi di sicurezza o miglioramenti tecnici. Ove possibile tali attivit&agrave; sono comunicate con
+                ragionevole preavviso; quelle urgenti o legate alla sicurezza possono essere eseguite senza preavviso.
+              </p>
+              <p className="mt-4">
+                4 BID SRL non &egrave; responsabile per malfunzionamenti, indisponibilit&agrave;, perdita di dati, cali di
+                prestazioni o danni, diretti o indiretti, derivanti da:
+              </p>
+              <ul className="list-disc pl-6 mt-4 space-y-2">
+                <li>aggiornamenti, manutenzione o evoluzioni dei propri sistemi;</li>
+                <li>
+                  guasti, sospensioni, limitazioni o modifiche di servizi, API o infrastrutture di terze parti (a titolo
+                  esemplificativo: hosting, connettivit&agrave;, PMS, channel manager, gateway di pagamento, provider di
+                  messaggistica e fornitori cloud);
+                </li>
+                <li>
+                  cause di forza maggiore o eventi comunque non imputabili a 4 BID SRL, inclusi guasti di rete, attacchi
+                  informatici, interruzioni di energia elettrica ed eventi naturali;
+                </li>
+                <li>uso improprio, errato o non conforme del servizio da parte del Cliente o di terzi.</li>
+              </ul>
+              <p className="mt-4">
+                Le interruzioni o i disservizi riconducibili alle attivit&agrave; e alle cause sopra indicate non danno
+                diritto a rimborsi, indennizzi, riduzioni del canone o risoluzione anticipata del contratto. In ogni
+                caso, ove una responsabilit&agrave; di 4 BID SRL dovesse essere accertata, essa sar&agrave; limitata
+                all'importo effettivamente corrisposto dal Cliente per il servizio interessato nei 3 (tre) mesi
+                precedenti l'evento, restando esclusi danni indiretti, mancati guadagni e perdite di opportunit&agrave;.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                8. Durata, Rinnovo Automatico e Disdetta degli Abbonamenti
+              </h2>
+              <p>
+                I servizi in abbonamento si rinnovano automaticamente alla scadenza del periodo scelto. La disdetta del
+                rinnovo va comunicata per iscritto, senza penali, entro i seguenti termini:
+              </p>
+              <ul className="list-disc pl-6 mt-4 space-y-2">
+                <li>
+                  <strong>Abbonamenti mensili:</strong> almeno 7 giorni prima della scadenza.
+                </li>
+                <li>
+                  <strong>Abbonamenti annuali:</strong> almeno 30 giorni prima della normale scadenza.
+                </li>
+              </ul>
+              <p className="mt-4">
+                In assenza di disdetta entro i termini indicati, il servizio si rinnova automaticamente per un ulteriore
+                periodo pari a quello scelto. In ogni caso il servizio resta attivo fino al termine del periodo
+                gi&agrave; pagato.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Link a Siti Esterni</h2>
               <p>
                 Il sito potrebbe contenere link a siti web di terze parti. 4 BID SRL non ha alcun controllo su tali siti
                 e non è responsabile dei loro contenuti, delle loro politiche sulla privacy o delle loro pratiche.
@@ -147,7 +211,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Progetti in Sviluppo</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Progetti in Sviluppo</h2>
               <p>
                 I progetti presentati nella sezione "Progetti in Sviluppo" (MANUBOT, SANTADDEO, HOTEL ACCELERATOR, etc.)
                 sono soggetti a continuo sviluppo. Le funzionalità, le tempistiche e le caratteristiche descritte
@@ -156,7 +220,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Proposte di Investimento</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Proposte di Investimento</h2>
               <p>
                 Le informazioni relative ai progetti e alle opportunità di investimento presenti sul sito hanno
                 carattere puramente informativo e non costituiscono offerta al pubblico di strumenti finanziari. Ogni
@@ -165,7 +229,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Modifiche ai Termini</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Modifiche ai Termini</h2>
               <p>
                 4 BID SRL si riserva il diritto di modificare i presenti Termini e Condizioni in qualsiasi momento. Le
                 modifiche saranno efficaci dalla data di pubblicazione sul sito. L'uso continuato del sito dopo la
@@ -174,7 +238,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Legge Applicabile e Foro Competente</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Legge Applicabile e Foro Competente</h2>
               <p>
                 I presenti Termini e Condizioni sono regolati dalla legge italiana. Per qualsiasi controversia derivante
                 dall'interpretazione o esecuzione dei presenti termini sarà competente in via esclusiva il Foro di
@@ -183,7 +247,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Contatti</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Contatti</h2>
               <p>
                 Per qualsiasi domanda relativa ai presenti Termini e Condizioni, contattare:
                 <br />

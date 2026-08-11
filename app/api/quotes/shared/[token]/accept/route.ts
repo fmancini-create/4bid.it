@@ -11,7 +11,7 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
-import { acceptanceDeclaration, economicTerms, mergeContractTerms, missingTermsProjects, parseContractTerms, quoteTermsProjects, termsLabel } from "@/lib/quotes/terms"
+import { acceptanceDeclaration, economicTerms, generalConditions, mergeContractTerms, missingTermsProjects, parseContractTerms, quoteTermsProjects, termsLabel } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
@@ -132,6 +132,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     billing_preference: billingPreference,
     declaration: acceptanceDeclaration(contractTerms),
     economic: economicTerms(selectedItems, billingPreference, quote.currency || "eur", { expiresAt: quote.expires_at, vatIncluded: quote.vat_included }),
+    general: generalConditions(),
     projects: (contractTerms?.projects || [])
       .filter(entry => projects.includes(entry.project))
       .map(entry => ({ project: entry.project, label: entry.label, url: entry.url, title: entry.title, version: entry.version, hash: entry.hash, characters: entry.characters, fetched_at: entry.fetched_at, text: entry.text })),

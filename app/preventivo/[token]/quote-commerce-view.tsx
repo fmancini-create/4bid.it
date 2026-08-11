@@ -13,7 +13,7 @@ import { ProjectBrand } from "@/components/quotes/project-brand"
 import ContractTermsSection, { acceptanceLabel } from "./contract-terms-section"
 import ComparisonTablesPreview from "@/components/quotes/comparison-tables-preview"
 import { normalizeQuoteTables } from "@/lib/quotes/comparison"
-import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
+import { economicTerms, generalConditions, parseContractTerms } from "@/lib/quotes/terms"
 import {
   calculateQuoteLine,
   decodeCredential,
@@ -426,6 +426,9 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
         // costo ricorrente annualizzato (canoni mensili x12 + canoni annuali),
         // ESCLUSO il setup una tantum: mostra il costo unitario dell'abbonamento.
         const recurringYearly = totals.monthly * 12 + totals.yearly
+        // Stessa base ricorrente al LISTINO, per barrare il prezzo pieno del
+        // canone "dal secondo anno" (che esclude il setup una tantum).
+        const recurringYearlyGross = totals.monthlyGross * 12 + totals.yearlyGross
         const corporate = selectedItems.find(i => i.project === "manubot" && i.kind === "plan" && /corporate/i.test(i.name || ""))
         const corpMeta = corporate ? getCommercialMeta(corporate) : null
         const perUnit: Array<{ label: string; value: string }> = []
@@ -458,6 +461,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
               <div className="flex justify-start lg:justify-end"><DiscountedAmount net={firstYear} gross={firstYearGross} currency={currency} netClassName="text-2xl font-black" align="right" /></div>
               <p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi</p>
               <p className="mt-1 text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p>
+              {totals.oneTime > 0 && recurringYearly > 0 ? <div className="mt-3 inline-flex flex-col rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 lg:items-end"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Dal secondo anno</p><div className="flex justify-start lg:justify-end"><DiscountedAmount net={recurringYearly} gross={recurringYearlyGross} currency={currency} netClassName="text-xl font-black" suffix={<span className="text-sm font-normal text-muted-foreground"> /anno</span>} align="right" /></div><p className="text-[11px] text-muted-foreground">solo canoni ricorrenti, senza il setup una tantum</p></div> : null}
             </div>
           </div>
           {perUnit.length ? <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
@@ -469,7 +473,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       <ComparisonTablesPreview tables={normalizeQuoteTables(quote.comparison_tables)} />
 
-      <ContractTermsSection terms={contractTerms} economic={economicLines} paymentTerms={quote.payment_terms} />
+      <ContractTermsSection terms={contractTerms} economic={economicLines} general={generalConditions()} paymentTerms={quote.payment_terms} />
 
       {!alreadyAccepted&&!expired?<>
         {requestedFields.length?<section className="rounded-2xl border bg-card p-6 space-y-4"><h2 className="font-semibold">Dati necessari all'attivazione</h2>{requestedFields.map(field=>{const credential=field.type==="credentials"?decodeCredential(fieldValues[field.key]):null;return <div key={field.key}><Label>{field.label}{field.required?" *":""}</Label>{field.type==="credentials"?<div className="grid gap-2 sm:grid-cols-2"><Input placeholder="ID / Username" value={credential?.id||""} onChange={e=>setCredentialPart(field.key,"id",e.target.value)}/><Input type="password" placeholder="Password" value={credential?.password||""} onChange={e=>setCredentialPart(field.key,"password",e.target.value)}/></div>:field.type==="textarea"?<Textarea value={fieldValues[field.key]||""} onChange={e=>setFieldValues(v=>({...v,[field.key]:e.target.value}))}/>:<Input type={field.type==="email"?"email":"text"} value={fieldValues[field.key]||""} onChange={e=>setFieldValues(v=>({...v,[field.key]:e.target.value}))}/>}</div>})}</section>:null}

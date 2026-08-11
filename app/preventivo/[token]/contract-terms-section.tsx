@@ -6,13 +6,14 @@ import { acceptanceDeclaration, type QuoteContractTerms } from "@/lib/quotes/ter
 interface Props {
   terms: QuoteContractTerms | null
   economic: string[]
+  general?: string[]
   paymentTerms?: string | null
 }
 
 /** Etichetta della casella di conferma: identica a quella conservata dal server. */
 export const acceptanceLabel = acceptanceDeclaration
 
-export default function ContractTermsSection({ terms, economic, paymentTerms }: Props) {
+export default function ContractTermsSection({ terms, economic, general, paymentTerms }: Props) {
   const progetti = terms?.projects || []
   const mancanti = terms?.failures || []
 
@@ -38,6 +39,26 @@ export default function ContractTermsSection({ terms, economic, paymentTerms }: 
           </div>
         ) : null}
       </div>
+
+      {general && general.length ? (
+        <div className="rounded-2xl border bg-card p-6">
+          <div className="mb-3 flex items-center gap-2">
+            <ScrollText className="h-5 w-5 text-primary" aria-hidden="true" />
+            <h3 className="text-xl font-semibold">Condizioni generali di 4BID S.r.l.</h3>
+          </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Continuit&agrave; del servizio, manutenzione e aggiornamenti, servizi di terze parti e limitazioni di responsabilit&agrave;.
+          </p>
+          <ul className="space-y-2">
+            {general.map((riga, indice) => (
+              <li key={indice} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span>{riga}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {progetti.length ? (
         <div className="rounded-2xl border bg-card p-6">
