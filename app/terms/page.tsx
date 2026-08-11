@@ -229,7 +229,43 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Modifiche ai Termini</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                12. Livelli di Servizio (SLA) e Impegni sui Progetti
+              </h2>
+              <p>
+                I tempi indicati nelle pagine commerciali e nelle proposte (a titolo esemplificativo: risposta entro 24
+                ore, primo contatto o avvio del progetto, setup o attivazione in 48 ore, supporto post-lancio) sono
+                <strong> impegni obiettivo</strong> riferiti ai giorni lavorativi e calcolati dalla ricezione di tutte le
+                informazioni, credenziali e materiali necessari da parte del Cliente.
+              </p>
+              <p className="mt-4">
+                Tali tempi non costituiscono termini essenziali ai sensi dell'art. 1457 c.c. e possono variare in
+                funzione della complessit&agrave; del progetto, della disponibilit&agrave; di servizi e API di terze
+                parti e di cause non imputabili a 4 BID SRL (cfr. art. 7). Eventuali SLA vincolanti, con relative
+                penali o indennizzi, si applicano solo se espressamente previsti e quantificati nel contratto o nella
+                proposta economica sottoscritta dal Cliente.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Assenza di Garanzia di Risultato</h2>
+              <p>
+                Le stime di performance, ritorno sull'investimento (ROI), incrementi di fatturato o di occupazione
+                eventualmente riportate nelle pagine del sito o nel materiale commerciale hanno finalit&agrave;
+                illustrative e si basano su risultati medi osservati con altri clienti. Esse
+                <strong> non costituiscono una garanzia di risultato</strong>.
+              </p>
+              <p className="mt-4">
+                I risultati effettivi dipendono da numerosi fattori esterni al controllo di 4 BID SRL (tra cui mercato,
+                stagionalit&agrave;, posizionamento della struttura, prezzi e scelte gestionali del Cliente,
+                applicazione delle indicazioni fornite). Salvo diverso accordo scritto e specifico, il pagamento dei
+                corrispettivi non &egrave; subordinato al raggiungimento di un determinato risultato e non d&agrave;
+                diritto a rimborsi in caso di mancato conseguimento delle stime.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Modifiche ai Termini</h2>
               <p>
                 4 BID SRL si riserva il diritto di modificare i presenti Termini e Condizioni in qualsiasi momento. Le
                 modifiche saranno efficaci dalla data di pubblicazione sul sito. L'uso continuato del sito dopo la
@@ -238,7 +274,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Legge Applicabile e Foro Competente</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Legge Applicabile e Foro Competente</h2>
               <p>
                 I presenti Termini e Condizioni sono regolati dalla legge italiana. Per qualsiasi controversia derivante
                 dall'interpretazione o esecuzione dei presenti termini sarà competente in via esclusiva il Foro di
@@ -247,7 +283,7 @@ export default function TermsPage() {
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Contatti</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">16. Contatti</h2>
               <p>
                 Per qualsiasi domanda relativa ai presenti Termini e Condizioni, contattare:
                 <br />
