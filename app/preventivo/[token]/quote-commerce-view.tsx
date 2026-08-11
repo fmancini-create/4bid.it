@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { toast } from "sonner"
-import { Banknote, Check, CheckCircle2, Clock3, CreditCard, FileText, Loader2, Receipt, ShieldCheck, Sparkles, Zap } from "lucide-react"
+import { Banknote, Check, CheckCircle2, Clock3, CreditCard, FileText, Loader2, Receipt, Settings, ShieldCheck, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -351,7 +351,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const [acceptedTerms,setAcceptedTerms] = useState(false)
   const [paymentMethod,setPaymentMethod] = useState<PaymentMethod|null>((quote.payment_method as PaymentMethod)|| (requiresCard ? "card" : null))
   const [confirmedMethod,setConfirmedMethod] = useState<PaymentMethod|null>(alreadyAccepted ? ((quote.payment_method as PaymentMethod)||null) : null)
-  const [accepting,setAccepting] = useState(false); const [paying,setPaying] = useState(false)
+  const [accepting,setAccepting] = useState(false); const [paying,setPaying] = useState(false); const [portalLoading,setPortalLoading] = useState(false)
 
   const totals = useMemo(() => {
     // Per ogni fascia sommiamo sia il NETTO (amount) sia il LISTINO (lineGrossAmount):
@@ -392,6 +392,8 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
   async function startCardPayment(){setPaying(true);try{const response=await fetch(`/api/quotes/shared/${token}/checkout`,{method:"POST"});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Impossibile avviare il pagamento");if(!data.url)throw new Error("URL di pagamento non disponibile");window.location.assign(data.url)}catch(error:any){toast.error(error.message||"Errore nel pagamento");setPaying(false)}}
 
+  async function openBillingPortal(){setPortalLoading(true);try{const response=await fetch(`/api/quotes/shared/${token}/portal`,{method:"POST"});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Impossibile aprire la gestione abbonamento");if(!data.url)throw new Error("URL del portale non disponibile");window.location.assign(data.url)}catch(error:any){toast.error(error.message||"Errore nell'apertura del portale");setPortalLoading(false)}}
+
   async function acceptQuote(){
     if(expired)return toast.error("Questo preventivo è scaduto")
     if(billingPreference === "yearly" && !annualEligible) return toast.error("La formula annuale non è disponibile per i prodotti selezionati")
@@ -410,6 +412,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
       <OfferCountdown expiresAt={quote.expires_at} expired={expired}/>
       {expired?<div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">Questo preventivo è scaduto. Contatta 4BID per riceverne uno aggiornato.</div>:null}
       {alreadyPaid?<div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900"><CheckCircle2 className="h-5 w-5"/>Pagamento confermato. L'attivazione dei servizi selezionati è stata avviata.</div>:null}
+      {alreadyPaid&&recurringParents.length>0?<section className="rounded-2xl border bg-card p-6"><div className="mb-1 flex items-center gap-2"><Settings className="h-5 w-5 text-primary"/><h2 className="font-semibold">Gestione abbonamento</h2></div><p className="mb-4 text-sm text-muted-foreground">Puoi disattivare il rinnovo automatico in autonomia dalla piattaforma, senza comunicazioni scritte. Il servizio resta attivo fino al termine del periodo già pagato.</p><Button onClick={openBillingPortal} disabled={portalLoading}>{portalLoading?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Settings className="mr-2 h-4 w-4"/>}Gestisci abbonamento / Disattiva rinnovo</Button></section>:null}
 
       <section className="overflow-hidden rounded-2xl border bg-card"><div className="bg-primary px-6 py-7 text-primary-foreground"><div className="mb-3 flex items-center gap-2 text-sm font-medium opacity-90"><FileText className="h-4 w-4"/>4BID · Soluzioni digitali e consulenza</div><h1 className="text-3xl font-bold">{quote.title}</h1>{quote.description?<p className="mt-3 whitespace-pre-wrap text-sm opacity-90">{quote.description}</p>:null}</div><div className="px-6 py-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase text-muted-foreground">Cliente</p><p className="mt-1 text-lg font-semibold">{clientCompany}</p></div><div className="sm:text-right"><p className="text-xs uppercase text-muted-foreground">Validità</p><p className="mt-1 font-medium">{quote.expires_at?`fino al ${new Date(quote.expires_at).toLocaleString("it-IT")}`:"Secondo condizioni indicate"}</p></div></div>{clientDetails.length?<dl className="mt-4 grid gap-x-6 gap-y-2 border-t pt-4 text-sm sm:grid-cols-2">{clientDetails.map(d=><div key={d.label} className="flex flex-col"><dt className="text-xs uppercase tracking-wide text-muted-foreground">{d.label}</dt><dd className="font-medium break-words">{d.value}</dd></div>)}</dl>:null}</div></section>
 

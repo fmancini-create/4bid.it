@@ -157,7 +157,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {q.first_viewed_at ? <span className="inline-flex items-center gap-1 text-primary"><Eye className="h-3.5 w-3.5" />Aperto {new Date(q.last_viewed_at || q.first_viewed_at).toLocaleString("it-IT")}{q.view_count > 1 ? ` · ${q.view_count} volte` : ""}</span> : q.sent_at ? <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5 opacity-50" />Non ancora aperto</span> : null}
+            {q.first_viewed_at ? <span className="inline-flex items-center gap-1 text-primary"><Eye className="h-3.5 w-3.5" />Aperto {new Date(q.last_viewed_at || q.first_viewed_at).toLocaleString("it-IT")}{q.view_count > 1 ? ` · ${q.view_count} volte` : ""}</span> : <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5 opacity-50" />Non ancora aperto</span>}
             {q.accepted_at && <span className="inline-flex items-center gap-1 text-amber-700"><CheckCircle2 className="h-3.5 w-3.5" />Accettato da {q.acceptance_name}</span>}
             {q.status === "sent" && !q.accepted_at && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />In attesa di accettazione</span>}
             {q.paid_at && <span className="inline-flex items-center gap-1 text-green-800"><CheckCircle2 className="h-3.5 w-3.5" />Pagato {new Date(q.paid_at).toLocaleDateString("it-IT")}</span>}
