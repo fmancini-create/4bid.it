@@ -178,6 +178,26 @@ export function applyBillingPreference(item: QuoteLineItem, preference: QuoteBil
   return calculateQuoteLine(next)
 }
 
+// Prezzo di LISTINO (pre-sconto) della riga, usato per barrarlo nel riepilogo.
+// Prende il massimo fra: list_amount (unit x quantita', prima dello sconto di
+// riga), amount (rete di sicurezza) e normal_price x quantita'. Quest'ultimo
+// serve perche' su un setup in formula ANNUALE agevolata (gratis o -X%)
+// `applyBillingPreference` -> `calculateQuoteLine` azzera list_amount: senza il
+// ripiego su normal_price il listino barrato del setup andrebbe perso.
+export function lineGrossAmount(item: QuoteLineItem): number {
+  const calc = calculateQuoteLine(item)
+  const qty = Math.max(1, Number(calc.quantity) || 1)
+  const normalUnit = Number(getCommercialMeta(item).normal_price)
+  const normalTotal = Number.isFinite(normalUnit) && normalUnit > 0 ? normalUnit * qty : 0
+  return Math.max(Number(calc.list_amount) || 0, Number(calc.amount) || 0, normalTotal)
+}
+
+// Percentuale di sconto (arrotondata) fra listino e netto; 0 se non c'e' sconto.
+export function discountPercent(gross: number, net: number): number {
+  if (!(gross > net + 0.005) || !(gross > 0)) return 0
+  return Math.round(((gross - net) / gross) * 100)
+}
+
 export function hasBaseForProject(items: QuoteLineItem[], project: string): boolean {
   return items.some(item => item.project === project && item.kind === "plan" && item.customer_selected !== false)
 }

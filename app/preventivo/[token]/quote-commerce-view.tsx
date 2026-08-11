@@ -24,7 +24,8 @@ import {
   type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, getIncludedCredits, hasAnnualBillingOption, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { annualComparison, annualSetupPromo, applyBillingPreference, getCommercialMeta, getIncludedCredits, hasAnnualBillingOption, lineGrossAmount, type AnnualSetupPromo, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import DiscountedAmount from "@/components/quotes/discounted-amount"
 import { quoteBrand, quoteBenefits } from "@/lib/quotes/branding"
 import { QUOTE_BANK_DETAILS, quoteTransferReason } from "@/lib/quotes/bank"
 import { QUOTE_SELLER, QUOTE_SELLER_ADDRESS_LINE } from "@/lib/quotes/company"
@@ -352,11 +353,19 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
   const [confirmedMethod,setConfirmedMethod] = useState<PaymentMethod|null>(alreadyAccepted ? ((quote.payment_method as PaymentMethod)||null) : null)
   const [accepting,setAccepting] = useState(false); const [paying,setPaying] = useState(false)
 
-  const totals = useMemo(() => ({
-    oneTime: selectedItems.filter(i => i.billing_period === "one_time").reduce((sum, i) => sum + Number(i.amount || 0), 0),
-    monthly: selectedItems.filter(i => i.billing_period === "monthly").reduce((sum, i) => sum + Number(i.amount || 0), 0),
-    yearly: selectedItems.filter(i => i.billing_period === "yearly").reduce((sum, i) => sum + Number(i.amount || 0), 0),
-  }), [selectedItems])
+  const totals = useMemo(() => {
+    // Per ogni fascia sommiamo sia il NETTO (amount) sia il LISTINO (lineGrossAmount):
+    // il listino serve a barrare il prezzo pieno e a calcolare la % di sconto.
+    const bucket = (period: string) => selectedItems.filter(i => i.billing_period === period)
+    const net = (arr: QuoteLineItem[]) => arr.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+    const gross = (arr: QuoteLineItem[]) => arr.reduce((sum, i) => sum + lineGrossAmount(i), 0)
+    const one = bucket("one_time"), mon = bucket("monthly"), yr = bucket("yearly")
+    return {
+      oneTime: net(one), oneTimeGross: gross(one),
+      monthly: net(mon), monthlyGross: gross(mon),
+      yearly: net(yr), yearlyGross: gross(yr),
+    }
+  }, [selectedItems])
 
   function chooseAnnual() {
     if (!annualEligible || alreadyAccepted) return
@@ -410,6 +419,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       {(() => {
         const firstYear = totals.oneTime + totals.monthly * 12 + totals.yearly
+        const firstYearGross = totals.oneTimeGross + totals.monthlyGross * 12 + totals.yearlyGross
         const mixed = totals.monthly > 0 && totals.yearly > 0
         // Costo per struttura/asset/utente: solo se il piano Corporate selezionato
         // ha valorizzato i relativi limiti (totale gruppo). Ripartisce SOLO il
@@ -437,15 +447,15 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
             <div>
               <h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2>
               <div className="flex flex-wrap gap-x-8 gap-y-3">
-                {totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum (setup)</p><p className="text-xl font-bold">{formatQuoteAmount(totals.oneTime,currency)}</p><p className="text-[11px] text-muted-foreground">addebito una sola volta</p></div> : null}
-                {totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-2xl font-black">{formatQuoteAmount(totals.monthly,currency)}<span className="text-sm font-normal text-muted-foreground"> /mese</span></p><p className="text-[11px] text-muted-foreground">addebito ogni mese</p></div> : null}
-                {totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-2xl font-black">{formatQuoteAmount(totals.yearly,currency)}<span className="text-sm font-normal text-muted-foreground"> /anno</span></p><p className="text-[11px] text-muted-foreground">addebito una volta l&apos;anno</p></div> : null}
+                {totals.oneTime > 0 ? <div><p className="text-xs text-muted-foreground">Una tantum (setup)</p><DiscountedAmount net={totals.oneTime} gross={totals.oneTimeGross} currency={currency} netClassName="text-xl font-bold" /><p className="text-[11px] text-muted-foreground">addebito una sola volta</p></div> : null}
+                {totals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><DiscountedAmount net={totals.monthly} gross={totals.monthlyGross} currency={currency} netClassName="text-2xl font-black" suffix={<span className="text-sm font-normal text-muted-foreground"> /mese</span>} /><p className="text-[11px] text-muted-foreground">addebito ogni mese</p></div> : null}
+                {totals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><DiscountedAmount net={totals.yearly} gross={totals.yearlyGross} currency={currency} netClassName="text-2xl font-black" suffix={<span className="text-sm font-normal text-muted-foreground"> /anno</span>} /><p className="text-[11px] text-muted-foreground">addebito una volta l&apos;anno</p></div> : null}
               </div>
               {mixed ? <p className="mt-3 max-w-xl text-xs text-muted-foreground">Alcune voci sono disponibili solo in formula mensile: per questo vedi sia un canone annuale sia un canone mensile. Il totale sotto li comprende entrambi.</p> : null}
             </div>
             <div className="lg:text-right">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Totale primo anno</p>
-              <p className="text-2xl font-black">{formatQuoteAmount(firstYear,currency)}</p>
+              <div className="flex justify-start lg:justify-end"><DiscountedAmount net={firstYear} gross={firstYearGross} currency={currency} netClassName="text-2xl font-black" align="right" /></div>
               <p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi</p>
               <p className="mt-1 text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p>
             </div>
