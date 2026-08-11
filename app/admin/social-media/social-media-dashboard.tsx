@@ -371,20 +371,25 @@ export default function SocialMediaDashboard({
     }
   }
 
-  const updatePost = async () => {
+  const updatePost = async (publishImmediately = false) => {
     if (!editingPost || !editingPost.content || editingPost.platforms.length === 0) return
 
     setIsLoading(true)
     try {
-      const scheduledForUTC = editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
+      // Pubblicando subito ignoriamo la programmazione: il post esce ora.
+      const scheduledForUTC =
+        publishImmediately ? null : editingPost.scheduled_for ? localDatetimeToUTC(editingPost.scheduled_for) : null
 
-      // Determine status: if has scheduled_for -> scheduled, otherwise keep as draft
+      // Determine status: if has scheduled_for -> scheduled, otherwise keep current
       let newStatus = editingPost.status
       if (scheduledForUTC && editingPost.status === "draft") {
         newStatus = "scheduled"
       } else if (!scheduledForUTC && editingPost.status === "scheduled") {
         newStatus = "draft"
       }
+
+      // savedPost conterra' il record creato/aggiornato, per l'eventuale publish.
+      let savedPost: SocialPost
 
       // If this is a repost (id is empty), create a new post
       if (!editingPost.id) {
@@ -409,41 +414,67 @@ export default function SocialMediaDashboard({
 
         if (!response.ok) throw new Error("Errore nel salvataggio")
 
-        const savedPost = await response.json()
+        savedPost = await response.json()
         setPosts((prev) => [savedPost, ...prev])
-        setShowEditDialog(false)
-        setEditingPost(null)
-        toast.success(scheduledForUTC ? "Post programmato!" : "Bozza salvata!")
-        return
+      } else {
+        const postData = {
+          id: editingPost.id,
+          content: editingPost.content,
+          platforms: editingPost.platforms,
+          status: newStatus,
+          scheduled_for: scheduledForUTC,
+          auto_publish: editingPost.auto_publish,
+          link_url: editingPost.link_url || null,
+          image_url: editingPost.image_url || null,
+          target_accounts:
+            editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
+          media_priority: editingPost.media_priority || "image",
+        }
+
+        const response = await fetch("/api/social/posts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(postData),
+        })
+
+        if (!response.ok) throw new Error("Errore nel salvataggio")
+
+        savedPost = await response.json()
+        setPosts((prev) => prev.map((p) => (p.id === savedPost.id ? savedPost : p)))
       }
 
-      const postData = {
-        id: editingPost.id,
-        content: editingPost.content,
-        platforms: editingPost.platforms,
-        status: newStatus,
-        scheduled_for: scheduledForUTC,
-        auto_publish: editingPost.auto_publish,
-        link_url: editingPost.link_url || null,
-        image_url: editingPost.image_url || null,
-        target_accounts:
-          editingPost.target_accounts && editingPost.target_accounts.length > 0 ? editingPost.target_accounts : null,
-        media_priority: editingPost.media_priority || "image",
+      // Pubblicazione immediata ("Salva e Pubblica" / "Modifica e Ripubblica"):
+      // chiamiamo l'endpoint publish. Toast ONESTO sull'esito, niente falso verde.
+      if (publishImmediately) {
+        try {
+          const pubRes = await fetch(`/api/social/posts/${savedPost.id}/publish`, { method: "POST" })
+          const pubResult = await pubRes.json().catch(() => ({}))
+          const publishedOn: string[] = pubResult.published || []
+          const pubErrors: string[] = pubResult.errors || []
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === savedPost.id
+                ? { ...p, status: pubResult.success ? "published" : "failed", published_at: new Date().toISOString(), error_message: pubErrors.join("; ") || null }
+                : p,
+            ),
+          )
+          if (pubResult.success && pubErrors.length === 0) {
+            toast.success(`Post pubblicato su ${publishedOn.length} ${publishedOn.length === 1 ? "canale" : "canali"}!`)
+          } else if (pubResult.success && pubErrors.length > 0) {
+            toast.warning(`Pubblicato in parte (${publishedOn.length}). Problemi: ${pubErrors.join("; ")}`)
+          } else {
+            toast.error(`Pubblicazione non riuscita: ${pubErrors.join("; ") || "nessun canale ha accettato il post"}`)
+          }
+        } catch (pubErr) {
+          console.error("[v0] republish error:", pubErr)
+          toast.error("Post salvato, ma la pubblicazione non e' riuscita. Riprova dal pulsante Pubblica.")
+        }
+      } else {
+        toast.success(scheduledForUTC ? "Post programmato!" : "Post salvato!")
       }
 
-      const response = await fetch("/api/social/posts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(postData),
-      })
-
-      if (!response.ok) throw new Error("Errore nel salvataggio")
-
-      const updatedPost = await response.json()
-      setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)))
       setShowEditDialog(false)
       setEditingPost(null)
-      toast.success(scheduledForUTC ? "Post programmato!" : "Bozza aggiornata!")
     } catch (error) {
       toast.error("Errore nel salvataggio del post")
     } finally {
@@ -1632,7 +1663,7 @@ export default function SocialMediaDashboard({
                   <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1 sm:flex-none">
                     Annulla
                   </Button>
-                  <Button onClick={updatePost} disabled={isLoading} className="flex-1 sm:flex-none">
+                  <Button variant="outline" onClick={() => updatePost(false)} disabled={isLoading} className="flex-1 sm:flex-none">
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1645,6 +1676,21 @@ export default function SocialMediaDashboard({
                       </>
                     )}
                   </Button>
+                  {!editingPost.scheduled_for && (
+                    <Button onClick={() => updatePost(true)} disabled={isLoading} className="flex-1 sm:flex-none">
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Pubblicazione...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Salva e Pubblica
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </ScrollArea>
