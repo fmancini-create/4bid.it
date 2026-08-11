@@ -72,14 +72,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // account: es. un post Santaddeo finiva sull'Instagram non correlato).
       if (post.target_accounts && post.target_accounts.length > 0) {
         platformAccounts = platformAccounts.filter(
-          (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
+          (a) =>
+            post.target_accounts.includes(a.id) ||
+            post.target_accounts.includes(a.account_id) ||
+            post.target_accounts.includes(a.page_id),
         )
         console.log(
           `[v0] ${platform} target_accounts filter (strict): ${post.target_accounts.length} targets, ${platformAccounts.length} matched`,
         )
         if (platformAccounts.length === 0) {
-          // Nessuna pagina target per questa piattaforma: salta senza errore.
-          console.log(`[v0] ${platform}: nessuna pagina di destinazione selezionata, skip.`)
+          // Piattaforma selezionata ma senza destinazione: segnalo (niente skip muto).
+          console.log(`[v0] ${platform}: nessuna pagina di destinazione selezionata.`)
+          errors.push(`${platform}: nessuna destinazione selezionata, post non pubblicato su questa piattaforma`)
           continue
         }
       }
