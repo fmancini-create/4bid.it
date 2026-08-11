@@ -13,7 +13,7 @@ import { ProjectBrand } from "@/components/quotes/project-brand"
 import ContractTermsSection, { acceptanceLabel } from "./contract-terms-section"
 import ComparisonTablesPreview from "@/components/quotes/comparison-tables-preview"
 import { normalizeQuoteTables } from "@/lib/quotes/comparison"
-import { economicTerms, generalConditions, parseContractTerms } from "@/lib/quotes/terms"
+import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
 import {
   calculateQuoteLine,
   decodeCredential,
@@ -483,7 +483,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
 
       <ComparisonTablesPreview tables={normalizeQuoteTables(quote.comparison_tables)} />
 
-      <ContractTermsSection terms={contractTerms} economic={economicLines} general={generalConditions()} paymentTerms={quote.payment_terms} />
+      <ContractTermsSection terms={contractTerms} economic={economicLines} paymentTerms={quote.payment_terms} />
 
       {!alreadyAccepted&&!expired?<>
         {requestedFields.length?<section className="rounded-2xl border bg-card p-6 space-y-4"><h2 className="font-semibold">Dati necessari all'attivazione</h2>{requestedFields.map(field=>{const credential=field.type==="credentials"?decodeCredential(fieldValues[field.key]):null;return <div key={field.key}><Label>{field.label}{field.required?" *":""}</Label>{field.type==="credentials"?<div className="grid gap-2 sm:grid-cols-2"><Input placeholder="ID / Username" value={credential?.id||""} onChange={e=>setCredentialPart(field.key,"id",e.target.value)}/><Input type="password" placeholder="Password" value={credential?.password||""} onChange={e=>setCredentialPart(field.key,"password",e.target.value)}/></div>:field.type==="textarea"?<Textarea value={fieldValues[field.key]||""} onChange={e=>setFieldValues(v=>({...v,[field.key]:e.target.value}))}/>:<Input type={field.type==="email"?"email":"text"} value={fieldValues[field.key]||""} onChange={e=>setFieldValues(v=>({...v,[field.key]:e.target.value}))}/>}</div>})}</section>:null}

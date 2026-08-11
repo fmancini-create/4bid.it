@@ -284,7 +284,7 @@ export default function SoftwareRevenueManagementPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-yellow" />
-                  <span className="text-sm">ROI garantito</span>
+                  <span className="text-sm">ROI misurabile</span>
                 </div>
               </div>
             </div>
