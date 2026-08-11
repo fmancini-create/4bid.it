@@ -117,6 +117,9 @@ export interface SalesChannelQuote {
   /** Copie delle condizioni: tipizzate come sconosciute per non creare un ciclo con terms.ts; si leggono con parseContractTerms. */
   contract_terms?: unknown
   accepted_terms?: unknown
+  /** Tabelle comparative mostrate al cliente: tipizzate come sconosciute per non
+   *  creare un ciclo con comparison.ts; si leggono con normalizeQuoteTables. */
+  comparison_tables?: unknown
   line_items: QuoteLineItem[]
   total_amount: number | null
   deposit_amount: number | null
