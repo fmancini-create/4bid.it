@@ -253,13 +253,13 @@ export default function SocialMediaDashboard({
     }
   }
 
-  const savePost = async () => {
+  const savePost = async (publishImmediately = false) => {
     // Simplified savePost to align with the update's DialogFooter
     if (!newPost.content || newPost.platforms.length === 0) return
 
     setIsLoading(true)
     try {
-      const scheduledForUTC = newPost.scheduled_for ? localDatetimeToUTC(newPost.scheduled_for) : null
+      const scheduledForUTC = publishImmediately ? null : newPost.scheduled_for ? localDatetimeToUTC(newPost.scheduled_for) : null
 
       const status = scheduledForUTC ? "scheduled" : "draft"
 
@@ -285,6 +285,39 @@ export default function SocialMediaDashboard({
 
       const savedPost = await response.json()
       setPosts((prev) => [savedPost, ...prev])
+
+      // Pubblicazione immediata: dopo aver creato la bozza, la pubblichiamo
+      // subito chiamando l'endpoint di publish. Toast ONESTO: se la
+      // pubblicazione fallisce (o riesce solo in parte) lo diciamo, invece di
+      // mostrare un "successo" fuorviante.
+      if (publishImmediately) {
+        try {
+          const pubRes = await fetch(`/api/social/posts/${savedPost.id}/publish`, { method: "POST" })
+          const pubResult = await pubRes.json().catch(() => ({}))
+          const publishedOn: string[] = pubResult.published || []
+          const pubErrors: string[] = pubResult.errors || []
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === savedPost.id
+                ? { ...p, status: pubResult.success ? "published" : "failed", published_at: new Date().toISOString(), error_message: pubErrors.join("; ") || null }
+                : p,
+            ),
+          )
+          if (pubResult.success && pubErrors.length === 0) {
+            toast.success(`Post pubblicato su ${publishedOn.length} ${publishedOn.length === 1 ? "canale" : "canali"}!`)
+          } else if (pubResult.success && pubErrors.length > 0) {
+            toast.warning(`Pubblicato in parte (${publishedOn.length}). Problemi: ${pubErrors.join("; ")}`)
+          } else {
+            toast.error(`Pubblicazione non riuscita: ${pubErrors.join("; ") || "nessun canale ha accettato il post"}`)
+          }
+        } catch (pubErr) {
+          console.error("[v0] immediate publish error:", pubErr)
+          toast.error("Post salvato come bozza, ma la pubblicazione non e' riuscita. Riprova dal pulsante Pubblica.")
+        }
+      } else {
+        toast.success(scheduledForUTC ? "Post programmato!" : "Bozza salvata!")
+      }
+
       setShowCreateDialog(false)
       setNewPost({
         content: "",
@@ -299,7 +332,6 @@ export default function SocialMediaDashboard({
         link_url: "", // Reset link_url
         media_priority: "image",
       })
-      toast.success("Post salvato!")
       router.refresh()
     } catch (error) {
       console.error("Save post error:", error)
@@ -1114,7 +1146,8 @@ export default function SocialMediaDashboard({
               Annulla
             </Button>
             <Button
-              onClick={savePost}
+              variant="outline"
+              onClick={() => savePost(false)}
               disabled={!newPost.content || newPost.platforms.length === 0 || isLoading}
               className="w-full sm:w-auto"
             >
@@ -1130,6 +1163,25 @@ export default function SocialMediaDashboard({
                 </>
               )}
             </Button>
+            {!newPost.scheduled_for && (
+              <Button
+                onClick={() => savePost(true)}
+                disabled={!newPost.content || newPost.platforms.length === 0 || isLoading}
+                className="w-full sm:w-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Pubblicazione...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Pubblica ora
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
