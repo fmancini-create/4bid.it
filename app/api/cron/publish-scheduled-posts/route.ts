@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
+import { publishToInstagram } from "@/lib/social/instagram"
 import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
 
 // Cron job per pubblicare i post programmati
@@ -126,10 +127,19 @@ export async function GET(request: NextRequest) {
                   errors.push(`Facebook (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
                 }
               } else if (platform === "instagram") {
-                if (!post.image_url) {
-                  errors.push("Instagram richiede un'immagine per pubblicare")
+                const result = await publishToInstagram(
+                  account.account_id,
+                  account.access_token,
+                  post.content,
+                  post.image_url,
+                  post.link_url,
+                )
+
+                if (result.success && result.postId) {
+                  platformPostIds[`instagram_${account.account_name}`] = result.postId
+                  console.log(`[v0] Published to Instagram ${account.account_name}: ${result.postId}`)
                 } else {
-                  errors.push("Instagram: pubblicazione in sviluppo")
+                  errors.push(`Instagram (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
                 }
               } else if (platform === "linkedin") {
                 const result = await publishToLinkedInWithFallback(

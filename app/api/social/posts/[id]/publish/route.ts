@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook } from "@/lib/social/facebook"
+import { publishToInstagram } from "@/lib/social/instagram"
 import { publishToLinkedInWithFallback, refreshLinkedInToken } from "@/lib/social/linkedin"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -112,10 +113,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               errors.push(`Facebook (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
             }
           } else if (platform === "instagram") {
-            if (!post.image_url) {
-              errors.push("Instagram richiede un'immagine per pubblicare")
+            const result = await publishToInstagram(
+              account.account_id, // IG Business Account ID
+              account.access_token,
+              post.content,
+              post.image_url,
+              post.link_url,
+            )
+
+            console.log(`[v0] Instagram result:`, result)
+
+            if (result.success && result.postId) {
+              platformPostIds[`instagram_${account.account_name}`] = result.postId
             } else {
-              errors.push("Instagram: pubblicazione in sviluppo")
+              errors.push(`Instagram (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
             }
           } else if (platform === "linkedin") {
             // Auto-rinnovo: il token LinkedIn dura ~60 giorni. Se e' scaduto (o
