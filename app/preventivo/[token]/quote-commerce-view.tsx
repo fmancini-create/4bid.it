@@ -448,7 +448,7 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
         // Valore "per struttura" al mese (canone ricorrente dal secondo anno):
         // stesso importo del ripartito, mostrato dentro il box "Dal secondo anno".
         const perStructure = perUnit.find(u => u.label === "per struttura") || null
-        return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
+        return <section className="rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="mb-3 text-lg font-semibold">Il tuo investimento</h2>
