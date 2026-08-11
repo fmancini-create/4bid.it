@@ -96,12 +96,21 @@ export async function GET(request: NextRequest) {
         for (const platform of platformsToPublish) {
           let platformAccounts = accounts?.filter((a) => a.platform === platform) || []
 
-          // target_accounts è usato solo per Facebook (multi-pagina)
-          // LinkedIn e Instagram usano tutti gli account attivi della piattaforma
-          if (platform === "facebook" && post.target_accounts && post.target_accounts.length > 0) {
+          // Le destinazioni scelte sono una ALLOWLIST autorevole su TUTTE le
+          // piattaforme (coerente col publish manuale): si pubblica SOLO sulle
+          // pagine indicate. Se una piattaforma selezionata non ha destinazioni,
+          // viene segnalata (niente skip muto).
+          if (post.target_accounts && post.target_accounts.length > 0) {
             platformAccounts = platformAccounts.filter(
-              (a) => post.target_accounts.includes(a.id) || post.target_accounts.includes(a.account_id),
+              (a) =>
+                post.target_accounts.includes(a.id) ||
+                post.target_accounts.includes(a.account_id) ||
+                post.target_accounts.includes(a.page_id),
             )
+            if (platformAccounts.length === 0) {
+              errors.push(`${platform}: nessuna destinazione selezionata, post non pubblicato su questa piattaforma`)
+              continue
+            }
           }
 
           if (platformAccounts.length === 0) {

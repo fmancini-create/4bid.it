@@ -1187,12 +1187,28 @@ export default function SocialMediaDashboard({
                       key={platform}
                       onClick={() => {
                         if (!isAvailable) return
-                        setNewPost((prev) => ({
-                          ...prev,
-                          platforms: isSelected
-                            ? prev.platforms.filter((p) => p !== platform)
-                            : [...prev.platforms, platform],
-                        }))
+                        const platAccounts = accounts.filter((a) => a.platform === platform && a.is_active)
+                        const platAccountIds = platAccounts.map((a) => a.account_id || a.page_id || "")
+                        setNewPost((prev) => {
+                          if (isSelected) {
+                            // Deseleziono la piattaforma: rimuovo anche le sue destinazioni.
+                            return {
+                              ...prev,
+                              platforms: prev.platforms.filter((p) => p !== platform),
+                              target_accounts: (prev.target_accounts || []).filter((id) => !platAccountIds.includes(id)),
+                            }
+                          }
+                          // Seleziono la piattaforma: se ha un solo account, lo pre-seleziono.
+                          const toAdd =
+                            platAccounts.length === 1
+                              ? [platAccounts[0].account_id || platAccounts[0].page_id || ""]
+                              : []
+                          return {
+                            ...prev,
+                            platforms: [...prev.platforms, platform],
+                            target_accounts: [...new Set([...(prev.target_accounts || []), ...toAdd])],
+                          }
+                        })
                       }}
                       disabled={!isAvailable}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
@@ -1211,42 +1227,61 @@ export default function SocialMediaDashboard({
               </div>
             </div>
 
-            {/* Target accounts selection for Facebook */}
-            {newPost.platforms.includes("facebook") && (
-              <div className="space-y-2">
-                <Label className="text-sm">Pagine Facebook</Label>
-                <p className="text-xs text-muted-foreground">Seleziona su quali pagine pubblicare</p>
-                <div className="flex flex-wrap gap-2">
-                  {accounts
-                    .filter((a) => a.platform === "facebook" && a.is_active)
-                    .map((account) => {
-                      const isSelected = newPost.target_accounts?.includes(account.page_id || account.account_id || "")
-                      return (
-                        <button
-                          key={account.id}
-                          onClick={() => {
-                            const accountId = account.page_id || account.account_id || ""
-                            setNewPost((prev) => ({
-                              ...prev,
-                              target_accounts: isSelected
-                                ? (prev.target_accounts || []).filter((id) => id !== accountId)
-                                : [...(prev.target_accounts || []), accountId],
-                            }))
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
-                            isSelected
-                              ? "bg-blue-600 text-white border-transparent"
-                              : "border-border hover:border-primary"
-                          }`}
-                        >
-                          <Facebook className="h-3.5 w-3.5" />
-                          <span className="truncate max-w-[100px] sm:max-w-none">{account.account_name}</span>
-                        </button>
-                      )
-                    })}
-                </div>
-              </div>
-            )}
+            {/* Selettore pagine di destinazione per OGNI piattaforma selezionata.
+                Le destinazioni sono una allowlist: se una piattaforma e' attiva ma
+                non ha nessuna pagina scelta, quella piattaforma verra' segnalata. */}
+            {["facebook", "instagram", "linkedin"]
+              .filter((platform) => newPost.platforms.includes(platform))
+              .map((platform) => {
+                const PlatformIcon = platformIcons[platform as keyof typeof platformIcons]
+                const platAccounts = accounts.filter((a) => a.platform === platform && a.is_active)
+                const labels: Record<string, string> = {
+                  facebook: "Pagine Facebook",
+                  instagram: "Account Instagram",
+                  linkedin: "Pagine LinkedIn",
+                }
+                const noneSelected = !platAccounts.some((a) =>
+                  newPost.target_accounts?.includes(a.account_id || a.page_id || ""),
+                )
+                return (
+                  <div key={platform} className="space-y-2">
+                    <Label className="text-sm">{labels[platform]}</Label>
+                    <p className="text-xs text-muted-foreground">Seleziona su quali destinazioni pubblicare</p>
+                    <div className="flex flex-wrap gap-2">
+                      {platAccounts.map((account) => {
+                        const accountId = account.account_id || account.page_id || ""
+                        const isSelected = newPost.target_accounts?.includes(accountId)
+                        return (
+                          <button
+                            key={account.id}
+                            onClick={() => {
+                              setNewPost((prev) => ({
+                                ...prev,
+                                target_accounts: isSelected
+                                  ? (prev.target_accounts || []).filter((id) => id !== accountId)
+                                  : [...(prev.target_accounts || []), accountId],
+                              }))
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                              isSelected
+                                ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                                : "border-border hover:border-primary"
+                            }`}
+                          >
+                            <PlatformIcon className="h-3.5 w-3.5" />
+                            <span className="truncate max-w-[100px] sm:max-w-none">{account.account_name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {noneSelected && (
+                      <p className="text-xs text-destructive">
+                        Nessuna destinazione selezionata: il post non uscira&apos; su {labels[platform]}.
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
 
             {/* Schedule toggle */}
             <div className="flex items-center justify-between py-2">
@@ -1691,10 +1726,27 @@ export default function SocialMediaDashboard({
                           key={platform}
                           type="button"
                           onClick={() => {
-                            const newPlatforms = isSelected
-                              ? editingPost.platforms.filter((p) => p !== platform)
-                              : [...editingPost.platforms, platform]
-                            setEditingPost({ ...editingPost, platforms: newPlatforms })
+                            const platAccounts = accounts.filter((a) => a.platform === platform && a.is_active)
+                            const platAccountIds = platAccounts.map((a) => a.account_id || a.page_id || "")
+                            if (isSelected) {
+                              setEditingPost({
+                                ...editingPost,
+                                platforms: editingPost.platforms.filter((p) => p !== platform),
+                                target_accounts: (editingPost.target_accounts || []).filter(
+                                  (id) => !platAccountIds.includes(id),
+                                ),
+                              })
+                            } else {
+                              const toAdd =
+                                platAccounts.length === 1
+                                  ? [platAccounts[0].account_id || platAccounts[0].page_id || ""]
+                                  : []
+                              setEditingPost({
+                                ...editingPost,
+                                platforms: [...editingPost.platforms, platform],
+                                target_accounts: [...new Set([...(editingPost.target_accounts || []), ...toAdd])],
+                              })
+                            }
                           }}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                             isSelected
@@ -1709,6 +1761,61 @@ export default function SocialMediaDashboard({
                     })}
                   </div>
                 </div>
+
+                {/* Selettore destinazioni per ogni piattaforma selezionata (edit) */}
+                {["facebook", "instagram", "linkedin"]
+                  .filter((platform) => editingPost.platforms.includes(platform))
+                  .map((platform) => {
+                    const PlatformIcon = platformIcons[platform as keyof typeof platformIcons]
+                    const platAccounts = accounts.filter((a) => a.platform === platform && a.is_active)
+                    if (platAccounts.length === 0) return null
+                    const labels: Record<string, string> = {
+                      facebook: "Pagine Facebook",
+                      instagram: "Account Instagram",
+                      linkedin: "Pagine LinkedIn",
+                    }
+                    const noneSelected = !platAccounts.some((a) =>
+                      editingPost.target_accounts?.includes(a.account_id || a.page_id || ""),
+                    )
+                    return (
+                      <div key={platform} className="space-y-2">
+                        <Label>{labels[platform]}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {platAccounts.map((account) => {
+                            const accountId = account.account_id || account.page_id || ""
+                            const isSel = editingPost.target_accounts?.includes(accountId)
+                            return (
+                              <button
+                                key={account.id}
+                                type="button"
+                                onClick={() => {
+                                  setEditingPost({
+                                    ...editingPost,
+                                    target_accounts: isSel
+                                      ? (editingPost.target_accounts || []).filter((id) => id !== accountId)
+                                      : [...(editingPost.target_accounts || []), accountId],
+                                  })
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                                  isSel
+                                    ? `${platformColors[platform as keyof typeof platformColors]} text-white border-transparent`
+                                    : "border-border hover:border-primary"
+                                }`}
+                              >
+                                <PlatformIcon className="h-3.5 w-3.5" />
+                                <span className="truncate max-w-[120px] sm:max-w-none">{account.account_name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {noneSelected && (
+                          <p className="text-xs text-destructive">
+                            Nessuna destinazione selezionata: il post non uscira&apos; su {labels[platform]}.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
 
                 {/* Schedule */}
                 <div className="space-y-2">
