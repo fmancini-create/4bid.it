@@ -445,6 +445,9 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
           if (assets > 0 && corpMeta.corporate_show_per_asset !== false) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringMonthly / assets, currency) })
           if (users > 0 && corpMeta.corporate_show_per_user !== false) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringMonthly / users, currency) })
         }
+        // Valore "per struttura" al mese (canone ricorrente dal secondo anno):
+        // stesso importo del ripartito, mostrato dentro il box "Dal secondo anno".
+        const perStructure = perUnit.find(u => u.label === "per struttura") || null
         return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -461,12 +464,19 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
               <div className="flex justify-start lg:justify-end"><DiscountedAmount net={firstYear} gross={firstYearGross} currency={currency} netClassName="text-2xl font-black" align="right" /></div>
               <p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi</p>
               <p className="mt-1 text-xs text-muted-foreground">{quote.vat_included ? "Importi IVA inclusa" : "Importi IVA esclusa"}</p>
-              {totals.oneTime > 0 && recurringYearly > 0 ? <div className="mt-3 inline-flex flex-col rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 lg:items-end"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Dal secondo anno</p><div className="flex justify-start lg:justify-end"><DiscountedAmount net={recurringYearly} gross={recurringYearlyGross} currency={currency} netClassName="text-xl font-black" suffix={<span className="text-sm font-normal text-muted-foreground"> /anno</span>} align="right" /></div><p className="text-[11px] text-muted-foreground">solo canoni ricorrenti, senza il setup una tantum</p></div> : null}
             </div>
           </div>
-          {perUnit.length ? <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
-            <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo abbonamento mensile ripartito<span className="normal-case font-normal"> (solo canoni, escluso setup)</span></p>
-            {perUnit.map(u => <div key={u.label}><p className="text-base font-bold">{u.value}<span className="text-[11px] font-normal text-muted-foreground"> /mese</span></p><p className="text-[11px] text-muted-foreground">{u.label}</p></div>)}
+          {recurringYearly > 0 && (perUnit.length > 0 || totals.oneTime > 0) ? <div className="mt-4 flex flex-col gap-4 border-t pt-4 lg:flex-row lg:items-start lg:justify-between">
+            {perUnit.length ? <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo abbonamento mensile ripartito<span className="normal-case font-normal"> (solo canoni, escluso setup)</span></p>
+              {perUnit.map(u => <div key={u.label}><p className="text-base font-bold">{u.value}<span className="text-[11px] font-normal text-muted-foreground"> /mese</span></p><p className="text-[11px] text-muted-foreground">{u.label}</p></div>)}
+            </div> : <div className="hidden lg:block" />}
+            {totals.oneTime > 0 ? <div className="inline-flex flex-col rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 lg:items-end lg:text-right">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Dal secondo anno</p>
+              <div className="flex justify-start lg:justify-end"><DiscountedAmount net={recurringYearly} gross={recurringYearlyGross} currency={currency} netClassName="text-xl font-black" suffix={<span className="text-sm font-normal text-muted-foreground"> /anno</span>} align="right" /></div>
+              {perStructure ? <p className="mt-1 text-base font-bold">{perStructure.value}<span className="text-[11px] font-normal text-muted-foreground"> /mese per struttura</span></p> : null}
+              <p className="mt-1 text-[11px] text-muted-foreground">solo canoni ricorrenti, senza il setup una tantum</p>
+            </div> : null}
           </div> : null}
         </section>
       })()}
