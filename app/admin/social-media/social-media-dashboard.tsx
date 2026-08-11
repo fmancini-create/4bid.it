@@ -932,14 +932,14 @@ export default function SocialMediaDashboard({
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Argomento..."
+                  placeholder="Scrivi un argomento o prompt per l'AI..."
                   value={newPost.ai_topic}
                   onChange={(e) => setNewPost((prev) => ({ ...prev, ai_topic: e.target.value }))}
                   className="text-sm"
                 />
                 <Button onClick={() => generateAIPost()} disabled={isGenerating} className="shrink-0">
                   {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  <span className="sm:hidden ml-2">Genera</span>
+                  <span className="ml-2">{isGenerating ? "Genero..." : "Genera testo"}</span>
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
