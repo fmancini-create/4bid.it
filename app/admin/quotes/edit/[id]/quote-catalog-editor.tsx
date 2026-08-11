@@ -25,6 +25,12 @@ import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, syncAnnualP
 import GroupPricingReference from "../../commerce/group-pricing-reference"
 import { QuantityInput } from "../../quantity-input"
 import { quoteBrandAccent } from "@/lib/quotes/branding"
+import QuoteComparisonSection from "@/components/quotes/quote-comparison-section"
+import {
+  normalizeQuoteTables,
+  productsInQuote as comparisonProductsInQuote,
+  type QuoteComparisonTable,
+} from "@/lib/quotes/comparison"
 
 type CatalogItem = {
   id: string
@@ -144,6 +150,16 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
 
   const lines = (quote?.line_items || []) as QuoteLineItem[]
   const requestedFields = (quote?.requested_fields || []) as QuoteRequestedField[]
+  // Tabelle comparative: snapshot salvato sul preventivo + prodotti (fra i 4)
+  // realmente presenti nelle voci, che sono gli unici per cui offrire la tabella.
+  const comparisonTables = useMemo(
+    () => normalizeQuoteTables((quote as SalesChannelQuote | null)?.comparison_tables),
+    [quote],
+  )
+  const comparisonProducts = useMemo(() => comparisonProductsInQuote(lines), [lines])
+  function setComparisonTables(next: QuoteComparisonTable[]) {
+    patchQuote({ comparison_tables: next } as Partial<SalesChannelQuote>)
+  }
   const calculated = useMemo(() => lines.map(calculateQuoteLine), [lines])
   // Totali RAGGRUPPATI PER PERIODO, come la vista cliente. Sommare una tantum,
   // mensile e annuale in un unico numero (il vecchio `calculateQuoteTotal`)
@@ -353,6 +369,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           client_name: quote.client_name, client_company: quote.client_company, client_email: quote.client_email, client_vat: quote.client_vat, client_address: quote.client_address,
           title: quote.title, description: quote.description, payment_terms: quote.payment_terms, vat_included: quote.vat_included, currency: quote.currency,
           expires_at: quote.expires_at, line_items: lines, requested_fields: requestedFields,
+          comparison_tables: comparisonTables,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -527,6 +544,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
       </div>
     })}</section>
+
+    <section className="border rounded-xl p-5 bg-card space-y-4"><div><h2 className="font-semibold text-lg">Tabelle comparative</h2><p className="text-sm text-muted-foreground">Attiva la tabella "perché sceglierci" per i prodotti presenti nel preventivo. Compaiono al cliente in fondo, prima delle condizioni. Puoi personalizzarle per questo cliente; i modelli di partenza si gestiscono in <a href="/admin/quotes/comparison" className="underline">Tabelle comparative</a>.</p></div><QuoteComparisonSection productsInQuote={comparisonProducts} value={comparisonTables} onChange={setComparisonTables} /></section>
 
     <section className="border rounded-xl p-5 bg-card space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-lg">Dati da richiedere al cliente</h2><p className="text-sm text-muted-foreground">Ripristinato dal vecchio preventivo: credenziali, email, URL, testi e altri dati che il cliente dovrà compilare.</p></div><Button variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-2" />Aggiungi campo</Button></div>{requestedFields.length === 0 ? <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Nessun dato aggiuntivo richiesto. Usa “Aggiungi campo” per richiedere, ad esempio, accessi Booking.com, Expedia, PMS o dati tecnici.</div> : <div className="space-y-3">{requestedFields.map((field, index) => <div key={field.key || index} className="rounded-lg border p-4 space-y-3"><div className="grid md:grid-cols-[1fr_220px_auto] gap-3 items-end"><div><Label>Etichetta campo</Label><Input value={field.label} onChange={e => setField(index, { label: e.target.value })} placeholder="Es. Credenziali Booking.com" /></div><div><Label>Tipo</Label><Select value={field.type} onValueChange={value => setField(index, { type: value as QuoteRequestedField["type"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FIELD_TYPES.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent></Select></div><Button size="icon" variant="ghost" onClick={() => removeField(index)}><X className="h-4 w-4" /></Button></div><div><Label>Indicazioni per il cliente (facoltative)</Label><Input value={field.help || ""} onChange={e => setField(index, { help: e.target.value })} placeholder="Es. Inserire username e password dell'account amministratore" /></div><div className="flex items-center gap-2"><Switch checked={field.required} onCheckedChange={required => setField(index, { required })} /><Label>Obbligatorio</Label></div></div>)}</div>}</section>
 

@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import ContractTermsSection, { acceptanceLabel } from "./contract-terms-section"
+import ComparisonTablesPreview from "@/components/quotes/comparison-tables-preview"
+import { normalizeQuoteTables } from "@/lib/quotes/comparison"
 import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
 import {
   decodeCredential,
@@ -277,6 +279,9 @@ export default function QuoteView({ token, quote, expired }: Props) {
             </p>
           </section>
         )}
+
+        {/* Tabelle comparative (in fondo, prima delle condizioni) */}
+        <ComparisonTablesPreview tables={normalizeQuoteTables(quote.comparison_tables)} />
 
         {/* Condizioni di pagamento */}
       <ContractTermsSection

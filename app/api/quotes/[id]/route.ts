@@ -18,6 +18,9 @@ const EDITABLE_FIELDS = [
   "client_name", "client_company", "client_email", "client_vat", "client_address",
   "title", "description", "payment_terms", "deposit_amount", "vat_included", "currency",
   "requested_fields", "expires_at",
+  // Tabelle comparative: materiale di posizionamento, non parte dell'accordo
+  // economico -> restano modificabili anche dopo l'accettazione.
+  "comparison_tables",
 ] as const
 
 /**
