@@ -194,6 +194,9 @@ export default function SocialMediaDashboard({
   })
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+  // Topic/stato per la scelta immagine nel dialog di modifica/ripubblica
+  const [editImageTopic, setEditImageTopic] = useState("")
+  const [isEditingImage, setIsEditingImage] = useState(false)
 
   const [publishConfirmPost, setPublishConfirmPost] = useState<SocialPost | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -250,6 +253,33 @@ export default function SocialMediaDashboard({
       toast.error(message)
     } finally {
       setIsGeneratingImage(false)
+    }
+  }
+
+  // Imposta l'immagine (logo reale del brand) nel dialog di modifica/ripubblica.
+  // Stesso endpoint del create: sceglie il logo dal brand/argomento o dal link.
+  const generateEditImage = async () => {
+    if (!editingPost) return
+    setIsEditingImage(true)
+    try {
+      const response = await fetch("/api/social/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: editImageTopic || editingPost.content?.slice(0, 60) || "",
+          linkUrl: editingPost.link_url || "",
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error || "Errore nella selezione dell'immagine")
+      setEditingPost((prev) => (prev ? { ...prev, image_url: data.imageUrl } : prev))
+      toast.success("Logo del brand impostato")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Errore nella selezione dell'immagine"
+      console.error("[v0] edit brand image error:", error)
+      toast.error(message)
+    } finally {
+      setIsEditingImage(false)
     }
   }
 
@@ -1408,7 +1438,7 @@ export default function SocialMediaDashboard({
         </Dialog>
       )}
 
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog open={showEditDialog} onOpenChange={(open) => { setShowEditDialog(open); if (!open) setEditImageTopic("") }}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Modifica Post</DialogTitle>
@@ -1453,6 +1483,39 @@ export default function SocialMediaDashboard({
                       Nessuna immagine
                     </div>
                   )}
+
+                  {/* Strumento logo del brand: aggiungi o sostituisci l'immagine
+                      anche in fase di modifica/ripubblica (stesso del create). */}
+                  <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        {editingPost.image_url ? "Sostituisci immagine (logo del brand)" : "Aggiungi immagine (logo del brand)"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Viene usato il logo reale del brand, scelto dall&apos;argomento o dal link. Utile per Instagram, che
+                      richiede sempre un&apos;immagine.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        placeholder="Brand o argomento (es. Santaddeo, Manubot, 4BID...)"
+                        value={editImageTopic}
+                        onChange={(e) => setEditImageTopic(e.target.value)}
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        onClick={generateEditImage}
+                        disabled={isEditingImage}
+                        variant="outline"
+                        className="shrink-0 bg-transparent"
+                      >
+                        {isEditingImage ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                        <span className="ml-2">Usa logo del brand</span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Link URL */}
