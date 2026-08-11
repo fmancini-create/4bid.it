@@ -124,7 +124,7 @@ export function mergeContractTerms(previous: QuoteContractTerms | null, fresh: Q
  */
 export function acceptanceDeclaration(terms: QuoteContractTerms | null): string {
   const nomi = (terms?.projects || []).map(entry => entry.version ? `${entry.label} (aggiornate al ${entry.version})` : entry.label)
-  const base = "Confermo di aver letto e accettato il preventivo, la durata selezionata, il rinnovo automatico, le condizioni economiche e le condizioni generali di 4BID S.r.l. riportate qui sopra"
+  const base = "Confermo di aver letto e accettato il preventivo, la durata selezionata, il rinnovo automatico e le condizioni economiche riportate qui sopra"
   if (!nomi.length) return `${base}.`
   const elenco = nomi.length === 1 ? nomi[0] : `${nomi.slice(0, -1).join(", ")} e ${nomi[nomi.length - 1]}`
   return `${base}, insieme alle condizioni contrattuali di ${elenco}, riportate per esteso in questa pagina.`

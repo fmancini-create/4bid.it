@@ -26,7 +26,7 @@ import ComparisonTablesPreview from "@/components/quotes/comparison-tables-previ
 import DiscountedAmount from "@/components/quotes/discounted-amount"
 import { lineGrossAmount } from "@/lib/quotes/commercial"
 import { normalizeQuoteTables } from "@/lib/quotes/comparison"
-import { economicTerms, generalConditions, parseContractTerms } from "@/lib/quotes/terms"
+import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
 import {
   decodeCredential,
   encodeCredential,
@@ -302,7 +302,6 @@ export default function QuoteView({ token, quote, expired }: Props) {
       <ContractTermsSection
         terms={parseContractTerms(quote.contract_terms)}
                 economic={economicTerms(lineItems, "monthly", quote.currency || "eur", { expiresAt: quote.expires_at, vatIncluded: quote.vat_included })}
-                general={generalConditions()}
                 paymentTerms={quote.payment_terms}
       />
 
