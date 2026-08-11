@@ -81,7 +81,7 @@ const BRANDS: BrandAsset[] = [
   },
   {
     key: "4bid",
-    asset: "/4bid-colorful-logo.jpg",
+    asset: "/4bid-logo-email.png",
     keywords: ["4bid", "4 bid"],
     domains: ["4bid.it", "4bid"],
   },

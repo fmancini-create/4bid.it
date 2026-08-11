@@ -197,6 +197,9 @@ export default function SocialMediaDashboard({
   // Topic/stato per la scelta immagine nel dialog di modifica/ripubblica
   const [editImageTopic, setEditImageTopic] = useState("")
   const [isEditingImage, setIsEditingImage] = useState(false)
+  // Generazione VERA immagine AI (fal) — create + edit
+  const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false)
+  const [isGeneratingEditAiImage, setIsGeneratingEditAiImage] = useState(false)
 
   const [publishConfirmPost, setPublishConfirmPost] = useState<SocialPost | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -280,6 +283,61 @@ export default function SocialMediaDashboard({
       toast.error(message)
     } finally {
       setIsEditingImage(false)
+    }
+  }
+
+  // Genera una VERA immagine AI (fal) coerente col testo del post — dialog CREATE.
+  const generateAiImageCreate = async () => {
+    const prompt = newPost.image_topic || newPost.ai_topic || newPost.content || ""
+    if (!prompt.trim()) {
+      toast.error("Scrivi prima un argomento o il testo del post")
+      return
+    }
+    setIsGeneratingAiImage(true)
+    try {
+      const response = await fetch("/api/social/generate-ai-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error || "Generazione immagine non riuscita")
+      setNewPost((prev) => ({ ...prev, image_url: data.imageUrl }))
+      toast.success("Immagine AI generata")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Generazione immagine non riuscita"
+      console.error("[v0] create AI image error:", error)
+      toast.error(message)
+    } finally {
+      setIsGeneratingAiImage(false)
+    }
+  }
+
+  // Genera una VERA immagine AI (fal) coerente col testo del post — dialog EDIT.
+  const generateAiImageEdit = async () => {
+    if (!editingPost) return
+    const prompt = editImageTopic || editingPost.content || ""
+    if (!prompt.trim()) {
+      toast.error("Scrivi prima un argomento o il testo del post")
+      return
+    }
+    setIsGeneratingEditAiImage(true)
+    try {
+      const response = await fetch("/api/social/generate-ai-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error || "Generazione immagine non riuscita")
+      setEditingPost((prev) => (prev ? { ...prev, image_url: data.imageUrl } : prev))
+      toast.success("Immagine AI generata")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Generazione immagine non riuscita"
+      console.error("[v0] edit AI image error:", error)
+      toast.error(message)
+    } finally {
+      setIsGeneratingEditAiImage(false)
     }
   }
 
@@ -989,15 +1047,16 @@ export default function SocialMediaDashboard({
               </div>
             </div>
 
-            {/* Brand image - usa SEMPRE un asset reale (logo), mai immagini AI */}
+            {/* Immagine: logo reale del brand OPPURE immagine generata con AI */}
             <div className="p-3 sm:p-4 bg-muted/50 rounded-lg space-y-3 border">
               <div className="flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                <span className="font-medium text-sm sm:text-base">Immagine (logo del brand)</span>
+                <span className="font-medium text-sm sm:text-base">Immagine</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Viene usato il logo reale del brand, scelto in automatico dal link o dall&apos;argomento. Nessuna
-                immagine generata dall&apos;AI.
+                Usa <strong>logo del brand</strong> per il marchio reale (scelto dall&apos;argomento o dal link), oppure{" "}
+                <strong>genera con AI</strong> un&apos;illustrazione a tema. Utile per Instagram, che richiede sempre
+                un&apos;immagine.
               </p>
               <div className="flex flex-col gap-2">
                 <Input
@@ -1006,19 +1065,33 @@ export default function SocialMediaDashboard({
                   onChange={(e) => setNewPost((prev) => ({ ...prev, image_topic: e.target.value }))}
                   className="text-sm"
                 />
-                <Button
-                  onClick={generateAIImage}
-                  disabled={isGeneratingImage}
-                  variant="outline"
-                  className="w-full bg-transparent"
-                >
-                  {isGeneratingImage ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ImageIcon className="h-4 w-4" />
-                  )}
-                  <span className="ml-2">Usa logo del brand</span>
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    onClick={generateAIImage}
+                    disabled={isGeneratingImage || isGeneratingAiImage}
+                    variant="outline"
+                    className="flex-1 bg-transparent"
+                  >
+                    {isGeneratingImage ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">Usa logo del brand</span>
+                  </Button>
+                  <Button
+                    onClick={generateAiImageCreate}
+                    disabled={isGeneratingAiImage || isGeneratingImage}
+                    className="flex-1"
+                  >
+                    {isGeneratingAiImage ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">{isGeneratingAiImage ? "Genero..." : "Genera con AI"}</span>
+                  </Button>
+                </div>
               </div>
 
               {newPost.image_url && (
@@ -1515,35 +1588,48 @@ export default function SocialMediaDashboard({
                     </div>
                   )}
 
-                  {/* Strumento logo del brand: aggiungi o sostituisci l'immagine
+                  {/* Immagine: logo reale del brand OPPURE immagine generata con AI
                       anche in fase di modifica/ripubblica (stesso del create). */}
                   <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <ImageIcon className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">
-                        {editingPost.image_url ? "Sostituisci immagine (logo del brand)" : "Aggiungi immagine (logo del brand)"}
+                        {editingPost.image_url ? "Sostituisci immagine" : "Aggiungi immagine"}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Viene usato il logo reale del brand, scelto dall&apos;argomento o dal link. Utile per Instagram, che
-                      richiede sempre un&apos;immagine.
+                      Usa <strong>logo del brand</strong> per il marchio reale, oppure <strong>genera con AI</strong>{" "}
+                      un&apos;illustrazione a tema. Utile per Instagram, che richiede sempre un&apos;immagine.
                     </p>
+                    <Input
+                      placeholder="Brand o argomento (es. Santaddeo, Manubot, 4BID...)"
+                      value={editImageTopic}
+                      onChange={(e) => setEditImageTopic(e.target.value)}
+                      className="text-sm"
+                    />
                     <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input
-                        placeholder="Brand o argomento (es. Santaddeo, Manubot, 4BID...)"
-                        value={editImageTopic}
-                        onChange={(e) => setEditImageTopic(e.target.value)}
-                        className="text-sm"
-                      />
                       <Button
                         type="button"
                         onClick={generateEditImage}
-                        disabled={isEditingImage}
+                        disabled={isEditingImage || isGeneratingEditAiImage}
                         variant="outline"
-                        className="shrink-0 bg-transparent"
+                        className="flex-1 bg-transparent"
                       >
                         {isEditingImage ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
                         <span className="ml-2">Usa logo del brand</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={generateAiImageEdit}
+                        disabled={isGeneratingEditAiImage || isEditingImage}
+                        className="flex-1"
+                      >
+                        {isGeneratingEditAiImage ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                        <span className="ml-2">{isGeneratingEditAiImage ? "Genero..." : "Genera con AI"}</span>
                       </Button>
                     </div>
                   </div>
