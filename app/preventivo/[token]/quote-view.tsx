@@ -23,6 +23,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import ContractTermsSection, { acceptanceLabel } from "./contract-terms-section"
 import ComparisonTablesPreview from "@/components/quotes/comparison-tables-preview"
+import DiscountedAmount from "@/components/quotes/discounted-amount"
+import { lineGrossAmount } from "@/lib/quotes/commercial"
 import { normalizeQuoteTables } from "@/lib/quotes/comparison"
 import { economicTerms, parseContractTerms } from "@/lib/quotes/terms"
 import {
@@ -79,6 +81,9 @@ export default function QuoteView({ token, quote, expired }: Props) {
   const requestedFields = (quote.requested_fields as QuoteRequestedField[]) || []
   const lineItems = quote.line_items || []
   const cardAmount = quote.deposit_amount ?? quote.total_amount ?? null
+  // Totali per il riepilogo: LISTINO (pre-sconto) da barrare e NETTO effettivo.
+  const grossTotal = lineItems.reduce((sum, li) => sum + lineGrossAmount(li), 0)
+  const netTotal = quote.total_amount ?? lineItems.reduce((sum, li) => sum + Number(li.amount || 0), 0)
 
   function setField(key: string, value: string) {
     setFieldValues((prev) => ({ ...prev, [key]: value }))
@@ -261,18 +266,28 @@ export default function QuoteView({ token, quote, expired }: Props) {
             {lineItems.length > 0 && (
               <div className="divide-y divide-border mb-3">
                 {lineItems.map((li, i) => (
-                  <div key={i} className="flex justify-between py-2 text-sm">
+                  <div key={i} className="flex justify-between gap-4 py-2 text-sm">
                     <span className="text-muted-foreground">{li.description}</span>
-                    <span className="font-medium">{formatQuoteAmount(li.amount, quote.currency)}</span>
+                    <DiscountedAmount
+                      net={Number(li.amount || 0)}
+                      gross={lineGrossAmount(li)}
+                      currency={quote.currency}
+                      netClassName="font-medium"
+                      align="right"
+                    />
                   </div>
                 ))}
               </div>
             )}
-            <div className="flex justify-between items-baseline border-t border-border pt-3">
+            <div className="flex justify-between items-start gap-4 border-t border-border pt-3">
               <span className="font-semibold">Totale</span>
-              <span className="text-xl font-bold">
-                {formatQuoteAmount(quote.total_amount, quote.currency)}
-              </span>
+              <DiscountedAmount
+                net={Number(netTotal || 0)}
+                gross={grossTotal}
+                currency={quote.currency}
+                netClassName="text-xl font-bold"
+                align="right"
+              />
             </div>
             <p className="text-xs text-muted-foreground text-right mt-1">
               {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}
