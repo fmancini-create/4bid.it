@@ -184,8 +184,11 @@ export default function TermsPage() {
                 8. Durata, Rinnovo Automatico e Disdetta degli Abbonamenti
               </h2>
               <p>
-                I servizi in abbonamento si rinnovano automaticamente alla scadenza del periodo scelto. La disdetta del
-                rinnovo va comunicata per iscritto, senza penali, entro i seguenti termini:
+                I servizi in abbonamento si rinnovano automaticamente alla scadenza del periodo scelto. Per disdire il
+                rinnovo &egrave; sufficiente disattivare il rinnovo automatico in autonomia dalla piattaforma, ove
+                disponibile la relativa funzione di gestione dell&apos;abbonamento; in mancanza di tale funzione &egrave;
+                sufficiente una comunicazione scritta, anche via email o PEC (senza necessit&agrave; di raccomandata o
+                comunicazione cartacea). In entrambi i casi senza penali ed entro i seguenti termini:
               </p>
               <ul className="list-disc pl-6 mt-4 space-y-2">
                 <li>
