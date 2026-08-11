@@ -423,9 +423,12 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
           const users = Number(corpMeta.corporate_max_users) || 0
           // Ogni voce e' mostrata solo se il relativo selettore e' attivo (default
           // attivo se mai impostato) E il valore ha senso (>0).
-          if (structures > 0 && corpMeta.corporate_show_per_structure !== false) perUnit.push({ label: "per struttura", value: formatQuoteAmount(recurringYearly / structures, currency) })
-          if (assets > 0 && corpMeta.corporate_show_per_asset !== false) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringYearly / assets, currency) })
-          if (users > 0 && corpMeta.corporate_show_per_user !== false) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringYearly / users, currency) })
+          // Il cliente vuole vedere il costo MENSILE per unita' (non l'annuo):
+          // il canone ricorrente e' annuo, quindi si divide anche per 12.
+          const recurringMonthly = recurringYearly / 12
+          if (structures > 0 && corpMeta.corporate_show_per_structure !== false) perUnit.push({ label: "per struttura", value: formatQuoteAmount(recurringMonthly / structures, currency) })
+          if (assets > 0 && corpMeta.corporate_show_per_asset !== false) perUnit.push({ label: "per asset", value: formatQuoteAmount(recurringMonthly / assets, currency) })
+          if (users > 0 && corpMeta.corporate_show_per_user !== false) perUnit.push({ label: "per utente", value: formatQuoteAmount(recurringMonthly / users, currency) })
         }
         return <section className="sticky bottom-3 z-10 rounded-2xl border border-primary/20 bg-background/95 p-6 shadow-lg backdrop-blur">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -446,8 +449,8 @@ export default function QuoteCommerceView({ token, quote, expired }: Props) {
             </div>
           </div>
           {perUnit.length ? <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
-            <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo abbonamento annuo ripartito<span className="normal-case font-normal"> (solo canoni, escluso setup)</span></p>
-            {perUnit.map(u => <div key={u.label}><p className="text-base font-bold">{u.value}</p><p className="text-[11px] text-muted-foreground">{u.label}</p></div>)}
+            <p className="w-full text-xs uppercase tracking-wide text-muted-foreground">Costo abbonamento mensile ripartito<span className="normal-case font-normal"> (solo canoni, escluso setup)</span></p>
+            {perUnit.map(u => <div key={u.label}><p className="text-base font-bold">{u.value}<span className="text-[11px] font-normal text-muted-foreground"> /mese</span></p><p className="text-[11px] text-muted-foreground">{u.label}</p></div>)}
           </div> : null}
         </section>
       })()}
