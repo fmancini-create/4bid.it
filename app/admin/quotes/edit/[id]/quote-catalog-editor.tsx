@@ -470,9 +470,11 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           // cliente, senza dover aprire l'anteprima.
           const structures = Number(item.quantity) || 0
           const recurringYearlyGroup = periodTotals.monthly * 12 + periodTotals.yearly
-          const perStructure = structures > 0 ? formatQuoteAmount(recurringYearlyGroup / structures, quote.currency) : null
-          const perAsset = maxAssets > 0 ? formatQuoteAmount(recurringYearlyGroup / maxAssets, quote.currency) : null
-          const perUser = maxUsers > 0 ? formatQuoteAmount(recurringYearlyGroup / maxUsers, quote.currency) : null
+          // Il cliente vede il costo MENSILE ripartito: dividiamo anche per 12.
+          const recurringMonthlyGroup = recurringYearlyGroup / 12
+          const perStructure = structures > 0 ? formatQuoteAmount(recurringMonthlyGroup / structures, quote.currency) : null
+          const perAsset = maxAssets > 0 ? formatQuoteAmount(recurringMonthlyGroup / maxAssets, quote.currency) : null
+          const perUser = maxUsers > 0 ? formatQuoteAmount(recurringMonthlyGroup / maxUsers, quote.currency) : null
           return <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
             <div>
               <strong>Limiti inclusi nel piano Corporate (totale gruppo)</strong>
@@ -483,17 +485,17 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
               <div><Label>Utenti inclusi (max, gruppo)</Label><Input type="number" min="0" value={maxUsers || ""} placeholder="es. 60" onChange={e => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_max_users: Number(e.target.value) || 0 }) : row))} /></div>
             </div>
             <div className="space-y-2 border-t border-primary/20 pt-3">
-              <p className="text-xs font-medium text-muted-foreground">Costo abbonamento annuo ripartito (ricorrente {formatQuoteAmount(recurringYearlyGroup, quote.currency)} / anno). L&apos;interruttore decide se mostrarlo al cliente:</p>
+              <p className="text-xs font-medium text-muted-foreground">Costo abbonamento mensile ripartito (ricorrente {formatQuoteAmount(recurringMonthlyGroup, quote.currency)} / mese). L&apos;interruttore decide se mostrarlo al cliente:</p>
               <div className="flex items-center justify-between gap-3">
-                <Label className="font-normal">Prezzo per struttura {perStructure ? <span className="font-semibold text-foreground">· {perStructure} / anno</span> : <span className="text-muted-foreground">(imposta la quantità strutture)</span>}</Label>
+                <Label className="font-normal">Prezzo per struttura {perStructure ? <span className="font-semibold text-foreground">· {perStructure} / mese</span> : <span className="text-muted-foreground">(imposta la quantità strutture)</span>}</Label>
                 <Switch checked={showStructure} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_structure: v }) : row))} />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <Label className="font-normal">Prezzo per asset {perAsset ? <span className="font-semibold text-foreground">· {perAsset} / anno</span> : <span className="text-muted-foreground">(imposta prima gli asset)</span>}</Label>
+                <Label className="font-normal">Prezzo per asset {perAsset ? <span className="font-semibold text-foreground">· {perAsset} / mese</span> : <span className="text-muted-foreground">(imposta prima gli asset)</span>}</Label>
                 <Switch checked={showAsset} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_asset: v }) : row))} />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <Label className="font-normal">Prezzo per utente {perUser ? <span className="font-semibold text-foreground">· {perUser} / anno</span> : <span className="text-muted-foreground">(imposta prima gli utenti)</span>}</Label>
+                <Label className="font-normal">Prezzo per utente {perUser ? <span className="font-semibold text-foreground">· {perUser} / mese</span> : <span className="text-muted-foreground">(imposta prima gli utenti)</span>}</Label>
                 <Switch checked={showUser} onCheckedChange={v => setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { corporate_show_per_user: v }) : row))} />
               </div>
             </div>
