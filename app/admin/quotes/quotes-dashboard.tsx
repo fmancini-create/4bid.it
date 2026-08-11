@@ -170,7 +170,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
             <Button size="sm" onClick={() => handleSend(q)} disabled={!q.client_email}><Send className="h-4 w-4 mr-1.5" />{q.status === "draft" ? "Invia" : "Reinvia"}</Button>
             {isUnpaid(q) && q.payment_method === "bonifico" && <Button size="sm" variant="outline" onClick={() => setTransferQuote(q)} disabled={actingId === q.id}><Banknote className="h-4 w-4 mr-1.5" />Bonifico ricevuto</Button>}
             {q.expired_at && <Button size="sm" variant="outline" onClick={() => handleReopen(q)} disabled={actingId === q.id}><RotateCcw className="h-4 w-4 mr-1.5" />Riapri offerta</Button>}
-            <Button size="sm" variant="outline" onClick={() => openPreview(q)}><ExternalLink className="h-4 w-4 mr-1.5" />Apri</Button>
+            <Button size="sm" variant="outline" onClick={() => openPreview(q)} title="Apre un'anteprima del preventivo: questa apertura NON viene conteggiata tra le visite del cliente"><ExternalLink className="h-4 w-4 mr-1.5" />Anteprima</Button>
             <Button size="sm" variant="outline" onClick={() => copyLink(q)}><Copy className="h-4 w-4 mr-1.5" />Copia link</Button>
             {q.first_viewed_at && <Button size="sm" variant="outline" onClick={() => setResetQuote(q)} disabled={actingId === q.id}><EyeOff className="h-4 w-4 mr-1.5" />Azzera visite</Button>}
             <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteQuote(q)} disabled={q.status === "paid"}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>
