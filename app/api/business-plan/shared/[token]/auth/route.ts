@@ -4,41 +4,36 @@ import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
-  console.log("[v0] Auth POST - token:", token)
-
   const supabase = createAdminClient()
   const body = await request.json()
-  console.log("[v0] Auth POST - has password:", !!body.password)
-
-  if (!body.password) {
-    return NextResponse.json({ error: "Password richiesta" }, { status: 400 })
-  }
+  if (!body.password) return NextResponse.json({ error: "Password richiesta" }, { status: 400 })
 
   const { data: share, error } = await supabase.from("business_plan_shares").select("*").eq("token", token).single()
+  if (error || !share) return NextResponse.json({ error: "Token non valido" }, { status: 404 })
+  if (share.expires_at && new Date(share.expires_at) < new Date()) return NextResponse.json({ error: "Link scaduto" }, { status: 410 })
 
-  console.log("[v0] Auth POST - share found:", !!share, "error:", error?.message)
-
-  if (error || !share) {
-    return NextResponse.json({ error: "Token non valido" }, { status: 404 })
-  }
-
-  console.log("[v0] Auth POST - verifying password")
   const isValid = await bcrypt.compare(body.password, share.password_hash)
-  console.log("[v0] Auth POST - password valid:", isValid)
+  if (!isValid) return NextResponse.json({ error: "Password non corretta" }, { status: 401 })
 
-  if (!isValid) {
-    return NextResponse.json({ error: "Password non corretta" }, { status: 401 })
-  }
-
-  // Aggiorna statistiche accesso
+  const now = new Date().toISOString()
   await supabase
     .from("business_plan_shares")
     .update({
-      last_accessed_at: new Date().toISOString(),
+      last_accessed_at: now,
       access_count: (share.access_count || 0) + 1,
+      first_viewed_at: share.first_viewed_at || now,
+      last_viewed_at: now,
+      view_count: (share.view_count || 0) + 1,
     })
     .eq("id", share.id)
 
-  console.log("[v0] Auth POST - success")
+  await supabase.from("business_plan_share_events").insert({
+    share_id: share.id,
+    business_plan_id: share.business_plan_id,
+    event_type: "page_viewed",
+    recipient_email: share.email,
+    metadata: { authenticated: true },
+  })
+
   return NextResponse.json({ success: true, businessPlanId: share.business_plan_id })
 }
