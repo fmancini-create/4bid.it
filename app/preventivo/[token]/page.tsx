@@ -1,9 +1,10 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
+import ForwardQuoteButton from "../forward-quote-button"
 import QuoteView from "./quote-view"
 import QuoteCommerceView from "./quote-commerce-view"
-import type { Metadata } from "next"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -85,10 +86,16 @@ export default async function PreventivoPage({
   const structuredQuote = lineItems.some((item) =>
     Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support),
   )
-
-  return structuredQuote ? (
+  const quoteView = structuredQuote ? (
     <QuoteCommerceView token={token} quote={data} expired={expired} />
   ) : (
     <QuoteView token={token} quote={data} expired={expired} />
+  )
+
+  return (
+    <>
+      {quoteView}
+      <ForwardQuoteButton token={token} />
+    </>
   )
 }
