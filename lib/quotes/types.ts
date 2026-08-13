@@ -97,6 +97,22 @@ export type QuotePaymentMethod = "bonifico" | "card"
 export type QuotePaymentStatus = "pending" | "awaiting_transfer" | "paid"
 export type QuoteProvisioningStatus = "not_required" | "pending" | "processing" | "partial" | "completed" | "failed" | "manual_action"
 
+/** Riepilogo per preventivo degli INOLTRI (copie personali inviate a terzi).
+ *  Le visite delle copie inoltrate NON toccano view_count del preventivo: senza
+ *  questo riepilogo la lista direbbe "non ancora aperto" anche dopo un inoltro
+ *  letto, e l'inoltro stesso risulterebbe invisibile fuori da /admin/quotes/analytics. */
+export interface QuoteForwardStats {
+  recipients: number
+  sent: number
+  opened: number
+  viewed: number
+  emailOpens: number
+  pageViews: number
+  failed: number
+  lastSentAt: string | null
+  lastActivityAt: string | null
+}
+
 export interface SalesChannelQuote {
   id: string
   quote_number: string | null

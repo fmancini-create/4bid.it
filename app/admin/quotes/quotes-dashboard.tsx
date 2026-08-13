@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, EyeOff, FileText, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
+import { AlertTriangle, Banknote, CheckCircle2, Clock, Copy, CreditCard, ExternalLink, Eye, EyeOff, FileText, Forward, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { formatQuoteAmount, type SalesChannelQuote } from "@/lib/quotes/types"
+import { formatQuoteAmount, type QuoteForwardStats, type SalesChannelQuote } from "@/lib/quotes/types"
 import QuoteSendDialog from "@/components/admin/quote-send-dialog"
+import ForwardDetailDialog from "./forward-detail-dialog"
 
 const STATUS_META: Record<SalesChannelQuote["status"], { label: string; className: string }> = {
   draft: { label: "Bozza", className: "bg-muted text-muted-foreground" },
@@ -25,10 +26,17 @@ function isUnpaid(q: SalesChannelQuote): boolean {
   return !!q.accepted_at && q.payment_status !== "paid" && !q.paid_at
 }
 
-export default function QuotesDashboard({ initialQuotes }: { initialQuotes: SalesChannelQuote[] }) {
+export default function QuotesDashboard({
+  initialQuotes,
+  forwardStats = {},
+}: {
+  initialQuotes: SalesChannelQuote[]
+  forwardStats?: Record<string, QuoteForwardStats>
+}) {
   const router = useRouter()
   const [quotes, setQuotes] = useState(initialQuotes)
   const [sendQuote, setSendQuote] = useState<SalesChannelQuote | null>(null)
+  const [forwardQuote, setForwardQuote] = useState<SalesChannelQuote | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   // Dialoghi React (non bloccanti). I nativi confirm()/prompt() bloccano il
   // main thread finche' restano aperti: quel tempo viene conteggiato come durata
@@ -150,6 +158,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
     {quotes.length === 0 ? <div className="border border-dashed rounded-lg p-12 text-center"><FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" /><p className="text-muted-foreground">Nessun preventivo.</p></div> : <div className="grid gap-4">
       {quotes.map(q => {
         const meta = STATUS_META[q.status] || STATUS_META.draft
+        const fwd = forwardStats[q.id]
         return <div key={q.id} className="bg-card border rounded-lg p-4 sm:p-5 flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0"><div className="flex items-center gap-2 flex-wrap"><h2 className="font-semibold truncate">{q.client_company || q.client_name || "Senza intestatario"}</h2><Badge className={meta.className}>{meta.label}</Badge>{q.payment_method && <Badge variant="outline" className="gap-1">{q.payment_method === "card" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}{q.payment_method === "card" ? "Carta" : "Bonifico"}</Badge>}</div><p className="text-sm text-muted-foreground truncate">{q.title}</p><div className="flex items-center gap-2 mt-1 flex-wrap">{q.quote_number && <span className="text-xs font-mono font-medium">{q.quote_number}</span>}{q.client_email && <span className="text-xs text-muted-foreground">{q.client_email}</span>}</div></div>
@@ -158,6 +167,8 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {q.first_viewed_at ? <span className="inline-flex items-center gap-1 text-primary"><Eye className="h-3.5 w-3.5" />Aperto {new Date(q.last_viewed_at || q.first_viewed_at).toLocaleString("it-IT")}{q.view_count > 1 ? ` · ${q.view_count} volte` : ""}</span> : <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5 opacity-50" />Non ancora aperto</span>}
+            {fwd && fwd.recipients > 0 && <span className="inline-flex items-center gap-1"><Forward className="h-3.5 w-3.5" />Inoltrato a {fwd.recipients} {fwd.recipients === 1 ? "destinatario" : "destinatari"}{fwd.lastSentAt ? ` il ${new Date(fwd.lastSentAt).toLocaleDateString("it-IT")}` : ""} · {fwd.emailOpens} aperture email · {fwd.pageViews} visualizzazioni copie</span>}
+            {fwd && fwd.failed > 0 && <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{fwd.failed} {fwd.failed === 1 ? "inoltro non consegnato" : "inoltri non consegnati"}</span>}
             {q.accepted_at && <span className="inline-flex items-center gap-1 text-amber-700"><CheckCircle2 className="h-3.5 w-3.5" />Accettato da {q.acceptance_name}</span>}
             {q.status === "sent" && !q.accepted_at && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />In attesa di accettazione</span>}
             {q.paid_at && <span className="inline-flex items-center gap-1 text-green-800"><CheckCircle2 className="h-3.5 w-3.5" />Pagato {new Date(q.paid_at).toLocaleDateString("it-IT")}</span>}
@@ -172,6 +183,7 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
             {q.expired_at && <Button size="sm" variant="outline" onClick={() => handleReopen(q)} disabled={actingId === q.id}><RotateCcw className="h-4 w-4 mr-1.5" />Riapri offerta</Button>}
             <Button size="sm" variant="outline" onClick={() => openPreview(q)} title="Apre un'anteprima del preventivo: questa apertura NON viene conteggiata tra le visite del cliente"><ExternalLink className="h-4 w-4 mr-1.5" />Anteprima</Button>
             <Button size="sm" variant="outline" onClick={() => copyLink(q)}><Copy className="h-4 w-4 mr-1.5" />Copia link</Button>
+            {fwd && fwd.recipients > 0 && <Button size="sm" variant="outline" onClick={() => setForwardQuote(q)}><Forward className="h-4 w-4 mr-1.5" />Inoltri ({fwd.recipients})</Button>}
             {q.first_viewed_at && <Button size="sm" variant="outline" onClick={() => setResetQuote(q)} disabled={actingId === q.id}><EyeOff className="h-4 w-4 mr-1.5" />Azzera visite</Button>}
             <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteQuote(q)} disabled={q.status === "paid"}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>
           </div>
@@ -234,6 +246,8 @@ export default function QuotesDashboard({ initialQuotes }: { initialQuotes: Sale
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <ForwardDetailDialog quote={forwardQuote} open={!!forwardQuote} onOpenChange={(open) => { if (!open) setForwardQuote(null) }} />
 
     <QuoteSendDialog
       quote={sendQuote}
