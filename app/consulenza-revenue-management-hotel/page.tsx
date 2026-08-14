@@ -8,6 +8,7 @@ import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
 import { SantaddeoUniqueCallout } from "@/components/santaddeo-unique-callout"
+import { RevenueManagerCostCallout } from "@/components/revenue-manager-cost-callout"
 import { ContactButton } from "@/components/contact-button"
 import { LandingVideos } from "@/components/video/landing-videos"
 
@@ -293,6 +294,22 @@ export default function ConsulenzaRevenueManagementPage() {
         title="Le testimonianze dei nostri clienti"
         subtitle="Chi ha lavorato con 4BID racconta i risultati ottenuti."
       />
+
+      {/* Vantaggio economico: sta subito prima del modello di collaborazione perché
+          è la premessa che rende leggibili i prezzi che seguono. Sfondo muted per
+          alternanza: i video sopra e il modello sotto sono su fondo pieno. */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-foreground mb-4">Il Vantaggio Economico</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto text-pretty">
+            Quanto costa avere un revenue manager di livello, e perché con noi la stessa competenza diventa accessibile
+            anche a una struttura indipendente
+          </p>
+          <div className="max-w-5xl mx-auto">
+            <RevenueManagerCostCallout />
+          </div>
+        </div>
+      </section>
 
       {/* Pricing Model */}
       <section className="py-20">

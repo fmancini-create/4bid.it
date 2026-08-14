@@ -6,6 +6,7 @@ import Footer from "@/components/footer"
 import { LandingPageTracker } from "@/components/landing-page-tracker"
 import { StructuredData } from "@/components/seo-structured-data"
 import { RelatedSolutions } from "@/components/related-solutions"
+import { RevenueManagerCostCallout } from "@/components/revenue-manager-cost-callout"
 
 export const metadata = {
   title: "Revenue Manager Hotel Toscana | Consulenza Firenze, Siena, Pisa | 4BID.IT",
@@ -329,6 +330,21 @@ export default function RevenueManagerHotelToscanaPage() {
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Vantaggio economico rispetto all'assunzione di un revenue manager interno:
+          è l'obiezione principale di chi valuta questa pagina, quindi sta subito
+          prima della chiamata all'azione. */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-foreground mb-4">Il Vantaggio Economico</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto text-pretty">
+            Perché affidarsi a noi costa molto meno che assumere la stessa figura in struttura
+          </p>
+          <div className="max-w-5xl mx-auto">
+            <RevenueManagerCostCallout />
           </div>
         </div>
       </section>
