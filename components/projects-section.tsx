@@ -6,6 +6,7 @@ import { ArrowRight, ExternalLink, Rocket, PiggyBank, TrendingUp, CheckCircle, H
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import InvestorInquiryModal from "@/components/investor-inquiry-modal"
+import ProblemSolutionFinder from "@/components/problem-solution-finder"
 
 type Project = {
   id: string
@@ -332,6 +333,9 @@ export default function ProjectsSection() {
               di gestione, dalla manutenzione automatizzata alla mobilità elettrica.
             </p>
           </div>
+
+          {/* Selettore problemi -> soluzioni: guida il visitatore prima delle card */}
+          <ProblemSolutionFinder />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {horecaSuite.map(renderCard)}
