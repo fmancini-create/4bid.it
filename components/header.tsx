@@ -66,23 +66,56 @@ export function Header() {
     }
   }
 
-  const navItems = [
+  /* Misurato a 1600px: per stare su una riga sola le 15 voci piatte chiedevano
+     2170px contro i 1536 disponibili, quindi 11 etichette su 15 si spezzavano su
+     2-3 righe ("PROGETTI IN SVILUPPO" su tre). Nessun gap o dimensione di font
+     recupera 634px: la riga va accorciata raggruppando. Qui restano 7 elementi
+     in orizzontale (3 link diretti + 4 tendine); il menu a scomparsa continua a
+     mostrare tutte le voci in elenco piatto, dove lo spazio verticale non è
+     scarso. */
+  const navGroups: { label: string; href?: string; items?: { label: string; href: string }[] }[] = [
     { label: "HOME", href: "/" },
-    { label: "DOVE INTERVENIAMO", href: "/#services" },
-    { label: "PROBLEMI E SOLUZIONI", href: "/problemi-hotel-soluzioni" },
-    { label: "PORTFOLIO", href: "/#portfolio" },
-    { label: "REVENUE MANAGEMENT", href: "/soluzioni-revenue-management" },
-    { label: "BLOG", href: "/blog" },
-    { label: "VIDEO GUIDE", href: "/video-guide" },
-    { label: "PARLANO DI NOI", href: "/parlano-di-noi" },
-    { label: "CHI SIAMO", href: "/#about" },
-    { label: "PROGETTI IN SVILUPPO", href: "/#projects" },
-    { label: "APP SVILUPPATE", href: "/#app" },
-    { label: "PROPONI LA TUA IDEA", href: "/proponi-idea" },
-    { label: "LAVORA CON NOI", href: "/lavora-con-noi" },
+    {
+      label: "SOLUZIONI",
+      items: [
+        { label: "Dove interveniamo", href: "/#services" },
+        { label: "Problemi e Soluzioni", href: "/problemi-hotel-soluzioni" },
+        { label: "Revenue Management", href: "/soluzioni-revenue-management" },
+      ],
+    },
+    {
+      label: "PROGETTI",
+      items: [
+        { label: "Portfolio", href: "/#portfolio" },
+        { label: "Progetti in sviluppo", href: "/#projects" },
+        { label: "App sviluppate", href: "/#app" },
+      ],
+    },
+    {
+      label: "RISORSE",
+      items: [
+        { label: "Blog", href: "/blog" },
+        { label: "Video guide", href: "/video-guide" },
+      ],
+    },
+    {
+      label: "AZIENDA",
+      items: [
+        { label: "Chi siamo", href: "/#about" },
+        { label: "Parlano di noi", href: "/parlano-di-noi" },
+        { label: "Lavora con noi", href: "/lavora-con-noi" },
+        { label: "Proponi la tua idea", href: "/proponi-idea" },
+      ],
+    },
     { label: "PRENOTA DEMO", href: "/prenota-demo" },
     { label: "CONTATTACI", href: "/#contact" },
   ]
+
+  /* Il menu a scomparsa mostra le stesse destinazioni in elenco piatto: derivarlo
+     dai gruppi evita che un domani una voce esista in una sola delle due liste. */
+  const navItems = navGroups.flatMap((group) =>
+    group.items ? group.items.map((item) => ({ label: item.label.toUpperCase(), href: item.href })) : [group as { label: string; href: string }],
+  )
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
@@ -112,33 +145,48 @@ export function Header() {
             />
           </Link>
 
-          {/* Desktop Navigation
-              Measured: this row needs ~1466px to fit 12 links plus the button. It
-              used to switch on at lg (1024px), so between 1024px and ~1490px the
-              nav overflowed and pushed "Area Riservata" clean off the right edge —
-              invisible and unclickable at ordinary laptop widths. Switch to the
-              full nav only once there is genuinely room; below that the burger
-              menu already exposes every entry.
-
-              Misurato a 1536px (container pieno a 2xl): con gap-8 la riga
-              chiedeva 1524px per i soli link, contro 1456px disponibili una
-              volta tolto il logo — 68px di troppo già prima di aggiungere
-              "PROBLEMI E SOLUZIONI", ed è il motivo per cui etichette come
-              "PROGETTI IN SVILUPPO" andavano a capo su tre righe. I 15 gap da
-              32px valevano 480px: portarli a 20px libera 300px, che coprono la
-              voce nuova e restituiscono margine (gap-4 lascia respiro anche al
-              logo a piena dimensione). */}
-          <nav className="hidden 2xl:flex items-center gap-4 ml-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                title={item.label}
-                className="text-sm font-medium text-gray-600 hover:text-[#5B9BD5] transition-colors border-b-2 border-transparent hover:border-[#F4B942] pb-1"
-              >
-                {item.label}
-              </Link>
-            ))}
+          {/* Navigazione desktop.
+              Storia delle misure di questa riga, perché è già stata sbagliata due
+              volte: con le 15 voci piatte serviva molto più spazio di quanto ce ne
+              fosse (2170px richiesti contro 1536), e il flex non taglia il testo —
+              lo manda a capo, quindi il difetto si vedeva come etichette su due o
+              tre righe invece che come sforamento. Prima ancora la soglia era lg
+              (1024px) e "Area Riservata" finiva fuori dal bordo destro.
+              Con 7 elementi la riga chiede ~700px: whitespace-nowrap impedisce
+              qualsiasi ritorno a capo e la soglia può scendere a xl (1280px),
+              dove lo spazio è ampio. Sotto quella soglia vale il menu a
+              scomparsa, che elenca tutte le voci. Se si aggiungono elementi qui,
+              rimisurare: nowrap trasforma un eccesso di larghezza in sforamento
+              silenzioso a destra. */}
+          <nav className="hidden xl:flex items-center gap-5 ml-8">
+            {navGroups.map((group) =>
+              group.items ? (
+                <DropdownMenu key={group.label}>
+                  <DropdownMenuTrigger className="flex items-center gap-1 whitespace-nowrap border-b-2 border-transparent pb-1 text-sm font-medium text-gray-600 transition-colors hover:border-[#F4B942] hover:text-[#5B9BD5] data-[state=open]:text-[#5B9BD5]">
+                    {group.label}
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {group.items.map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href} className="cursor-pointer">
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link
+                  key={group.label}
+                  href={group.href!}
+                  title={group.label}
+                  className="whitespace-nowrap text-sm font-medium text-gray-600 hover:text-[#5B9BD5] transition-colors border-b-2 border-transparent hover:border-[#F4B942] pb-1"
+                >
+                  {group.label}
+                </Link>
+              ),
+            )}
             {/* Two separate areas exist — the client Project Room and the internal
                 back office — and only a label distinguished them, so a single
                 button named "Area Riservata" could not serve both: clients read
@@ -146,8 +194,8 @@ export function Header() {
                 /admin entry rendered only when isAdmin was already true, so the
                 door was visible exclusively to whoever had already walked through
                 it. Both destinations are now named explicitly and always
-                reachable. A dropdown keeps them within the width of one button:
-                this row already needs ~1466px of the 1536px available at 2xl. */}
+                reachable. A dropdown keeps them within the width of one button,
+                which is what lets this row stay on a single line. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -198,7 +246,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="2xl:hidden"
+            className="xl:hidden"
             aria-label={isMenuOpen ? "Chiudi il menu di navigazione" : "Apri il menu di navigazione"}
             aria-expanded={isMenuOpen}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -209,7 +257,7 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav className="2xl:hidden py-4 border-t max-h-[calc(100vh-5rem)] overflow-y-auto">
+          <nav className="xl:hidden py-4 border-t max-h-[calc(100vh-5rem)] overflow-y-auto">
             {navItems.map((item) => (
               <Link
                 key={item.label}
