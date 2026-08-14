@@ -45,7 +45,8 @@ export function RevenueManagerCostCallout() {
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Il nostro team di revenue manager lavora su un portafoglio di strutture: la spesa di una competenza senior si
-            ripartisce, e a te arriva solo la quota che ti riguarda.
+            ripartisce, e a te arriva solo la quota che ti riguarda. Lavoriamo sui dati, quindi il modello vale per
+            qualsiasi struttura, in Italia come all&apos;estero.
           </p>
         </div>
       </div>
@@ -63,6 +64,8 @@ export function RevenueManagerCostCallout() {
           "Competenza senior disponibile da subito, senza selezione né formazione",
           "Continuità garantita: ferie, malattie e dimissioni non fermano il revenue",
           "Modello performance based: la spesa cresce solo se crescono i ricavi",
+          "Nessun vincolo geografico: gestiamo da remoto strutture in tutta Italia e fuori dai confini",
+          "Metodo e strumenti pensati per OTA, PMS e domanda internazionale",
         ].map((voce) => (
           <li key={voce} className="flex items-start gap-2">
             <CheckCircle2 className="h-5 w-5 text-primary-blue mt-0.5 flex-shrink-0" aria-hidden="true" />
