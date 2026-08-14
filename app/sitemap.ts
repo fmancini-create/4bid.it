@@ -70,6 +70,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "come-aumentare-ricavi-hotel",
     "ottimizzazione-revpar-hotel",
     "cose-il-revenue-management",
+    "problemi-hotel-soluzioni",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
     lastModified,

@@ -33,6 +33,16 @@ export const SOLUTIONS: Solution[] = [
     cluster: "Consulenza & Strategia",
   },
   {
+    // Pagina di ingresso per chi cerca partendo dal proprio problema, non dal
+    // nome della soluzione. Inserita qui perche' Footer e RelatedSolutions
+    // leggono questo elenco: senza, la pagina resterebbe collegata solo dalla
+    // home e nessuna landing la raggiungerebbe.
+    slug: "problemi-hotel-soluzioni",
+    title: "Problemi e Soluzioni per Hotel",
+    short: "Parti dal tuo problema e trova la soluzione 4BID che lo risolve.",
+    cluster: "Consulenza & Strategia",
+  },
+  {
     slug: "consulenza-revenue-management-hotel",
     title: "Consulenza Revenue Management",
     short: "Strategia su misura per aumentare i ricavi della tua struttura.",
