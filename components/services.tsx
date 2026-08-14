@@ -105,6 +105,26 @@ export default function Services() {
             )
           })}
         </div>
+
+        {/* Chi arriva qui cerca per problema ("perdo prenotazioni", "dipendo dalle
+            OTA"), non per nome del servizio. L'unico ingresso alla pagina
+            problemi/soluzioni era un link testuale a ~4300px di scroll e la voce
+            di footer: in pratica invisibile. Questo richiamo sta subito sotto
+            "Dove interveniamo", a poche centinaia di pixel dall'apertura. */}
+        <div className="max-w-7xl mx-auto mt-12 flex flex-col items-center gap-4 rounded-lg border border-gray-200 bg-white px-6 py-8 text-center md:flex-row md:justify-between md:text-left">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-700">Non sai da quale intervento partire?</h3>
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              Dicci qual è il problema della tua struttura e ti mostriamo quali soluzioni lo risolvono.
+            </p>
+          </div>
+          <Link
+            href="/problemi-hotel-soluzioni"
+            className="shrink-0 rounded-md bg-[#F4B942] px-6 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-[#e0a92f]"
+          >
+            Parti dal tuo problema
+          </Link>
+        </div>
       </div>
     </section>
   )

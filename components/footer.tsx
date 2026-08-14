@@ -11,7 +11,16 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo and Description */}
           <div className="md:col-span-2">
-            <Image src="/logo.png" alt="4BID Logo" width={120} height={80} className="mb-4" style={{ height: 'auto' }} />
+            {/* width e height vanno dichiarate insieme nello style, altrimenti Next
+                avvisa a ogni render che una sola delle due è stata modificata. */}
+            <Image
+              src="/logo.png"
+              alt="4BID Logo"
+              width={120}
+              height={80}
+              className="mb-4"
+              style={{ width: "120px", height: "auto" }}
+            />
             <p className="text-gray-400 text-sm leading-relaxed max-w-md">
               4BID SRL è la tua partner di fiducia per la consulenza e il revenue management nel settore
               turistico-ricettivo. Innovazione, tecnologia e esperienza al servizio del tuo business.

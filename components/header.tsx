@@ -69,6 +69,7 @@ export function Header() {
   const navItems = [
     { label: "HOME", href: "/" },
     { label: "DOVE INTERVENIAMO", href: "/#services" },
+    { label: "PROBLEMI E SOLUZIONI", href: "/problemi-hotel-soluzioni" },
     { label: "PORTFOLIO", href: "/#portfolio" },
     { label: "REVENUE MANAGEMENT", href: "/soluzioni-revenue-management" },
     { label: "BLOG", href: "/blog" },
@@ -88,8 +89,27 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center" title="4bid - Home">
-            <Image src="/logo.png" alt="4bid Logo" width={80} height={50} style={{ width: 'auto', height: 'auto' }} priority />
+          {/* shrink-0: senza questo il logo è la prima vittima di una riga di
+              navigazione troppo larga. Misurato a 1600px, veniva compresso da
+              80px a 36px (e in precedenza fin quasi a zero) invece di forzare le
+              etichette ad andare a capo. Con lo spazio garantito serve però un
+              tetto all'altezza: lo style inline "height: auto" faceva assumere
+              al file la sua dimensione naturale (129×80px), che riempiva per
+              intero la barra da h-20 sbordando oltre il fondo. h-12 w-auto
+              tiene il rapporto e lo riporta a ~77px di base. */}
+          <Link href="/" className="flex shrink-0 items-center" title="4bid - Home">
+            {/* L'altezza sta nello style inline, non in una classe: Next legge lo
+                style dell'elemento per il controllo sulle proporzioni e con le
+                sole utility Tailwind avvisava a ogni render che una sola delle
+                due dimensioni era stata modificata. */}
+            <Image
+              src="/logo.png"
+              alt="4bid Logo"
+              width={80}
+              height={50}
+              style={{ height: "3rem", width: "auto" }}
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation
@@ -98,8 +118,17 @@ export function Header() {
               nav overflowed and pushed "Area Riservata" clean off the right edge —
               invisible and unclickable at ordinary laptop widths. Switch to the
               full nav only once there is genuinely room; below that the burger
-              menu already exposes every entry. */}
-          <nav className="hidden 2xl:flex items-center gap-8">
+              menu already exposes every entry.
+
+              Misurato a 1536px (container pieno a 2xl): con gap-8 la riga
+              chiedeva 1524px per i soli link, contro 1456px disponibili una
+              volta tolto il logo — 68px di troppo già prima di aggiungere
+              "PROBLEMI E SOLUZIONI", ed è il motivo per cui etichette come
+              "PROGETTI IN SVILUPPO" andavano a capo su tre righe. I 15 gap da
+              32px valevano 480px: portarli a 20px libera 300px, che coprono la
+              voce nuova e restituiscono margine (gap-4 lascia respiro anche al
+              logo a piena dimensione). */}
+          <nav className="hidden 2xl:flex items-center gap-4 ml-6">
             {navItems.map((item) => (
               <Link
                 key={item.label}
