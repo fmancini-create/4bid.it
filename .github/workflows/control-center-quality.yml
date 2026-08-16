@@ -36,4 +36,3 @@ jobs:
             echo 'TypeScript errors found in Control Center files.'
             exit 1
           fi
-      - run: pnpm build
