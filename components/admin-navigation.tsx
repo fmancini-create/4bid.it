@@ -24,6 +24,7 @@ import {
   Inbox,
   Briefcase,
   Table2,
+  Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -165,6 +166,14 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
           >
             <Lock className="h-5 w-5 text-primary shrink-0" />
             <span className="font-semibold text-sm sm:text-base">Project Room clienti</span>
+          </a>
+
+          <a
+            href="/admin/control-center"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-primary/5 hover:bg-primary/10 active:bg-primary/15 transition-colors text-left touch-manipulation"
+          >
+            <Activity className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-semibold text-sm sm:text-base">Control Center</span>
           </a>
 
           <a
