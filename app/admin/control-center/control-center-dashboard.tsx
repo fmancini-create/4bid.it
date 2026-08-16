@@ -33,8 +33,9 @@ export default function ControlCenterDashboard({ userEmail, latestRuns, findings
   const [selected, setSelected] = useState(latestRuns[0]?.project.slug || "")
   const active = latestRuns.find((item) => item.project.slug === selected)
   const activeFindings = useMemo(() => {
-    if (!active?.run?.id) return []
-    return findings.filter((item) => item.run_id === active.run.id)
+    const runId = active?.run?.id
+    if (!runId) return []
+    return findings.filter((item) => item.run_id === runId)
       .sort((a, b) => ["critical", "high", "medium", "low", "info"].indexOf(a.severity) - ["critical", "high", "medium", "low", "info"].indexOf(b.severity))
   }, [active, findings])
 
@@ -57,8 +58,12 @@ export default function ControlCenterDashboard({ userEmail, latestRuns, findings
 
   const critical = latestRuns.filter((item) => item.run?.status === "critical").length
   const attention = latestRuns.filter((item) => item.run?.status === "attention").length
-  const average = latestRuns.filter((item) => typeof item.run?.score_overall === "number")
-  const averageScore = average.length ? Math.round(average.reduce((sum, item) => sum + item.run.score_overall, 0) / average.length) : null
+  const availableScores = latestRuns.flatMap((item) =>
+    typeof item.run?.score_overall === "number" ? [item.run.score_overall] : [],
+  )
+  const averageScore = availableScores.length
+    ? Math.round(availableScores.reduce((sum, score) => sum + score, 0) / availableScores.length)
+    : null
 
   return (
     <div className="min-h-screen bg-muted/30">
