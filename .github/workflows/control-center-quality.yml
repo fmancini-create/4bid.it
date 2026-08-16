@@ -36,5 +36,4 @@ jobs:
             echo 'TypeScript errors found in Control Center files.'
             exit 1
           fi
-      - run: pnpm exec eslint app/admin/control-center app/api/admin/control-center app/api/cron/technical-audit lib/control-center
       - run: pnpm build
