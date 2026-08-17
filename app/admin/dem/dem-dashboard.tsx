@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from "react"
 import { AIR_MARKET_PRESET } from "@/lib/dem/air-market-template"
+import { ECOSISTEMA_PRESET } from "@/lib/dem/press-release-ecosistema"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -603,6 +604,17 @@ export default function DemDashboard({
     setNewName(DEMO_SANTADDEO_PRESET.name)
     setNewSubject(DEMO_SANTADDEO_PRESET.subject)
     setNewTemplate(DEMO_SANTADDEO_PRESET.html)
+    setShowNewCampaign(true)
+  }
+
+  // Comunicato stampa sull'ecosistema (i quattro software collegati). Il testo
+  // arriva da lib/dem/press-release-ecosistema.ts, la stessa fonte del PDF
+  // allegato: caricarlo da qui non puo' produrre una versione diversa da quella
+  // dell'allegato.
+  const loadEcosistemaPreset = () => {
+    setNewName(ECOSISTEMA_PRESET.name)
+    setNewSubject(ECOSISTEMA_PRESET.subject)
+    setNewTemplate(ECOSISTEMA_PRESET.html)
     setShowNewCampaign(true)
   }
 
@@ -1910,6 +1922,10 @@ export default function DemDashboard({
             <Button size="sm" variant="outline" onClick={loadAirMarketPreset}>
               <FileText className="h-4 w-4 mr-2" />
               Traffico Aereo
+            </Button>
+            <Button size="sm" variant="outline" onClick={loadEcosistemaPreset}>
+              <FileText className="h-4 w-4 mr-2" />
+              Comunicato Ecosistema
             </Button>
             <Dialog open={showNewCampaign} onOpenChange={setShowNewCampaign}>
               <DialogTrigger asChild>
