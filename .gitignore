@@ -34,3 +34,7 @@ scripts/.*
 *.token
 .token-*
 verifica-*.mts
+# Cartella di appoggio per le sonde di verifica. Senza questa riga il commit
+# automatico le ha davvero tracciate (25 file, uno dei quali generava un token
+# di accesso di un utente reale): rimosse a mano dall'indice il 17/08/2026.
+.v0tmp/

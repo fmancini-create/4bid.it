@@ -164,9 +164,25 @@ export async function POST(request: NextRequest) {
       campaign.html_template
     )
     const resolvedAttachments: { filename: string; content: Buffer; contentType?: string }[] = []
+    // Stessa guardia dell'invio vero. Qui conta anche di piu': la prova serve a
+    // decidere se spedire, e una prova che arriva SENZA l'allegato senza dirlo
+    // darebbe una conferma falsa proprio nel momento del controllo.
+    const nonScaricabili: string[] = []
     for (const ref of attachmentRefs) {
       const file = await fetchAttachment(baseUrl, ref)
       if (file) resolvedAttachments.push(file)
+      else nonScaricabili.push(ref.filename || ref.path)
+    }
+    if (nonScaricabili.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `Allegato non scaricabile: ${nonScaricabili.join(", ")}. ` +
+            `Nessuna prova e' stata inviata. Il file e' dichiarato nel template ma non ` +
+            `risponde su ${baseUrl}: se e' stato aggiunto di recente, pubblica il sito e riprova.`,
+        },
+        { status: 400 }
+      )
     }
 
     // Personalize + add tracking pixel/links tied to the test recipient

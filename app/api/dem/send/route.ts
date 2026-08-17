@@ -313,9 +313,35 @@ export async function POST(request: NextRequest) {
         : templateWithoutMarkers + linksBox
     } else {
       // Comportamento classico: scarica e allega i file una sola volta.
+      // Se un allegato DICHIARATO non e' scaricabile, NON si spedisce: prima
+      // l'errore veniva solo scritto nei log e la campagna partiva comunque,
+      // con l'email che annunciava un documento assente. Le email non si
+      // richiamano indietro, quindi qui si ferma tutto PRIMA del primo invio.
+      const nonScaricabili: string[] = []
       for (const ref of attachmentRefs) {
         const file = await fetchAttachment(baseUrl, ref)
         if (file) resolvedAttachments.push(file)
+        else nonScaricabili.push(ref.filename || ref.path)
+      }
+      if (nonScaricabili.length > 0) {
+        // Lo stato e' gia' stato portato a "sending" piu' sopra. Uscire senza
+        // rimetterlo com'era lascerebbe la campagna bloccata: il controllo
+        // "Campagna gia' in fase di invio" respingerebbe ogni nuovo tentativo,
+        // anche dopo aver pubblicato il file. `campaign.status` e' il valore
+        // letto PRIMA del cambio, quindi si ripristina esattamente quello.
+        await supabase
+          .from("dem_campaigns")
+          .update({ status: campaign.status, updated_at: new Date().toISOString() })
+          .eq("id", campaign_id)
+        return NextResponse.json(
+          {
+            error:
+              `Allegato non scaricabile: ${nonScaricabili.join(", ")}. ` +
+              `Nessuna email e' stata inviata. Il file e' dichiarato nel template ma non ` +
+              `risponde su ${baseUrl}: se e' stato aggiunto di recente, pubblica il sito e riprova.`,
+          },
+          { status: 400 }
+        )
       }
     }
 
