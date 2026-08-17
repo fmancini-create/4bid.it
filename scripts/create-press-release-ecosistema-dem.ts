@@ -8,14 +8,20 @@
 // divergerebbe, e soprattutto si rischierebbe di riscrivere a un indirizzo che ha
 // chiesto di non essere piu' contattato.
 //
-// LA RUBRICA NON VIENE RICOSTRUITA: gli indirizzi vengono letti dalla PRIMA
-// campagna stampa (31/05, "Comunicato stampa - Lancio Santaddeo"). Non esiste un
-// valore "stampa" per tipo_contatto (il vincolo della tabella ammette solo
+// LA RUBRICA NON VIENE RICOSTRUITA: gli indirizzi vengono letti dalle campagne
+// stampa precedenti, prendendone l'UNIONE. Non esiste un valore "stampa" per
+// tipo_contatto (il vincolo della tabella ammette solo
 // potenziale/cliente/collaboratore) e quei contatti hanno il campo vuoto: l'unico
-// modo affidabile di ritrovarli e' seguire la campagna a cui sono agganciati.
+// modo affidabile di ritrovarli e' seguire le campagne a cui sono agganciati.
 //
 // LO SCRIPT NON INVIA NULLA. Crea una bozza con auto_send spento. L'invio resta
 // un gesto umano dalla dashboard.
+
+// Rende il file un MODULO. Senza questa riga TypeScript lo tratta come script
+// globale e i suoi nomi finiscono nello stesso spazio di
+// scripts/create-press-release-dem.ts, che dichiara anch'esso `BASE`,
+// `Destinatario` e `chiama`: misurato, 4 errori TS2451/TS2300/TS2393.
+export {}
 
 const BASE = process.env.DEM_BASE_URL || "http://localhost:3000"
 
