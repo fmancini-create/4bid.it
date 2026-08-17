@@ -26,8 +26,27 @@ type Destinatario = {
   nome_azienda: string | null
 }
 
-async function chiama(percorso: string, opzioni?: RequestInit) {
-  const r = await fetch(`${BASE}${percorso}`, opzioni)
+/**
+ * Chiama una rotta DEM autenticandosi come chiamata automatica.
+ *
+ * PERCHE' SERVE L'INTESTAZIONE: dal 03/08/2026 ogni rotta sotto /api/dem/ passa
+ * da `rifiutaSeNonAutorizzato`, che accetta due sole vie - `Bearer CRON_SECRET`
+ * oppure la sessione del super admin. Uno script non ha cookie di sessione:
+ * senza il segreto ogni chiamata torna 401 e nessuna campagna verrebbe creata.
+ * Misurato: `GET /api/dem/campaigns` senza intestazione -> 401.
+ */
+async function chiama(percorso: string, opzioni: RequestInit = {}) {
+  const segreto = process.env.CRON_SECRET
+  if (!segreto) {
+    throw new Error(
+      "CRON_SECRET assente: le rotte DEM risponderebbero 401. " +
+        "Esegui con: set -a && source /vercel/share/.env.project && set +a",
+    )
+  }
+  const r = await fetch(`${BASE}${percorso}`, {
+    ...opzioni,
+    headers: { ...(opzioni.headers || {}), Authorization: `Bearer ${segreto}` },
+  })
   const corpo = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(`${percorso} -> ${r.status}: ${JSON.stringify(corpo).slice(0, 300)}`)
   return corpo
@@ -58,30 +77,49 @@ async function main() {
     .order("created_at", { ascending: true })
   if (erroreCampagne) throw new Error(erroreCampagne.message)
 
-  const stampaPrecedente = (campagne || []).find((c) =>
+  // Si prende l'UNIONE di tutte le campagne stampa, non solo la prima: se un
+  // indirizzo fosse stato aggiunto a mano in un comunicato successivo, leggendo
+  // una sola campagna resterebbe fuori senza che nulla lo segnali. Misurato oggi
+  // le due campagne stampa contengono gli stessi 54 indirizzi, quindi l'unione
+  // non cambia il risultato: cambia il comportamento futuro.
+  const campagneStampa = (campagne || []).filter((c) =>
     /comunicato|stampa|press/i.test(c.name || ""),
   )
-  if (!stampaPrecedente) {
-    throw new Error("Campagna stampa precedente non trovata: impossibile riusare la rubrica")
+  if (campagneStampa.length === 0) {
+    throw new Error("Nessuna campagna stampa precedente: impossibile riusare la rubrica")
   }
-  console.log(`  rubrica letta da: "${stampaPrecedente.name}"`)
 
-  const rubrica: Destinatario[] = []
-  for (let da = 0; ; da += 1000) {
-    const { data, error } = await db
-      .from("dem_recipients")
-      .select("email, nome, cognome, nome_azienda")
-      .eq("campaign_id", stampaPrecedente.id)
-      .range(da, da + 999)
-    // Sempre leggere `error`: una query su una colonna inesistente non torna
-    // "zero righe", va in errore, e ignorarlo stamperebbe "nessun destinatario"
-    // mentre in realta' la rubrica non e' stata nemmeno interrogata.
-    if (error) throw new Error(error.message)
-    if (!data || data.length === 0) break
-    rubrica.push(...(data as Destinatario[]))
-    if (data.length < 1000) break
+  const perEmail = new Map<string, Destinatario>()
+  for (const c of campagneStampa) {
+    if (c.name === NOME_CAMPAGNA_ECOSISTEMA) continue // e' quella che stiamo creando
+    let letti = 0
+    for (let da = 0; ; da += 1000) {
+      const { data, error } = await db
+        .from("dem_recipients")
+        .select("email, nome, cognome, nome_azienda")
+        .eq("campaign_id", c.id)
+        .range(da, da + 999)
+      // Sempre leggere `error`: una query su una colonna inesistente non torna
+      // "zero righe", va in errore, e ignorarlo stamperebbe "nessun destinatario"
+      // mentre in realta' la rubrica non e' stata nemmeno interrogata.
+      if (error) throw new Error(error.message)
+      if (!data || data.length === 0) break
+      for (const r of data as Destinatario[]) {
+        const chiave = r.email.trim().toLowerCase()
+        const gia = perEmail.get(chiave)
+        // Il nome, dove esiste, non va perso: solo 5 dei 54 indirizzi hanno un
+        // nome di persona, gli altri sono redazioni generiche.
+        if (!gia) perEmail.set(chiave, r)
+        else if (!gia.nome && r.nome) perEmail.set(chiave, r)
+      }
+      letti += data.length
+      if (data.length < 1000) break
+    }
+    console.log(`  rubrica da "${c.name}": ${letti} righe`)
   }
-  console.log(`  indirizzi in rubrica stampa: ${rubrica.length}`)
+
+  const rubrica: Destinatario[] = [...perEmail.values()]
+  console.log(`  indirizzi distinti in rubrica stampa: ${rubrica.length}`)
   if (rubrica.length === 0) throw new Error("rubrica vuota: non si crea una campagna senza destinatari")
 
   // 2. Crea la campagna, se non esiste gia'. Rieseguire lo script non deve
@@ -153,7 +191,17 @@ async function main() {
         nome_azienda: r.nome_azienda,
       })),
     }),
-  }).catch((e) => ({ errore: e instanceof Error ? e.message : String(e) }))
+  }).catch((e) => {
+    const messaggio = e instanceof Error ? e.message : String(e)
+    // Rieseguendo lo script la rotta risponde 400 "Nessun destinatario da
+    // aggiungere": e' l'esito NORMALE, sono tutti duplicati. Non va confuso con
+    // un caricamento fallito, che invece deve fermare lo script. Il conteggio
+    // finale dei destinatari resta comunque il giudice.
+    if (/Nessun destinatario da aggiungere|Nessun nuovo destinatario/.test(messaggio)) {
+      return { nulla_da_aggiungere: "rubrica gia' agganciata (riesecuzione)" }
+    }
+    throw new Error(`aggancio destinatari fallito: ${messaggio}`)
+  })
   console.log(`  aggancio destinatari: ${JSON.stringify(esito).slice(0, 220)}`)
 
   // 4. Verifiche finali.
@@ -171,11 +219,32 @@ async function main() {
   console.log(`    fallite:    ${finale?.failed_count}`)
   console.log(`    oggetto:    ${finale?.subject} (${finale?.subject?.length} caratteri)`)
 
-  const { count: destinatari } = await db
+  const { count: destinatari, error: erroreConteggio } = await db
     .from("dem_recipients")
     .select("id", { count: "exact", head: true })
     .eq("campaign_id", campaignId)
-  console.log(`    destinatari: ${destinatari}`)
+  if (erroreConteggio) throw new Error(erroreConteggio.message)
+
+  // Il numero atteso si CALCOLA, non si scrive a mano: rubrica meno chi non va
+  // piu' contattato. Cosi' se domani un indirizzo rimbalza il controllo resta
+  // valido, e se invece qualcuno spegnesse il filtro dei soppressi il confronto
+  // andrebbe in rosso.
+  const soppressi = new Set<string>()
+  for (const tabella of ["dem_unsubscribes", "dem_recipients"] as const) {
+    const q =
+      tabella === "dem_unsubscribes"
+        ? db.from(tabella).select("email")
+        : db.from(tabella).select("email").in("send_status", ["bounced", "complained", "unsubscribed"])
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    for (const r of data || []) if (r.email) soppressi.add(String(r.email).trim().toLowerCase())
+  }
+  const attesi = rubrica.filter((r) => !soppressi.has(r.email.trim().toLowerCase())).length
+  console.log(
+    `    destinatari: ${destinatari} (attesi ${attesi} = ${rubrica.length} in rubrica ` +
+      `- ${rubrica.length - attesi} fra disiscritti e non recapitabili) ` +
+      `${destinatari === attesi ? "ok" : "DISCORDANTE"}`,
+  )
 
   // La colonna e' `send_status`, NON `status`: quest'ultima non esiste su
   // dem_recipients e una query che la usa va in errore invece di tornare zero.
@@ -196,9 +265,9 @@ async function main() {
     ["titolo del comunicato", htmlSalvato.includes("quattro software italiani")],
     ["tutti e quattro i prodotti", ["Santaddeo", "Hotel Accelerator", "ManuBot", "Hotel Profit AI"].every((p) => htmlSalvato.includes(p))],
     ["nessun asterisco di enfasi rimasto", !htmlSalvato.includes("**")],
-    // I segnaposto del nome NON devono comparire: 30 dei 54 indirizzi sono
-    // redazioni generiche senza nome di persona e la sostituzione lascerebbe
-    // "Gentile ,".
+    // I segnaposto del nome NON devono comparire: verificato sui dati veri, solo
+    // 5 dei 54 indirizzi stampa hanno un nome di persona. Sui restanti 49 la
+    // sostituzione lascerebbe "Gentile ,".
     ["nessun segnaposto {{nome}}", !/\{\{\s*(nome|cognome|nome_azienda)\s*\}\}/i.test(htmlSalvato)],
   ]
   for (const [che, esito] of controlli) {
@@ -211,6 +280,44 @@ async function main() {
   await access(`public${PERCORSO_PDF_ECOSISTEMA}`)
     .then(() => console.log(`    ok  PDF presente in public${PERCORSO_PDF_ECOSISTEMA}`))
     .catch(() => console.log(`    NO  PDF MANCANTE: public${PERCORSO_PDF_ECOSISTEMA}`))
+
+  // === PRONTI PER L'INVIO? Si guarda la PRODUZIONE, non il disco locale. ===
+  //
+  // PERCHE' QUESTO CONTROLLO ESISTE: ne' l'allegato ne' il logo viaggiano dentro
+  // l'email. `fetchAttachment` in /api/dem/send SCARICA il PDF da
+  // NEXT_PUBLIC_SITE_URL e, se la risposta non e' 200, scrive una riga in console
+  // e restituisce `null`: l'email parte comunque, SENZA allegato, e la campagna
+  // risulta "inviata". Il logo lo scarica il client di posta del giornalista.
+  // Avere i file in `public/` non basta: valgono solo dopo la pubblicazione del
+  // sito, e qui la produzione resta indietro rispetto al codice.
+  const sito = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it").replace(/\/$/, "")
+  const daControllare = [
+    { che: "PDF allegato", url: `${sito}${PERCORSO_PDF_ECOSISTEMA}` },
+    ...[...htmlSalvato.matchAll(/<img[^>]+src="(https?:\/\/[^"]+)"/gi)]
+      .map((m) => m[1])
+      .filter((u, i, a) => a.indexOf(u) === i)
+      .map((url) => ({ che: "immagine nell'email", url })),
+  ]
+
+  console.log("")
+  console.log(`  === raggiungibili sul sito pubblicato (${sito}) ===`)
+  let mancanti = 0
+  for (const { che, url } of daControllare) {
+    const esito = await fetch(url, { method: "GET" })
+      .then((r) => `${r.status} ${r.headers.get("content-type") || "?"}`)
+      .catch((e) => `non raggiungibile (${e instanceof Error ? e.message : e})`)
+    const ok = esito.startsWith("200")
+    if (!ok) mancanti++
+    console.log(`    ${ok ? "ok " : "NO "} ${che}: ${url} -> ${esito}`)
+  }
+  if (mancanti > 0) {
+    console.log("")
+    console.log(
+      `    ATTENZIONE: ${mancanti} file non ancora pubblicati. Inviando ora, il PDF` +
+        " arriverebbe come allegato MANCANTE (in silenzio) e il logo come immagine" +
+        " rotta. Pubblicare il sito PRIMA di inviare.",
+    )
+  }
 
   // Le altre campagne non devono essere state toccate.
   console.log("")

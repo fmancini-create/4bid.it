@@ -225,6 +225,19 @@ async function main() {
     )
     const spazio = normale.widthOfTextAtSize(" ", corpo)
 
+    // NOTA su un difetto APPARENTE, per non rincorrerlo di nuovo: aprendo il PDF,
+    // qualche spazio sembra sparito ("Telefonate,email"). Misurato: lo spazio c'e'
+    // ed e' esatto - "Telefonate," e' larga 50,80 pt e la parola dopo comincia a
+    // 115,72, cioe' 62 + 50,80 + 2,92 (uno spazio) al centesimo. L'occhio vede
+    // strette solo le coppie che finiscono per virgola.
+    // La causa e' che Helvetica e' un font "standard": non viene incorporato, e il
+    // lettore lo sostituisce con Arial/Liberation, i cui glifi sono leggermente
+    // piu' larghi (pdfjs misura "Telefonate," 52,53 invece di 50,80) e mangiano
+    // parte dello spazio. Incorporare un TTF vero lo risolverebbe, ma servirebbe
+    // una dipendenza in piu' (@pdf-lib/fontkit) e un file di font nel repo: il
+    // comunicato Air Market inviato alle stesse 54 redazioni e' fatto con gli
+    // stessi font standard.
+
     // Impaginazione parola per parola: si accumula una riga e la si disegna solo
     // quando e' completa, perche' la larghezza dipende dal font di OGNI segmento.
     let riga: Parola[] = []

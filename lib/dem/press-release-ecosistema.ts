@@ -245,9 +245,9 @@ function sezioneHtml(s: Sezione): string {
  * aggiunge da se' il riquadro con il collegamento per scaricarlo, quindi qui NON
  * si aggiunge un secondo link, che risulterebbe doppio.
  *
- * Nessun segnaposto {{nome}}: 30 dei 54 indirizzi in rubrica sono redazioni
- * generiche (redazione@, info@) senza nome di persona, e la sostituzione
- * lascerebbe "Gentile ,".
+ * Nessun segnaposto {{nome}}: contati sui dati veri, solo 5 dei 54 indirizzi in
+ * rubrica stampa hanno un nome di persona. Sugli altri 49, redazioni generiche
+ * del tipo redazione@ o info@, la sostituzione lascerebbe "Gentile ,".
  *
  * Il guscio NON e' quello di lib/dem/email-shell.ts: quello ha in testa il logo
  * Santaddeo e la banda con la rotta aerea, cioe' l'identita' di UN prodotto.
@@ -276,13 +276,22 @@ export function htmlComunicatoEcosistema(): string {
              esce dallo schermo. -->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e3dd;border-radius:8px;overflow:hidden;">
           <!-- Intestazione: marchio dell'AZIENDA, non di un prodotto.
-               Il file e' servito come .jpg perche' i suoi byte sono JPEG:
-               public/4bid-logo-email.png ha estensione .png ma contenuto JPEG, e
-               dichiarare un tipo che non corrisponde e' un rischio inutile in
-               posta. -->
+
+               L'INDIRIZZO DEL LOGO E' VERIFICATO IN PRODUZIONE, non scelto. Nelle
+               email l'immagine non viene impacchettata: il client di posta la
+               scarica da www.4bid.it quando il destinatario apre il messaggio.
+               Prima qui c'era una copia nuova in /dem/4bid-logo.jpg, presente in
+               locale ma non ancora pubblicata: misurato 404 su www.4bid.it, e a
+               schermo l'intestazione mostrava il riquadro dell'immagine rotta.
+               /4bid-logo-email.png invece risponde 200 da tempo (67 KB, 1402x1142,
+               abbastanza grande per gli schermi a densita' doppia).
+               Nota: quel file ha estensione .png ma byte JPEG, e il sito lo serve
+               come image/png. E' cosi' da prima di questo comunicato e i client
+               riconoscono il formato dai byte; rinominarlo romperebbe le pagine
+               che lo usano gia'. -->
           <tr>
             <td align="center" style="background-color:#ffffff;padding:30px 32px 22px;border-bottom:3px solid ${ARANCIO};">
-              <img src="https://www.4bid.it/dem/4bid-logo.jpg" alt="4 bid" width="150" style="display:block;width:150px;max-width:45%;height:auto;border:0;margin:0 auto;" />
+              <img src="https://www.4bid.it/4bid-logo-email.png" alt="4 bid" width="150" style="display:block;width:150px;max-width:45%;height:auto;border:0;margin:0 auto;" />
             </td>
           </tr>
           <!-- Etichetta, data, titolo -->
