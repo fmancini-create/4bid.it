@@ -116,8 +116,13 @@ export async function POST(request: NextRequest) {
         : request.headers.get("origin") || "https://www.4bid.it")
 
     // Create or reuse a test recipient so opens/clicks can be tracked and shown in stats.
-    // Reset its counters for a clean test. It is flagged tipo_contatto='test' and
-    // marked as 'sent' so the real "Invia" (which only targets pending) won't resend it.
+    // Reset its counters for a clean test. It is marked as 'sent' so the real "Invia"
+    // (which only targets pending) won't resend it.
+    // NOTA: questo commento diceva che la riga viene marcata tipo_contatto='test',
+    // ma `baseFields` imposta tipo_contatto: null. Il campo che la distingue e'
+    // `nome_azienda = "Redazione di Prova (PROVA)"`. Conseguenza da tenere presente:
+    // la riga di prova ENTRA nel conteggio destinatari della campagna (una prova
+    // su una bozza da 48 la fa leggere 49), pur non ricevendo l'invio vero.
     const { data: existing } = await supabase
       .from("dem_recipients")
       .select("id")

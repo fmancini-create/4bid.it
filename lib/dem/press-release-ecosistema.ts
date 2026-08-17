@@ -170,7 +170,22 @@ export const COMUNICATO_ECOSISTEMA = {
     righe: [
       "4 bid srl - Via Sorripa, 10 - 50026 San Casciano in Val di Pesa (FI)",
       "P.IVA 06241710489",
-      "info@4bid.it - www.4bid.it - www.santaddeo.com",
+      "info@4bid.it - www.4bid.it",
+      // Il testo qui sopra dichiara QUATTRO piattaforme: elencarne due sole
+      // lasciava il lettore senza l'indirizzo di ManuBot, Hotel Accelerator e
+      // Hotel Profit AI. Stesso ordine della scheda "Su 4 bid srl", cosi' chi
+      // legge accoppia nome e sito senza dover indovinare.
+      // Tutti e quattro i domini sono stati MISURATI: rispondono 200 e
+      // ridirigono su "www.", quindi la forma con "www." e' quella canonica e
+      // non aggiunge un salto di redirect.
+      // UNA RIGA PER PRODOTTO, non tutti in fila: messi su una riga sola il
+      // ritorno a capo spezzava la coppia (visto a schermo: "ManuBot" a fine
+      // riga e "www.manubot.it" all'inizio della successiva), che e' proprio
+      // l'ambiguita' da evitare. Una riga per prodotto non si spezza mai.
+      "Santaddeo - www.santaddeo.com",
+      "Hotel Accelerator - www.hotelaccelerator.com",
+      "ManuBot - www.manubot.it",
+      "Hotel Profit AI - www.hotelprofitai.com",
     ],
   },
 }
@@ -347,7 +362,16 @@ export function htmlComunicatoEcosistema(): string {
             <td style="padding:0 32px;">
               <hr style="border:none;border-top:1px solid #e6e3dd;margin:0 0 16px;" />
               <p style="margin:0;font-size:13px;line-height:1.6;color:#5a5a5a;">
-                <a href="https://www.4bid.it" style="color:${BLU};">www.4bid.it</a> · <a href="https://www.santaddeo.com" style="color:${BLU};">www.santaddeo.com</a> · <a href="mailto:info@4bid.it" style="color:${BLU};">info@4bid.it</a>
+                ${[
+                  ["https://www.4bid.it", "www.4bid.it"],
+                  ["https://www.santaddeo.com", "www.santaddeo.com"],
+                  ["https://www.hotelaccelerator.com", "www.hotelaccelerator.com"],
+                  ["https://www.manubot.it", "www.manubot.it"],
+                  ["https://www.hotelprofitai.com", "www.hotelprofitai.com"],
+                  ["mailto:info@4bid.it", "info@4bid.it"],
+                ]
+                  .map(([href, testo]) => `<a href="${href}" style="color:${BLU};">${testo}</a>`)
+                  .join(" · ")}
               </p>
             </td>
           </tr>
