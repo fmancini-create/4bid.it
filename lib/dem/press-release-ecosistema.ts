@@ -67,6 +67,11 @@ export const COMUNICATO_ECOSISTEMA = {
   titolo:
     "L'hotel che impara da solo: quattro software italiani provano a cambiare il modo di gestire l'ospitalità",
 
+  // UNICA differenza voluta rispetto al sorgente dell'autore: qui il sommario
+  // NON porta i `**`. Il sorgente li usa perche' l'intero paragrafo va in
+  // grassetto, e qui il grassetto e' gia' dato dal riquadro che lo contiene
+  // (`font-weight:bold` sulla cella). Il testo passa da `esc()`, che non
+  // interpreta il markdown: lasciare i `**` stamperebbe gli asterischi.
   sommario:
     "Una telefonata può cambiare il prezzo di una camera. Un messaggio vocale può diventare automaticamente un intervento di manutenzione. Una fattura può aggiornare in tempo reale la redditività dell'hotel. È l'idea alla base dell'ecosistema tecnologico sviluppato da 4 BID: far dialogare vendite, prezzi, operatività e contabilità attraverso l'intelligenza artificiale.",
 
@@ -124,7 +129,14 @@ export const COMUNICATO_ECOSISTEMA = {
         "Collegandosi ai software contabili della struttura, il sistema può acquisire e registrare autonomamente voci, documenti e fatture, con l'obiettivo di mantenere **la situazione economica e contabile costantemente aggiornata**, senza aspettare report prodotti settimane o mesi dopo.",
         "Ma il dato contabile, da solo, racconta soltanto una parte della storia.",
         "Attraverso l'integrazione con Santaddeo, Hotel Profit AI può mettere in relazione i numeri economici con gli indicatori operativi e commerciali dell'hotel, monitorandone le performance.",
-        'La domanda cambia quindi da **"Quanto abbiamo guadagnato il mese scorso?"** a **"Come sta andando economicamente la struttura adesso, e perché?"**',
+        // Le quattro righe sotto sono separate NEL TESTO DELL'AUTORE: le due
+        // domande stanno da sole per creare la pausa. Le avevo unite in un unico
+        // periodo (nessuna parola persa, ma la struttura era mia, non sua):
+        // ripristinate come nel sorgente.
+        "La domanda cambia quindi da:",
+        '**"Quanto abbiamo guadagnato il mese scorso?"**',
+        "a:",
+        '**"Come sta andando economicamente la struttura adesso, e perché?"**',
       ],
     },
     {
