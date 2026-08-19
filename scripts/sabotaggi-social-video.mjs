@@ -81,6 +81,20 @@ const sabotaggi = [
   },
   {
     file: VIDEO,
+    cerca: "if (senzaAccount.has(p)) continue",
+    sost: "if (false) continue",
+    rompe: "l'avviso nominerebbe un canale senza account collegato, promettendo una pubblicazione impossibile",
+  },
+  {
+    // Questo e' l'errore che avevo scritto davvero: trattare la lista vuota come
+    // "nessuna destinazione", mentre la rotta la interpreta come "tutti gli attivi".
+    file: VIDEO,
+    cerca: "    if (senzaAccount.has(p)) continue",
+    sost: "    if (senzaAccount.has(p)) continue\n    if ((input.destinazioniPerPiattaforma[p] ?? []).length === 0) continue",
+    rompe: "lista vuota letta come 'nessuno': l'avviso direbbe che un canale non riceve nulla mentre riceve tutto",
+  },
+  {
+    file: VIDEO,
     cerca: 'if (isYoutubeUrl(videoUrl)) return "youtube"',
     sost: 'if (isVideoFileUrl(videoUrl)) return "video"\n    if (isYoutubeUrl(videoUrl)) return "youtube"',
     rompe: "niente: i due riconoscimenti sono mutuamente esclusivi, quindi l'ordine non cambia il risultato",
