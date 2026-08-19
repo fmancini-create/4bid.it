@@ -142,6 +142,29 @@ export const INVII_MINIMI_PER_VARIANTE = 400
  * funziona sulla base di nulla, che e' esattamente il rischio che questa prova
  * esiste per evitare.
  */
+/**
+ * Scarto minimo, in punti percentuali, per dire che due percentuali si
+ * distinguono.
+ *
+ * Era scritto come `1.5` in due punti diversi del file, con due confronti
+ * scritti in modo diverso (`scarto < 1.5` fra le varianti, `Math.abs(scarto) <
+ * 1.5` contro lo storico). Due copie della stessa regola sono due regole che
+ * possono divergere: bastava cambiarne una per avere un pannello che dichiara un
+ * vincente in un riquadro e "nessun miglioramento" in quello sotto, sugli stessi
+ * numeri. Ora la soglia e' UNA e la decisione passa da `distinguibili()`.
+ */
+export const SCARTO_MINIMO_PUNTI = 1.5
+
+/**
+ * `true` quando due percentuali sono abbastanza distanti da non essere rumore.
+ *
+ * Il confronto e' `>=`: a scarto esattamente pari alla soglia si decide, perche'
+ * la soglia e' il minimo ACCETTABILE, non il primo valore rifiutato.
+ */
+export function distinguibili(unaPct: number, altraPct: number): boolean {
+  return Math.abs(unaPct - altraPct) >= SCARTO_MINIMO_PUNTI
+}
+
 export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
   vincente: VarianteOggetto | null
   motivo: string
@@ -169,9 +192,10 @@ export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
   const aperturaB: number = b.aperturePct
 
   const scarto = Math.abs(aperturaA - aperturaB)
-  // 1,5 punti: sotto questa distanza, con qualche migliaio di invii per parte,
-  // le due varianti non sono distinguibili in modo utile a una decisione.
-  if (scarto < 1.5) {
+  // Soglia unica, la stessa usata nel confronto con lo storico: con qualche
+  // migliaio di invii per parte, sotto questa distanza le due varianti non sono
+  // distinguibili in modo utile a una decisione.
+  if (!distinguibili(aperturaA, aperturaB)) {
     return {
       vincente: null,
       motivo: `Le due varianti sono equivalenti (scarto ${numero(scarto, 1)} punti): l'oggetto non è la leva che cambia le aperture.`,
@@ -231,14 +255,14 @@ export function confrontoConStorico(
   // che a quello scarto non sappiamo. Colto guardando la schermata, non le prove.
   const etichetta = `La più alta delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%)`
 
-  // 1,5 punti: la stessa soglia usata fra le due varianti. Usarne una piu'
-  // generosa qui vorrebbe dire dichiarare un miglioramento con meno prove di
+  // La stessa soglia usata fra le due varianti, dalla stessa funzione: usarne una
+  // piu' generosa qui vorrebbe dire dichiarare un miglioramento con meno prove di
   // quante ne chiediamo per dichiarare un vincente.
-  if (Math.abs(scarto) < 1.5) {
-    return `La migliore delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%) è in linea con il ${asticella}: la prova non ha ancora prodotto un miglioramento. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+  if (!distinguibili(migliore.aperturePct, aperturaStorico)) {
+    return `${etichetta} è in linea con il ${asticella}: la prova non ha ancora prodotto un miglioramento. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
   }
   if (scarto > 0) {
-    return `La migliore delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%) supera di ${numero(scarto, 1)} punti il ${asticella}. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+    return `${etichetta} supera di ${numero(scarto, 1)} punti il ${asticella}. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
   }
-  return `Entrambe restano sotto il ${asticella}: la migliore (${migliore.variante}) apre ${numero(Math.abs(scarto), 1)} punti in meno. Vale la pena rimettere in gara l'oggetto precedente. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+  return `Entrambe restano sotto il ${asticella}: ${etichetta} apre ${numero(Math.abs(scarto), 1)} punti in meno. Vale la pena rimettere in gara l'oggetto precedente. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
 }

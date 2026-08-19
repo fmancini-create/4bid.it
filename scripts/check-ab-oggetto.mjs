@@ -20,8 +20,10 @@ const {
   percentuale,
   esitoConfronto,
   confrontoConStorico,
+  distinguibili,
   numero,
   INVII_MINIMI_PER_VARIANTE,
+  SCARTO_MINIMO_PUNTI,
 } = mod
 const { AIR_MARKET_PRESET, PAGINA_AIR_MARKET, OGGETTI_ALTERNATIVI, OGGETTO_A, OGGETTO_B, OGGETTO_STORICO } =
   tpl
@@ -49,6 +51,10 @@ const riga = (variante, inviate, aperte, clic) => ({
   aperturePct: percentuale(aperte, inviate),
   clicSuApertePct: percentuale(clic, aperte),
 })
+
+// Riga dello storico (le email spedite prima della prova). Definita qui e non
+// piu' in basso perche' serve anche alle verifiche sulla soglia.
+const STOR = (inviate, aperte) => ({ inviate, aperturePct: percentuale(aperte, inviate) })
 
 // --- Formato dei numeri e della lingua a schermo ---------------------------
 //
@@ -233,6 +239,66 @@ prova("la soglia dichiarata e' quella usata", () => {
   assert.equal(sopra.vincente, "A", "alla soglia esatta il confronto deve poter concludere")
 })
 
+// --- La soglia dello scarto: una sola, non due copie -----------------------
+//
+// Difetto trovato MISURANDO uno scatto, non leggendo il codice: sugli stessi
+// numeri (A 15,5% / B 14,0%, scarto esattamente 1,5) il pannello dichiarava "A
+// apre di piu'" nel riquadro delle varianti e "in linea, nessun miglioramento"
+// in quello contro lo storico. La soglia 1,5 era scritta due volte, con due
+// confronti diversi: `scarto < 1.5` e `Math.abs(scarto) < 1.5`. Due copie della
+// stessa regola sono due regole che possono divergere.
+console.log("\n== soglia dello scarto: una sola regola ==")
+
+prova("allo scarto ESATTO la soglia decide, non rifiuta", () => {
+  assert.equal(distinguibili(15.5, 14), true, "1,5 e' il minimo accettabile, non il primo rifiutato")
+  assert.equal(distinguibili(14, 15.5), true, "l'ordine degli argomenti non deve contare")
+})
+
+prova("sotto la soglia non si distingue", () => {
+  assert.equal(distinguibili(15.5, 14.1), false)
+  assert.equal(distinguibili(15, 15), false)
+})
+
+prova("la costante dichiarata e' quella usata", () => {
+  assert.equal(distinguibili(10, 10 + SCARTO_MINIMO_PUNTI), true)
+  assert.equal(distinguibili(10, 10 + SCARTO_MINIMO_PUNTI - 0.1), false)
+})
+
+// Questa verifica esiste perche' un sabotaggio ha smascherato un buco: alzando
+// SOLO la soglia del confronto con lo storico (a 3 punti) nessuna prova
+// arrossiva. Le verifiche c'erano, ma tutte con scarti larghi (5 punti) o
+// piccolissimi (0,4): nessuna cadeva nella fascia in cui le due soglie
+// divergono. Un guasto che nessuna prova vede e' un guasto che arriva in
+// produzione.
+prova("il confronto con lo storico usa la SOGLIA CONDIVISA, non una propria", () => {
+  // Storico 15,0% (300/2000). La variante piu' alta apre 16,6% (332/2000): scarto
+  // 1,6 punti, appena SOPRA la soglia condivisa di 1,5 ma sotto qualsiasi soglia
+  // piu' generosa. Se questo caso non dice "supera", la soglia dello storico e'
+  // stata slegata da quella delle varianti.
+  const m = confrontoConStorico([riga("A", 2000, 332, 33), riga("B", 2000, 300, 30)], STOR(2000, 300))
+  assert.match(
+    m,
+    /supera/,
+    `scarto di 1,6 punti sopra la soglia condivisa (${SCARTO_MINIMO_PUNTI}) ma non dichiarato: il confronto con lo storico usa una soglia propria`,
+  )
+})
+
+prova("i due confronti concordano sugli STESSI numeri (scarto esatto)", () => {
+  // Il caso dello scatto: A 15,5% - B 14,0% = 1,5 esatti, e A supera lo storico
+  // (15,1%) di 0,4 punti, che invece e' sotto soglia. Le due frasi devono essere
+  // coerenti: A vince fra le varianti, ma NON e' un miglioramento sullo storico.
+  const a = riga("A", 2000, 310, 30)
+  const b = riga("B", 2000, 280, 28)
+  const e = esitoConfronto(a, b)
+  assert.equal(e.vincente, "A", "allo scarto esatto il vincente deve essere dichiarato")
+
+  const m = confrontoConStorico([a, b], STOR(4119, 624))
+  assert.match(m, /in linea/, "0,4 punti sullo storico sono sotto soglia: non e' un miglioramento")
+  // La coerenza che il pannello deve garantire: se qui si dichiara un vincente,
+  // il testo non puo' chiamare "equivalenti" le due varianti.
+  assert.ok(!/equivalenti/i.test(e.motivo), `dichiara un vincente e le dice equivalenti: "${e.motivo}"`)
+})
+
 console.log("\n== email: testo accorciato e pulsante ==")
 
 const html = AIR_MARKET_PRESET.html
@@ -301,7 +367,6 @@ console.log("\n== confronto con l'oggetto storico (l'asticella) ==")
 // La prova mette in gara due oggetti NUOVI: dice quale dei due apre meglio, ma
 // non se battono quello di prima. Queste verifiche proteggono la riga che
 // risponde a "abbiamo migliorato?".
-const STOR = (inviate, aperte) => ({ inviate, aperturePct: percentuale(aperte, inviate) })
 
 prova("senza abbastanza invii storici non si dice niente", () => {
   // 30 invii storici darebbero una percentuale precisa e insensata.
@@ -316,12 +381,28 @@ prova("finche' le varianti sono sotto soglia non si dice niente", () => {
   assert.equal(confrontoConStorico([riga("A", 100, 20, 2), riga("B", 100, 15, 2)], STOR(4119, 624)), null)
 })
 
-prova("dichiara il miglioramento quando la migliore supera lo storico", () => {
+prova("dichiara il miglioramento quando la piu' alta supera lo storico", () => {
   // storico 4119/624 = 15,1% ; A 2000/400 = 20%
   const m = confrontoConStorico([riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)], STOR(4119, 624))
   assert.match(m, /supera/)
-  assert.match(m, /^La migliore delle due \(A/)
+  assert.match(m, /^La più alta delle due \(A/)
   assert.match(m, /non è un confronto alla pari/)
+})
+
+// "Piu' alta", non "migliore", e non e' pignoleria linguistica.
+//
+// Colto NELLO SCATTO: nel caso di scarto minimo il pannello diceva "le due
+// varianti sono equivalenti" e due righe sotto "la MIGLIORE delle due (A)".
+// Se non si distinguono, nessuna delle due e' migliore: le due frasi si
+// contraddicevano nella stessa schermata. "Piu' alta" dichiara solo il fatto
+// misurato, senza sostenere un giudizio che a quello scarto non possiamo dare.
+prova("non chiama 'migliore' una variante quando sono equivalenti", () => {
+  const m = confrontoConStorico([riga("A", 2000, 310, 30), riga("B", 2000, 280, 28)], STOR(4119, 624))
+  assert.match(m, /in linea/, "questo caso deve essere quello dello scarto minimo")
+  assert.ok(
+    !/migliore/i.test(m),
+    `dice "migliore" mentre l'altro riquadro dichiara le varianti equivalenti: "${m}"`,
+  )
 })
 
 prova("avverte quando ENTRAMBE restano sotto lo storico", () => {
@@ -338,18 +419,18 @@ prova("dice 'in linea' quando lo scarto e' rumore", () => {
   assert.match(m, /non ha ancora prodotto un miglioramento/)
 })
 
-prova("confronta con la MIGLIORE delle due, non con la prima", () => {
-  // B (20%) e' migliore di A (10%): il testo deve parlare di B.
+prova("confronta con la PIU' ALTA delle due, non con la prima", () => {
+  // B (20%) apre piu' di A (10%): il testo deve parlare di B.
   const m = confrontoConStorico([riga("A", 2000, 200, 20), riga("B", 2000, 400, 40)], STOR(4119, 624))
-  assert.match(m, /^La migliore delle due \(B/)
+  assert.match(m, /^La più alta delle due \(B/)
   assert.match(m, /supera/)
 })
 
 prova("ignora una variante ancora sotto soglia invece di farla vincere", () => {
-  // A ha 100 invii e 50% di aperture: sembrerebbe la migliore, ma e' rumore.
-  // Deve vincere B, che ha invii sufficienti.
+  // A ha 100 invii e 50% di aperture: sembrerebbe la piu' alta, ma e' rumore.
+  // Deve valere B, che ha invii sufficienti.
   const m = confrontoConStorico([riga("A", 100, 50, 5), riga("B", 2000, 400, 40)], STOR(4119, 624))
-  assert.match(m, /^La migliore delle due \(B/)
+  assert.match(m, /^La più alta delle due \(B/)
 })
 
 console.log("\n== oggetti alternativi da provare ==")

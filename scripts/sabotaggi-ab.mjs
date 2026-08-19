@@ -56,11 +56,13 @@ const sabotaggi = [
     attesa: /zero invii/i,
   },
   {
+    // Aggiornato dopo l'unificazione della soglia: ora c'e' una sola costante,
+    // quindi azzerarla toglie il filtro del rumore a ENTRAMBI i confronti.
     nome: "6. Scarto minimo dichiarato vincente (soglia rumore a zero)",
     file: AB,
-    da: "  if (scarto < 1.5) {",
-    a: "  if (scarto < 0) {",
-    attesa: /equivalenti/i,
+    da: "export const SCARTO_MINIMO_PUNTI = 1.5",
+    a: "export const SCARTO_MINIMO_PUNTI = 0",
+    attesa: /equivalenti|sotto la soglia non si distingue|costante dichiarata/i,
   },
   {
     nome: "7. Email riallungata con un quarto paragrafo",
@@ -110,18 +112,18 @@ const sabotaggi = [
     attesa: /senza abbastanza invii storici/i,
   },
   {
-    nome: "13. Confronto con la PRIMA variante invece della migliore",
+    nome: "13. Confronto con la PRIMA variante invece della piu' alta",
     file: AB,
     da: "  const migliore = pronte.reduce((x, y) => (y.aperturePct > x.aperturePct ? y : x))",
     a: "  const migliore = pronte[0]",
-    attesa: /MIGLIORE delle due/i,
+    attesa: /PIU' ALTA delle due/i,
   },
   {
     nome: "14. Nel confronto con lo storico entra anche una variante sotto soglia",
     file: AB,
     da: "      v.inviate >= INVII_MINIMI_PER_VARIANTE && v.aperturePct !== null,",
     a: "      v.aperturePct !== null,",
-    attesa: /sotto soglia|varianti sono sotto soglia/i,
+    attesa: /sotto soglia/i,
   },
   {
     nome: "15. Il confronto con lo storico non avverte piu' che non e' alla pari",
@@ -129,6 +131,35 @@ const sabotaggi = [
     da: " Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`\n  }\n  return `Entrambe restano sotto il ${asticella}",
     a: "`\n  }\n  return `Entrambe restano sotto il ${asticella}",
     attesa: /confronto alla pari/i,
+  },
+  {
+    // Rimette la contraddizione vista nello scatto: "le due varianti sono
+    // equivalenti" e, due righe sotto, "la MIGLIORE delle due".
+    nome: "16. Torna a chiamare 'migliore' una variante equivalente all'altra",
+    file: AB,
+    da: "  const etichetta = `La più alta delle due (",
+    a: "  const etichetta = `La migliore delle due (",
+    attesa: /non chiama 'migliore'|equivalenti/i,
+  },
+  {
+    // Rimette il difetto trovato nello scatto: la soglia rifiuta il proprio
+    // valore esatto, cosi' a scarto 1,5 il vincente non viene dichiarato mentre
+    // l'altro riquadro parla comunque della variante piu' alta.
+    nome: "17. La soglia rifiuta il proprio valore esatto (torna a '>')",
+    file: AB,
+    da: "  return Math.abs(unaPct - altraPct) >= SCARTO_MINIMO_PUNTI",
+    a: "  return Math.abs(unaPct - altraPct) > SCARTO_MINIMO_PUNTI",
+    attesa: /scarto ESATTO|minimo accettabile/i,
+  },
+  {
+    nome: "18. Soglia diversa fra i due confronti (torna a due copie)",
+    file: AB,
+    da: "  if (!distinguibili(migliore.aperturePct, aperturaStorico)) {",
+    a: "  if (Math.abs(scarto) < 3) {",
+    // L'attesa punta alla prova specifica del buco: un'attesa generica come
+    // /in linea|miglioramento/ corrispondeva al nome di prove che restavano
+    // verdi anche a guasto applicato, quindi non provava nulla.
+    attesa: /SOGLIA CONDIVISA/i,
   },
 ]
 
@@ -154,6 +185,14 @@ if (partenza.uscita !== 0 || rosseInizio > 0) {
 }
 
 let colti = 0
+// I sabotaggi saltati si contano a parte, e rendono ROSSO l'esito finale.
+//
+// Prima il `continue` li scartava in silenzio e il totale si adattava: dopo aver
+// unificato la soglia, due voci puntavano a testo che non esisteva piu' e il
+// riepilogo diceva "16 su 16" mentre l'elenco ne aveva 18. Un sabotaggio che non
+// viene eseguito non e' un sabotaggio superato: e' una verifica che non c'e' piu'
+// e che il riepilogo faceva sembrare presente.
+let saltati = 0
 for (const s of sabotaggi) {
   console.log(`\n--- ${s.nome}`)
   const impronta = sha(s.file)
@@ -161,6 +200,8 @@ for (const s of sabotaggi) {
 
   if (!originale.includes(s.da)) {
     console.log(`  SALTATO: testo da sostituire non trovato in ${s.file}`)
+    console.log("  Il sabotaggio non e' stato eseguito: aggiornarlo o rimuoverlo.")
+    saltati++
     continue
   }
   writeFileSync(s.file, originale.replace(s.da, s.a))
@@ -204,6 +245,11 @@ for (const s of sabotaggi) {
 }
 
 console.log(`\n=== SABOTAGGI COLTI: ${colti} su ${sabotaggi.length} ===`)
+if (saltati > 0) {
+  console.log(
+    `ATTENZIONE: ${saltati} sabotaggi NON eseguiti (testo non trovato). Non sono superati: sono verifiche perse.`,
+  )
+}
 
 const finale = esegui()
 console.log(`controllo finale sul codice ripristinato: uscita ${finale.uscita}, rosse ${(finale.out.match(/ROSSA/g) || []).length}`)
