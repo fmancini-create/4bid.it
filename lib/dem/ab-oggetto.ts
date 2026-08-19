@@ -187,3 +187,58 @@ export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
     motivo: `La variante ${vincente.variante} apre ${numero(scarto, 1)} punti in più (${numero(aperturaVincente, 1)}% contro ${numero(aperturaPerdente, 1)}%).`,
   }
 }
+
+/**
+ * Confronta la migliore delle due varianti con l'oggetto usato PRIMA della prova.
+ *
+ * Serve perche' la prova in corso mette in gara due oggetti nuovi: dice quale dei
+ * due apre meglio, ma non se battono quello di prima. Senza questa riga il
+ * pannello risponderebbe a "quale delle due?" lasciando senza risposta la domanda
+ * che conta, che e' "abbiamo migliorato?".
+ *
+ * Restituisce `null` quando il paragone non si puo' fare: senza storico, senza
+ * abbastanza invii storici, o prima che le varianti abbiano raggiunto la soglia.
+ * Un paragone con 30 invii storici sarebbe un numero preciso e insensato.
+ *
+ * IMPORTANTE - non e' un confronto alla pari, ed e' dichiarato nel testo: lo
+ * storico e' stato spedito in giorni diversi, con un corpo diverso e una
+ * reputazione del mittente diversa. E' un'asticella, non un avversario.
+ */
+export function confrontoConStorico(
+  varianti: readonly RigaConfrontoAb[],
+  storico: { inviate: number; aperturePct: number | null },
+): string | null {
+  if (storico.inviate < INVII_MINIMI_PER_VARIANTE) return null
+  const aperturaStorico = storico.aperturePct
+  if (aperturaStorico === null) return null
+
+  const pronte = varianti.filter(
+    (v): v is RigaConfrontoAb & { aperturePct: number } =>
+      v.inviate >= INVII_MINIMI_PER_VARIANTE && v.aperturePct !== null,
+  )
+  if (pronte.length === 0) return null
+
+  const migliore = pronte.reduce((x, y) => (y.aperturePct > x.aperturePct ? y : x))
+  const scarto = migliore.aperturePct - aperturaStorico
+  const asticella = `${numero(aperturaStorico, 1)}% dell'oggetto precedente`
+
+  // "La piu' alta", non "la migliore".
+  //
+  // Quando le due varianti sono equivalenti, `esitoConfronto` scrive nella stessa
+  // schermata "le due varianti sono equivalenti": chiamarne una "la migliore" due
+  // righe sotto si contraddiceva da solo. "Piu' alta" dichiara solo il fatto
+  // misurato (quale percentuale e' maggiore) senza sostenere che sia meglio, cosa
+  // che a quello scarto non sappiamo. Colto guardando la schermata, non le prove.
+  const etichetta = `La più alta delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%)`
+
+  // 1,5 punti: la stessa soglia usata fra le due varianti. Usarne una piu'
+  // generosa qui vorrebbe dire dichiarare un miglioramento con meno prove di
+  // quante ne chiediamo per dichiarare un vincente.
+  if (Math.abs(scarto) < 1.5) {
+    return `La migliore delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%) è in linea con il ${asticella}: la prova non ha ancora prodotto un miglioramento. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+  }
+  if (scarto > 0) {
+    return `La migliore delle due (${migliore.variante}, ${numero(migliore.aperturePct, 1)}%) supera di ${numero(scarto, 1)} punti il ${asticella}. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+  }
+  return `Entrambe restano sotto il ${asticella}: la migliore (${migliore.variante}) apre ${numero(Math.abs(scarto), 1)} punti in meno. Vale la pena rimettere in gara l'oggetto precedente. Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`
+}

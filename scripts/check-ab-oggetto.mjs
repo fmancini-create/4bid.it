@@ -19,10 +19,12 @@ const {
   oggettoPerDestinatario,
   percentuale,
   esitoConfronto,
+  confrontoConStorico,
   numero,
   INVII_MINIMI_PER_VARIANTE,
 } = mod
-const { AIR_MARKET_PRESET, PAGINA_AIR_MARKET, OGGETTI_ALTERNATIVI } = tpl
+const { AIR_MARKET_PRESET, PAGINA_AIR_MARKET, OGGETTI_ALTERNATIVI, OGGETTO_A, OGGETTO_B, OGGETTO_STORICO } =
+  tpl
 
 let passate = 0
 let rosse = 0
@@ -294,6 +296,62 @@ prova("resta un invito alla demo", () => {
   assert.ok(/prenota una demo/i.test(testoVisibile), "l'invito alla demo e' scomparso")
 })
 
+console.log("\n== confronto con l'oggetto storico (l'asticella) ==")
+
+// La prova mette in gara due oggetti NUOVI: dice quale dei due apre meglio, ma
+// non se battono quello di prima. Queste verifiche proteggono la riga che
+// risponde a "abbiamo migliorato?".
+const STOR = (inviate, aperte) => ({ inviate, aperturePct: percentuale(aperte, inviate) })
+
+prova("senza abbastanza invii storici non si dice niente", () => {
+  // 30 invii storici darebbero una percentuale precisa e insensata.
+  assert.equal(confrontoConStorico([riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)], STOR(30, 5)), null)
+})
+
+prova("senza aperture storiche rilevate non si dice niente", () => {
+  assert.equal(confrontoConStorico([riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)], STOR(0, 0)), null)
+})
+
+prova("finche' le varianti sono sotto soglia non si dice niente", () => {
+  assert.equal(confrontoConStorico([riga("A", 100, 20, 2), riga("B", 100, 15, 2)], STOR(4119, 624)), null)
+})
+
+prova("dichiara il miglioramento quando la migliore supera lo storico", () => {
+  // storico 4119/624 = 15,1% ; A 2000/400 = 20%
+  const m = confrontoConStorico([riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)], STOR(4119, 624))
+  assert.match(m, /supera/)
+  assert.match(m, /^La migliore delle due \(A/)
+  assert.match(m, /non è un confronto alla pari/)
+})
+
+prova("avverte quando ENTRAMBE restano sotto lo storico", () => {
+  // storico 15,1% ; A 10% ; B 9% -> la migliore (A) e' comunque sotto
+  const m = confrontoConStorico([riga("A", 2000, 200, 20), riga("B", 2000, 180, 18)], STOR(4119, 624))
+  assert.match(m, /sotto/)
+  assert.match(m, /rimettere in gara l'oggetto precedente/)
+})
+
+prova("dice 'in linea' quando lo scarto e' rumore", () => {
+  // storico 15,1% ; A 15,5% -> 0,4 punti: sotto la soglia di 1,5
+  const m = confrontoConStorico([riga("A", 2000, 310, 30), riga("B", 2000, 280, 28)], STOR(4119, 624))
+  assert.match(m, /in linea/)
+  assert.match(m, /non ha ancora prodotto un miglioramento/)
+})
+
+prova("confronta con la MIGLIORE delle due, non con la prima", () => {
+  // B (20%) e' migliore di A (10%): il testo deve parlare di B.
+  const m = confrontoConStorico([riga("A", 2000, 200, 20), riga("B", 2000, 400, 40)], STOR(4119, 624))
+  assert.match(m, /^La migliore delle due \(B/)
+  assert.match(m, /supera/)
+})
+
+prova("ignora una variante ancora sotto soglia invece di farla vincere", () => {
+  // A ha 100 invii e 50% di aperture: sembrerebbe la migliore, ma e' rumore.
+  // Deve vincere B, che ha invii sufficienti.
+  const m = confrontoConStorico([riga("A", 100, 50, 5), riga("B", 2000, 400, 40)], STOR(4119, 624))
+  assert.match(m, /^La migliore delle due \(B/)
+})
+
 console.log("\n== oggetti alternativi da provare ==")
 
 prova("ci sono piu' proposte fra cui scegliere", () => {
@@ -306,9 +364,53 @@ prova("nessuna proposta promette numeri o percentuali", () => {
   }
 })
 
-prova("nessuna proposta e' uguale all'oggetto attuale", () => {
-  for (const o of OGGETTI_ALTERNATIVI) {
-    assert.notEqual(o.trim(), AIR_MARKET_PRESET.subject.trim(), `duplicato dell'attuale: "${o}"`)
+// La verifica che stava qui ("nessuna proposta e' uguale all'oggetto attuale") e'
+// stata rimossa perche' era diventata FALSA per costruzione: il committente ha
+// scelto di mettere in gara la proposta 1 contro la 3, quindi l'oggetto A ORA E'
+// una delle proposte. Tenerla avrebbe significato tenere una prova che vieta
+// esattamente cio' che si e' deciso di fare.
+prova("l'oggetto dell'email e' la variante A scelta", () => {
+  assert.equal(AIR_MARKET_PRESET.subject, OGGETTO_A)
+  assert.equal(OGGETTO_A, OGGETTI_ALTERNATIVI[0], "la variante A non e' la proposta 1")
+  assert.equal(OGGETTO_B, OGGETTI_ALTERNATIVI[2], "la variante B non e' la proposta 3")
+})
+
+prova("le due varianti sono diverse fra loro e dallo storico", () => {
+  assert.notEqual(OGGETTO_A.trim(), OGGETTO_B.trim(), "A e B identici: confronto con se stesso")
+  assert.notEqual(OGGETTO_A.trim(), OGGETTO_STORICO.trim())
+  assert.notEqual(OGGETTO_B.trim(), OGGETTO_STORICO.trim())
+})
+
+// Il vincolo piu' importante del corpo, e nasce dalla prova A/B.
+//
+// Un solo corpo serve DUE oggetti: se il titolo ricopia l'oggetto A, chi riceve
+// il B legge un'email che comincia con una frase diversa da quella che l'ha
+// convinto ad aprire. La versione precedente ripeteva parola per parola l'oggetto
+// di allora, quindi con la prova accesa sarebbe stata sbagliata per meta' dei
+// destinatari.
+prova("il corpo non ricopia nessuno dei due oggetti", () => {
+  for (const [nome, oggetto] of [
+    ["A", OGGETTO_A],
+    ["B", OGGETTO_B],
+    ["storico", OGGETTO_STORICO],
+  ]) {
+    const senzaPunto = oggetto.replace(/[?.!]+$/, "").trim().toLowerCase()
+    assert.ok(
+      !testoVisibile.toLowerCase().includes(senzaPunto),
+      `il corpo ripete l'oggetto ${nome} ("${oggetto}"): incoerente per chi ha ricevuto l'altra variante`,
+    )
+  }
+})
+
+prova("l'anteprima non ricopia nessuno dei due oggetti", () => {
+  // L'anteprima si legge ACCANTO all'oggetto nella casella: ripeterlo spreca
+  // l'unico spazio disponibile per aggiungere un motivo per aprire.
+  const sorgente = readFileSync(new URL("../lib/dem/air-market-template.ts", import.meta.url), "utf8")
+  const riga = sorgente.split("\n").find((l) => l.trim().startsWith("anteprima:"))
+  assert.ok(riga, "riga dell'anteprima non trovata")
+  for (const oggetto of [OGGETTO_A, OGGETTO_B]) {
+    const senzaPunto = oggetto.replace(/[?.!]+$/, "").trim().toLowerCase()
+    assert.ok(!riga.toLowerCase().includes(senzaPunto), `l'anteprima ripete "${oggetto}"`)
   }
 })
 

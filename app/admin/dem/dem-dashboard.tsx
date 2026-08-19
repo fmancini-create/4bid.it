@@ -383,6 +383,10 @@ interface CampaignStats {
     oggettoB: string
     a: { inviate: number; aperte: number; clic: number }
     b: { inviate: number; aperte: number; clic: number }
+    // Le email spedite prima della prova, con l'oggetto di allora. Servono come
+    // asticella: la prova mette in gara due oggetti nuovi, quindi da sola non
+    // puo' dire se sono un miglioramento rispetto a prima.
+    storico: { oggetto: string; inviate: number; aperte: number; clic: number }
   }
 }
 
@@ -1552,10 +1556,11 @@ export default function DemDashboard({
               oggettoB={stats.ab.oggettoB}
               a={stats.ab.a}
               b={stats.ab.b}
-              spediteFuoriProva={Math.max(
-                0,
-                stats.summary.sent - stats.ab.a.inviate - stats.ab.b.inviate,
-              )}
+                  // Contato dalla rotta con `subject_variant is null`, non piu'
+                  // dedotto per sottrazione da `sent`: la sottrazione dava un
+                  // numero plausibile anche quando era sbagliato, e non poteva
+                  // dire QUALE oggetto avevano ricevuto quelle email.
+                  storico={stats.ab.storico}
             />
           )}
 

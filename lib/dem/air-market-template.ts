@@ -53,16 +53,10 @@ const BOTTONE_FUNZIONALITA = `          <!-- Invito principale -->
             </td>
           </tr>`
 
-// Oggetti da mettere alla prova sulla coda, contro quello attuale.
-//
-// L'attuale ("Il tuo prossimo ospite ha già prenotato il volo") apre al 15,15%,
-// meglio della campagna di riferimento sulla stessa lista fredda (14,04%): per
-// questo NON viene buttato, ma tenuto come termine di paragone. Se il nuovo
-// oggetto apre meno, si e' perso nulla; se apre piu', lo si sa con i numeri.
-//
-// Nessuno di questi promette cifre o risultati ("+18% di RevPAR"): sono
-// verifiche che non possiamo sostenere e che sulla lista fredda attirano
-// segnalazioni di spam, le quali peggiorano la consegna per TUTTA la lista.
+// Oggetti proposti. Nessuno promette cifre o risultati ("+18% di RevPAR"):
+// sarebbero verifiche che non possiamo sostenere e che sulla lista fredda
+// attirano segnalazioni di spam, le quali peggiorano la consegna per TUTTA la
+// lista, non solo per chi segnala.
 export const OGGETTI_ALTERNATIVI = [
   "Sai quanti voli sono già prenotati verso il tuo aeroporto?",
   "I tuoi ospiti di settembre hanno già il biglietto in mano",
@@ -71,12 +65,34 @@ export const OGGETTI_ALTERNATIVI = [
   "Chi arriverà in città lo si sa già oggi",
 ] as const
 
+// Le due varianti scelte per la prova: la 1 contro la 3.
+export const OGGETTO_A = OGGETTI_ALTERNATIVI[0]
+export const OGGETTO_B = OGGETTI_ALTERNATIVI[2]
+
+// L'oggetto usato per le prime 4.119 email.
+//
+// Va conservato per un motivo preciso: apriva al 15,15%, meglio della campagna
+// di riferimento sulla stessa lista fredda (14,04%). Siccome la prova mette in
+// gara la 1 contro la 3, NESSUNA delle due varianti e' questo oggetto: la prova
+// dira' quale delle due apre meglio, ma NON se batte il 15,15%.
+//
+// Per questo il numero storico resta a schermo nel pannello come terza riga di
+// riferimento, con un avvertimento: e' stato misurato in giorni diversi, quindi
+// e' un'asticella da tenere d'occhio, non un confronto alla pari. Cancellarlo
+// significherebbe perdere l'unico termine di paragone che abbiamo.
+export const OGGETTO_STORICO = "Il tuo prossimo ospite ha già prenotato il volo"
+
 export const AIR_MARKET_PRESET = {
   name: "Santaddeo - Traffico aereo (Air Market)",
-  subject: "Il tuo prossimo ospite ha già prenotato il volo",
+  // Variante A della prova. La B (OGGETTO_B) non sta qui perche' non e' un
+  // secondo modello: il corpo e' lo STESSO per entrambe, cambia solo l'oggetto.
+  subject: OGGETTO_A,
   html: costruisciDem({
     titolo: "Santaddeo - Air Market Intelligence",
-    anteprima: "Lui non sa ancora dove dormirà. Il suo volo, però, è già prenotato.",
+    // L'anteprima si legge nella casella ACCANTO all'oggetto, quindi partecipa
+    // alla decisione di aprire e vale per entrambe le varianti: non ripete
+    // nessuno dei due oggetti, ma aggiunge il pezzo che manca a tutti e due.
+    anteprima: "I voli già in calendario dicono da quali paesi arriverà la domanda.",
     motivoRicezione: "Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.",
     // TRE righe, non di piu'.
     //
@@ -86,12 +102,18 @@ export const AIR_MARKET_PRESET = {
     // stesso motivo qui NON c'e' piu' il riquadro di confronto con gli altri
     // sistemi (resta nelle altre due versioni, dove il pubblico e' diverso):
     // e' il contenuto tipico di una pagina, non di un invito.
+    //
+    // Il titolo NON ricopia l'oggetto, e per la prova A/B e' un vincolo, non uno
+    // stile: un solo corpo serve DUE oggetti diversi, quindi ripetere l'oggetto A
+    // renderebbe l'email incoerente per chi ha ricevuto il B, e viceversa. La
+    // versione precedente ripeteva parola per parola l'oggetto di allora: con la
+    // prova in corso sarebbe stata sbagliata per meta' dei destinatari.
     righe: `          <!-- Gancio -->
           <tr>
             <td style="padding:34px 32px 0;font-size:16px;line-height:1.7;color:#2d2d2d;">
-              <p style="margin:0 0 18px;font-size:21px;font-weight:bold;color:#1b2a4a;line-height:1.45;">Il tuo prossimo ospite ha già prenotato il volo.</p>
-              <p style="margin:0 0 18px;">Non sa ancora dove dormirà, ma il suo aereo verso l'aeroporto vicino a te è già in calendario.</p>
-              <p style="margin:0 0 6px;">Santaddeo legge quei voli e ti dice <strong>da quali paesi arriverà la domanda</strong>, settimane prima delle prenotazioni.</p>
+              <p style="margin:0 0 18px;font-size:21px;font-weight:bold;color:#1b2a4a;line-height:1.45;">I voli verso il tuo aeroporto sono già prenotati. Le camere no.</p>
+              <p style="margin:0 0 18px;">Da quali paesi arriverà la domanda, e in quali settimane, è già scritto negli aerei in calendario: settimane prima che arrivino le prenotazioni.</p>
+              <p style="margin:0 0 6px;">Santaddeo legge quel dato e te lo mette accanto a prezzi e occupazione.</p>
             </td>
           </tr>
 ${BOTTONE_FUNZIONALITA}

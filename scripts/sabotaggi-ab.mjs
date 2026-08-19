@@ -65,9 +65,9 @@ const sabotaggi = [
   {
     nome: "7. Email riallungata con un quarto paragrafo",
     file: TPL,
-    da: `<p style="margin:0 0 6px;">Santaddeo legge quei voli`,
+    da: `<p style="margin:0 0 6px;">Santaddeo legge quel dato`,
     a: `<p style="margin:0 0 18px;">Testo aggiunto che riporta l'email alla lunghezza di prima, spiegando per filo e per segno tutto il funzionamento del modulo, i mercati coperti, la frequenza di aggiornamento dei dati, le integrazioni disponibili e ogni altro dettaglio che rende inutile aprire la pagina di destinazione perche' chi legge ha gia' capito tutto e non ha piu' alcun motivo di cliccare sul pulsante.</p>
-              <p style="margin:0 0 6px;">Santaddeo legge quei voli`,
+              <p style="margin:0 0 6px;">Santaddeo legge quel dato`,
     attesa: /corpo email breve|tre paragrafi/i,
   },
   {
@@ -85,11 +85,50 @@ const sabotaggi = [
     attesa: /promette numeri|percentuali/i,
   },
   {
-    nome: "10. Proposta identica all'oggetto attuale",
+    // Era "proposta identica all'oggetto attuale", verifica rimossa quando il
+    // committente ha scelto di mettere in gara la proposta 1: ora l'oggetto A E'
+    // una proposta, quindi quella regola era diventata falsa per costruzione.
+    // Al suo posto si guasta il vincolo che conta con la prova accesa.
+    nome: "10. Il corpo ricopia l'oggetto della variante A",
     file: TPL,
-    da: '"Chi arriverà in città lo si sa già oggi",',
-    a: '"Il tuo prossimo ospite ha già prenotato il volo",',
-    attesa: /uguale all'oggetto attuale|duplicato/i,
+    da: "I voli verso il tuo aeroporto sono già prenotati. Le camere no.",
+    a: "Sai quanti voli sono già prenotati verso il tuo aeroporto?",
+    attesa: /non ricopia nessuno dei due oggetti|ripete l'oggetto/i,
+  },
+  {
+    nome: "11. L'anteprima ricopia l'oggetto della variante B",
+    file: TPL,
+    da: 'anteprima: "I voli già in calendario dicono da quali paesi arriverà la domanda."',
+    a: 'anteprima: "C\'è un dato che il tuo revenue non sta guardando."',
+    attesa: /anteprima non ricopia/i,
+  },
+  {
+    nome: "12. Confronto con lo storico anche con pochi invii storici",
+    file: AB,
+    da: "  if (storico.inviate < INVII_MINIMI_PER_VARIANTE) return null",
+    a: "  if (storico.inviate < 0) return null",
+    attesa: /senza abbastanza invii storici/i,
+  },
+  {
+    nome: "13. Confronto con la PRIMA variante invece della migliore",
+    file: AB,
+    da: "  const migliore = pronte.reduce((x, y) => (y.aperturePct > x.aperturePct ? y : x))",
+    a: "  const migliore = pronte[0]",
+    attesa: /MIGLIORE delle due/i,
+  },
+  {
+    nome: "14. Nel confronto con lo storico entra anche una variante sotto soglia",
+    file: AB,
+    da: "      v.inviate >= INVII_MINIMI_PER_VARIANTE && v.aperturePct !== null,",
+    a: "      v.aperturePct !== null,",
+    attesa: /sotto soglia|varianti sono sotto soglia/i,
+  },
+  {
+    nome: "15. Il confronto con lo storico non avverte piu' che non e' alla pari",
+    file: AB,
+    da: " Attenzione, non è un confronto alla pari — lo storico è stato spedito in giorni diversi e con un altro testo.`\n  }\n  return `Entrambe restano sotto il ${asticella}",
+    a: "`\n  }\n  return `Entrambe restano sotto il ${asticella}",
+    attesa: /confronto alla pari/i,
   },
 ]
 

@@ -10,6 +10,7 @@ import { FlaskConical } from "lucide-react"
 import {
   percentuale,
   esitoConfronto,
+  confrontoConStorico,
   numero,
   INVII_MINIMI_PER_VARIANTE,
   type RigaConfrontoAb,
@@ -23,7 +24,7 @@ export function ConfrontoAb({
   oggettoB,
   a,
   b,
-  spediteFuoriProva,
+  storico,
 }: {
   attiva: boolean
   oggettoA: string
@@ -31,11 +32,16 @@ export function ConfrontoAb({
   a: DatiVariante
   b: DatiVariante
   /**
-   * Email spedite prima che la prova esistesse (variante non assegnata).
-   * Si dichiara in pagina: senza questo numero, "inviate 2.000 + 2.000" contro un
-   * totale campagna di 8.000 sembrerebbe un errore di conteggio.
+   * Email spedite prima che la prova esistesse (variante non assegnata), con
+   * l'oggetto di allora.
+   *
+   * Si mostra in pagina per due motivi. Primo: senza questo numero, "inviate
+   * 2.000 + 2.000" contro un totale campagna di 8.000 sembrerebbe un errore di
+   * conteggio. Secondo, piu' importante: siccome la prova mette in gara due
+   * oggetti NUOVI, questa e' l'unica asticella per sapere se sono un
+   * miglioramento e non solo diversi fra loro.
    */
-  spediteFuoriProva: number
+  storico: DatiVariante & { oggetto: string }
 }) {
   if (!attiva) return null
 
@@ -53,6 +59,9 @@ export function ConfrontoAb({
   })
 
   const esito = esitoConfronto(righe[0], righe[1])
+
+  const aperturaStorico = percentuale(storico.aperte, storico.inviate)
+  const contro = confrontoConStorico(righe, { inviate: storico.inviate, aperturePct: aperturaStorico })
 
   return (
     <Card className="mb-6">
@@ -98,13 +107,26 @@ export function ConfrontoAb({
 
         <p className="text-sm leading-relaxed text-muted-foreground">{esito.motivo}</p>
 
-        {spediteFuoriProva > 0 && (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Altre {numero(spediteFuoriProva)} email sono state spedite prima dell&apos;avvio della
-            prova, con il testo precedente: restano fuori dal confronto perché sommarle falserebbe
-            il paragone. La soglia per dichiarare un vincente è di {numero(INVII_MINIMI_PER_VARIANTE)}{" "}
-            invii per variante.
-          </p>
+        {contro && <p className="text-sm leading-relaxed text-foreground">{contro}</p>}
+
+        {storico.inviate > 0 && (
+          <div className="flex flex-col gap-1 rounded-md border border-dashed border-border p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Prima della prova · riferimento
+            </p>
+            <p className="text-sm leading-relaxed text-foreground">
+              {storico.oggetto || <span className="italic">oggetto non registrato</span>}
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {aperturaStorico === null ? "—" : `${numero(aperturaStorico, 1)}%`} ·{" "}
+              {numero(storico.inviate)} inviate · {numero(storico.aperte)} aperte
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Restano fuori dal confronto: sommarle a una delle due varianti falserebbe il paragone,
+              perché sono partite in giorni diversi e con un altro testo. La soglia per dichiarare un
+              vincente è di {numero(INVII_MINIMI_PER_VARIANTE)} invii per variante.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

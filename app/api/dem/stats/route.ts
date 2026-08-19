@@ -226,14 +226,40 @@ export async function GET(request: NextRequest) {
       return count || 0
     }
 
-    const [aInviate, aAperte, aClic, bInviate, bAperte, bClic] = await Promise.all([
-      contaVariante("A"),
-      contaVariante("A", "aperte"),
-      contaVariante("A", "clic"),
-      contaVariante("B"),
-      contaVariante("B", "aperte"),
-      contaVariante("B", "clic"),
-    ])
+    // Le email spedite PRIMA della prova (`subject_variant is null`).
+    //
+    // Non entrano nel confronto, ma vanno mostrate: sulla campagna Air Market
+    // sono 4.119 invii con l'oggetto precedente, che ha aperto al 15,15%. Se la
+    // prova mette in gara due oggetti NUOVI, nessuna delle due varianti e' quello
+    // storico e il confronto A/B non puo' dire se l'una o l'altra batte il
+    // 15,15%. Tenere quel numero a schermo e' l'unico modo di avere un'asticella;
+    // buttarlo via renderebbe la prova incapace di rispondere alla domanda vera,
+    // che e' "abbiamo migliorato?" e non solo "quale delle due e' meglio?".
+    const contaStorico = async (filtro?: "aperte" | "clic") => {
+      let q = supabase
+        .from("dem_recipients")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaignId)
+        .eq("send_status", "sent")
+        .is("subject_variant", null)
+      if (filtro === "aperte") q = q.gt("open_count", 0)
+      if (filtro === "clic") q = q.gt("click_count", 0)
+      const { count } = await q
+      return count || 0
+    }
+
+    const [aInviate, aAperte, aClic, bInviate, bAperte, bClic, sInviate, sAperte, sClic] =
+      await Promise.all([
+        contaVariante("A"),
+        contaVariante("A", "aperte"),
+        contaVariante("A", "clic"),
+        contaVariante("B"),
+        contaVariante("B", "aperte"),
+        contaVariante("B", "clic"),
+        contaStorico(),
+        contaStorico("aperte"),
+        contaStorico("clic"),
+      ])
 
     // Get tracking events
     const { data: events } = await supabase
@@ -271,6 +297,14 @@ export async function GET(request: NextRequest) {
         oggettoB: campaign.subject_b || "",
         a: { inviate: aInviate, aperte: aAperte, clic: aClic },
         b: { inviate: bInviate, aperte: bAperte, clic: bClic },
+        // Riga di riferimento storica. `oggetto` puo' essere vuoto: in quel caso il
+        // pannello dice "oggetto non registrato" invece di inventare un'etichetta.
+        storico: {
+          oggetto: campaign.subject_legacy || "",
+          inviate: sInviate,
+          aperte: sAperte,
+          clic: sClic,
+        },
       },
     })
   } catch (error) {
