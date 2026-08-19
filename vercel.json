@@ -55,6 +55,10 @@
     {
       "path": "/api/cron/scan-scidoo",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/scan-slope",
+      "schedule": "* * * * *"
     }
   ]
 }

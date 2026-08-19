@@ -249,6 +249,14 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
           </a>
 
           <a
+            href="/admin/slope-clienti"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+          >
+            <Hotel className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Clienti Slope</span>
+          </a>
+
+          <a
             href="/admin/dem"
             className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
           >
