@@ -271,6 +271,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({
       success: hasPublished,
+      // Lo stato viaggia al client: senza questo campo l'interfaccia non
+      // potrebbe distinguere "in elaborazione" da "fallito" e mostrerebbe un
+      // errore rosso su un Reel che sta uscendo regolarmente.
+      status: nuovoStato,
       post: data,
       published: Object.keys(platformPostIds),
       errors,

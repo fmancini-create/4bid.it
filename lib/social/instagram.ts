@@ -40,7 +40,7 @@ export async function publishReelToInstagram(
   videoUrl: string,
   linkUrl?: string | null,
   coverUrl?: string | null,
-): Promise<{ success: boolean; postId?: string; error?: string; pending?: { creationId: string } }> {
+): Promise<InstagramPublishResult> {
   try {
     if (!igUserId) return { success: false, error: "Instagram account ID mancante" }
     if (!accessToken) return { success: false, error: "Instagram access token mancante" }
@@ -179,7 +179,7 @@ export async function publishToInstagram(
   content: string,
   imageUrl?: string | null,
   linkUrl?: string | null,
-): Promise<{ success: boolean; postId?: string; error?: string }> {
+): Promise<InstagramPublishResult> {
   try {
     if (!igUserId) return { success: false, error: "Instagram account ID mancante" }
     if (!accessToken) return { success: false, error: "Instagram access token mancante" }

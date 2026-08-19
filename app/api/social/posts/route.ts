@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
+import { resolveMediaKind } from "@/lib/social/video"
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,12 @@ export async function POST(request: NextRequest) {
         image_url: body.image_url || null,
         link_url: body.link_url || null, // Added link_url to insert
         media_priority: body.media_priority || "image", // Added media_priority to insert
+        video_url: body.video_url || null,
+        // post_type lo decide il SERVER dal media, con la stessa funzione usata
+        // dalla pubblicazione: se lo scegliesse il client, un post potrebbe
+        // dichiararsi "video" senza averne uno.
+        post_type: resolveMediaKind({ videoUrl: body.video_url, imageUrl: body.image_url }) === "video" ? "video" : undefined,
+        media_kind: resolveMediaKind({ videoUrl: body.video_url, imageUrl: body.image_url }),
       })
       .select()
       .single()
@@ -111,6 +118,14 @@ export async function PUT(request: NextRequest) {
           image_url: image_url || null,
           link_url: link_url || null,
           media_priority: body.media_priority || "image", // Added media_priority to insert
+        video_url: body.video_url ?? existingPost.video_url ?? null,
+        post_type:
+          resolveMediaKind({
+            videoUrl: body.video_url ?? existingPost.video_url,
+            imageUrl: image_url,
+          }) === "video"
+            ? "video"
+            : undefined,
         })
         .select()
         .single()
@@ -140,6 +155,17 @@ export async function PUT(request: NextRequest) {
         hashtags: content.match(/#\w+/g) || [],
         updated_at: new Date().toISOString(),
         media_priority: body.media_priority || existingPost.media_priority || "image",
+        // Senza questa riga la modifica di un post AZZERAVA di fatto il video
+        // (restava quello vecchio in banca dati ma l'interfaccia non poteva
+        // ne' cambiarlo ne' toglierlo): il campo va scritto esplicitamente.
+        video_url: body.video_url !== undefined ? body.video_url || null : existingPost.video_url,
+        post_type:
+          resolveMediaKind({
+            videoUrl: body.video_url !== undefined ? body.video_url : existingPost.video_url,
+            imageUrl: image_url,
+          }) === "video"
+            ? "video"
+            : existingPost.post_type,
       })
       .eq("id", id)
       .select()

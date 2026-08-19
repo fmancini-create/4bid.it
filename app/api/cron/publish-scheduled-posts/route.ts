@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook, publishVideoToFacebook } from "@/lib/social/facebook"
 import { publishToInstagram, publishReelToInstagram, riprendiReelInstagram } from "@/lib/social/instagram"
@@ -26,7 +26,11 @@ const LIMITE_ATTESA_MS = 2 * 60 * 60 * 1000
  * Instagram e' pronto e, se lo e', lo pubblica.
  */
 async function riprendiInElaborazione(
-  supabase: ReturnType<typeof createClient>,
+  // Il tipo e' quello del client creato in questa rotta. Annotarlo come
+  // ReturnType<typeof createClient> prendeva una firma diversa (senza schema),
+  // che rendeva ogni riga letta `never`: 14 errori inventati che seppellivano
+  // quelli veri. Il tipo di un doppio va preso dal chiamante, non indovinato.
+  supabase: SupabaseClient<any, "public", "public", any, any>,
   accounts: Array<Record<string, any>>,
 ): Promise<{ pubblicati: number; ancoraInCorso: number; scaduti: number }> {
   const esito = { pubblicati: 0, ancoraInCorso: 0, scaduti: 0 }
@@ -38,7 +42,7 @@ async function riprendiInElaborazione(
 
   for (const post of attesi) {
     const stato = (post.processing_state || {}) as { instagram_containers?: Record<string, string>; avviato?: string }
-    const containers = stato.instagram_containers || {}
+    const containers: Record<string, string> = stato.instagram_containers || {}
     const avviato = stato.avviato ? Date.parse(stato.avviato) : 0
 
     // Nessun container da riprendere: il post e' in "processing" per errore.
