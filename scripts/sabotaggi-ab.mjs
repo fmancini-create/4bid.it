@@ -73,11 +73,15 @@ const sabotaggi = [
     attesa: /corpo email breve|tre paragrafi/i,
   },
   {
+    // Aggiornato: il pulsante ora porta anche i parametri di provenienza, quindi
+    // l'attributo e' `href="${PAGINA_AIR_MARKET}?${parametri}"` e il testo
+    // cercato prima non esisteva piu'. Il sabotaggio resta lo stesso: scavalcare
+    // la costante scrivendo l'indirizzo a mano, e insieme perdere i parametri.
     nome: "8. Indirizzo della pagina scritto a mano nel pulsante",
     file: TPL,
-    da: 'href="${PAGINA_AIR_MARKET}"',
+    da: 'href="${PAGINA_AIR_MARKET}?${parametri}"',
     a: 'href="https://www.santaddeo.com/features"',
-    attesa: /nel sorgente il pulsante usa la costante/i,
+    attesa: /il pulsante porta all'indirizzo dichiarato|pagina dedicata/i,
   },
   {
     nome: "9. Proposta con promessa numerica non sostenibile",
@@ -160,6 +164,77 @@ const sabotaggi = [
     // /in linea|miglioramento/ corrispondeva al nome di prove che restavano
     // verdi anche a guasto applicato, quindi non provava nulla.
     attesa: /SOGLIA CONDIVISA/i,
+  },
+
+  // --- Link della pagina e attribuzione dei contatti -----------------------
+  //
+  // Questi sette li avevo eseguiti a mano da riga di comando: tutti colti, ma
+  // fuori dall'elenco non esistevano per nessun altro. Un sabotaggio provato una
+  // volta sola e non registrato e' una verifica che non protegge il domani.
+  {
+    nome: "19. Torna alla pagina generica invece di quella dedicata",
+    file: TPL,
+    da: '"https://www.santaddeo.com/landing/air-market"',
+    a: '"https://www.santaddeo.com/features"',
+    attesa: /pagina dedicata|indirizzo di atterraggio/i,
+  },
+  {
+    // La riscrittura dei link per il tracciamento clic codifica l'indirizzo cosi'
+    // com'e': con `&amp;` l'indirizzo finale avrebbe `amp;utm_medium` e il
+    // parametro sarebbe perso in silenzio.
+    nome: "20. & scritte come &amp; (il tracciamento perderebbe i parametri)",
+    file: TPL,
+    da: '].join("&")',
+    a: '].join("&amp;")',
+    attesa: /& sono nude|&amp;/i,
+  },
+  {
+    nome: "21. Stesso utm_campaign per i tre pubblici",
+    file: TPL,
+    da: 'invitoPagina({ utmCampaign: "air-market-clienti" })',
+    a: 'invitoPagina({ utmCampaign: "air-market" })',
+    attesa: /campagne DISTINTE/i,
+  },
+  {
+    // Il difetto piu' insidioso: la landing ricopia `utm_content` nei link del
+    // proprio modulo, quindi un valore fisso attribuirebbe alla variante A anche
+    // i contatti nati dalla B, e la prova A/B leggerebbe numeri falsi.
+    nome: "22. utm_content fisso ad A invece del segnaposto",
+    file: TPL,
+    da: "utm_content=${SEGNAPOSTO_VARIANTE}",
+    a: "utm_content=A",
+    attesa: /variante realmente spedita|segnaposto della variante/i,
+  },
+  {
+    nome: "23. Manca il ? fra indirizzo e parametri",
+    file: TPL,
+    da: "}?${parametri}",
+    a: "}${parametri}",
+    attesa: /indirizzo dichiarato|parametri sono quelli attesi/i,
+  },
+  {
+    nome: "24. Host senza www (un reindirizzamento in piu')",
+    file: TPL,
+    da: '"https://www.santaddeo.com/landing/air-market"',
+    a: '"https://santaddeo.com/landing/air-market"',
+    attesa: /host e' quello finale|senza un reindirizzamento/i,
+  },
+  {
+    nome: "25. A prova spenta il segnaposto resta dentro il link",
+    file: AB,
+    da: '  if (!variante) return html.replace(/&utm_content=\\{\\{\\s*variante\\s*\\}\\}/gi, "")',
+    a: "  if (!variante) return html",
+    attesa: /parametro sparisce/i,
+  },
+  {
+    // Rimette il numero sbagliato che avevo scritto nel commento: diceva "soglia
+    // di 300" mentre la costante vale 400. Nessuna prova lo vedeva, perche'
+    // nessuna leggeva i commenti.
+    nome: "26. Il commento in testa dichiara una soglia diversa dalla costante",
+    file: AB,
+    da: "molto oltre la soglia di 400 (INVII_MINIMI_PER_VARIANTE)",
+    a: "molto oltre la soglia di 300 (INVII_MINIMI_PER_VARIANTE)",
+    attesa: /dichiara la soglia VERA/i,
   },
 ]
 

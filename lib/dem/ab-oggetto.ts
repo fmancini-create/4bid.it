@@ -17,11 +17,18 @@
 // campagna Air Market (19/08/2026): 28.774 destinatari in totale, di cui 4.119
 // gia' spediti con l'oggetto precedente, 255 rimbalzati, 5 con segnalazione, 1
 // fallito e **24.394 ancora in attesa**. Meta' per parte da' circa 12.000 invii
-// per variante, molto oltre la soglia di 300 che serve per dichiarare un
-// vincente: la prova avra' una risposta ben prima di finire la coda.
+// per variante, molto oltre la soglia di 400 (INVII_MINIMI_PER_VARIANTE) che
+// serve per dichiarare un vincente.
+//
+// Cadenza MISURATA: il cron `dem-auto-send` gira 10 volte al giorno (ogni ora
+// dalle 7 alle 16) con lotti da 250, quindi fino a 2.500 email al giorno. Le 800
+// che servono per superare la soglia su ENTRAMBE le varianti arrivano nella prima
+// giornata piena di invio; la coda intera durerebbe circa dieci giorni. La prova
+// dara' una risposta molto prima di esaurirla.
 //
 // (Una versione precedente di questo commento diceva "coda utile di ~4.000
-// indirizzi". Era sbagliato di un fattore sei: il numero non era stato misurato.)
+// indirizzi" e "soglia di 300": il primo numero era sbagliato di un fattore sei,
+// il secondo contraddiceva la costante qui sotto. Nessuno dei due era misurato.)
 
 /** Variante dell'oggetto realmente spedita a un destinatario. */
 export type VarianteOggetto = "A" | "B"

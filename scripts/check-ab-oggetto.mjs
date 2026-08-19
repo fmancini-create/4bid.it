@@ -308,6 +308,30 @@ prova("i due confronti concordano sugli STESSI numeri (scarto esatto)", () => {
   assert.ok(!/equivalenti/i.test(e.motivo), `dichiara un vincente e le dice equivalenti: "${e.motivo}"`)
 })
 
+// I commenti in testa al modulo citano numeri, e sbagliavano entrambi: "soglia di
+// 300" contro una costante di 400, e "coda utile di ~4.000" contro 24.394 righe
+// reali. Un commento che contraddice il codice e' peggio di un commento assente,
+// perche' chi legge gli crede. Qui il numero dichiarato viene confrontato con la
+// costante vera, cosi' non possono piu' divergere in silenzio.
+prova("il commento in testa dichiara la soglia VERA, non un numero inventato", () => {
+  const sorgente = readFileSync(new URL("../lib/dem/ab-oggetto.ts", import.meta.url), "utf8")
+  const testa = sorgente.slice(0, sorgente.indexOf("export type VarianteOggetto"))
+  // Si cerca solo la forma che DICHIARA la soglia, cioe' seguita dal nome della
+  // costante. La prima versione di questa sonda prendeva ogni "soglia di N" e
+  // arrossiva sulla nota storica in fondo al commento, quella che RACCONTA il
+  // numero sbagliato di prima: il codice era giusto e il difetto stava nel mio
+  // metro. Anche una prova puo' essere il sospettato.
+  const citati = [...testa.matchAll(/soglia di (\d+) \(INVII_MINIMI_PER_VARIANTE\)/g)].map((m) => Number(m[1]))
+  assert.ok(citati.length > 0, "il commento non dichiara piu' la soglia: verifica da aggiornare o da togliere")
+  for (const n of citati) {
+    assert.equal(
+      n,
+      INVII_MINIMI_PER_VARIANTE,
+      `il commento dice "soglia di ${n}" ma la costante vale ${INVII_MINIMI_PER_VARIANTE}`,
+    )
+  }
+})
+
 // --- Link della pagina e attribuzione dei contatti -------------------------
 //
 // Misurato sulla pagina VERA (19/08/2026): la landing ricopia `utm_content` nei
