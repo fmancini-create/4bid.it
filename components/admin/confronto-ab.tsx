@@ -10,6 +10,7 @@ import { FlaskConical } from "lucide-react"
 import {
   percentuale,
   esitoConfronto,
+  numero,
   INVII_MINIMI_PER_VARIANTE,
   type RigaConfrontoAb,
 } from "@/lib/dem/ab-oggetto"
@@ -82,12 +83,13 @@ export function ConfrontoAb({
                 </div>
                 <p className="text-sm leading-relaxed text-foreground">{r.oggetto}</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {r.aperturePct === null ? "—" : `${r.aperturePct}%`}
+                  {r.aperturePct === null ? "—" : `${numero(r.aperturePct, 1)}%`}
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {r.inviate.toLocaleString("it-IT")} inviate · {r.aperte.toLocaleString("it-IT")}{" "}
-                  aperte · {r.clic.toLocaleString("it-IT")} clic
-                  {r.clicSuApertePct !== null && <> · {r.clicSuApertePct}% clicca dopo aver aperto</>}
+                  {numero(r.inviate)} inviate · {numero(r.aperte)} aperte · {numero(r.clic)} clic
+                  {r.clicSuApertePct !== null && (
+                    <> · {numero(r.clicSuApertePct, 1)}% clicca dopo aver aperto</>
+                  )}
                 </p>
               </div>
             )
@@ -98,10 +100,10 @@ export function ConfrontoAb({
 
         {spediteFuoriProva > 0 && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Altre {spediteFuoriProva.toLocaleString("it-IT")} email sono state spedite prima
-            dell&apos;avvio della prova, con il testo precedente: restano fuori dal confronto perché
-            sommarle falserebbe il paragone. La soglia per dichiarare un vincente è di{" "}
-            {INVII_MINIMI_PER_VARIANTE} invii per variante.
+            Altre {numero(spediteFuoriProva)} email sono state spedite prima dell&apos;avvio della
+            prova, con il testo precedente: restano fuori dal confronto perché sommarle falserebbe
+            il paragone. La soglia per dichiarare un vincente è di {numero(INVII_MINIMI_PER_VARIANTE)}{" "}
+            invii per variante.
           </p>
         )}
       </CardContent>

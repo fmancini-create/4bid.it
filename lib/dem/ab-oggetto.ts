@@ -87,6 +87,21 @@ export function oggettoPerDestinatario(params: {
   return { oggetto: variante === "A" ? oggettoA : (oggettoB as string), variante }
 }
 
+/**
+ * Numero in formato italiano: virgola per i decimali, punto per le migliaia.
+ *
+ * Non si usa `toLocaleString` senza indicare la lingua: prende quella
+ * dell'ambiente, e nel server di questo progetto vale "en-US" - a schermo si
+ * leggeva `15.1%` e `4119` invece di `15,1%` e `4.119`. Un numero che si legge
+ * male fa dubitare del numero, non del formato.
+ */
+export function numero(valore: number, decimali = 0): string {
+  return valore.toLocaleString("it-IT", {
+    minimumFractionDigits: decimali,
+    maximumFractionDigits: decimali,
+  })
+}
+
 /** Numeri di una singola variante, come li mostra il pannello. */
 export type RigaConfrontoAb = {
   variante: VarianteOggetto
@@ -138,7 +153,7 @@ export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
     )
     return {
       vincente: null,
-      motivo: `Ancora troppo presto: servono almeno ${INVII_MINIMI_PER_VARIANTE} invii per variante (ne mancano ${mancanti}).`,
+      motivo: `Ancora troppo presto: servono almeno ${numero(INVII_MINIMI_PER_VARIANTE)} invii per variante (ne mancano ${numero(mancanti)}).`,
     }
   }
 
@@ -146,19 +161,29 @@ export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
     return { vincente: null, motivo: "Aperture non ancora rilevate." }
   }
 
-  const scarto = Math.abs(a.aperturePct - b.aperturePct)
+  // Le due percentuali si estraggono qui, dove la guardia sopra ha appena
+  // escluso `null`: leggerle piu' avanti attraverso `vincente`/`perdente` fa
+  // perdere a TypeScript quella certezza, perche' sono riferimenti a oggetti il
+  // cui campo resta dichiarato `number | null`.
+  const aperturaA: number = a.aperturePct
+  const aperturaB: number = b.aperturePct
+
+  const scarto = Math.abs(aperturaA - aperturaB)
   // 1,5 punti: sotto questa distanza, con qualche migliaio di invii per parte,
   // le due varianti non sono distinguibili in modo utile a una decisione.
   if (scarto < 1.5) {
     return {
       vincente: null,
-      motivo: `Le due varianti sono equivalenti (scarto ${scarto.toFixed(1)} punti): l'oggetto non e' la leva che cambia le aperture.`,
+      motivo: `Le due varianti sono equivalenti (scarto ${numero(scarto, 1)} punti): l'oggetto non è la leva che cambia le aperture.`,
     }
   }
 
-  const vincente = a.aperturePct > b.aperturePct ? a : b
+  const aVince = aperturaA > aperturaB
+  const vincente = aVince ? a : b
+  const aperturaVincente = aVince ? aperturaA : aperturaB
+  const aperturaPerdente = aVince ? aperturaB : aperturaA
   return {
     vincente: vincente.variante,
-    motivo: `La variante ${vincente.variante} apre ${scarto.toFixed(1)} punti in piu' (${vincente.aperturePct}% contro ${(vincente === a ? b.aperturePct : a.aperturePct)}%).`,
+    motivo: `La variante ${vincente.variante} apre ${numero(scarto, 1)} punti in più (${numero(aperturaVincente, 1)}% contro ${numero(aperturaPerdente, 1)}%).`,
   }
 }

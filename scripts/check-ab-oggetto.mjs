@@ -19,6 +19,7 @@ const {
   oggettoPerDestinatario,
   percentuale,
   esitoConfronto,
+  numero,
   INVII_MINIMI_PER_VARIANTE,
 } = mod
 const { AIR_MARKET_PRESET, PAGINA_AIR_MARKET, OGGETTI_ALTERNATIVI } = tpl
@@ -45,6 +46,52 @@ const riga = (variante, inviate, aperte, clic) => ({
   clic,
   aperturePct: percentuale(aperte, inviate),
   clicSuApertePct: percentuale(clic, aperte),
+})
+
+// --- Formato dei numeri e della lingua a schermo ---------------------------
+//
+// Nati da uno scatto del pannello: i testi mostravano "in piu'" e "non e'" al
+// posto di "in più" e "non è", e le percentuali usavano il punto ("15.1%")
+// perche' `toLocaleString` senza lingua prende quella dell'ambiente ("en-US" sul
+// server).
+//
+// Nello stesso scatto avevo letto "4119" come un secondo difetto: NON lo era. In
+// italiano i numeri di quattro cifre si scrivono senza separatore (4119, non
+// 4.119) e ICU applica correttamente questa regola; il punto compare da cinque
+// cifre (28.513). L'attesa sbagliata era la mia, non il codice: le due verifiche
+// qui sotto fissano il comportamento REALE misurato, cosi' nessuno "corregge"
+// una regola giusta credendola un difetto.
+console.log("\n== formato italiano di numeri e testi ==")
+
+prova("percentuali con la virgola, non col punto", () => {
+  assert.equal(numero(15.15, 1), "15,2")
+  assert.equal(numero(5.9, 1), "5,9")
+})
+
+prova("migliaia col punto da cinque cifre, senza sotto (regola italiana)", () => {
+  assert.equal(numero(28513), "28.513")
+  assert.equal(numero(4119), "4119")
+  assert.equal(numero(0), "0")
+})
+
+prova("i testi dell'esito non usano apostrofi al posto degli accenti", () => {
+  const casi = [
+    esitoConfronto(riga("A", 100, 15, 2), riga("B", 100, 15, 2)).motivo,
+    esitoConfronto(riga("A", 2000, 300, 30), riga("B", 2000, 300, 30)).motivo,
+    esitoConfronto(riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)).motivo,
+  ]
+  for (const testo of casi) {
+    assert.ok(
+      !/(piu'|\be'\s|puo'|perche'|cioe')/i.test(testo),
+      `accento scritto con apostrofo in un testo visibile: "${testo}"`,
+    )
+  }
+})
+
+prova("i testi dell'esito non mostrano decimali col punto", () => {
+  const m = esitoConfronto(riga("A", 2000, 400, 40), riga("B", 2000, 300, 30)).motivo
+  assert.ok(!/\d+\.\d/.test(m), `decimale col punto in un testo visibile: "${m}"`)
+  assert.ok(/\d+,\d/.test(m), `nessun decimale con la virgola: "${m}"`)
 })
 
 console.log("\n== provaAttiva: quando la prova NON deve partire ==")
@@ -156,7 +203,8 @@ prova("scarto ampio => dichiara il vincente giusto (B)", () => {
   // A 15,0% contro B 20,0%.
   const e = esitoConfronto(riga("A", 2000, 300, 30), riga("B", 2000, 400, 40))
   assert.equal(e.vincente, "B")
-  assert.match(e.motivo, /5\.0 punti/)
+  // Virgola, non punto: il testo finisce sotto gli occhi di chi legge il pannello.
+  assert.match(e.motivo, /5,0 punti/)
 })
 
 prova("scarto ampio a favore di A => dichiara A", () => {
