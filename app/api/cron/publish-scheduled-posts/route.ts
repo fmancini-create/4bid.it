@@ -1,11 +1,117 @@
 import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
-import { publishToFacebook } from "@/lib/social/facebook"
-import { publishToInstagram } from "@/lib/social/instagram"
-import { publishToLinkedInWithFallback } from "@/lib/social/linkedin"
+import { publishToFacebook, publishVideoToFacebook } from "@/lib/social/facebook"
+import { publishToInstagram, publishReelToInstagram, riprendiReelInstagram } from "@/lib/social/instagram"
+import { publishToLinkedInWithFallback, publishVideoToLinkedIn } from "@/lib/social/linkedin"
+import { canPublish, resolveMediaKind } from "@/lib/social/video"
 
 // Cron job per pubblicare i post programmati
 // Esegue ogni 5 minuti e pubblica i post con scheduled_for <= now
+
+// I video richiedono caricamenti lunghi: senza questo il cron verrebbe troncato.
+export const maxDuration = 300
+
+/**
+ * Oltre questo tempo un Reel in elaborazione viene dichiarato FALLITO.
+ *
+ * Serve perche' altrimenti un container che Meta non finisce mai di elaborare
+ * terrebbe il post in "processing" per l'eternita': l'operatore vedrebbe "in
+ * corso" per giorni senza sapere che non uscira' mai. 2 ore sono largamente
+ * sufficienti per qualunque video entro il nostro limite di dimensione.
+ */
+const LIMITE_ATTESA_MS = 2 * 60 * 60 * 1000
+
+/**
+ * Riprende i post lasciati in stato "processing": controlla se il container
+ * Instagram e' pronto e, se lo e', lo pubblica.
+ */
+async function riprendiInElaborazione(
+  supabase: ReturnType<typeof createClient>,
+  accounts: Array<Record<string, any>>,
+): Promise<{ pubblicati: number; ancoraInCorso: number; scaduti: number }> {
+  const esito = { pubblicati: 0, ancoraInCorso: 0, scaduti: 0 }
+
+  const { data: attesi } = await supabase.from("social_posts").select("*").eq("status", "processing").limit(20)
+
+  if (!attesi || attesi.length === 0) return esito
+  console.log(`[v0] Post in elaborazione da riprendere: ${attesi.length}`)
+
+  for (const post of attesi) {
+    const stato = (post.processing_state || {}) as { instagram_containers?: Record<string, string>; avviato?: string }
+    const containers = stato.instagram_containers || {}
+    const avviato = stato.avviato ? Date.parse(stato.avviato) : 0
+
+    // Nessun container da riprendere: il post e' in "processing" per errore.
+    // Va chiuso, non lasciato appeso.
+    if (Object.keys(containers).length === 0) {
+      await supabase
+        .from("social_posts")
+        .update({
+          status: "failed",
+          error_message: "Post rimasto in elaborazione senza alcun video da riprendere",
+        })
+        .eq("id", post.id)
+      esito.scaduti++
+      continue
+    }
+
+    if (avviato && Date.now() - avviato > LIMITE_ATTESA_MS) {
+      await supabase
+        .from("social_posts")
+        .update({
+          status: "failed",
+          error_message: `Instagram non ha completato l'elaborazione del video entro ${LIMITE_ATTESA_MS / 3600000} ore`,
+          processing_state: {},
+        })
+        .eq("id", post.id)
+      esito.scaduti++
+      console.log(`[v0] Post ${post.id}: attesa scaduta, dichiarato fallito`)
+      continue
+    }
+
+    const platformPostIds: Record<string, string> = { ...((post.platform_post_ids || {}) as Record<string, string>) }
+    const rimasti: Record<string, string> = {}
+    const errori: string[] = []
+
+    for (const [accountId, creationId] of Object.entries(containers)) {
+      const account = accounts.find((a) => a.id === accountId)
+      if (!account) {
+        errori.push("Account Instagram non più disponibile per completare la pubblicazione")
+        continue
+      }
+      const r = await riprendiReelInstagram(account.account_id, account.access_token, creationId)
+      if (r.success && r.postId) {
+        platformPostIds[`instagram_${account.account_name}`] = r.postId
+        esito.pubblicati++
+        console.log(`[v0] Reel ripreso e pubblicato: ${r.postId}`)
+      } else if (r.ancoraInCorso) {
+        rimasti[accountId] = creationId
+        esito.ancoraInCorso++
+      } else {
+        errori.push(`Instagram (${account.account_name}): ${r.error || "Errore sconosciuto"}`)
+      }
+    }
+
+    const ancoraAttesa = Object.keys(rimasti).length > 0
+    const qualcosaUscito = Object.keys(platformPostIds).length > 0
+
+    await supabase
+      .from("social_posts")
+      .update({
+        status: ancoraAttesa ? "processing" : qualcosaUscito ? "published" : "failed",
+        published_at: qualcosaUscito && !ancoraAttesa ? new Date().toISOString() : post.published_at,
+        platform_post_ids: platformPostIds,
+        // L'istante di avvio si CONSERVA: se lo riscrivessimo a ogni giro, il
+        // limite delle 2 ore non scadrebbe mai e il post resterebbe appeso.
+        processing_state: ancoraAttesa ? { instagram_containers: rimasti, avviato: stato.avviato } : {},
+        error_message: errori.length > 0 ? errori.join("; ") : post.error_message,
+      })
+      .eq("id", post.id)
+  }
+
+  console.log("[v0] Ripresa completata:", esito)
+  return esito
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,10 +162,23 @@ export async function GET(request: NextRequest) {
     )
     console.log(`[v0] Posts to publish (scheduled_for <= ${now}):`, posts?.length || 0)
 
+    // Recupera gli account attivi
+    const { data: accounts } = await supabase.from("social_accounts").select("*").eq("is_active", true)
+
+    // RIPRESA dei Reel lasciati in elaborazione da un giro precedente.
+    //
+    // Deve stare PRIMA del ritorno "nessun post da pubblicare": il caso normale
+    // e' proprio quello (nessun post programmato in scadenza), ed e' esattamente
+    // il giro in cui un Reel in attesa va ripreso. Metterla dopo significava non
+    // eseguirla mai quando serviva, lasciando il post bloccato in "processing"
+    // per sempre.
+    const ripresi = await riprendiInElaborazione(supabase, accounts || [])
+
     if (!posts || posts.length === 0) {
       return NextResponse.json({
         message: "Nessun post da pubblicare",
         count: 0,
+        ripresi,
         debug: {
           now,
           allScheduledCount: allScheduled?.length || 0,
@@ -73,15 +192,16 @@ export async function GET(request: NextRequest) {
 
     console.log(`[v0] Found ${posts.length} scheduled posts to publish`)
 
-    // Recupera gli account attivi
-    const { data: accounts } = await supabase.from("social_accounts").select("*").eq("is_active", true)
-
     const results: { postId: string; success: boolean; errors?: string[] }[] = []
 
     // Pubblica ogni post
     for (const post of posts) {
       const platformPostIds: Record<string, string> = {}
       const errors: string[] = []
+      // Stessa funzione usata dalla pubblicazione manuale: un solo giudice sul
+      // tipo di media, cosi' le due strade non possono divergere.
+      const mediaKind = resolveMediaKind({ videoUrl: post.video_url, imageUrl: post.image_url })
+      const inElaborazione: Record<string, string> = {}
 
       let platformsToPublish = post.platforms || []
       if (!platformsToPublish || platformsToPublish.length === 0) {
@@ -121,13 +241,27 @@ export async function GET(request: NextRequest) {
           for (const account of platformAccounts) {
             try {
               if (platform === "facebook") {
-                const result = await publishToFacebook(
-                  account.page_id,
-                  account.access_token,
-                  post.content,
-                  post.link_url,
-                  post.image_url,
-                )
+                const result =
+                  mediaKind === "video"
+                    ? await publishVideoToFacebook(
+                        account.page_id,
+                        account.access_token,
+                        post.content,
+                        post.video_url,
+                        post.link_url,
+                      )
+                    : await publishToFacebook(
+                        account.page_id,
+                        account.access_token,
+                        post.content,
+                        mediaKind === "youtube" ? post.video_url : post.link_url,
+                        post.image_url,
+                        // DIFETTO PREESISTENTE CORRETTO: media_priority non veniva
+                        // passato affatto, quindi il cron usava sempre il default
+                        // "image" e la scelta dell'operatore veniva ignorata solo
+                        // nei post programmati. La pubblicazione manuale lo passava.
+                        mediaKind === "youtube" ? "link" : post.media_priority || "image",
+                      )
 
                 if (result.success && result.postId) {
                   platformPostIds[`facebook_${account.account_name}`] = result.postId
@@ -136,28 +270,62 @@ export async function GET(request: NextRequest) {
                   errors.push(`Facebook (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
                 }
               } else if (platform === "instagram") {
-                const result = await publishToInstagram(
-                  account.account_id,
-                  account.access_token,
-                  post.content,
-                  post.image_url,
-                  post.link_url,
-                )
+                const ammesso = canPublish("instagram", mediaKind, { hasLink: Boolean(post.link_url) })
+                if (!ammesso.ok) {
+                  errors.push(`Instagram (${account.account_name}): ${ammesso.reason}`)
+                  continue
+                }
+
+                const result =
+                  mediaKind === "video"
+                    ? await publishReelToInstagram(
+                        account.account_id,
+                        account.access_token,
+                        post.content,
+                        post.video_url,
+                        post.link_url,
+                        post.image_url,
+                      )
+                    : await publishToInstagram(
+                        account.account_id,
+                        account.access_token,
+                        post.content,
+                        post.image_url,
+                        post.link_url,
+                      )
 
                 if (result.success && result.postId) {
                   platformPostIds[`instagram_${account.account_name}`] = result.postId
                   console.log(`[v0] Published to Instagram ${account.account_name}: ${result.postId}`)
+                } else if ("pending" in result && result.pending) {
+                  inElaborazione[account.id] = result.pending.creationId
+                  console.log(`[v0] Instagram Reel in elaborazione: ${result.pending.creationId}`)
                 } else {
                   errors.push(`Instagram (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
                 }
               } else if (platform === "linkedin") {
-                const result = await publishToLinkedInWithFallback(
-                  account.access_token,
-                  account.account_id,
-                  account.page_id,
-                  post.content,
-                  post.image_url,
-                )
+                const result =
+                  mediaKind === "video"
+                    ? await publishVideoToLinkedIn(
+                        account.access_token,
+                        account.account_id,
+                        post.content,
+                        post.video_url,
+                        post.title,
+                      )
+                    : await publishToLinkedInWithFallback(
+                        account.access_token,
+                        account.account_id,
+                        account.page_id,
+                        post.content,
+                        // DIFETTO PREESISTENTE CORRETTO (approvato dal committente):
+                        // qui veniva passato post.image_url al posto di post.link_url.
+                        // Il quinto parametro e' `linkUrl`, quindi l'URL della
+                        // FOTOGRAFIA diventava il link dell'articolo LinkedIn. La
+                        // pubblicazione manuale passava correttamente link_url:
+                        // due strade, due comportamenti diversi sullo stesso post.
+                        mediaKind === "youtube" ? post.video_url : post.link_url,
+                      )
 
                 if (result.success && result.postId) {
                   const suffix = result.publishedAs === "personal" ? " (profilo personale)" : ""
@@ -176,12 +344,15 @@ export async function GET(request: NextRequest) {
 
       // Aggiorna lo stato del post
       const hasPublished = Object.keys(platformPostIds).length > 0
+      const attese = Object.keys(inElaborazione).length > 0
       await supabase
         .from("social_posts")
         .update({
-          status: hasPublished ? "published" : "failed",
-          published_at: new Date().toISOString(),
+          status: attese ? "processing" : hasPublished ? "published" : "failed",
+          // Solo cio' che e' uscito davvero ha una data di pubblicazione.
+          published_at: hasPublished ? new Date().toISOString() : post.published_at,
           platform_post_ids: platformPostIds,
+          processing_state: attese ? { instagram_containers: inElaborazione, avviato: new Date().toISOString() } : {},
           error_message: errors.length > 0 ? errors.join("; ") : null,
         })
         .eq("id", post.id)

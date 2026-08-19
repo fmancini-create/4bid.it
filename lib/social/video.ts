@@ -1,0 +1,183 @@
+/**
+ * Decide UNA VOLTA SOLA che tipo di media ha un post social e se e' pubblicabile
+ * su ciascuna piattaforma.
+ *
+ * Perche' un modulo a se': i tre pubblicatori (Instagram, Facebook, LinkedIn)
+ * hanno regole diverse e incompatibili fra loro. Se ognuno decidesse da solo
+ * "questo e' un video", basterebbe un controllo diverso in un punto per avere un
+ * video spacciato per foto su un canale e non sull'altro. Qui la decisione e'
+ * una, e i pubblicatori la ricevono.
+ *
+ * Il vincolo che governa tutto, misurato e non supposto: un LINK YouTube non e'
+ * un file video. Instagram e Facebook caricano BYTE (o scaricano un URL di file
+ * diretto); non sanno cosa sia una pagina di YouTube. Quindi:
+ *   - file video (mp4/mov)  -> Reel Instagram, video Facebook, upload LinkedIn
+ *   - link YouTube          -> SOLO LinkedIn e Facebook, come articolo/anteprima
+ * Dire all'operatore che un video YouTube "va su Instagram" sarebbe una bugia:
+ * la pubblicazione fallirebbe al momento dell'invio, cioe' troppo tardi.
+ */
+
+import { parseYoutubeId } from "@/lib/videos/youtube"
+
+/** Tipo di media di un post, deciso qui e scritto in `social_posts.media_kind`. */
+export type MediaKind = "image" | "video" | "youtube"
+
+export type Platform = "instagram" | "facebook" | "linkedin"
+
+/**
+ * Limite di dimensione per i video caricati.
+ *
+ * Non e' un numero arbitrario: il file viene letto dal server per essere
+ * inoltrato a LinkedIn e a Facebook, quindi finisce in memoria. 200 MB e' il
+ * tetto dichiarato, cosi' un file enorme viene RIFIUTATO SUBITO con un messaggio
+ * chiaro invece di far fallire la pubblicazione a meta' strada.
+ */
+export const MAX_VIDEO_BYTES = 200 * 1024 * 1024
+
+/** Estensioni video accettate: quelle che Instagram e Facebook sanno leggere. */
+export const VIDEO_EXTENSIONS = ["mp4", "mov"] as const
+
+/** Tipi MIME accettati in caricamento. */
+export const VIDEO_MIME_TYPES = ["video/mp4", "video/quicktime"] as const
+
+/** Estensioni immagine, per distinguere i due casi senza indovinare. */
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"] as const
+
+/** Estrae l'estensione da un URL ignorando query string e frammento. */
+function extensionOf(url: string): string | null {
+  try {
+    const path = url.startsWith("http") ? new URL(url).pathname : url.split("?")[0]
+    const m = path.toLowerCase().match(/\.([a-z0-9]+)$/)
+    return m ? m[1] : null
+  } catch {
+    const m = url.toLowerCase().split("?")[0].match(/\.([a-z0-9]+)$/)
+    return m ? m[1] : null
+  }
+}
+
+/** Vero se l'URL punta a un FILE video (non a una pagina che contiene un video). */
+export function isVideoFileUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  const ext = extensionOf(url)
+  return ext !== null && (VIDEO_EXTENSIONS as readonly string[]).includes(ext)
+}
+
+/** Vero se l'URL punta a un file immagine. */
+export function isImageFileUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  const ext = extensionOf(url)
+  return ext !== null && (IMAGE_EXTENSIONS as readonly string[]).includes(ext)
+}
+
+/** Vero se l'URL e' un video YouTube (pagina, non file). */
+export function isYoutubeUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  // parseYoutubeId accetta anche un ID nudo di 11 caratteri: qui pretendiamo un
+  // vero indirizzo YouTube, altrimenti una parola qualsiasi di 11 lettere
+  // passerebbe per un video.
+  if (!/youtube\.com|youtu\.be/i.test(url)) return false
+  return parseYoutubeId(url) !== null
+}
+
+/** URL di embed di un video YouTube, per l'anteprima nell'interfaccia. */
+export function youtubeEmbedUrl(url: string): string | null {
+  const id = parseYoutubeId(url)
+  return id ? `https://www.youtube.com/embed/${id}` : null
+}
+
+/** Miniatura di un video YouTube: usata come immagine di anteprima del post. */
+export function youtubeThumbnail(url: string): string | null {
+  const id = parseYoutubeId(url)
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null
+}
+
+export interface PostMedia {
+  videoUrl?: string | null
+  imageUrl?: string | null
+}
+
+/**
+ * Decide il tipo di media di un post. Un solo punto di verita'.
+ * L'ordine conta: il video vince sull'immagine, perche' quando c'e' un video
+ * l'immagine e' al massimo una copertina.
+ */
+export function resolveMediaKind(media: PostMedia): MediaKind | null {
+  const { videoUrl, imageUrl } = media
+  if (videoUrl) {
+    if (isYoutubeUrl(videoUrl)) return "youtube"
+    if (isVideoFileUrl(videoUrl)) return "video"
+    // Un videoUrl che non e' ne' YouTube ne' un file riconoscibile non viene
+    // promosso a "video": meglio nessun media che un media che fallira'.
+    return imageUrl ? "image" : null
+  }
+  return imageUrl ? "image" : null
+}
+
+export interface Publishability {
+  /** Vero se il post puo' essere pubblicato su questa piattaforma. */
+  ok: boolean
+  /** Come esce: video nativo, link, foto, o solo testo. */
+  as: "video" | "link" | "image" | "text"
+  /** Motivo del rifiuto, in italiano, per l'operatore. */
+  reason?: string
+}
+
+/**
+ * Dice se e COME un post esce su una piattaforma.
+ *
+ * Questa funzione e' il motivo per cui l'interfaccia puo' avvisare PRIMA, invece
+ * di far scoprire il problema dall'errore di pubblicazione.
+ */
+export function canPublish(
+  platform: Platform,
+  kind: MediaKind | null,
+  opts: { hasLink?: boolean; hasText?: boolean } = {},
+): Publishability {
+  const hasLink = Boolean(opts.hasLink)
+
+  if (platform === "instagram") {
+    // Instagram pubblica SOLO media veri: nessun post di solo testo, nessun link.
+    if (kind === "video") return { ok: true, as: "video" }
+    if (kind === "image") return { ok: true, as: "image" }
+    if (kind === "youtube") {
+      return {
+        ok: false,
+        as: "text",
+        reason:
+          "Instagram non accetta i link YouTube: per un Reel serve il file video. Carica il file oppure togli Instagram da questo post.",
+      }
+    }
+    return { ok: false, as: "text", reason: "Instagram richiede un'immagine o un video." }
+  }
+
+  if (platform === "facebook") {
+    if (kind === "video") return { ok: true, as: "video" }
+    if (kind === "youtube") return { ok: true, as: "link" } // anteprima del link
+    if (kind === "image") return { ok: true, as: "image" }
+    if (hasLink) return { ok: true, as: "link" }
+    return { ok: true, as: "text" }
+  }
+
+  // LinkedIn
+  if (kind === "video") return { ok: true, as: "video" }
+  if (kind === "youtube") return { ok: true, as: "link" }
+  if (hasLink) return { ok: true, as: "link" }
+  return { ok: true, as: "text" }
+}
+
+/** Errore di validazione di un file in caricamento, in italiano. */
+export function validateVideoUpload(file: { size: number; type: string; name: string }): string | null {
+  const extOk = (VIDEO_EXTENSIONS as readonly string[]).includes(extensionOf(file.name) || "")
+  const mimeOk = (VIDEO_MIME_TYPES as readonly string[]).includes(file.type)
+  if (!extOk && !mimeOk) {
+    return `Formato non supportato. Sono ammessi solo ${VIDEO_EXTENSIONS.join(" e ")} (Instagram e Facebook non leggono altri formati).`
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    const mb = Math.round(file.size / 1024 / 1024)
+    return `Il video pesa ${mb} MB e supera il limite di ${MAX_VIDEO_BYTES / 1024 / 1024} MB. Il file viene caricato dal server verso LinkedIn e Facebook, quindi oltre questa soglia la pubblicazione fallirebbe.`
+  }
+  if (file.size === 0) {
+    return "Il file e' vuoto."
+  }
+  return null
+}

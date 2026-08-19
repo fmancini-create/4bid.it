@@ -56,3 +56,10 @@ alter table public.social_posts add  constraint social_posts_video_coerente
 alter table public.social_posts drop constraint if exists social_posts_media_kind_check;
 alter table public.social_posts add  constraint social_posts_media_kind_check
   check (media_kind is null or media_kind = any (array['image','video','youtube']));
+
+-- 4) Requisito 4: i video nei post AUTOMATICI si accendono per singola campagna.
+--    SPENTO di default, quindi al momento dell'applicazione nulla cambia: le 5
+--    campagne continuano a usare le immagini finche' non lo accendi tu.
+--    Verificato dopo l'applicazione: 5 regole, impronta identica, 0 accese.
+alter table public.social_topic_rules
+  add column if not exists use_library_video boolean not null default false;

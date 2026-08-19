@@ -1,8 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
-import { publishToFacebook } from "@/lib/social/facebook"
-import { publishToInstagram } from "@/lib/social/instagram"
-import { publishToLinkedInWithFallback, refreshLinkedInToken } from "@/lib/social/linkedin"
+import { publishToFacebook, publishVideoToFacebook } from "@/lib/social/facebook"
+import { publishToInstagram, publishReelToInstagram } from "@/lib/social/instagram"
+import { publishToLinkedInWithFallback, publishVideoToLinkedIn, refreshLinkedInToken } from "@/lib/social/linkedin"
+import { canPublish, resolveMediaKind, youtubeThumbnail } from "@/lib/social/video"
+
+// Un Reel Instagram o un caricamento LinkedIn richiedono tempo: la richiesta
+// deve poter durare piu' dei 10s di default.
+export const maxDuration = 300
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -60,6 +65,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const platformPostIds: Record<string, string> = {}
     const errors: string[] = []
+    // Un solo punto decide il tipo di media, poi tutte le piattaforme lo ricevono.
+    const mediaKind = resolveMediaKind({ videoUrl: post.video_url, imageUrl: post.image_url })
+    // Reel rimasti in elaborazione: li conserviamo per far riprendere il cron.
+    const inElaborazione: Record<string, string> = {}
+    console.log("[v0] Media del post:", { mediaKind, video: post.video_url, immagine: post.image_url })
 
     // Pubblica su ogni piattaforma
     for (const platform of platformsToPublish) {
@@ -100,14 +110,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           console.log(`[v0] Publishing to ${platform} account:`, account.account_name)
 
           if (platform === "facebook") {
-            const result = await publishToFacebook(
-              account.page_id,
-              account.access_token,
-              post.content,
-              post.link_url,
-              post.image_url,
-              post.media_priority || "image", // Default to "image" if not set
-            )
+            // Un video con FILE va sull'endpoint /videos: percorso separato, quindi
+            // il comportamento di foto e link resta identico a prima.
+            const result =
+              mediaKind === "video"
+                ? await publishVideoToFacebook(
+                    account.page_id,
+                    account.access_token,
+                    post.content,
+                    post.video_url,
+                    post.link_url,
+                  )
+                : await publishToFacebook(
+                    account.page_id,
+                    account.access_token,
+                    post.content,
+                    // Un video YouTube esce come anteprima del link: il link del
+                    // video vince su link_url, altrimenti il video non si vedrebbe.
+                    mediaKind === "youtube" ? post.video_url : post.link_url,
+                    post.image_url,
+                    mediaKind === "youtube" ? "link" : post.media_priority || "image",
+                  )
 
             console.log(`[v0] Facebook result:`, result)
 
@@ -117,18 +140,42 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               errors.push(`Facebook (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
             }
           } else if (platform === "instagram") {
-            const result = await publishToInstagram(
-              account.account_id, // IG Business Account ID
-              account.access_token,
-              post.content,
-              post.image_url,
-              post.link_url,
-            )
+            // Instagram non accetta i link YouTube: lo diciamo con un messaggio
+            // chiaro invece di lasciare che l'API risponda con un errore tecnico.
+            const ammesso = canPublish("instagram", mediaKind, { hasLink: Boolean(post.link_url) })
+            if (!ammesso.ok) {
+              errors.push(`Instagram (${account.account_name}): ${ammesso.reason}`)
+              continue
+            }
+
+            const result =
+              mediaKind === "video"
+                ? await publishReelToInstagram(
+                    account.account_id,
+                    account.access_token,
+                    post.content,
+                    post.video_url,
+                    post.link_url,
+                    post.image_url, // copertina, se presente
+                  )
+                : await publishToInstagram(
+                    account.account_id, // IG Business Account ID
+                    account.access_token,
+                    post.content,
+                    post.image_url,
+                    post.link_url,
+                  )
 
             console.log(`[v0] Instagram result:`, result)
 
             if (result.success && result.postId) {
               platformPostIds[`instagram_${account.account_name}`] = result.postId
+            } else if ("pending" in result && result.pending) {
+              // Il Reel e' caricato su Meta ma ancora in lavorazione. Conserviamo
+              // l'id del container: senza questo, il video caricato andrebbe perso
+              // e l'operatore vedrebbe solo un errore.
+              inElaborazione[account.id] = result.pending.creationId
+              console.log("[v0] Instagram Reel in elaborazione, container:", result.pending.creationId)
             } else {
               errors.push(`Instagram (${account.account_name}): ${result.error || "Errore sconosciuto"}`)
             }
@@ -160,13 +207,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               }
             }
 
-            const result = await publishToLinkedInWithFallback(
-              linkedinToken,
-              account.account_id, // Organization ID (110665381)
-              account.page_id, // Person URN (salvato come page_id per LinkedIn)
-              post.content,
-              post.link_url,
-            )
+            const result =
+              mediaKind === "video"
+                ? await publishVideoToLinkedIn(
+                    linkedinToken,
+                    account.account_id,
+                    post.content,
+                    post.video_url,
+                    post.title,
+                  )
+                : await publishToLinkedInWithFallback(
+                    linkedinToken,
+                    account.account_id, // Organization ID (110665381)
+                    account.page_id, // Person URN (salvato come page_id per LinkedIn)
+                    post.content,
+                    // Un video YouTube esce come articolo: il suo link ha la
+                    // precedenza, altrimenti il video non comparirebbe.
+                    mediaKind === "youtube" ? post.video_url : post.link_url,
+                  )
 
             console.log(`[v0] LinkedIn result:`, result)
 
@@ -186,14 +244,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Aggiorna lo stato del post
     const hasPublished = Object.keys(platformPostIds).length > 0
-    console.log("[v0] Publish result:", { hasPublished, platformPostIds, errors })
+    const attese = Object.keys(inElaborazione).length > 0
+    console.log("[v0] Publish result:", { hasPublished, attese, platformPostIds, errors })
+
+    // Tre esiti, non due. Un Reel ancora in lavorazione su Meta NON e' un
+    // fallimento: marcarlo "failed" farebbe ripubblicare il video da zero (o lo
+    // farebbe abbandonare), mentre il container e' vivo e va solo ripreso.
+    const nuovoStato = attese ? "processing" : hasPublished ? "published" : "failed"
 
     const { data, error } = await supabase
       .from("social_posts")
       .update({
-        status: hasPublished ? "published" : "failed",
-        published_at: new Date().toISOString(),
+        status: nuovoStato,
+        // La data di pubblicazione si scrive solo quando qualcosa e' uscito
+        // davvero: un post in elaborazione non ha ancora una data.
+        published_at: hasPublished ? new Date().toISOString() : post.published_at,
         platform_post_ids: platformPostIds,
+        processing_state: attese ? { instagram_containers: inElaborazione, avviato: new Date().toISOString() } : {},
         error_message: errors.length > 0 ? errors.join("; ") : null,
       })
       .eq("id", id)
