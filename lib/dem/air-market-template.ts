@@ -63,6 +63,14 @@ export const SEGNAPOSTO_VARIANTE = "{{variante}}"
  * versione per i freddi, da quella per i clienti e da quella per i collaboratori,
  * e un valore unico avrebbe fatto sembrare un solo invio tre campagne distinte.
  *
+ * ATTENZIONE a cosa e' VIVO, misurato in banca dati il 19/08/2026: i tre pubblici
+ * sono tre CAMPAGNE separate (`dem_recipients` non ha alcuna colonna che distingua
+ * il pubblico, e l'invio legge `html_template` dalla campagna), ma ne esiste una
+ * sola con questa pagina: "Santaddeo - Traffico aereo (Air Market)", quella dei
+ * freddi, con 24.394 destinatari in coda. I corpi per clienti e collaboratori qui
+ * sotto sono PRONTI ma DORMIENTI: nessuna campagna li usa. Chi legge "tre
+ * pubblici" non deve dedurne tre invii in corso.
+ *
  * Le `&` restano nude, NON scritte come `&amp;`: la riscrittura dei link per il
  * tracciamento clic prende l'indirizzo dall'attributo e lo codifica cosi' com'e',
  * quindi un `&amp;` finirebbe nell'indirizzo finale e trasformerebbe
