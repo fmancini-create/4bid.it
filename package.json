@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "check:ab": "node --experimental-strip-types --import ./scripts/registra-hook-ts.mjs scripts/check-ab-oggetto.mjs",
+    "dem:air-market": "node --experimental-strip-types --import ./scripts/registra-hook-ts.mjs --env-file-if-exists=/vercel/share/.env.project scripts/aggiorna-dem-air-market.mjs"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",

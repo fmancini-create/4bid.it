@@ -20,9 +20,9 @@
 // secondi. L'obiettivo non e' spiegare il modulo, ma portare sulla pagina delle
 // funzionalita' e alla conversazione.
 //
-// Il testo dice quello che la pagina /features dichiara davvero ("analisi dei
-// voli in arrivo sugli aeroporti vicini: da quali paesi arrivera' la domanda e
-// su quali mercati puntare"): promettere altro significherebbe far arrivare il
+// Il testo dice quello che la pagina di atterraggio dichiara davvero ("analisi
+// dei voli in arrivo sugli aeroporti vicini: da quali paesi arrivera' la domanda
+// e su quali mercati puntare"): promettere altro significherebbe far arrivare il
 // lettore su una pagina che lo smentisce.
 //
 // NESSUN testo usa i segnaposto {{nome}} / {{nome_azienda}}: la sostituzione in
@@ -31,36 +31,128 @@
 // peggio di nessun saluto.
 import { costruisciDem, RIQUADRO_DIFFERENZA } from "./email-shell"
 
-// Invito alla pagina delle funzionalita': identico per tutti, cambia solo la
-// riga che segue.
-const BOTTONE_FUNZIONALITA = `          <!-- Invito principale -->
+// Pagina di atterraggio del pulsante, in UN SOLO posto.
+//
+// Pagina dedicata fornita dal committente e VERIFICATA prima di metterla qui:
+// risponde 200 con titolo "Air Market Intelligence: su quali mercati investire".
+// I primi 4.119 destinatari hanno ricevuto la pagina generica /features; da qui in
+// avanti si va sulla pagina dedicata. E' una differenza di contenuto fra i due
+// gruppi, ed e' un'altra ragione per cui il dato storico non e' un confronto alla
+// pari (vedi OGGETTO_STORICO).
+//
+// Host con il `www`: `santaddeo.com` risponde con un reindirizzamento a
+// `www.santaddeo.com`, e questo link passa GIA' dal reindirizzamento del
+// tracciamento clic. Scriverlo gia' in forma finale evita un salto in piu'.
+export const PAGINA_AIR_MARKET = "https://www.santaddeo.com/landing/air-market"
+
+// Segnaposto della variante A/B, sostituito in fase di invio (vedi la rotta di
+// invio). NON e' un valore fisso per un motivo misurato: la landing ricopia
+// `utm_content` tale e quale nei link del proprio modulo, quindi scrivere "A" a
+// codice attribuirebbe alla variante A anche i contatti nati dalla B.
+export const SEGNAPOSTO_VARIANTE = "{{variante}}"
+
+/**
+ * Invito alla pagina, con i parametri di provenienza.
+ *
+ * Gli `utm` servono perche' li ho misurati sulla pagina vera: la landing li
+ * ricopia nei link verso `/request-info`, quindi senza di essi un contatto nato
+ * dalla DEM arriva al modulo indistinguibile da uno arrivato da Google. Con essi,
+ * il modulo riceve campagna e variante.
+ *
+ * `utm_campaign` e' DIVERSO per i tre pubblici: lo stesso pulsante e' usato dalla
+ * versione per i freddi, da quella per i clienti e da quella per i collaboratori,
+ * e un valore unico avrebbe fatto sembrare un solo invio tre campagne distinte.
+ *
+ * Le `&` restano nude, NON scritte come `&amp;`: la riscrittura dei link per il
+ * tracciamento clic prende l'indirizzo dall'attributo e lo codifica cosi' com'e',
+ * quindi un `&amp;` finirebbe nell'indirizzo finale e trasformerebbe
+ * `utm_medium` in `amp;utm_medium`, perdendo il parametro.
+ */
+function invitoPagina(opts: { utmCampaign: string; conVariante?: boolean }): string {
+  const parametri = [
+    "utm_source=dem",
+    "utm_medium=email",
+    `utm_campaign=${opts.utmCampaign}`,
+    // Solo dove la prova A/B esiste davvero: le versioni per clienti e
+    // collaboratori non hanno un oggetto B, quindi un `utm_content` vuoto o finto
+    // aggiungerebbe una colonna che non significa niente.
+    ...(opts.conVariante ? [`utm_content=${SEGNAPOSTO_VARIANTE}`] : []),
+  ].join("&")
+  return `          <!-- Invito principale -->
           <tr>
             <td align="center" style="padding:30px 32px 10px;">
-              <a href="https://www.santaddeo.com/features" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri tutte le funzionalità</a>
+              <a href="${PAGINA_AIR_MARKET}?${parametri}" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri come funziona</a>
             </td>
           </tr>`
+}
+
+// Oggetti proposti. Nessuno promette cifre o risultati ("+18% di RevPAR"):
+// sarebbero verifiche che non possiamo sostenere e che sulla lista fredda
+// attirano segnalazioni di spam, le quali peggiorano la consegna per TUTTA la
+// lista, non solo per chi segnala.
+export const OGGETTI_ALTERNATIVI = [
+  "Sai quanti voli sono già prenotati verso il tuo aeroporto?",
+  "I tuoi ospiti di settembre hanno già il biglietto in mano",
+  "C'è un dato che il tuo revenue non sta guardando",
+  "Il volo è prenotato. La camera no.",
+  "Chi arriverà in città lo si sa già oggi",
+] as const
+
+// Le due varianti scelte per la prova: la 1 contro la 3.
+export const OGGETTO_A = OGGETTI_ALTERNATIVI[0]
+export const OGGETTO_B = OGGETTI_ALTERNATIVI[2]
+
+// L'oggetto usato per le prime 4.119 email.
+//
+// Va conservato per un motivo preciso: apriva al 15,15%, meglio della campagna
+// di riferimento sulla stessa lista fredda (14,04%). Siccome la prova mette in
+// gara la 1 contro la 3, NESSUNA delle due varianti e' questo oggetto: la prova
+// dira' quale delle due apre meglio, ma NON se batte il 15,15%.
+//
+// Per questo il numero storico resta a schermo nel pannello come terza riga di
+// riferimento, con un avvertimento: e' stato misurato in giorni diversi, quindi
+// e' un'asticella da tenere d'occhio, non un confronto alla pari. Cancellarlo
+// significherebbe perdere l'unico termine di paragone che abbiamo.
+export const OGGETTO_STORICO = "Il tuo prossimo ospite ha già prenotato il volo"
 
 export const AIR_MARKET_PRESET = {
   name: "Santaddeo - Traffico aereo (Air Market)",
-  subject: "Il tuo prossimo ospite ha già prenotato il volo",
+  // Variante A della prova. La B (OGGETTO_B) non sta qui perche' non e' un
+  // secondo modello: il corpo e' lo STESSO per entrambe, cambia solo l'oggetto.
+  subject: OGGETTO_A,
   html: costruisciDem({
     titolo: "Santaddeo - Air Market Intelligence",
-    anteprima: "Lui non sa ancora dove dormirà. Il suo volo, però, è già prenotato.",
+    // L'anteprima si legge nella casella ACCANTO all'oggetto, quindi partecipa
+    // alla decisione di aprire e vale per entrambe le varianti: non ripete
+    // nessuno dei due oggetti, ma aggiunge il pezzo che manca a tutti e due.
+    anteprima: "I voli già in calendario dicono da quali paesi arriverà la domanda.",
     motivoRicezione: "Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.",
+    // TRE righe, non di piu'.
+    //
+    // La versione precedente ne aveva 152 parole: spiegava il modulo dentro
+    // l'email, e chi aveva capito tutto non aveva piu' motivo di cliccare. Il
+    // compito dell'email e' incuriosire; a spiegare ci pensa la pagina. Per lo
+    // stesso motivo qui NON c'e' piu' il riquadro di confronto con gli altri
+    // sistemi (resta nelle altre due versioni, dove il pubblico e' diverso):
+    // e' il contenuto tipico di una pagina, non di un invito.
+    //
+    // Il titolo NON ricopia l'oggetto, e per la prova A/B e' un vincolo, non uno
+    // stile: un solo corpo serve DUE oggetti diversi, quindi ripetere l'oggetto A
+    // renderebbe l'email incoerente per chi ha ricevuto il B, e viceversa. La
+    // versione precedente ripeteva parola per parola l'oggetto di allora: con la
+    // prova in corso sarebbe stata sbagliata per meta' dei destinatari.
     righe: `          <!-- Gancio -->
           <tr>
             <td style="padding:34px 32px 0;font-size:16px;line-height:1.7;color:#2d2d2d;">
-              <p style="margin:0 0 18px;font-size:21px;font-weight:bold;color:#1b2a4a;line-height:1.45;">Il tuo prossimo ospite ha già prenotato il volo.</p>
-              <p style="margin:0 0 18px;">Non sa ancora dove dormirà. Ma il suo aereo, verso l'aeroporto vicino a te, è già in calendario.</p>
-              <p style="margin:0 0 6px;">Santaddeo legge quei voli e ti dice <strong>da quali paesi arriverà la domanda</strong>, così scegli prima su quali mercati puntare con pricing e marketing.</p>
+              <p style="margin:0 0 18px;font-size:21px;font-weight:bold;color:#1b2a4a;line-height:1.45;">I voli verso il tuo aeroporto sono già prenotati. Le camere no.</p>
+              <p style="margin:0 0 18px;">Da quali paesi arriverà la domanda, e in quali settimane, è già scritto negli aerei in calendario: settimane prima che arrivino le prenotazioni.</p>
+              <p style="margin:0 0 6px;">Santaddeo legge quel dato e te lo mette accanto a prezzi e occupazione.</p>
             </td>
           </tr>
-${RIQUADRO_DIFFERENZA}
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market", conVariante: true })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
-              Ti interessa vederlo sui dati del tuo hotel?<br />
-              <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="color:#1b2a4a;font-weight:bold;">Prenota una demo gratuita</a> o rispondi a questa email.
+              Oppure <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="color:#1b2a4a;font-weight:bold;">prenota una demo gratuita</a>.
             </td>
           </tr>`,
   }),
@@ -93,7 +185,7 @@ export const AIR_MARKET_CLIENTI_PRESET = {
             </td>
           </tr>
 ${RIQUADRO_DIFFERENZA}
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market-clienti" })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
               Vuoi vederla sui dati della tua struttura?<br />
@@ -124,7 +216,7 @@ export const AIR_MARKET_COLLABORATORI_PRESET = {
             </td>
           </tr>
 ${RIQUADRO_DIFFERENZA}
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market-collaboratori" })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
               Ti serve una demo da mostrare o materiale da inviare?<br />
