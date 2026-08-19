@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest"
 import {
   LIMITE_ATTESA_MS,
   MAX_VIDEO_BYTES,
+  type Platform,
   avvioAttesa,
   canPublish,
   decidiStatoPost,
+  destinazioniEffettive,
   isVideoFileUrl,
   isYoutubeUrl,
   resolveMediaKind,
@@ -199,6 +201,62 @@ describe("decidiStatoPost", () => {
     const r = decidiStatoPost({ qualcosaPubblicato: false, inAttesa: true, avviatoIl: quasi, adesso: ORA })
     expect(r.stato).toBe("processing")
     expect(r.scaduto).toBe(false)
+  })
+})
+
+/**
+ * Prove sull'avviso dei link YouTube.
+ *
+ * Difetto trovato guardando la pagina vera: l'avviso prometteva "uscira' su
+ * Facebook e LinkedIn" basandosi sulle piattaforme SPUNTATE, e restava identico
+ * anche quando Instagram non aveva destinazioni. Una frase che l'operatore legge
+ * prima di premere "Pubblica" non puo' nominare canali a caso.
+ */
+describe("destinazioniEffettive", () => {
+  const TUTTE: Platform[] = ["facebook", "instagram", "linkedin"]
+
+  it("con un link YouTube: Instagram escluso, gli altri due escono", () => {
+    const r = destinazioniEffettive({ piattaforme: TUTTE, kind: "youtube", destinazioniPerPiattaforma: {} })
+    expect(r.escluse).toEqual(["Instagram"])
+    expect(r.escono).toEqual(["Facebook", "LinkedIn"])
+  })
+
+  it("un canale senza account collegato non viene nominato affatto", () => {
+    // Ne' fra chi esce ne' fra chi e' escluso: non riceve nulla comunque, e
+    // nominarlo confonderebbe il motivo (formato contro collegamento assente).
+    const r = destinazioniEffettive({
+      piattaforme: TUTTE,
+      kind: "youtube",
+      destinazioniPerPiattaforma: {},
+      senzaAccountCollegato: ["linkedin"],
+    })
+    expect(r.escono).toEqual(["Facebook"])
+    expect(r.escluse).toEqual(["Instagram"])
+  })
+
+  it("se c'e' solo Instagram e il media e' YouTube, non esce nulla", () => {
+    const r = destinazioniEffettive({ piattaforme: ["instagram"], kind: "youtube", destinazioniPerPiattaforma: {} })
+    expect(r.escono).toEqual([])
+    expect(r.escluse).toEqual(["Instagram"])
+  })
+
+  it("con un file video nessuno viene escluso: il Reel si puo' fare", () => {
+    const r = destinazioniEffettive({ piattaforme: TUTTE, kind: "video", destinazioniPerPiattaforma: {} })
+    expect(r.escluse).toEqual([])
+    expect(r.escono).toEqual(["Facebook", "Instagram", "LinkedIn"])
+  })
+
+  // Errore che avevo commesso scrivendo questa funzione: trattare la lista vuota
+  // come "nessuna destinazione". La rotta di pubblicazione filtra gli account
+  // SOLO quando la lista e' piena, quindi vuota significa "tutti gli attivi".
+  it("lista di destinazioni VUOTA significa 'tutti gli account attivi'", () => {
+    const vuota = destinazioniEffettive({ piattaforme: TUTTE, kind: "youtube", destinazioniPerPiattaforma: {} })
+    const piena = destinazioniEffettive({
+      piattaforme: TUTTE,
+      kind: "youtube",
+      destinazioniPerPiattaforma: { facebook: ["pagina-1"], instagram: ["ig-1"], linkedin: ["li-1"] },
+    })
+    expect(vuota).toEqual(piena)
   })
 })
 

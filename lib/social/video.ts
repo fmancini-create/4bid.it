@@ -165,6 +165,57 @@ export function canPublish(
   return { ok: true, as: "text" }
 }
 
+const NOMI_PIATTAFORMA: Record<Platform, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+}
+
+/**
+ * Dove uscira' DAVVERO un post con un link YouTube, e dove no.
+ *
+ * Serve perche' l'avviso all'operatore non puo' basarsi sulle piattaforme
+ * spuntate: quello che conta e' avere una DESTINAZIONE scelta. Un canale
+ * spuntato ma senza pagina/account selezionato non riceve niente, e nominarlo
+ * sarebbe una promessa falsa — l'avviso diceva "uscira' su Facebook e LinkedIn"
+ * anche quando nessuna destinazione era stata scelta.
+ *
+ * Restituisce i soli canali che hanno una destinazione E accettano il media.
+ */
+export function destinazioniEffettive(input: {
+  piattaforme: Platform[]
+  kind: MediaKind | null
+  /**
+   * id delle destinazioni scelte, per piattaforma.
+   *
+   * ATTENZIONE alla lista VUOTA: non significa "nessuna destinazione", significa
+   * "tutte le destinazioni attive di quel canale". E' la regola della rotta di
+   * pubblicazione, che filtra gli account solo quando la lista e' piena. Va
+   * rispecchiata qui, altrimenti l'avviso direbbe che un canale non riceve nulla
+   * proprio mentre riceve tutto.
+   */
+  destinazioniPerPiattaforma: Partial<Record<Platform, string[]>>
+  /** Piattaforme che non hanno alcun account collegato: quelle davvero non ricevono. */
+  senzaAccountCollegato?: Platform[]
+  hasLink?: boolean
+}): { escono: string[]; escluse: string[] } {
+  const escono: string[] = []
+  const escluse: string[] = []
+  const senzaAccount = new Set(input.senzaAccountCollegato ?? [])
+
+  for (const p of input.piattaforme) {
+    // Un canale senza NESSUN account collegato non riceve nulla, qualunque sia
+    // il formato: non va nominato, ne' fra chi esce ne' fra chi e' escluso.
+    if (senzaAccount.has(p)) continue
+
+    const esito = canPublish(p, input.kind, { hasLink: input.hasLink })
+    if (esito.ok) escono.push(NOMI_PIATTAFORMA[p])
+    else escluse.push(NOMI_PIATTAFORMA[p])
+  }
+
+  return { escono, escluse }
+}
+
 /**
  * Oltre questo tempo un Reel in elaborazione viene dichiarato fallito, invece di
  * restare "in corso" per sempre agli occhi dell'operatore.

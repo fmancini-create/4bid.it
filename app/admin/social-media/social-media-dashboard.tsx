@@ -36,7 +36,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CampaignsManager } from "@/components/social/campaigns-manager"
-import { resolveMediaKind, validateVideoUpload, youtubeThumbnail } from "@/lib/social/video"
+import {
+  type Platform,
+  destinazioniEffettive,
+  resolveMediaKind,
+  validateVideoUpload,
+  youtubeThumbnail,
+} from "@/lib/social/video"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -383,6 +389,24 @@ export default function SocialMediaDashboard({
    * Reel dove il server pubblica un link.
    */
   const mediaKindNuovo = resolveMediaKind({ videoUrl: newPost.video_url, imageUrl: newPost.image_url })
+
+  /**
+   * Dove uscirà davvero il post, per l'avviso sui link YouTube.
+   *
+   * Nota sulla lista VUOTA di target_accounts: non vuol dire "nessuna
+   * destinazione", vuol dire "tutti gli account attivi del canale" — è la regola
+   * della rotta di pubblicazione. Quello che esclude un canale per davvero è non
+   * avere alcun account collegato.
+   */
+  const destinazioniYoutube = destinazioniEffettive({
+    piattaforme: newPost.platforms as Platform[],
+    kind: mediaKindNuovo,
+    destinazioniPerPiattaforma: {},
+    senzaAccountCollegato: (["facebook", "instagram", "linkedin"] as Platform[]).filter(
+      (p) => !accounts.some((a) => a.platform === p && a.is_active),
+    ),
+    hasLink: Boolean(newPost.link_url),
+  })
 
   const caricaVideo = async (file: File) => {
     // Controllo lato client: dà una risposta immediata. Il server ricontrolla
@@ -1298,12 +1322,21 @@ export default function SocialMediaDashboard({
               )}
 
               {/* Avviso ONESTO: un link YouTube non diventa un Reel. Meglio dirlo
-                  qui che far fallire la pubblicazione dopo. */}
-              {mediaKindNuovo === "youtube" && newPost.platforms.includes("instagram") && (
+                  qui che far fallire la pubblicazione dopo.
+                  Si basa sulle DESTINAZIONI scelte, non sulle piattaforme spuntate:
+                  un canale senza pagina/account selezionato non riceve nulla, e
+                  prima l'avviso prometteva "uscira' su Facebook e LinkedIn" anche
+                  quando nessuna destinazione era stata scelta. */}
+              {mediaKindNuovo === "youtube" && destinazioniYoutube.escluse.length > 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-500 flex items-start gap-1">
                   <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  Instagram non pubblica i link YouTube: per un Reel serve il file video. Questo post uscirà su Facebook
-                  e LinkedIn, ma non su Instagram.
+                  <span>
+                    {destinazioniYoutube.escluse.join(" e ")} non pubblica i link YouTube: per un Reel serve il file
+                    video.{" "}
+                    {destinazioniYoutube.escono.length > 0
+                      ? `Questo post uscirà su ${destinazioniYoutube.escono.join(" e ")}, ma non su ${destinazioniYoutube.escluse.join(" e ")}.`
+                      : `Con le destinazioni scelte ora, questo post non uscirà da nessuna parte.`}
+                  </span>
                 </p>
               )}
               {mediaKindNuovo === "video" && (
