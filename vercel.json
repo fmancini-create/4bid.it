@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/project-room-digest",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/scan-scidoo",
+      "schedule": "* * * * *"
     }
   ]
 }
