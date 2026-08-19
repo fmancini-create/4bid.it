@@ -145,10 +145,11 @@ function derivePropertyName(h1: string | null, title: string | null, schemaName:
       .trim()
     const isGenericBookingLabel =
       /^Prenotazione\s+Online(?:\s+Ufficiale)?(?:\s+di)?$/i.test(cleaned || "") ||
-      /^Online\s+(?:Official\s+)?Booking(?:\s+of)?$/i.test(cleaned || "")
+      /^Online\s+(?:Official\s+)?Booking(?:\s+of)?$/i.test(cleaned || "") ||
+      /^[\s\-|–—]+$/.test(cleaned || "")
 
     // I codici Scidoo inesistenti possono restituire comunque HTTP 200 con un
-    // H1 generico ("Prenotazione Online di") e senza identita della struttura.
+    // H1 generico ("Prenotazione Online di") e senza identità della struttura.
     // Non considerarli clienti evita falsi positivi pur mantenendo validi i
     // booking engine che espongono davvero il nome nell'H1, nel title o nel JSON-LD.
     if (cleaned && cleaned.length >= 2 && !isGenericBookingLabel && !/^scidoo$/i.test(cleaned)) return cleaned
