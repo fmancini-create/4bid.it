@@ -1,0 +1,164 @@
+// Prova A/B sull'oggetto di una DEM.
+//
+// PERCHE' ESISTE: l'oggetto della campagna "Traffico aereo (Air Market)" apre al
+// 15,15%, cioe' MEGLIO della campagna di riferimento sulla stessa lista fredda
+// (Invito Demo, 14,04%). Sostituirlo con un oggetto nuovo "perche' sembra piu'
+// invogliante" e' una scommessa: se apre peggio lo si scopre a campagna finita,
+// quando le email non si richiamano piu' indietro. Qui invece i due oggetti
+// viaggiano in parallelo sulla stessa coda, nello stesso giorno, alla stessa ora:
+// l'unica differenza fra i due gruppi e' l'oggetto, quindi la differenza fra le
+// aperture e' attribuibile all'oggetto e non al momento dell'invio.
+//
+// COSA NON FA: non decide il vincente e non cambia nulla da sola. Serve a
+// MISURARE. La scelta finale resta di chi gestisce la campagna, sui numeri che
+// il pannello mostra.
+//
+// La suddivisione e' 50/50 e non regolabile: con una coda utile di ~4.000
+// indirizzi (la campagna invia solo alla fascia sicura) meta' per parte da' circa
+// 2.000 invii per variante, abbastanza perche' una differenza vera si veda. Una
+// percentuale piu' bassa sulla B allungherebbe i tempi senza aggiungere
+// informazione.
+
+/** Variante dell'oggetto realmente spedita a un destinatario. */
+export type VarianteOggetto = "A" | "B"
+
+/**
+ * Hash stabile di una stringa (FNV-1a a 32 bit).
+ *
+ * DEVE essere deterministico: la variante si ricava dall'identificativo del
+ * destinatario, non da un numero casuale o dalla posizione nel lotto. Con
+ * `Math.random()` o con l'indice del ciclo, un destinatario rimesso in coda (per
+ * un errore di rete, un nuovo tentativo, un lotto ripetuto) potrebbe ricevere la
+ * PRIMA volta l'oggetto A e la seconda l'oggetto B: due email diverse alla stessa
+ * persona, e una misura sporca in cui non si sa piu' quale oggetto ha aperto.
+ */
+function hashStabile(testo: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < testo.length; i++) {
+    h ^= testo.charCodeAt(i)
+    // Moltiplicazione FNV con troncamento a 32 bit senza segno.
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h >>> 0
+}
+
+/**
+ * Una prova e' attiva solo se esiste un secondo oggetto DAVVERO diverso.
+ *
+ * I due casi respinti non sono teorici:
+ * - `subject_b` vuoto o solo spazi: e' il valore che resta in banca dati quando
+ *   si svuota il campo nel pannello. Trattarlo come "prova attiva" spedirebbe
+ *   email con oggetto vuoto, che i filtri antispam puniscono.
+ * - `subject_b` identico a `subject`: sarebbe un confronto fra un oggetto e se
+ *   stesso. Darebbe due percentuali quasi uguali e l'apparenza di una misura
+ *   riuscita, mentre non misura niente. Un controllo che non puo' distinguere
+ *   nulla e' peggio di nessun controllo, perche' viene creduto.
+ */
+export function provaAttiva(oggettoA: string | null | undefined, oggettoB: string | null | undefined): boolean {
+  const a = (oggettoA || "").trim()
+  const b = (oggettoB || "").trim()
+  if (a.length === 0 || b.length === 0) return false
+  return a !== b
+}
+
+/**
+ * Decide quale oggetto spedire a un destinatario.
+ *
+ * Se la prova non e' attiva restituisce l'oggetto A e variante `null`: `null`
+ * significa "spedita fuori dalla prova" ed e' il valore che tiene onesto il
+ * confronto. Le 4.119 email partite PRIMA che la prova esistesse hanno variante
+ * `null`: contarle come A le sommerebbe a un gruppo spedito in giorni diversi,
+ * con reputazione del mittente diversa, gonfiando o affossando A per motivi che
+ * non c'entrano con l'oggetto.
+ */
+export function oggettoPerDestinatario(params: {
+  oggettoA: string
+  oggettoB: string | null | undefined
+  idDestinatario: string
+}): { oggetto: string; variante: VarianteOggetto | null } {
+  const { oggettoA, oggettoB, idDestinatario } = params
+
+  if (!provaAttiva(oggettoA, oggettoB)) {
+    return { oggetto: oggettoA, variante: null }
+  }
+
+  // Bit meno significativo dell'hash: suddivisione 50/50 stabile.
+  const variante: VarianteOggetto = hashStabile(idDestinatario) % 2 === 0 ? "A" : "B"
+  return { oggetto: variante === "A" ? oggettoA : (oggettoB as string), variante }
+}
+
+/** Numeri di una singola variante, come li mostra il pannello. */
+export type RigaConfrontoAb = {
+  variante: VarianteOggetto
+  oggetto: string
+  inviate: number
+  aperte: number
+  clic: number
+  aperturePct: number | null
+  clicSuApertePct: number | null
+}
+
+/**
+ * Percentuale con un decimale, oppure `null` quando il denominatore e' zero.
+ *
+ * `null` e non `0`: con zero invii "0%" si leggerebbe come "questo oggetto non
+ * apre mai", che e' un giudizio, mentre il dato semplicemente non c'e' ancora.
+ */
+export function percentuale(numeratore: number, denominatore: number): number | null {
+  if (!denominatore || denominatore <= 0) return null
+  return Math.round((numeratore / denominatore) * 1000) / 10
+}
+
+/**
+ * Soglia minima di invii per variante prima di dichiarare un vincente.
+ *
+ * Sotto questo numero le due percentuali oscillano per caso: a 100 invii e 15%
+ * di apertura bastano tre aperture in piu' per spostare la variante di 3 punti.
+ * Il pannello mostra comunque i numeri, ma senza indicare un vincente.
+ */
+export const INVII_MINIMI_PER_VARIANTE = 400
+
+/**
+ * Confronta le due varianti e dice se si puo' concludere qualcosa.
+ *
+ * Restituisce `vincente: null` quando i dati sono insufficienti O quando lo
+ * scarto e' troppo piccolo per distinguersi dal rumore. Dichiarare un vincente
+ * per uno scarto di mezzo punto porterebbe a sostituire un oggetto che
+ * funziona sulla base di nulla, che e' esattamente il rischio che questa prova
+ * esiste per evitare.
+ */
+export function esitoConfronto(a: RigaConfrontoAb, b: RigaConfrontoAb): {
+  vincente: VarianteOggetto | null
+  motivo: string
+} {
+  if (a.inviate < INVII_MINIMI_PER_VARIANTE || b.inviate < INVII_MINIMI_PER_VARIANTE) {
+    const mancanti = Math.max(
+      INVII_MINIMI_PER_VARIANTE - a.inviate,
+      INVII_MINIMI_PER_VARIANTE - b.inviate,
+    )
+    return {
+      vincente: null,
+      motivo: `Ancora troppo presto: servono almeno ${INVII_MINIMI_PER_VARIANTE} invii per variante (ne mancano ${mancanti}).`,
+    }
+  }
+
+  if (a.aperturePct === null || b.aperturePct === null) {
+    return { vincente: null, motivo: "Aperture non ancora rilevate." }
+  }
+
+  const scarto = Math.abs(a.aperturePct - b.aperturePct)
+  // 1,5 punti: sotto questa distanza, con qualche migliaio di invii per parte,
+  // le due varianti non sono distinguibili in modo utile a una decisione.
+  if (scarto < 1.5) {
+    return {
+      vincente: null,
+      motivo: `Le due varianti sono equivalenti (scarto ${scarto.toFixed(1)} punti): l'oggetto non e' la leva che cambia le aperture.`,
+    }
+  }
+
+  const vincente = a.aperturePct > b.aperturePct ? a : b
+  return {
+    vincente: vincente.variante,
+    motivo: `La variante ${vincente.variante} apre ${scarto.toFixed(1)} punti in piu' (${vincente.aperturePct}% contro ${(vincente === a ? b.aperturePct : a.aperturePct)}%).`,
+  }
+}
