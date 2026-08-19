@@ -24,7 +24,10 @@ if (!connectionString) {
   process.exit(1)
 }
 
-const sql = readFileSync(join(__dirname, "2026-08-19-dem-ab-oggetto.sql"), "utf8")
+// Le due migrazioni della prova A/B, in ordine. Entrambe sono additive e
+// idempotenti (`add column if not exists`), quindi rieseguire e' innocuo.
+const FILE_SQL = ["2026-08-19-dem-ab-oggetto.sql", "2026-08-19-dem-oggetto-storico.sql"]
+const sql = FILE_SQL.map((f) => readFileSync(join(__dirname, f), "utf8")).join("\n;\n")
 
 const client = new Client({
   connectionString: connectionString.replace(/[?&]sslmode=require/g, ""),
@@ -43,12 +46,16 @@ try {
   // sembra riuscito.
   const { rows } = await client.query(
     `select table_name, column_name from information_schema.columns
-      where (table_name = 'dem_campaigns' and column_name = 'subject_b')
+      where (table_name = 'dem_campaigns' and column_name in ('subject_b', 'subject_legacy'))
          or (table_name = 'dem_recipients' and column_name = 'subject_variant')
-      order by table_name`,
+      order by table_name, column_name`,
   )
   const trovate = rows.map((r) => `${r.table_name}.${r.column_name}`)
-  const attese = ["dem_campaigns.subject_b", "dem_recipients.subject_variant"]
+  const attese = [
+    "dem_campaigns.subject_b",
+    "dem_campaigns.subject_legacy",
+    "dem_recipients.subject_variant",
+  ]
   const mancanti = attese.filter((a) => !trovate.includes(a))
 
   if (mancanti.length > 0) {
