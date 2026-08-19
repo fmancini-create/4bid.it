@@ -13,14 +13,42 @@
 // MISURARE. La scelta finale resta di chi gestisce la campagna, sui numeri che
 // il pannello mostra.
 //
-// La suddivisione e' 50/50 e non regolabile: con una coda utile di ~4.000
-// indirizzi (la campagna invia solo alla fascia sicura) meta' per parte da' circa
-// 2.000 invii per variante, abbastanza perche' una differenza vera si veda. Una
-// percentuale piu' bassa sulla B allungherebbe i tempi senza aggiungere
-// informazione.
+// La suddivisione e' 50/50 e non regolabile. Numeri MISURATI in banca dati sulla
+// campagna Air Market (19/08/2026): 28.774 destinatari in totale, di cui 4.119
+// gia' spediti con l'oggetto precedente, 255 rimbalzati, 5 con segnalazione, 1
+// fallito e **24.394 ancora in attesa**. Meta' per parte da' circa 12.000 invii
+// per variante, molto oltre la soglia di 300 che serve per dichiarare un
+// vincente: la prova avra' una risposta ben prima di finire la coda.
+//
+// (Una versione precedente di questo commento diceva "coda utile di ~4.000
+// indirizzi". Era sbagliato di un fattore sei: il numero non era stato misurato.)
 
 /** Variante dell'oggetto realmente spedita a un destinatario. */
 export type VarianteOggetto = "A" | "B"
+
+/**
+ * Scrive la variante dentro l'indirizzo del pulsante (`utm_content`).
+ *
+ * SERVE perche' l'ho misurato sulla pagina vera: la landing di Santaddeo ricopia
+ * `utm_content` nei link verso il proprio modulo di richiesta informazioni.
+ * Quindi un contatto che nasce da questa DEM porta con se' la variante da cui e'
+ * arrivato; senza il parametro, arriverebbe al modulo indistinguibile da uno
+ * venuto da una ricerca su Google.
+ *
+ * Sta QUI e non nella rotta di invio per una ragione pratica: una copia della
+ * sostituzione scritta dentro la rotta non e' richiamabile dalle prove, e una
+ * prova che riscrive la stessa espressione per conto proprio non prova il codice
+ * che spedisce davvero, ma una sua imitazione.
+ *
+ * A prova SPENTA (variante `null`, cioe' nessun oggetto B) il parametro viene
+ * rimosso insieme alla sua `&`: lasciare il segnaposto manderebbe in pagina un
+ * valore finto, e lasciare `utm_content=` vuoto creerebbe una colonna vuota che
+ * somiglia a un dato perso invece che a una prova non attiva.
+ */
+export function applicaVarianteAlLink(html: string, variante: VarianteOggetto | null): string {
+  if (!variante) return html.replace(/&utm_content=\{\{\s*variante\s*\}\}/gi, "")
+  return html.replace(/\{\{\s*variante\s*\}\}/gi, encodeURIComponent(variante))
+}
 
 /**
  * Hash stabile di una stringa (FNV-1a a 32 bit).

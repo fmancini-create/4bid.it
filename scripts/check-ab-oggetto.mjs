@@ -24,9 +24,18 @@ const {
   numero,
   INVII_MINIMI_PER_VARIANTE,
   SCARTO_MINIMO_PUNTI,
+  applicaVarianteAlLink,
 } = mod
-const { AIR_MARKET_PRESET, PAGINA_AIR_MARKET, OGGETTI_ALTERNATIVI, OGGETTO_A, OGGETTO_B, OGGETTO_STORICO } =
-  tpl
+const {
+  AIR_MARKET_PRESET,
+  AIR_MARKET_CLIENTI_PRESET,
+  AIR_MARKET_COLLABORATORI_PRESET,
+  PAGINA_AIR_MARKET,
+  OGGETTI_ALTERNATIVI,
+  OGGETTO_A,
+  OGGETTO_B,
+  OGGETTO_STORICO,
+} = tpl
 
 let passate = 0
 let rosse = 0
@@ -299,6 +308,110 @@ prova("i due confronti concordano sugli STESSI numeri (scarto esatto)", () => {
   assert.ok(!/equivalenti/i.test(e.motivo), `dichiara un vincente e le dice equivalenti: "${e.motivo}"`)
 })
 
+// --- Link della pagina e attribuzione dei contatti -------------------------
+//
+// Misurato sulla pagina VERA (19/08/2026): la landing ricopia `utm_content` nei
+// propri link verso `/request-info`, e senza parametri passa solo
+// `ref=landing-air-market`. Quindi cio' che l'email scrive nell'indirizzo decide
+// se un contatto nato da questa campagna sara' riconoscibile, e da quale variante.
+console.log("\n== link della pagina: provenienza e variante ==")
+
+const linkDi = (testo) => {
+  const m = testo.match(/href="(https:\/\/www\.santaddeo\.com[^"]*)"/)
+  assert.ok(m, "nessun link a www.santaddeo.com nel corpo")
+  return m[1]
+}
+
+prova("il pulsante punta alla pagina dedicata, non a quella generica", () => {
+  const l = linkDi(AIR_MARKET_PRESET.html)
+  assert.ok(l.startsWith("https://www.santaddeo.com/landing/air-market"), `punta a: ${l}`)
+  assert.ok(!l.includes("/features"), "punta ancora alla pagina generica delle funzionalita'")
+})
+
+prova("l'host e' quello finale, senza un reindirizzamento in mezzo", () => {
+  // `santaddeo.com` risponde con un reindirizzamento a `www.santaddeo.com`, e
+  // questo link passa GIA' dal reindirizzamento del tracciamento clic: ogni salto
+  // in meno e' un punto in meno dove perdere i parametri.
+  assert.match(linkDi(AIR_MARKET_PRESET.html), /^https:\/\/www\.santaddeo\.com\//)
+})
+
+prova("le & sono nude, non scritte come &amp;", () => {
+  // Vincolo tecnico, non stilistico: la riscrittura dei link per il tracciamento
+  // clic prende l'indirizzo dall'attributo e lo codifica cosi' com'e'. Con
+  // `&amp;` l'indirizzo finale avrebbe `amp;utm_medium` e il parametro sarebbe
+  // perso senza che nulla sembri rotto.
+  for (const [nome, p] of [
+    ["freddi", AIR_MARKET_PRESET],
+    ["clienti", AIR_MARKET_CLIENTI_PRESET],
+    ["collaboratori", AIR_MARKET_COLLABORATORI_PRESET],
+  ]) {
+    assert.ok(!linkDi(p.html).includes("&amp;"), `la versione ${nome} scrive &amp; nel link`)
+  }
+})
+
+prova("i tre pubblici finiscono in campagne DISTINTE", () => {
+  // Lo stesso pulsante e' usato dalle tre versioni: un `utm_campaign` unico
+  // avrebbe fatto sembrare tre invii a pubblici diversi una sola campagna.
+  const c = (p) => new URL(linkDi(p.html)).searchParams.get("utm_campaign")
+  const freddi = c(AIR_MARKET_PRESET)
+  const clienti = c(AIR_MARKET_CLIENTI_PRESET)
+  const collab = c(AIR_MARKET_COLLABORATORI_PRESET)
+  assert.equal(freddi, "air-market")
+  assert.notEqual(clienti, freddi, "clienti e freddi nella stessa campagna")
+  assert.notEqual(collab, freddi, "collaboratori e freddi nella stessa campagna")
+  assert.notEqual(clienti, collab, "clienti e collaboratori nella stessa campagna")
+})
+
+prova("solo la versione con la prova A/B porta il segnaposto della variante", () => {
+  assert.ok(linkDi(AIR_MARKET_PRESET.html).includes("{{variante}}"), "manca nella versione per i freddi")
+  for (const [nome, p] of [
+    ["clienti", AIR_MARKET_CLIENTI_PRESET],
+    ["collaboratori", AIR_MARKET_COLLABORATORI_PRESET],
+  ]) {
+    assert.ok(
+      !linkDi(p.html).includes("{{variante}}"),
+      `la versione ${nome} non ha un oggetto B: il parametro darebbe una colonna senza significato`,
+    )
+  }
+})
+
+// Le tre che seguono ESEGUONO `applicaVarianteAlLink`, la funzione che usa la
+// rotta di invio: non una copia dell'espressione riscritta qui dentro, che
+// proverebbe l'imitazione e non il codice che spedisce.
+prova("a prova accesa il link porta la variante realmente spedita", () => {
+  for (const v of ["A", "B"]) {
+    const l = linkDi(applicaVarianteAlLink(AIR_MARKET_PRESET.html, v))
+    assert.equal(new URL(l).searchParams.get("utm_content"), v)
+    assert.ok(!l.includes("{{"), `segnaposto non sostituito: ${l}`)
+  }
+})
+
+prova("a prova spenta il parametro sparisce insieme alla sua &", () => {
+  const l = linkDi(applicaVarianteAlLink(AIR_MARKET_PRESET.html, null))
+  assert.ok(!l.includes("utm_content"), `parametro rimasto senza valore: ${l}`)
+  assert.ok(!l.includes("{{"), `segnaposto rimasto nell'indirizzo: ${l}`)
+  assert.ok(!l.includes("&&"), `doppia & nell'indirizzo: ${l}`)
+  assert.ok(!l.endsWith("&"), `indirizzo che finisce con &: ${l}`)
+  // Gli altri tre devono restare: senza di essi il contatto arriverebbe al modulo
+  // indistinguibile da uno venuto da una ricerca.
+  const p = new URL(l).searchParams
+  assert.equal(p.get("utm_source"), "dem")
+  assert.equal(p.get("utm_medium"), "email")
+  assert.equal(p.get("utm_campaign"), "air-market")
+})
+
+prova("i parametri sono quelli attesi, letti da un lettore di indirizzi", () => {
+  // Un `?` o una `&` fuori posto danno un indirizzo che si apre comunque, ma con i
+  // parametri attaccati fra loro: un difetto che si vedrebbe solo mesi dopo,
+  // guardando le statistiche.
+  const p = new URL(linkDi(applicaVarianteAlLink(AIR_MARKET_PRESET.html, "A"))).searchParams
+  assert.deepEqual(
+    [...p.keys()].sort(),
+    ["utm_campaign", "utm_content", "utm_medium", "utm_source"],
+    "i parametri letti non sono i quattro attesi",
+  )
+})
+
 console.log("\n== email: testo accorciato e pulsante ==")
 
 const html = AIR_MARKET_PRESET.html
@@ -328,7 +441,15 @@ prova("il riquadro di confronto NON e' piu' nell'email (va nella pagina)", () =>
 })
 
 prova("il pulsante porta all'indirizzo dichiarato nella costante", () => {
-  assert.ok(html.includes(`href="${PAGINA_AIR_MARKET}"`), "il pulsante non porta a PAGINA_AIR_MARKET")
+  // L'indirizzo ora porta i parametri di provenienza, quindi non e' piu' uguale
+  // alla costante: si verifica che ci COMINCI, seguito da `?`. Il confronto per
+  // uguaglianza esatta che c'era prima diventerebbe rosso senza che nulla sia
+  // rotto, e "aggiustarlo" togliendo il controllo avrebbe lasciato il pulsante
+  // libero di puntare altrove.
+  assert.ok(
+    html.includes(`href="${PAGINA_AIR_MARKET}?`),
+    `il pulsante non porta a PAGINA_AIR_MARKET: ${linkDi(html)}`,
+  )
 })
 
 // Questa verifica legge il SORGENTE, non l'HTML generato.
@@ -354,8 +475,12 @@ prova("nel sorgente il pulsante usa la costante, non un indirizzo scritto a mano
 })
 
 prova("un solo indirizzo di atterraggio in tutta l'email", () => {
-  const occorrenze = (html.match(/santaddeo\.com\/features/g) || []).length
-  assert.ok(occorrenze <= 1, `l'indirizzo compare ${occorrenze} volte: cambiarlo richiederebbe piu' modifiche`)
+  // Cercava `santaddeo.com/features`, che dal cambio di pagina non esiste piu' in
+  // nessuna email: contava zero occorrenze e passava sempre. Un controllo che non
+  // puo' fallire non e' un controllo. Ora conta l'indirizzo VERO, e la verifica
+  // che sia esattamente uno la rende capace di arrossire in entrambi i sensi.
+  const occorrenze = (html.match(/www\.santaddeo\.com\/landing\/air-market/g) || []).length
+  assert.equal(occorrenze, 1, `l'indirizzo di atterraggio compare ${occorrenze} volte, non una`)
 })
 
 prova("resta un invito alla demo", () => {

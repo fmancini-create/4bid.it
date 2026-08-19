@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-resend"
 import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
-import { oggettoPerDestinatario } from "@/lib/dem/ab-oggetto"
+import { oggettoPerDestinatario, applicaVarianteAlLink } from "@/lib/dem/ab-oggetto"
 
 // Allow long-running sends: throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
@@ -398,20 +398,6 @@ export async function POST(request: NextRequest) {
             .eq("id", recipient.id)
           continue
         }
-        // Personalize template (markers already stripped)
-        const personalizedHtml = personalizeTemplate(templateWithoutMarkers, recipient)
-
-        // Add tracking (rewrites only http(s) links, so the {{unsubscribe}} token
-        // is left untouched and replaced afterwards with the real, untracked URL).
-        const trackedHtml = addTracking(personalizedHtml, campaign_id, recipient.id, baseUrl, {
-          trackOpens,
-          trackClicks,
-        })
-
-        // Build the per-recipient unsubscribe URL and inject it into the footer link.
-        const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, recipient.email, campaign_id)
-        const finalHtml = trackedHtml.replace(/\{\{\s*unsubscribe\s*\}\}/gi, unsubscribeUrl)
-
         // Prova A/B sull'oggetto. La variante si ricava dall'identificativo del
         // destinatario (hash stabile), non da un numero casuale: un destinatario
         // rimesso in coda dopo un errore riceve lo STESSO oggetto della prima
@@ -419,11 +405,38 @@ export async function POST(request: NextRequest) {
         // saprebbe piu' quale oggetto ha aperto.
         // Senza un `subject_b` valido, `variante` vale null e si spedisce
         // l'oggetto attuale: la prova e' spenta e nulla cambia.
+        //
+        // Si calcola QUI, prima del tracciamento, e non piu' subito prima della
+        // spedizione: il corpo contiene il segnaposto della variante dentro
+        // l'indirizzo del pulsante, e `addTracking` codifica gli indirizzi. Fatta
+        // dopo, la sostituzione non avrebbe trovato piu' nulla da sostituire e nel
+        // link sarebbe finito il segnaposto codificato.
         const { oggetto, variante } = oggettoPerDestinatario({
           oggettoA: campaign.subject,
           oggettoB: campaign.subject_b,
           idDestinatario: String(recipient.id),
         })
+
+        // Personalize template (markers already stripped)
+        const personalizedHtml = personalizeTemplate(templateWithoutMarkers, recipient)
+
+        // Variante nell'indirizzo della pagina, per riconoscere i contatti nati
+        // dall'una o dall'altra: la pagina di atterraggio ricopia `utm_content`
+        // nei link del proprio modulo. La regola sta in `applicaVarianteAlLink`,
+        // in un solo posto, cosi' le prove verificano il codice che spedisce
+        // davvero e non una copia riscritta a parte.
+        const conVariante = applicaVarianteAlLink(personalizedHtml, variante)
+
+        // Add tracking (rewrites only http(s) links, so the {{unsubscribe}} token
+        // is left untouched and replaced afterwards with the real, untracked URL).
+        const trackedHtml = addTracking(conVariante, campaign_id, recipient.id, baseUrl, {
+          trackOpens,
+          trackClicks,
+        })
+
+        // Build the per-recipient unsubscribe URL and inject it into the footer link.
+        const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, recipient.email, campaign_id)
+        const finalHtml = trackedHtml.replace(/\{\{\s*unsubscribe\s*\}\}/gi, unsubscribeUrl)
 
         // Send email with one-click unsubscribe headers (RFC 8058). Mail clients
         // (Gmail, Apple Mail, Outlook) show a native "Unsubscribe" button.

@@ -20,9 +20,9 @@
 // secondi. L'obiettivo non e' spiegare il modulo, ma portare sulla pagina delle
 // funzionalita' e alla conversazione.
 //
-// Il testo dice quello che la pagina /features dichiara davvero ("analisi dei
-// voli in arrivo sugli aeroporti vicini: da quali paesi arrivera' la domanda e
-// su quali mercati puntare"): promettere altro significherebbe far arrivare il
+// Il testo dice quello che la pagina di atterraggio dichiara davvero ("analisi
+// dei voli in arrivo sugli aeroporti vicini: da quali paesi arrivera' la domanda
+// e su quali mercati puntare"): promettere altro significherebbe far arrivare il
 // lettore su una pagina che lo smentisce.
 //
 // NESSUN testo usa i segnaposto {{nome}} / {{nome_azienda}}: la sostituzione in
@@ -33,25 +33,58 @@ import { costruisciDem, RIQUADRO_DIFFERENZA } from "./email-shell"
 
 // Pagina di atterraggio del pulsante, in UN SOLO posto.
 //
-// ATTENZIONE - VALORE PROVVISORIO. La pagina dedicata ad Air Market viene
-// realizzata su santaddeo.com e il committente deve ancora fornire l'indirizzo:
-// finche' non arriva, il pulsante resta sulla pagina generica /features, che e'
-// quella che i primi 4.119 destinatari hanno gia' ricevuto. Non e' un indirizzo
-// inventato "in attesa": un link finto in una campagna in volo manderebbe
-// migliaia di persone su una pagina inesistente.
+// Pagina dedicata fornita dal committente e VERIFICATA prima di metterla qui:
+// risponde 200 con titolo "Air Market Intelligence: su quali mercati investire".
+// I primi 4.119 destinatari hanno ricevuto la pagina generica /features; da qui in
+// avanti si va sulla pagina dedicata. E' una differenza di contenuto fra i due
+// gruppi, ed e' un'altra ragione per cui il dato storico non e' un confronto alla
+// pari (vedi OGGETTO_STORICO).
 //
-// Quando arriva il link, si cambia SOLO questa riga e si riallinea la campagna in
-// banca dati con `node scripts/aggiorna-dem-air-market.mjs --commit`: il modello
-// nel codice e la copia in volo sono due cose distinte (vedi lo script).
-export const PAGINA_AIR_MARKET = "https://www.santaddeo.com/features"
+// Host con il `www`: `santaddeo.com` risponde con un reindirizzamento a
+// `www.santaddeo.com`, e questo link passa GIA' dal reindirizzamento del
+// tracciamento clic. Scriverlo gia' in forma finale evita un salto in piu'.
+export const PAGINA_AIR_MARKET = "https://www.santaddeo.com/landing/air-market"
 
-// Invito alla pagina: identico per tutti, cambia solo la riga che segue.
-const BOTTONE_FUNZIONALITA = `          <!-- Invito principale -->
+// Segnaposto della variante A/B, sostituito in fase di invio (vedi la rotta di
+// invio). NON e' un valore fisso per un motivo misurato: la landing ricopia
+// `utm_content` tale e quale nei link del proprio modulo, quindi scrivere "A" a
+// codice attribuirebbe alla variante A anche i contatti nati dalla B.
+export const SEGNAPOSTO_VARIANTE = "{{variante}}"
+
+/**
+ * Invito alla pagina, con i parametri di provenienza.
+ *
+ * Gli `utm` servono perche' li ho misurati sulla pagina vera: la landing li
+ * ricopia nei link verso `/request-info`, quindi senza di essi un contatto nato
+ * dalla DEM arriva al modulo indistinguibile da uno arrivato da Google. Con essi,
+ * il modulo riceve campagna e variante.
+ *
+ * `utm_campaign` e' DIVERSO per i tre pubblici: lo stesso pulsante e' usato dalla
+ * versione per i freddi, da quella per i clienti e da quella per i collaboratori,
+ * e un valore unico avrebbe fatto sembrare un solo invio tre campagne distinte.
+ *
+ * Le `&` restano nude, NON scritte come `&amp;`: la riscrittura dei link per il
+ * tracciamento clic prende l'indirizzo dall'attributo e lo codifica cosi' com'e',
+ * quindi un `&amp;` finirebbe nell'indirizzo finale e trasformerebbe
+ * `utm_medium` in `amp;utm_medium`, perdendo il parametro.
+ */
+function invitoPagina(opts: { utmCampaign: string; conVariante?: boolean }): string {
+  const parametri = [
+    "utm_source=dem",
+    "utm_medium=email",
+    `utm_campaign=${opts.utmCampaign}`,
+    // Solo dove la prova A/B esiste davvero: le versioni per clienti e
+    // collaboratori non hanno un oggetto B, quindi un `utm_content` vuoto o finto
+    // aggiungerebbe una colonna che non significa niente.
+    ...(opts.conVariante ? [`utm_content=${SEGNAPOSTO_VARIANTE}`] : []),
+  ].join("&")
+  return `          <!-- Invito principale -->
           <tr>
             <td align="center" style="padding:30px 32px 10px;">
-              <a href="${PAGINA_AIR_MARKET}" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri come funziona</a>
+              <a href="${PAGINA_AIR_MARKET}?${parametri}" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri come funziona</a>
             </td>
           </tr>`
+}
 
 // Oggetti proposti. Nessuno promette cifre o risultati ("+18% di RevPAR"):
 // sarebbero verifiche che non possiamo sostenere e che sulla lista fredda
@@ -116,7 +149,7 @@ export const AIR_MARKET_PRESET = {
               <p style="margin:0 0 6px;">Santaddeo legge quel dato e te lo mette accanto a prezzi e occupazione.</p>
             </td>
           </tr>
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market", conVariante: true })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
               Oppure <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="color:#1b2a4a;font-weight:bold;">prenota una demo gratuita</a>.
@@ -152,7 +185,7 @@ export const AIR_MARKET_CLIENTI_PRESET = {
             </td>
           </tr>
 ${RIQUADRO_DIFFERENZA}
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market-clienti" })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
               Vuoi vederla sui dati della tua struttura?<br />
@@ -183,7 +216,7 @@ export const AIR_MARKET_COLLABORATORI_PRESET = {
             </td>
           </tr>
 ${RIQUADRO_DIFFERENZA}
-${BOTTONE_FUNZIONALITA}
+${invitoPagina({ utmCampaign: "air-market-collaboratori" })}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
               Ti serve una demo da mostrare o materiale da inviare?<br />
