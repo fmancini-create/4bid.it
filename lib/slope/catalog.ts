@@ -244,7 +244,11 @@ export function parseSlopeProperty(slopeId: string, html: string, httpStatus = 2
   const countryCode = addressMatch?.[5]?.toUpperCase() || null
   const region = province ? ITALIAN_REGIONS_BY_PROVINCE[province] || null : null
 
-  const coordinateValue = $("[data-OpenStreetMap-coordinates-value]").first().attr("data-OpenStreetMap-coordinates-value")
+  // I parser HTML normalizzano in minuscolo i nomi degli attributi, mentre
+  // Slope li emette come data-OpenStreetMap-*: leggere la forma normalizzata.
+  const coordinateValue = $("[data-openstreetmap-coordinates-value]")
+    .first()
+    .attr("data-openstreetmap-coordinates-value")
   let latitude: number | null = null
   let longitude: number | null = null
   if (coordinateValue) {
