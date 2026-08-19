@@ -165,11 +165,69 @@ export function canPublish(
   return { ok: true, as: "text" }
 }
 
+/**
+ * Oltre questo tempo un Reel in elaborazione viene dichiarato fallito, invece di
+ * restare "in corso" per sempre agli occhi dell'operatore.
+ */
+export const LIMITE_ATTESA_MS = 2 * 60 * 60 * 1000
+
+export type StatoPost = "processing" | "published" | "failed"
+
+/**
+ * Decide lo stato di un post dopo un tentativo di pubblicazione.
+ *
+ * Vive qui, come funzione pura, per due ragioni. La prima: gli esiti sono TRE e
+ * la stessa decisione serve alla pubblicazione manuale e al cron — duplicarla
+ * significherebbe farle divergere. La seconda, piu' importante: dentro la rotta
+ * questa logica non era provabile, e due sabotaggi (un Reel in elaborazione
+ * dichiarato "failed", e l'istante di avvio riscritto a ogni giro cosi' che il
+ * limite non scade mai) sono sfuggiti proprio per questo. Una regola che nessuna
+ * prova puo' raggiungere non e' protetta.
+ */
+export function decidiStatoPost(input: {
+  qualcosaPubblicato: boolean
+  inAttesa: boolean
+  avviatoIl?: string | null
+  adesso?: number
+}): { stato: StatoPost; scaduto: boolean } {
+  const { qualcosaPubblicato, inAttesa } = input
+  const adesso = input.adesso ?? Date.now()
+  const avviato = input.avviatoIl ? Date.parse(input.avviatoIl) : 0
+
+  // L'attesa scaduta chiude il caso: senza questo un container che Meta non
+  // finisce mai terrebbe il post appeso per sempre.
+  if (inAttesa && avviato > 0 && adesso - avviato > LIMITE_ATTESA_MS) {
+    return { stato: qualcosaPubblicato ? "published" : "failed", scaduto: true }
+  }
+  if (inAttesa) return { stato: "processing", scaduto: false }
+  return { stato: qualcosaPubblicato ? "published" : "failed", scaduto: false }
+}
+
+/**
+ * L'istante di avvio dell'attesa: si CONSERVA quello originale.
+ * Riscriverlo a ogni giro del cron azzererebbe il conto alla rovescia e il
+ * limite delle 2 ore non scadrebbe mai.
+ */
+export function avvioAttesa(esistente: string | null | undefined, adesso = new Date()): string {
+  return esistente || adesso.toISOString()
+}
+
 /** Errore di validazione di un file in caricamento, in italiano. */
 export function validateVideoUpload(file: { size: number; type: string; name: string }): string | null {
-  const extOk = (VIDEO_EXTENSIONS as readonly string[]).includes(extensionOf(file.name) || "")
+  const estensione = extensionOf(file.name)
+  const extOk = (VIDEO_EXTENSIONS as readonly string[]).includes(estensione || "")
   const mimeOk = (VIDEO_MIME_TYPES as readonly string[]).includes(file.type)
-  if (!extOk && !mimeOk) {
+
+  // L'estensione e' OBBLIGATORIA; il MIME, se dichiarato, non deve contraddirla.
+  //
+  // Con un `||` bastava che uno solo dei due fosse buono: un `virus.exe` con type
+  // "video/mp4" passava, perche' il type lo dichiara il browser ed e' la parte
+  // falsificabile. Ma preteserli entrambi rifiutava un `.mp4` legittimo quando il
+  // browser non dichiara alcun MIME (caso misurato con una sonda: succede).
+  //
+  // Quindi: il nome deve finire in mp4/mov, e un MIME presente deve essere fra
+  // quelli ammessi. Il MIME vuoto e' tollerato, il MIME sbagliato no.
+  if (!extOk || (file.type !== "" && !mimeOk)) {
     return `Formato non supportato. Sono ammessi solo ${VIDEO_EXTENSIONS.join(" e ")} (Instagram e Facebook non leggono altri formati).`
   }
   if (file.size > MAX_VIDEO_BYTES) {

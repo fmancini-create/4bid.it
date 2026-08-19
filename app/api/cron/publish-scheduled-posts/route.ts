@@ -3,23 +3,19 @@ import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook, publishVideoToFacebook } from "@/lib/social/facebook"
 import { publishToInstagram, publishReelToInstagram, riprendiReelInstagram } from "@/lib/social/instagram"
 import { publishToLinkedInWithFallback, publishVideoToLinkedIn } from "@/lib/social/linkedin"
-import { canPublish, resolveMediaKind } from "@/lib/social/video"
+import {
+  LIMITE_ATTESA_MS,
+  avvioAttesa,
+  canPublish,
+  decidiStatoPost,
+  resolveMediaKind,
+} from "@/lib/social/video"
 
 // Cron job per pubblicare i post programmati
 // Esegue ogni 5 minuti e pubblica i post con scheduled_for <= now
 
 // I video richiedono caricamenti lunghi: senza questo il cron verrebbe troncato.
 export const maxDuration = 300
-
-/**
- * Oltre questo tempo un Reel in elaborazione viene dichiarato FALLITO.
- *
- * Serve perche' altrimenti un container che Meta non finisce mai di elaborare
- * terrebbe il post in "processing" per l'eternita': l'operatore vedrebbe "in
- * corso" per giorni senza sapere che non uscira' mai. 2 ore sono largamente
- * sufficienti per qualunque video entro il nostro limite di dimensione.
- */
-const LIMITE_ATTESA_MS = 2 * 60 * 60 * 1000
 
 /**
  * Riprende i post lasciati in stato "processing": controlla se il container
@@ -99,18 +95,33 @@ async function riprendiInElaborazione(
     const ancoraAttesa = Object.keys(rimasti).length > 0
     const qualcosaUscito = Object.keys(platformPostIds).length > 0
 
+    // La decisione sui tre esiti sta in lib/social/video.ts: funzione pura,
+    // quindi raggiungibile dalle prove. Quando era scritta qui dentro, due
+    // sabotaggi su questa logica sono sfuggiti.
+    const deciso = decidiStatoPost({
+      qualcosaPubblicato: qualcosaUscito,
+      inAttesa: ancoraAttesa,
+      avviatoIl: stato.avviato,
+    })
+
     await supabase
       .from("social_posts")
       .update({
-        status: ancoraAttesa ? "processing" : qualcosaUscito ? "published" : "failed",
-        published_at: qualcosaUscito && !ancoraAttesa ? new Date().toISOString() : post.published_at,
+        status: deciso.stato,
+        published_at: deciso.stato === "published" ? new Date().toISOString() : post.published_at,
         platform_post_ids: platformPostIds,
-        // L'istante di avvio si CONSERVA: se lo riscrivessimo a ogni giro, il
-        // limite delle 2 ore non scadrebbe mai e il post resterebbe appeso.
-        processing_state: ancoraAttesa ? { instagram_containers: rimasti, avviato: stato.avviato } : {},
+        // L'istante di avvio si CONSERVA (avvioAttesa mantiene l'originale): se
+        // lo riscrivessimo a ogni giro, il limite non scadrebbe mai.
+        processing_state:
+          deciso.stato === "processing" ? { instagram_containers: rimasti, avviato: avvioAttesa(stato.avviato) } : {},
         error_message: errori.length > 0 ? errori.join("; ") : post.error_message,
       })
       .eq("id", post.id)
+
+    if (deciso.scaduto) {
+      esito.scaduti++
+      console.log(`[v0] Post ${post.id}: attesa scaduta durante la ripresa`)
+    }
   }
 
   console.log("[v0] Ripresa completata:", esito)
@@ -349,14 +360,20 @@ export async function GET(request: NextRequest) {
       // Aggiorna lo stato del post
       const hasPublished = Object.keys(platformPostIds).length > 0
       const attese = Object.keys(inElaborazione).length > 0
+      // Stessa funzione della ripresa e della pubblicazione manuale.
+      const decisoOra = decidiStatoPost({ qualcosaPubblicato: hasPublished, inAttesa: attese })
       await supabase
         .from("social_posts")
         .update({
-          status: attese ? "processing" : hasPublished ? "published" : "failed",
+          status: decisoOra.stato,
           // Solo cio' che e' uscito davvero ha una data di pubblicazione.
           published_at: hasPublished ? new Date().toISOString() : post.published_at,
           platform_post_ids: platformPostIds,
-          processing_state: attese ? { instagram_containers: inElaborazione, avviato: new Date().toISOString() } : {},
+          // Prima attesa: qui l'istante di avvio nasce adesso.
+          processing_state:
+            decisoOra.stato === "processing"
+              ? { instagram_containers: inElaborazione, avviato: avvioAttesa(null) }
+              : {},
           error_message: errors.length > 0 ? errors.join("; ") : null,
         })
         .eq("id", post.id)

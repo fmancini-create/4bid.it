@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { put } from "@vercel/blob"
 import { createClient } from "@/lib/supabase/server"
-import { MAX_VIDEO_BYTES, validateVideoUpload } from "@/lib/social/video"
+import { MAX_VIDEO_BYTES, VIDEO_EXTENSIONS, validateVideoUpload } from "@/lib/social/video"
 
 // Un video e' molto piu' grande di un'immagine: il caricamento richiede tempo.
 export const maxDuration = 300
@@ -24,14 +24,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nessun file ricevuto" }, { status: 400 })
     }
 
-    // La validazione vive in lib/social/video.ts: stesse regole che userA
+    // La validazione vive in lib/social/video.ts: stesse regole che usa
     // l'interfaccia, cosi' il messaggio non puo' divergere fra client e server.
+    // Il controllo nel browser e' solo cortesia: questo e' quello che difende,
+    // perche' una richiesta puo' arrivare senza passare dalla pagina.
     const errore = validateVideoUpload({ size: file.size, type: file.type, name: file.name })
     if (errore) {
       return NextResponse.json({ error: errore }, { status: 400 })
     }
 
-    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4"
+    // L'estensione si prende dalla LISTA AMMESSA, non dal nome grezzo del file:
+    // il nome lo scrive chi carica, e finirebbe dentro il percorso del blob.
+    const estratta = file.name.split(".").pop()?.toLowerCase() || ""
+    const ext = (VIDEO_EXTENSIONS as readonly string[]).includes(estratta) ? estratta : "mp4"
     const path = `social/video/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
     const blob = await put(path, file, {

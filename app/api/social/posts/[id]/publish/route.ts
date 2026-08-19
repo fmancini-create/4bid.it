@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { publishToFacebook, publishVideoToFacebook } from "@/lib/social/facebook"
 import { publishToInstagram, publishReelToInstagram } from "@/lib/social/instagram"
 import { publishToLinkedInWithFallback, publishVideoToLinkedIn, refreshLinkedInToken } from "@/lib/social/linkedin"
-import { canPublish, resolveMediaKind, youtubeThumbnail } from "@/lib/social/video"
+import { avvioAttesa, canPublish, decidiStatoPost, resolveMediaKind, youtubeThumbnail } from "@/lib/social/video"
 
 // Un Reel Instagram o un caricamento LinkedIn richiedono tempo: la richiesta
 // deve poter durare piu' dei 10s di default.
@@ -248,9 +248,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     console.log("[v0] Publish result:", { hasPublished, attese, platformPostIds, errors })
 
     // Tre esiti, non due. Un Reel ancora in lavorazione su Meta NON e' un
-    // fallimento: marcarlo "failed" farebbe ripubblicare il video da zero (o lo
-    // farebbe abbandonare), mentre il container e' vivo e va solo ripreso.
-    const nuovoStato = attese ? "processing" : hasPublished ? "published" : "failed"
+    // fallimento: marcarlo "failed" farebbe abbandonare il video, mentre il
+    // container e' vivo e va solo ripreso.
+    // La decisione sta in lib/social/video.ts, la stessa che usa il cron.
+    const nuovoStato = decidiStatoPost({ qualcosaPubblicato: hasPublished, inAttesa: attese }).stato
 
     const { data, error } = await supabase
       .from("social_posts")
@@ -260,7 +261,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         // davvero: un post in elaborazione non ha ancora una data.
         published_at: hasPublished ? new Date().toISOString() : post.published_at,
         platform_post_ids: platformPostIds,
-        processing_state: attese ? { instagram_containers: inElaborazione, avviato: new Date().toISOString() } : {},
+        processing_state:
+          nuovoStato === "processing" ? { instagram_containers: inElaborazione, avviato: avvioAttesa(null) } : {},
         error_message: errors.length > 0 ? errors.join("; ") : null,
       })
       .eq("id", id)
