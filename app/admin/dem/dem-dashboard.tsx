@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useRef } from "react"
 import { AIR_MARKET_PRESET } from "@/lib/dem/air-market-template"
 import { ECOSISTEMA_PRESET } from "@/lib/dem/press-release-ecosistema"
+import { ConfrontoAb } from "@/components/admin/confronto-ab"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -373,6 +374,15 @@ interface CampaignStats {
     unique_opens: number
     clicks: number
     unique_clicks: number
+  }
+  // Confronto A/B sull'oggetto. Opzionale: le campagne create prima della prova
+  // non lo hanno, e il pannello deve continuare a funzionare senza.
+  ab?: {
+    attiva: boolean
+    oggettoA: string
+    oggettoB: string
+    a: { inviate: number; aperte: number; clic: number }
+    b: { inviate: number; aperte: number; clic: number }
   }
 }
 
@@ -1532,6 +1542,21 @@ export default function DemDashboard({
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* Confronto A/B sull'oggetto: compare solo se esiste un secondo oggetto. */}
+          {stats?.ab && (
+            <ConfrontoAb
+              attiva={stats.ab.attiva}
+              oggettoA={stats.ab.oggettoA}
+              oggettoB={stats.ab.oggettoB}
+              a={stats.ab.a}
+              b={stats.ab.b}
+              spediteFuoriProva={Math.max(
+                0,
+                stats.summary.sent - stats.ab.a.inviate - stats.ab.b.inviate,
+              )}
+            />
           )}
 
           {/* Recipients table */}

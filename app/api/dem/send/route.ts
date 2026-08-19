@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-resend"
 import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
+import { oggettoPerDestinatario } from "@/lib/dem/ab-oggetto"
 
 // Allow long-running sends: throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
@@ -411,11 +412,24 @@ export async function POST(request: NextRequest) {
         const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, recipient.email, campaign_id)
         const finalHtml = trackedHtml.replace(/\{\{\s*unsubscribe\s*\}\}/gi, unsubscribeUrl)
 
+        // Prova A/B sull'oggetto. La variante si ricava dall'identificativo del
+        // destinatario (hash stabile), non da un numero casuale: un destinatario
+        // rimesso in coda dopo un errore riceve lo STESSO oggetto della prima
+        // volta, altrimenti la stessa persona vedrebbe due email diverse e non si
+        // saprebbe piu' quale oggetto ha aperto.
+        // Senza un `subject_b` valido, `variante` vale null e si spedisce
+        // l'oggetto attuale: la prova e' spenta e nulla cambia.
+        const { oggetto, variante } = oggettoPerDestinatario({
+          oggettoA: campaign.subject,
+          oggettoB: campaign.subject_b,
+          idDestinatario: String(recipient.id),
+        })
+
         // Send email with one-click unsubscribe headers (RFC 8058). Mail clients
         // (Gmail, Apple Mail, Outlook) show a native "Unsubscribe" button.
         const result = await sendEmail({
           to: recipient.email,
-          subject: campaign.subject,
+          subject: oggetto,
           html: finalHtml,
           attachments: resolvedAttachments.length > 0 ? resolvedAttachments : undefined,
           headers: {
@@ -431,6 +445,11 @@ export async function POST(request: NextRequest) {
             .update({
               send_status: "sent",
               sent_at: new Date().toISOString(),
+              // Si scrive la variante SOLO qui, sull'invio riuscito: se venisse
+              // scritta prima di spedire, un errore SMTP lascerebbe la variante
+              // su un'email mai partita e il denominatore delle aperture
+              // conterebbe invii inesistenti.
+              subject_variant: variante,
             })
             .eq("id", recipient.id)
         } else {

@@ -31,14 +31,45 @@
 // peggio di nessun saluto.
 import { costruisciDem, RIQUADRO_DIFFERENZA } from "./email-shell"
 
-// Invito alla pagina delle funzionalita': identico per tutti, cambia solo la
-// riga che segue.
+// Pagina di atterraggio del pulsante, in UN SOLO posto.
+//
+// ATTENZIONE - VALORE PROVVISORIO. La pagina dedicata ad Air Market viene
+// realizzata su santaddeo.com e il committente deve ancora fornire l'indirizzo:
+// finche' non arriva, il pulsante resta sulla pagina generica /features, che e'
+// quella che i primi 4.119 destinatari hanno gia' ricevuto. Non e' un indirizzo
+// inventato "in attesa": un link finto in una campagna in volo manderebbe
+// migliaia di persone su una pagina inesistente.
+//
+// Quando arriva il link, si cambia SOLO questa riga e si riallinea la campagna in
+// banca dati con `node scripts/aggiorna-dem-air-market.mjs --commit`: il modello
+// nel codice e la copia in volo sono due cose distinte (vedi lo script).
+export const PAGINA_AIR_MARKET = "https://www.santaddeo.com/features"
+
+// Invito alla pagina: identico per tutti, cambia solo la riga che segue.
 const BOTTONE_FUNZIONALITA = `          <!-- Invito principale -->
           <tr>
             <td align="center" style="padding:30px 32px 10px;">
-              <a href="https://www.santaddeo.com/features" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri tutte le funzionalità</a>
+              <a href="${PAGINA_AIR_MARKET}" style="display:inline-block;background-color:#2bb3a3;color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 38px;border-radius:6px;">Scopri come funziona</a>
             </td>
           </tr>`
+
+// Oggetti da mettere alla prova sulla coda, contro quello attuale.
+//
+// L'attuale ("Il tuo prossimo ospite ha già prenotato il volo") apre al 15,15%,
+// meglio della campagna di riferimento sulla stessa lista fredda (14,04%): per
+// questo NON viene buttato, ma tenuto come termine di paragone. Se il nuovo
+// oggetto apre meno, si e' perso nulla; se apre piu', lo si sa con i numeri.
+//
+// Nessuno di questi promette cifre o risultati ("+18% di RevPAR"): sono
+// verifiche che non possiamo sostenere e che sulla lista fredda attirano
+// segnalazioni di spam, le quali peggiorano la consegna per TUTTA la lista.
+export const OGGETTI_ALTERNATIVI = [
+  "Sai quanti voli sono già prenotati verso il tuo aeroporto?",
+  "I tuoi ospiti di settembre hanno già il biglietto in mano",
+  "C'è un dato che il tuo revenue non sta guardando",
+  "Il volo è prenotato. La camera no.",
+  "Chi arriverà in città lo si sa già oggi",
+] as const
 
 export const AIR_MARKET_PRESET = {
   name: "Santaddeo - Traffico aereo (Air Market)",
@@ -47,20 +78,26 @@ export const AIR_MARKET_PRESET = {
     titolo: "Santaddeo - Air Market Intelligence",
     anteprima: "Lui non sa ancora dove dormirà. Il suo volo, però, è già prenotato.",
     motivoRicezione: "Ricevi questa email perché riteniamo Santaddeo utile per la tua struttura ricettiva.",
+    // TRE righe, non di piu'.
+    //
+    // La versione precedente ne aveva 152 parole: spiegava il modulo dentro
+    // l'email, e chi aveva capito tutto non aveva piu' motivo di cliccare. Il
+    // compito dell'email e' incuriosire; a spiegare ci pensa la pagina. Per lo
+    // stesso motivo qui NON c'e' piu' il riquadro di confronto con gli altri
+    // sistemi (resta nelle altre due versioni, dove il pubblico e' diverso):
+    // e' il contenuto tipico di una pagina, non di un invito.
     righe: `          <!-- Gancio -->
           <tr>
             <td style="padding:34px 32px 0;font-size:16px;line-height:1.7;color:#2d2d2d;">
               <p style="margin:0 0 18px;font-size:21px;font-weight:bold;color:#1b2a4a;line-height:1.45;">Il tuo prossimo ospite ha già prenotato il volo.</p>
-              <p style="margin:0 0 18px;">Non sa ancora dove dormirà. Ma il suo aereo, verso l'aeroporto vicino a te, è già in calendario.</p>
-              <p style="margin:0 0 6px;">Santaddeo legge quei voli e ti dice <strong>da quali paesi arriverà la domanda</strong>, così scegli prima su quali mercati puntare con pricing e marketing.</p>
+              <p style="margin:0 0 18px;">Non sa ancora dove dormirà, ma il suo aereo verso l'aeroporto vicino a te è già in calendario.</p>
+              <p style="margin:0 0 6px;">Santaddeo legge quei voli e ti dice <strong>da quali paesi arriverà la domanda</strong>, settimane prima delle prenotazioni.</p>
             </td>
           </tr>
-${RIQUADRO_DIFFERENZA}
 ${BOTTONE_FUNZIONALITA}
           <tr>
             <td align="center" style="padding:0 32px 26px;font-size:15px;color:#5a5a5a;line-height:1.6;">
-              Ti interessa vederlo sui dati del tuo hotel?<br />
-              <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="color:#1b2a4a;font-weight:bold;">Prenota una demo gratuita</a> o rispondi a questa email.
+              Oppure <a href="https://calendar.app.google/S25JdWoLtBnbGw4Q8" style="color:#1b2a4a;font-weight:bold;">prenota una demo gratuita</a>.
             </td>
           </tr>`,
   }),

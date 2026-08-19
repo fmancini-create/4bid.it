@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getLocationByEmail } from "@/lib/dem/hotels-csv"
 import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
+import { provaAttiva } from "@/lib/dem/ab-oggetto"
 
 export async function GET(request: NextRequest) {
   // Espone indirizzi email dei destinatari e la loro localita': dato personale,
@@ -200,6 +201,40 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Confronto A/B sull'oggetto.
+    //
+    // Si contano SOLO le email con `send_status = 'sent'` e una variante
+    // assegnata. Le 4.119 spedite prima che la prova esistesse hanno
+    // `subject_variant = NULL` e restano fuori: sommarle alla variante A la
+    // gonfierebbe con invii fatti in altri giorni, con un testo diverso e una
+    // reputazione del mittente diversa, e il confronto non misurerebbe piu'
+    // l'oggetto.
+    //
+    // Conteggi lato banca dati (head: true, nessuna riga scaricata): su decine di
+    // migliaia di destinatari, contare in memoria significherebbe scaricarli tutti
+    // e sbagliare il totale appena la paginazione taglia l'elenco.
+    const contaVariante = async (variante: "A" | "B", filtro?: "aperte" | "clic") => {
+      let q = supabase
+        .from("dem_recipients")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaignId)
+        .eq("send_status", "sent")
+        .eq("subject_variant", variante)
+      if (filtro === "aperte") q = q.gt("open_count", 0)
+      if (filtro === "clic") q = q.gt("click_count", 0)
+      const { count } = await q
+      return count || 0
+    }
+
+    const [aInviate, aAperte, aClic, bInviate, bAperte, bClic] = await Promise.all([
+      contaVariante("A"),
+      contaVariante("A", "aperte"),
+      contaVariante("A", "clic"),
+      contaVariante("B"),
+      contaVariante("B", "aperte"),
+      contaVariante("B", "clic"),
+    ])
+
     // Get tracking events
     const { data: events } = await supabase
       .from("dem_tracking_events")
@@ -226,6 +261,16 @@ export async function GET(request: NextRequest) {
         unique_opens: campaign.unique_opens || 0,
         clicks: campaign.click_count || 0,
         unique_clicks: campaign.unique_clicks || 0,
+      },
+      // `attiva` dice se i due oggetti esistono e sono diversi: il pannello non
+      // deve mostrare un confronto quando non c'e' un secondo oggetto da
+      // confrontare.
+      ab: {
+        attiva: provaAttiva(campaign.subject, campaign.subject_b),
+        oggettoA: campaign.subject || "",
+        oggettoB: campaign.subject_b || "",
+        a: { inviate: aInviate, aperte: aAperte, clic: aClic },
+        b: { inviate: bInviate, aperte: bAperte, clic: bClic },
       },
     })
   } catch (error) {
