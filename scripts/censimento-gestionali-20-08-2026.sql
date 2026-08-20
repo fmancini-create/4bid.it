@@ -100,7 +100,14 @@ GROUP BY dominio
 UNION ALL
 SELECT
   'email:' || email                                    AS identity_key,
-  coalesce(azienda, split_part(email, '@', 1))         AS name,
+  -- GROUP BY email OBBLIGATORIO, non estetico: `base` e' DISTINCT su
+  -- (email, dominio, azienda), quindi lo STESSO indirizzo con due
+  -- `nome_azienda` diversi produceva DUE righe con la stessa identity_key.
+  -- Misurato: lettieri.massimo@gmail.com compariva come "Detercom professional
+  -- srl" e come "lettieri.massimo". Con l'upsert questo faceva morire l'intero
+  -- lotto ("ON CONFLICT DO UPDATE command cannot affect row a second time"):
+  -- una riga sporca su 25.443 fermava tutta la semina.
+  coalesce(min(azienda), split_part(email, '@', 1))    AS name,
   email                                                AS email,
   ARRAY[email]                                         AS emails,
   NULL::text                                           AS website_host,
@@ -108,15 +115,22 @@ SELECT
   -- Stato onesto: non e' "nessun gestionale", e' "non possiamo cercarlo".
   'no_website'::text                                   AS technology_status
 FROM marcata
-WHERE personale;
+WHERE personale
+GROUP BY email;
 
 -- ---------------------------------------------------------------------------
 -- 3. Semina a lotti
 -- ---------------------------------------------------------------------------
 -- Avanza di `p_limit` candidate per chiamata usando `seed_offset` come segnaposto,
 -- e mette in coda per il riconoscimento solo quelle che hanno un sito.
+-- Il tipo di ritorno cambia (`inserite` -> `toccate`), e per cambiarlo serve
+-- eliminare prima: CREATE OR REPLACE non puo' alterare la firma.
+DROP FUNCTION IF EXISTS censimento_semina_lotto(integer);
+
 CREATE OR REPLACE FUNCTION censimento_semina_lotto(p_limit integer DEFAULT 500)
-RETURNS TABLE (inserite integer, in_coda integer, nuovo_offset integer, totale integer, esaurito boolean)
+-- `toccate` e NON `inserite`: l'upsert restituisce anche le righe AGGIORNATE,
+-- quindi chiamarle "inserite" sarebbe un numero che mente su una rilettura.
+RETURNS TABLE (toccate integer, in_coda integer, nuovo_offset integer, totale integer, esaurito boolean)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -132,9 +146,18 @@ BEGIN
 
   SELECT count(*)::int INTO v_totale FROM hospitality_seed_candidates;
 
+  -- `DISTINCT ON` e' una RETE, non la correzione: la causa e' stata sistemata
+  -- nella vista. Ma una sola chiave duplicata bastava a far morire il lotto
+  -- intero, quindi qui si paga il prezzo di una riga scartata invece di fermare
+  -- la semina di 25.443. Senza rete, una fonte nuova sporca ripeterebbe il guasto.
+  --
+  -- `ORDER BY identity_key` non e' decorativo: con OFFSET serve un ordine
+  -- UNIVOCO, altrimenti fra un lotto e l'altro le righe si spostano e qualcuna
+  -- viene saltata o vista due volte. `identity_key` e' unica, quindi va bene.
   CREATE TEMP TABLE _lotto ON COMMIT DROP AS
-    SELECT * FROM hospitality_seed_candidates
-    ORDER BY identity_key
+    SELECT DISTINCT ON (identity_key) *
+      FROM hospitality_seed_candidates
+     ORDER BY identity_key
     OFFSET v_offset LIMIT p_limit;
 
   WITH ins AS (
