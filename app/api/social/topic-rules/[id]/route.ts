@@ -29,6 +29,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     "auto_publish",
     "notes",
     "min_queue_pending",
+    // Senza queste due voci la modifica dei video sarebbe INERTE: il ciclo sotto
+    // copia solo i campi nominati qui, quindi una scelta salvata dall'interfaccia
+    // verrebbe scartata senza alcun errore.
+    "use_library_video",
+    "video_ids",
   ]
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const k of allowed) if (k in body) update[k] = body[k]
