@@ -41,6 +41,7 @@ export default function GuidaRevenueManagementPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-31"
         title="Guida Completa al Revenue Management Hotel"
         description="Guida completa al Revenue Management per hotel: cos'è, come funziona, checklist operativa, errori comuni e glossario."
         url="https://www.4bid.it/guida-revenue-management-hotel"

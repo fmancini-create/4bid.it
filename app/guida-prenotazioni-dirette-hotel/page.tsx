@@ -41,6 +41,7 @@ export default function GuidaPrenotazioniDirettePage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-31"
         title="Guida alle Prenotazioni Dirette Hotel"
         description="Guida completa per aumentare le prenotazioni dirette: strategie, checklist operativa, errori comuni e glossario."
         url="https://www.4bid.it/guida-prenotazioni-dirette-hotel"

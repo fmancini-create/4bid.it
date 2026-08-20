@@ -50,6 +50,7 @@ export default function OttimizzazioneADRHotelPage() {
       <StructuredData
         url="https://www.4bid.it/ottimizzazione-adr-hotel"
         type="Article"
+        datePublished="2025-12-15"
         title="Ottimizzazione ADR Hotel"
         description="Strategie avanzate per ottimizzare l'ADR del tuo hotel"
         faqs={faqData}

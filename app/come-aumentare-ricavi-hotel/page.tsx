@@ -49,6 +49,7 @@ export default function ComeAumentareRicaviHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Come Aumentare i Ricavi del Tuo Hotel - Guida Pratica 2026"
         description="10 strategie comprovate per incrementare il fatturato del tuo hotel"
         url="https://www.4bid.it/come-aumentare-ricavi-hotel"

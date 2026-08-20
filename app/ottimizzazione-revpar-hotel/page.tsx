@@ -24,6 +24,7 @@ export default function OttimizzazioneRevparHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Ottimizzazione RevPAR Hotel"
         description="Guida completa all'ottimizzazione del RevPAR: strategie, formule di calcolo e best practice per massimizzare il Revenue per Available Room."
         url="https://www.4bid.it/ottimizzazione-revpar-hotel"

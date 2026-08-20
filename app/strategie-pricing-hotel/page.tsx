@@ -24,6 +24,7 @@ export default function StrategiePricingHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Strategie Pricing Hotel: BAR, Dynamic Pricing, LOS"
         description="Strategie pricing hotel comprovate: BAR strategy, dynamic pricing, price fencing, LOS restrictions. Dal pricing statico al dinamico intelligente."
         url="https://www.4bid.it/strategie-pricing-hotel"

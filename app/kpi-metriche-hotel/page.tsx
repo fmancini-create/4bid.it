@@ -50,6 +50,7 @@ export default function KPIMetricheHotelPage() {
       <StructuredData
         url="https://www.4bid.it/kpi-metriche-hotel"
         type="Article"
+        datePublished="2025-12-15"
         title="KPI e Metriche Hotel: Monitora le Performance"
         description="Guida completa ai KPI e metriche essenziali per hotel"
         faqs={faqData}

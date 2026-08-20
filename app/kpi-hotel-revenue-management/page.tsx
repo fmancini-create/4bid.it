@@ -50,6 +50,7 @@ export default function KPIHotelRevenueManagementPage() {
       <StructuredData
         url="https://www.4bid.it/kpi-hotel-revenue-management"
         type="Article"
+        datePublished="2025-12-15"
         title="KPI Hotel Revenue Management: Monitora Performance"
         description="I KPI essenziali del Revenue Management per monitorare e ottimizzare le performance hotel"
         faqs={faqData}

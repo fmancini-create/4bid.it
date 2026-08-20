@@ -107,8 +107,13 @@ export default function Metodo4BidPage() {
   const entityLinks = entitySchemaLinks("metodo-4bid")
   return (
     <div className="min-h-screen bg-background">
+      {/*
+        WebPage, non Article: questa e' la pagina che descrive il metodo, non un
+        articolo datato. Per WebPage Google non chiede datePublished, quindi non
+        serve cercarle una data di pubblicazione che non ha.
+      */}
       <StructuredData
-        type="Article"
+        type="WebPage"
         title="Il Metodo 4BID"
         description="L'approccio 4BID integra revenue management, dati, intelligenza artificiale, automazioni e controllo operativo."
         url="https://www.4bid.it/metodo-4bid"

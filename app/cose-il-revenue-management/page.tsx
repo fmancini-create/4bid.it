@@ -182,6 +182,7 @@ export default function CoseIlRevenueManagementPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Cos'è il Revenue Management Hotel? Guida Completa"
         description="Guida completa per comprendere cos'è il Revenue Management Hotel, dove si applica e perché è fondamentale per massimizzare i ricavi."
         url="https://www.4bid.it/cose-il-revenue-management"
