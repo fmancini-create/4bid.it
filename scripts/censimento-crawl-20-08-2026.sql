@@ -89,18 +89,28 @@ CREATE OR REPLACE FUNCTION censimento_registra_host_sconosciuto(
 RETURNS void
 LANGUAGE sql
 AS $$
+  -- `sample_urls` e' jsonb, NON text[]: il tipo va letto dallo schema, non
+  -- dedotto dal nome. Un `ARRAY[...]` qui faceva fallire l'intera migrazione.
   INSERT INTO hospitality_unknown_booking_hosts (host, occurrences, sample_urls, first_seen_at, last_seen_at)
-  VALUES (lower(p_host), 1, ARRAY[p_url], now(), now())
+  VALUES (lower(p_host), 1, jsonb_build_array(p_url), now(), now())
   ON CONFLICT (host) DO UPDATE
     SET occurrences  = hospitality_unknown_booking_hosts.occurrences + 1,
         -- Massimo 5 esempi: servono a capire di che fornitore si tratta, non a
-        -- conservare ogni URL visto. Un array che cresce senza limite su 17.855
+        -- conservare ogni URL visto. Un elenco che cresce senza limite su 17.855
         -- strutture diventa un problema di spazio e di lettura.
+        --
+        -- `ORDER BY u` non e' estetico: senza un ordine, `LIMIT 5` sceglie 5
+        -- elementi QUALSIASI, quindi a parita' di dati la colonna cambierebbe a
+        -- ogni chiamata e non si potrebbe piu' verificare nulla.
         sample_urls  = (
-          SELECT array_agg(u) FROM (
-            SELECT DISTINCT unnest(hospitality_unknown_booking_hosts.sample_urls || ARRAY[p_url]) AS u
-            LIMIT 5
-          ) s
+          SELECT coalesce(jsonb_agg(u ORDER BY u), '[]'::jsonb)
+            FROM (
+              SELECT DISTINCT jsonb_array_elements_text(
+                       hospitality_unknown_booking_hosts.sample_urls || jsonb_build_array(p_url)
+                     ) AS u
+               ORDER BY 1
+               LIMIT 5
+            ) s
         ),
         last_seen_at = now();
 $$;
