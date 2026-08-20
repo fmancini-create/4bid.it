@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import {
   mediaDelPost,
   ordinaPerRotazione,
@@ -26,6 +28,25 @@ const v = (id: string, sort?: number): VideoLibreria => ({
   title: `Video ${id}`,
   sort_order: sort ?? 0,
 })
+
+/**
+ * Il generatore non e' provabile a unita': chiama l'IA e Supabase. Ma il pezzo
+ * che conta e' un solo argomento — il contatore che rende la rotazione vera fra
+ * le esecuzioni — e quello si puo' controllare leggendo il codice.
+ *
+ * I COMMENTI VANNO VIA prima di cercare. Altrimenti la prova misurerebbe la
+ * prosa che spiega la regola invece della riga che la applica, e resterebbe
+ * verde su un generatore rotto: l'errore che ho gia' commesso, cercando la
+ * menzione di un nome invece della riga che decide.
+ */
+function codiceSenzaCommenti(percorso: string): string {
+  const testo = readFileSync(join(process.cwd(), percorso), "utf8")
+  return testo
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((r) => !r.trim().startsWith("//"))
+    .join("\n")
+}
 
 describe("indirizzo del video di libreria", () => {
   it("costruisce un vero indirizzo YouTube dall'id nudo", () => {
@@ -173,5 +194,23 @@ describe("avviso onesto sulle destinazioni", () => {
   it("non inventa esclusioni quando Instagram non c'e'", () => {
     expect(piattaformeSenzaVideoLibreria(["facebook", "linkedin"])).toEqual([])
     expect(piattaformeSenzaVideoLibreria(null)).toEqual([])
+  })
+})
+
+describe("contratto del generatore", () => {
+  it("passa alla rotazione il contatore PERSISTITO, non l'indice del lotto", () => {
+    // Il difetto che questa prova esiste per fermare: usare solo `i`. La suite
+    // resterebbe verde, il codice sembrerebbe giusto, e ogni esecuzione
+    // ripartirebbe dal primo video — una rotazione che non ruota.
+    const codice = codiceSenzaCommenti("lib/social/campaign-runner.ts")
+    expect(codice).toContain("posts_generated_count || 0) + i")
+  })
+
+  it("scrive i campi media da un punto solo, senza ricalcolarli a mano", () => {
+    // Se il generatore tornasse a comporre post_type/media_priority da se',
+    // i vincoli del database potrebbero contraddirsi di nuovo.
+    const codice = codiceSenzaCommenti("lib/social/campaign-runner.ts")
+    expect(codice).toContain("mediaDelPost(")
+    expect(codice).not.toContain('post_type: imageUrl ? "image" : "text"')
   })
 })

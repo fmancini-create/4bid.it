@@ -24,8 +24,12 @@ import fs from "node:fs"
 
 const VIDEO = "lib/social/video.ts"
 const CRON = "app/api/cron/publish-scheduled-posts/route.ts"
+const CAMPAGNA = "lib/social/campaign-video.ts"
+const RUNNER = "lib/social/campaign-runner.ts"
 
-const originali = Object.fromEntries([VIDEO, CRON].map((f) => [f, fs.readFileSync(f, "utf8")]))
+const originali = Object.fromEntries(
+  [VIDEO, CRON, CAMPAGNA, RUNNER].map((f) => [f, fs.readFileSync(f, "utf8")]),
+)
 const ripristina = () => {
   for (const [f, c] of Object.entries(originali)) fs.writeFileSync(f, c)
 }
@@ -98,6 +102,62 @@ const sabotaggi = [
     cerca: 'if (isYoutubeUrl(videoUrl)) return "youtube"',
     sost: 'if (isVideoFileUrl(videoUrl)) return "video"\n    if (isYoutubeUrl(videoUrl)) return "youtube"',
     rompe: "niente: i due riconoscimenti sono mutuamente esclusivi, quindi l'ordine non cambia il risultato",
+    equivalente: true,
+  },
+
+  // ---- Video a rotazione nelle campagne ----
+  {
+    file: CAMPAGNA,
+    cerca: "    return a.video_id.localeCompare(b.video_id)",
+    sost: "    return 0",
+    rompe:
+      "ordine non univoco: due video con lo stesso sort_order potrebbero scambiarsi di posto, e lo stesso indice darebbe video diversi",
+  },
+  {
+    file: CAMPAGNA,
+    cerca: "  const i = ((Math.trunc(input.indiceGlobale) % n) + n) % n",
+    sost: "  const i = Math.trunc(input.indiceGlobale) % n",
+    rompe: "un contatore negativo darebbe un indice negativo, cioe' undefined: un post senza video",
+  },
+  {
+    file: CAMPAGNA,
+    cerca: "  if (ordinati.length === 0) return null",
+    sost: "",
+    rompe: "raccolta vuota: tornerebbe undefined invece di null, e il post verrebbe dichiarato video senza averne uno",
+  },
+  {
+    file: CAMPAGNA,
+    cerca: "    if (isYoutubeUrl(url)) {",
+    sost: "    if (true) {",
+    rompe: "un id malformato nella libreria produrrebbe un post 'video' che il vincolo del database rifiuta",
+  },
+  {
+    file: CAMPAGNA,
+    cerca: "        image_url: youtubeThumbnail(url) ?? imageUrl,",
+    sost: "        image_url: null,",
+    rompe: "il post video perderebbe la copertina, che e' cio' che si vede nel riquadro prima di partire",
+  },
+  {
+    // L'errore vero che avevo commesso nella #227: leggere le piattaforme
+    // spuntate invece di cio' che riceve davvero il video.
+    file: CAMPAGNA,
+    cerca: '  return (piattaforme ?? []).filter((p) => p === "instagram")',
+    sost: "  return []",
+    rompe:
+      "l'avviso su Instagram sparirebbe: la campagna pubblicherebbe su Instagram niente, in silenzio",
+  },
+  {
+    file: RUNNER,
+    cerca: "        indiceGlobale: (rule.posts_generated_count || 0) + i,",
+    sost: "        indiceGlobale: i,",
+    rompe:
+      "la rotazione ripartirebbe da zero a ogni esecuzione: una campagna da 1 post userebbe sempre il primo video",
+  },
+  {
+    file: CAMPAGNA,
+    cerca: "  return [...video].sort((a, b) => {",
+    sost: "  return video.slice().sort((a, b) => {",
+    rompe: "niente: entrambe le forme copiano l'array prima di ordinarlo, quindi il comportamento e' identico",
     equivalente: true,
   },
 ]
