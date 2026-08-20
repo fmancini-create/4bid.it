@@ -18,6 +18,7 @@
 // accorge: la sua promessa e' che `/percorso` non scatti mai dentro un host, non
 // che le 16 firme siano quelle giuste.
 import { describe, expect, it } from "vitest"
+import { eUnRifiutoTemporaneo } from "../lib/hospitality/census"
 import {
   decidiFornitori,
   estraiSegnali,
@@ -343,5 +344,35 @@ describe("la firma Beds24 come e' DAVVERO in produzione oggi", () => {
       [BEDS24_OGGI],
     )
     expect(r).toHaveLength(0)
+  })
+})
+
+describe("un rifiuto non e' un sito che non esiste", () => {
+  // Il difetto piu' costoso trovato oggi: un 403 veniva marcato `failed` come un
+  // dominio inesistente, quindi quell'albergo non sarebbe MAI stato ritentato e
+  // sarebbe uscito dal censimento per sempre. Misurato: `palazzettopisani.com` e
+  // `colibrihotel.it` erano "irraggiungibili" per il censimento e rispondono
+  // 200 a una richiesta fatta meglio.
+  it("i rifiuti anti-automi si ritentano", () => {
+    for (const err of ["HTTP 403", "HTTP 401", "HTTP 406", "HTTP 429", "HTTP 503", "HTTP 500"]) {
+      expect(eUnRifiutoTemporaneo(err), err).toBe(true)
+    }
+  })
+
+  it("la lentezza non e' assenza: si ritenta", () => {
+    expect(eUnRifiutoTemporaneo("timeout oltre 12s")).toBe(true)
+  })
+
+  // CONTROLLO NEGATIVO: se dicesse "ritenta" a tutto, la coda non si
+  // svuoterebbe mai e il censimento girerebbe a vuoto in eterno.
+  it("cio' che davvero non esiste si archivia, altrimenti la coda non finisce mai", () => {
+    for (const err of ["HTTP 404", "HTTP 410", "fetch failed", "getaddrinfo ENOTFOUND x.it", ""]) {
+      expect(eUnRifiutoTemporaneo(err), err).toBe(false)
+    }
+  })
+
+  it("un codice che CONTIENE 403 ma non lo e' non inganna il confronto", () => {
+    // `\b` alla fine del confronto: senza, "HTTP 4030" passerebbe per 403.
+    expect(eUnRifiutoTemporaneo("HTTP 4030")).toBe(false)
   })
 })

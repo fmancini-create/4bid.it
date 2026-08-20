@@ -72,8 +72,15 @@ async function scarica(url: string): Promise<{ html: string; urlFinale: string }
         // essere riconosciuto e' esattamente cio' che un gestore del sito ha
         // diritto di bloccare; qui c'e' un contatto per chiedere di smettere.
         "user-agent": "4bidBot/1.0 (censimento gestionali; https://www.4bid.it; info@4bid.it)",
-        accept: "text/html,application/xhtml+xml",
-        "accept-language": "it-IT,it;q=0.9",
+        // `*/*;q=0.8` in coda NON e' decorazione: senza di esso alcuni server
+        // rispondono `406 Not Acceptable` invece della pagina. Misurato su
+        // colibrihotel.it, che il censimento dava per irraggiungibile mentre
+        // `curl` con le intestazioni complete lo leggeva con un 200.
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "it-IT,it;q=0.9,en;q=0.8",
+        // Alcuni server rifiutano (403) chi non dichiara di accettare la
+        // compressione, perche' e' un tratto tipico degli automi grezzi.
+        "accept-encoding": "gzip, deflate, br",
       },
     })
 
@@ -96,6 +103,26 @@ async function scarica(url: string): Promise<{ html: string; urlFinale: string }
   } finally {
     clearTimeout(timer)
   }
+}
+
+/**
+ * Il sito ci ha RIFIUTATO adesso, o non esiste?
+ *
+ * Estratta dal ciclo di scrittura di proposito: dentro il ciclo questa regola
+ * non era verificabile senza database, e una regola che decide se un albergo
+ * verra' mai piu' ritentato deve essere provabile da sola.
+ *
+ * `true`  => il sito c'e' ma non ha voluto parlare con noi: si ritenta.
+ * `false` => non c'e' nulla da raggiungere (DNS morto, 404, 410): si archivia.
+ */
+export function eUnRifiutoTemporaneo(errore: string | null | undefined): boolean {
+  const err = errore || ""
+  // 401/403/405/406/409/423/425/429: protezioni anti-automi e limiti di banda.
+  // 408 e 5xx: il server c'e' ma adesso non ce la fa.
+  if (/HTTP (401|403|405|406|408|409|423|425|429|5\d\d)\b/.test(err)) return true
+  // Lentezza non e' assenza: un sito lento oggi risponde domani.
+  if (/timeout/i.test(err)) return true
+  return false
 }
 
 async function esaminaStruttura(riga: RigaLotto, firme: Firma[]): Promise<EsitoStruttura> {
@@ -212,16 +239,42 @@ export async function processaLottoCensimento(limite = CENSIMENTO_LOTTO): Promis
   for (const e of esiti) {
     if (e.irraggiungibile) {
       irraggiungibili++
+
+      // "Ci ha RIFIUTATO" e "NON ESISTE" sono due cose diverse, e confonderle
+      // costa strutture vere.
+      //
+      // Un 403/406/429 e un timeout dicono che il sito c'e' e non ha voluto
+      // parlare con noi adesso: quasi sempre e' una protezione anti-automi o un
+      // momento di carico. Marcandoli `failed` come un dominio inesistente,
+      // quell'albergo non verrebbe MAI piu' ritentato e uscirebbe dal censimento
+      // per sempre -- e' esattamente il caso di `palazzettopisani.com` e
+      // `colibrihotel.it`, che rispondono 200 a una richiesta fatta meglio.
+      //
+      // Quindi: rifiuto => torna in coda per un nuovo tentativo; sito
+      // irraggiungibile davvero (DNS che non risolve, 404, 410) => `failed`.
+      const rifiuto = eUnRifiutoTemporaneo(e.errore)
+
       await db
         .from("hospitality_properties")
-        .update({ technology_status: "unreachable", last_crawled_at: adesso, updated_at: adesso })
+        .update({
+          // Chi ci ha solo rifiutato resta `unknown`: dire "unreachable" di un
+          // albergo il cui sito funziona e' un'informazione falsa, e questa
+          // colonna decide chi entra nelle liste commerciali.
+          technology_status: rifiuto ? "unknown" : "unreachable",
+          last_crawled_at: adesso,
+          updated_at: adesso,
+        })
         .eq("id", e.property_id)
+
       await db
         .from("hospitality_crawl_queue")
         .update({
-          status: "failed",
+          status: rifiuto ? "pending" : "failed",
           last_error: e.errore,
           last_attempt_at: adesso,
+          // Un rifiuto si ritenta piu' tardi, non subito: ripresentarsi entro
+          // pochi minuti a chi ci ha appena respinto significa insistere.
+          next_attempt_at: rifiuto ? new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() : null,
           updated_at: adesso,
         })
         .eq("property_id", e.property_id)
