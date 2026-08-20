@@ -35,7 +35,11 @@ try {
            booking_engine_provider = NULL, booking_engine_confidence = NULL,
            pms_provider = NULL, pms_confidence = NULL,
            channel_manager_provider = NULL, channel_manager_confidence = NULL,
-           last_crawled_at = NULL, last_crawl_status = NULL, last_crawl_error = NULL
+           -- Solo last_crawled_at: last_crawl_status e last_crawl_error NON
+           -- esistono in questa tabella, li avevo dedotti dal nome invece di
+           -- leggerli dallo schema. Lo stato del tentativo vive nella coda
+           -- (hospitality_crawl_queue.last_error), non qui.
+           last_crawled_at = NULL
      WHERE technology_status IN ('detected', 'unreachable', 'needs_review')`)
   // 3) la coda torna in attesa, contatore azzerato.
   const cod = await c.query(`
