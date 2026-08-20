@@ -59,6 +59,10 @@
     {
       "path": "/api/cron/scan-slope",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/censimento-gestionali",
+      "schedule": "* * * * *"
     }
   ]
 }
