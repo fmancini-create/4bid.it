@@ -21,6 +21,7 @@ export default function StrategieVenditaDirettaHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Strategie Vendita Diretta Hotel"
         description="Aumenta le vendite dirette del tuo hotel riducendo la dipendenza da OTA. Strategie, strumenti e tecniche di disintermediazione."
         url="https://www.4bid.it/strategie-vendita-diretta-hotel"

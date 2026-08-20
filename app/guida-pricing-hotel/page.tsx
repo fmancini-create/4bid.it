@@ -40,6 +40,7 @@ export default function GuidaPricingHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-31"
         title="Guida Completa al Pricing Hotel"
         description="Guida completa alle strategie di pricing per hotel: tariffe dinamiche, BAR, restrizioni, segmentazione."
         url="https://www.4bid.it/guida-pricing-hotel"

@@ -51,6 +51,7 @@ export default function AnalisiCompetitivaHotelFirenzePage() {
       <StructuredData
         url="https://www.4bid.it/analisi-competitiva-hotel-firenze"
         type="Article"
+        datePublished="2025-12-15"
         title="Analisi Competitiva Hotel Firenze"
         description="Analisi strategica del competitive set per hotel a Firenze"
         faqs={faqData}

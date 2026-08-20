@@ -21,6 +21,7 @@ export default function StrategiePrenotazioniDiretteHotelPage() {
     <div className="min-h-screen bg-background">
       <StructuredData
         type="Article"
+        datePublished="2025-12-15"
         title="Strategie Prenotazioni Dirette Hotel"
         description="Aumenta le prenotazioni dirette del tuo hotel e riduci le commissioni OTA fino al 50%. Strategie di direct booking e disintermediazione."
         url="https://www.4bid.it/strategie-prenotazioni-dirette-hotel"
