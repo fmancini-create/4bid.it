@@ -25,6 +25,21 @@ const SABOTAGGI = [
     "    return null\n  }\n}",
     "    throw new Error('regex non valida')\n  }\n}",
   ],
+  [
+    "SAB8 l'elenco dei non-fornitori (social, analitiche) viene ignorato",
+    "      if (HOST_MAI_FORNITORI.test(h)) continue",
+    "      if (false) continue",
+  ],
+  [
+    "SAB9 l'indizio di prenotazione si cerca di nuovo nell'URL intero (query compresa)",
+    "if (INDIZI_PRENOTAZIONE.test(h + parsed.pathname)) suoi.add(h)",
+    "if (INDIZI_PRENOTAZIONE.test(u)) suoi.add(h)",
+  ],
+  [
+    "SAB10 la prova torna a essere la pagina visitata invece dell'host del fornitore",
+    '          evidence_url: h,\n          source_url: urlPagina,',
+    "          evidence_url: urlPagina,\n          source_url: urlPagina,",
+  ],
 ]
 
 const quale = process.argv[2]

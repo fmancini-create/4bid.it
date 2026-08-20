@@ -45,6 +45,12 @@ type EsitoStruttura = {
   riscontri: Riscontro[]
   hostSconosciuti: string[]
   irraggiungibile: boolean
+  // La pagina effettivamente scaricata (dopo i rimandi). Serve per l'URL di
+  // esempio degli host sconosciuti: prima lo prendevo da `riscontri[0]`, che
+  // per un host sconosciuto e' vuoto quasi per definizione -- infatti in
+  // produzione tutti e 14 gli esempi erano stringa vuota, cioe' l'elenco dei
+  // fornitori da valutare non diceva DOVE guardare.
+  urlPagina: string
 }
 
 /**
@@ -100,6 +106,7 @@ async function esaminaStruttura(riga: RigaLotto, firme: Firma[]): Promise<EsitoS
     riscontri: [],
     hostSconosciuti: [],
     irraggiungibile: false,
+    urlPagina: riga.website_url,
   }
 
   const esito = await scarica(riga.website_url)
@@ -111,7 +118,7 @@ async function esaminaStruttura(riga: RigaLotto, firme: Firma[]): Promise<EsitoS
   const riscontri = riconosci(firme, segnali, esito.html, esito.urlFinale)
   const sconosciuti = hostDiPrenotazioneSconosciuti(segnali, riscontri, riga.website_host)
 
-  return { ...base, ok: true, riscontri, hostSconosciuti: sconosciuti }
+  return { ...base, ok: true, riscontri, hostSconosciuti: sconosciuti, urlPagina: esito.urlFinale }
 }
 
 export type EsitoLotto = {
@@ -241,8 +248,12 @@ export async function processaLottoCensimento(limite = CENSIMENTO_LOTTO): Promis
           provider_name: r.provider_name,
           confidence: r.confidence,
           evidence_kind: r.evidence_kind,
+          // Due colonne, due significati: `evidence_url` e' l'host/URL DEL
+          // FORNITORE trovato, `source_url` la pagina della struttura dove
+          // l'abbiamo trovato. Prima scrivevo la pagina in entrambe, quindi la
+          // prova non era controllabile senza riscaricare l'HTML.
           evidence_url: r.evidence_url,
-          source_url: r.evidence_url,
+          source_url: r.source_url,
           evidence_excerpt: r.evidence_excerpt,
           raw_evidence: { slug: r.slug, kind: r.evidence_kind },
           is_current: true,
@@ -283,7 +294,10 @@ export async function processaLottoCensimento(limite = CENSIMENTO_LOTTO): Promis
       })
       .eq("property_id", e.property_id)
 
-    for (const h of e.hostSconosciuti) sconosciutiVisti.push({ host: h, url: e.riscontri[0]?.evidence_url || "" })
+    // La pagina dove l'host e' stato visto, NON `riscontri[0]`: per un host
+    // sconosciuto i riscontri sono vuoti quasi per definizione, quindi l'esempio
+    // era sempre stringa vuota e non si poteva andare a controllare.
+    for (const h of e.hostSconosciuti) sconosciutiVisti.push({ host: h, url: e.urlPagina })
   }
 
   // 6) Host di prenotazione non riconosciuti: e' cosi' che l'elenco dei

@@ -73,7 +73,12 @@ const MEWS = firma({
 const TUTTE = [SCIDOO, SLOPE, VERTICAL, BEDS24, MEWS]
 
 /** Costruisce una pagina minima che linka l'URL dato, come farebbe un sito vero. */
-const pagina = (href: string) => `<html><body><a href="${href}">Prenota</a></body></html>`
+// Accetta PIU' indirizzi: con un solo parametro, una prova che ne passava due
+// ne controllava in silenzio soltanto uno (JavaScript ignora gli argomenti in
+// eccesso, quindi restava verde). L'ha trovato `tsc`, non vitest: un controllo
+// dei tipi vede quello che una prova verde nasconde.
+const pagina = (...href: string[]) =>
+  `<html><body>${href.map((h) => `<a href="${h}">Prenota</a>`).join("")}</body></html>`
 
 const analizza = (href: string, urlPagina: string, firme: Firma[] = TUTTE) => {
   const html = pagina(href)
@@ -200,5 +205,69 @@ describe("host sconosciuti: si raccolgono quelli utili, non il sito della strutt
     const segnali = estraiSegnali(html, "https://hotel.it/")
     const riscontri = riconosci(TUTTE, segnali, html, "https://hotel.it/")
     expect(hostDiPrenotazioneSconosciuti(segnali, riscontri, "hotel.it")).toHaveLength(0)
+  })
+
+  // Difetto misurato in produzione: su 30 siti l'elenco dei "possibili
+  // fornitori" conteneva `www.facebook.com` 12 volte. Causa: il pulsante
+  // "condividi" porta la pagina di prenotazione della struttura DENTRO la
+  // propria query, e l'indizio venuto cercato nell'URL intero scattava.
+  it("un link di condivisione social non rende Facebook un gestionale", () => {
+    const html = pagina("https://www.facebook.com/sharer/sharer.php?u=https://hotel.it/prenota-ora")
+    const segnali = estraiSegnali(html, "https://hotel.it/")
+    const host = hostDiPrenotazioneSconosciuti(segnali, [], "hotel.it")
+    expect(host).not.toContain("www.facebook.com")
+    expect(host).toHaveLength(0)
+  })
+
+  // Questa prova ISOLA il difetto della query, e la precedente NO: Facebook e'
+  // gia' nell'elenco dei non-fornitori, quindi resta fuori anche cercando
+  // nell'URL intero. Provando a rimettere il difetto, il contratto restava
+  // verde: due difese sovrapposte, e la prova misurava solo quella sbagliata.
+  //
+  // Qui l'host NON e' in nessun elenco e la parola "prenota" sta SOLO nella
+  // query: viene raccolto se e solo se si cerca dove non si deve.
+  it("una parola di prenotazione nella sola query non basta a raccogliere l'host", () => {
+    const html = pagina("https://tracciamento.example.net/click?destinazione=https://hotel.it/prenota")
+    const segnali = estraiSegnali(html, "https://hotel.it/")
+    const host = hostDiPrenotazioneSconosciuti(segnali, [], "hotel.it")
+    expect(host).not.toContain("tracciamento.example.net")
+    expect(host).toHaveLength(0)
+  })
+
+  it("analitiche e reti di distribuzione non finiscono fra i fornitori", () => {
+    const html = pagina(
+      "https://www.googletagmanager.com/gtm.js?id=GTM-X&booking=1",
+      "https://cdn.jsdelivr.net/npm/booking-widget.js",
+    )
+    const segnali = estraiSegnali(html, "https://hotel.it/")
+    expect(hostDiPrenotazioneSconosciuti(segnali, [], "hotel.it")).toHaveLength(0)
+  })
+
+  it("un host di prenotazione vero passa ancora: il filtro non e' un tappo", () => {
+    // Controllo positivo dell'elenco: se escludesse troppo, questa prova cade.
+    const html = pagina("https://be.bookingexpert.it/reserve/hotel-x")
+    const segnali = estraiSegnali(html, "https://hotel.it/")
+    expect(hostDiPrenotazioneSconosciuti(segnali, [], "hotel.it")).toContain("be.bookingexpert.it")
+  })
+})
+
+describe("la prova di un rilevamento deve essere controllabile", () => {
+  // Difetto misurato: `evidence_url` conteneva la pagina VISITATA e non l'host
+  // del fornitore, e la stessa pagina finiva anche in `source_url`. Due colonne
+  // con lo stesso valore, e la prova reperibile solo riscaricando l'HTML: la
+  // mia verifica dava "0 su 3 coerenti" su rilevamenti in parte corretti.
+  it("evidence_url e' l'host del fornitore, source_url la pagina della struttura", () => {
+    const r = analizza("https://reservations.verticalbooking.com/x", "https://ilcasale.it/index.php")
+    expect(r).toHaveLength(1)
+    expect(r[0].evidence_url).toBe("reservations.verticalbooking.com")
+    expect(r[0].source_url).toBe("https://ilcasale.it/index.php")
+    expect(r[0].evidence_url).not.toBe(r[0].source_url)
+  })
+
+  it("per un riscontro su URL la prova e' l'URL del fornitore, non la pagina", () => {
+    const r = analizza("https://terzi.example.com/distributor/hotel-9", "https://hotel.it/camere")
+    expect(r.length).toBeGreaterThan(0)
+    expect(r[0].evidence_url).toContain("/distributor/")
+    expect(r[0].source_url).toBe("https://hotel.it/camere")
   })
 })

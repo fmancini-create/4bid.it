@@ -31,7 +31,17 @@ export type Riscontro = {
   // Da dove viene il riconoscimento. Serve a poterlo contestare: un riscontro
   // sull'host di un iframe di prenotazione vale piu' di una parola nell'HTML.
   evidence_kind: "host" | "url" | "html"
+  // LA PROVA: l'host o l'URL del fornitore che abbiamo effettivamente trovato
+  // (es. `book.verticalbooking.com`). Non e' la pagina che abbiamo visitato.
+  //
+  // Prima mettevo qui la pagina visitata, e la pagina finiva ANCHE in
+  // `source_url`: due colonne con lo stesso valore e la prova nascosta solo
+  // nell'estratto. Cosi' era impossibile controllare un rilevamento senza
+  // rileggere l'HTML, ed e' il motivo per cui la mia verifica dava
+  // "0 su 3 coerenti" su rilevamenti in parte corretti.
   evidence_url: string
+  // Dove l'abbiamo trovata: la pagina della struttura che abbiamo scaricato.
+  source_url: string
   evidence_excerpt: string
 }
 
@@ -123,7 +133,8 @@ export function riconosci(
           technology_types: f.technology_types,
           confidence: FIDUCIA.host,
           evidence_kind: "host",
-          evidence_url: urlPagina,
+          evidence_url: h,
+          source_url: urlPagina,
           evidence_excerpt: h,
         }
         break
@@ -160,7 +171,8 @@ export function riconosci(
             technology_types: f.technology_types,
             confidence: FIDUCIA.url,
             evidence_kind: "url",
-            evidence_url: urlPagina,
+            evidence_url: u.slice(0, 500),
+            source_url: urlPagina,
             evidence_excerpt: u.slice(0, 300),
           }
           break
@@ -182,7 +194,12 @@ export function riconosci(
             technology_types: f.technology_types,
             confidence: FIDUCIA.html,
             evidence_kind: "html",
+            // Per un riscontro nell'HTML la "prova" e' il testo trovato, non un
+            // indirizzo: qui evidence_url resta la pagina, perche' non esiste un
+            // URL del fornitore da citare. E' l'unico caso in cui i due campi
+            // coincidono, ed e' voluto.
             evidence_url: urlPagina,
+            source_url: urlPagina,
             evidence_excerpt: html.slice(at, at + 220).replace(/\s+/g, " "),
           }
           break
@@ -251,7 +268,19 @@ export function decidiFornitori(riscontri: Riscontro[]): Fornitori {
 // puntano allo stesso host sconosciuto, quello e' un fornitore che ci manca, e
 // va aggiunto. Senza questo, il censimento resterebbe fermo a cio' che sapevamo
 // il primo giorno.
-const INDIZI_PRENOTAZIONE = /(book|prenot|reserv|availab|disponibil|rate|tariff)/i
+// `rate` e' stato tolto di proposito: compare in "corpo<rate>", "gene<rate>",
+// "sepa<rate>" e in mezzo a nomi di file, e da solo portava dentro host che non
+// c'entrano niente con le prenotazioni.
+const INDIZI_PRENOTAZIONE = /(book|prenot|reserv|availab|disponibil|tariff)/i
+
+// Host che NON sono mai un gestionale alberghiero, per quanto compaiano in una
+// pagina di hotel: social, analitiche, mappe, reti di distribuzione.
+//
+// Senza questo elenco il censimento raccoglieva `www.facebook.com` come
+// "possibile fornitore" 12 volte su 30 siti, e l'elenco dei fornitori da
+// valutare diventava inutile: 12 righe di rumore prima di un nome vero.
+const HOST_MAI_FORNITORI =
+  /(^|\.)(facebook|fbcdn|instagram|twitter|x|linkedin|tiktok|pinterest|youtube|youtu|whatsapp|telegram|google|googleapis|gstatic|googletagmanager|google-analytics|doubleclick|bing|yandex|cloudflare|cloudfront|jsdelivr|unpkg|bootstrapcdn|fontawesome|gravatar|wp|w3|schema|paypal|stripe|tripadvisor|trustyou|trustpilot)\.[a-z.]+$/i
 
 export function hostDiPrenotazioneSconosciuti(
   segnali: { host: string[]; url: string[] },
@@ -269,7 +298,17 @@ export function hostDiPrenotazioneSconosciuti(
       const h = parsed.hostname.toLowerCase()
       // Il sito della struttura stessa non e' un fornitore.
       if (h === base || h === `www.${base}` || h.endsWith(`.${base}`)) continue
-      if (INDIZI_PRENOTAZIONE.test(u)) suoi.add(h)
+      if (HOST_MAI_FORNITORI.test(h)) continue
+
+      // L'indizio va cercato SOLO in host + percorso, MAI nella query.
+      //
+      // Cercandolo nell'URL intero, un pulsante "condividi su Facebook" porta
+      // la pagina di prenotazione della struttura dentro la propria query
+      // (`facebook.com/sharer?u=...../prenota`): l'indizio scattava, e Facebook
+      // veniva registrato come possibile gestionale. E' lo stesso errore del
+      // confronto sullo schema: cercare in una parte di stringa che non ha il
+      // significato che le si attribuisce.
+      if (INDIZI_PRENOTAZIONE.test(h + parsed.pathname)) suoi.add(h)
     } catch {
       // gia' gestito in estraiSegnali
     }

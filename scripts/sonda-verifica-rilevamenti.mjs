@@ -1,8 +1,16 @@
 // Sonda: i rilevamenti scritti sono CORRETTI, non solo presenti?
-// Un conteggio "5 rilevati" non dice nulla sulla qualita': va guardato il
-// contenuto, e per ogni rilevamento va confrontata la prova (l'host trovato)
-// col fornitore dedotto. Se l'host non contiene il nome del fornitore, il
-// rilevamento e' sospetto e va guardato a mano.
+//
+// Un conteggio "3 rilevati" non dice nulla sulla qualita': va guardato il
+// CONTENUTO. Per ogni rilevamento si confronta la prova (l'host dove il
+// fornitore e' stato trovato) col fornitore dedotto: se l'host non contiene
+// nessuna parola del nome del fornitore, il rilevamento e' sospetto.
+//
+// E' esattamente cosi' che ho trovato i due falsi positivi Beds24: il
+// conteggio diceva 5, il contenuto diceva che 2 erano sbagliati.
+//
+// NOTA sui nomi delle colonne: qui vanno `provider_name` e `evidence_url`.
+// Nella prima versione avevo scritto `provider_slug` e `evidence_value`,
+// dedotti dal significato invece di letti dallo schema, e la sonda crollava.
 import pg from "pg"
 
 const conn = (process.env.SUPABASE_POSTGRES_URL_NON_POOLING || "")
@@ -14,10 +22,26 @@ await c.connect()
 
 const q = async (sql, params = []) => (await c.query(sql, params)).rows
 
+// Il nome del fornitore ("Vertical Booking") non compare mai identico
+// nell'host ("book.verticalbooking.com"): va confrontato a parole, togliendo
+// spazi e punteggiatura. Le parole generiche vanno scartate, altrimenti
+// "booking" da sola renderebbe COERENTE qualunque host contenente "booking"
+// -- che e' precisamente il difetto che stiamo cercando.
+const GENERICHE = new Set(["booking", "hotel", "hotels", "system", "software", "group", "web", "online"])
+const coerenza = (nomeFornitore, urlProva) => {
+  const prova = String(urlProva || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+  const parole = String(nomeFornitore || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((p) => p.length >= 4 && !GENERICHE.has(p))
+  // Nome compatto intero ("verticalbooking") oppure una parola specifica.
+  const compatto = String(nomeFornitore || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+  if (compatto && prova.includes(compatto)) return true
+  return parole.some((p) => prova.includes(p))
+}
+
 console.log("=== stato della coda dopo il lotto ===")
-for (const r of await q(
-  `SELECT status, count(*)::int n FROM hospitality_crawl_queue GROUP BY status ORDER BY n DESC`,
-)) {
+for (const r of await q(`SELECT status, count(*)::int n FROM hospitality_crawl_queue GROUP BY status ORDER BY n DESC`)) {
   console.log(`  ${String(r.status).padEnd(12)} ${r.n}`)
 }
 
@@ -32,35 +56,30 @@ for (const r of await q(
 console.log()
 console.log("=== i rilevamenti scritti: fornitore, prova, e il CONFRONTO ===")
 const det = await q(
-  `SELECT d.provider_slug, d.technology_type, d.evidence_kind, d.evidence_value, d.confidence,
+  `SELECT d.provider_name, d.technology_type, d.evidence_kind, d.evidence_url, d.confidence,
           p.website_host, p.name
      FROM hospitality_technology_detections d
      JOIN hospitality_properties p ON p.id = d.property_id
-    ORDER BY d.provider_slug, p.website_host`,
+    ORDER BY d.provider_name, p.website_host`,
 )
 if (!det.length) console.log("  NESSUN rilevamento scritto")
-for (const r of det) {
-  // La prova regge? L'host trovato deve contenere il nome del fornitore.
-  const radice = String(r.provider_slug).split("_")[0]
-  const prova = String(r.evidence_value || "").toLowerCase()
-  const coerente = prova.includes(radice)
-  console.log(`  ${coerente ? "COERENTE " : "DA GUARDARE"} ${String(r.provider_slug).padEnd(16)} ${String(r.technology_type).padEnd(16)} conf=${r.confidence}`)
-  console.log(`      struttura: ${String(r.name).slice(0, 42).padEnd(42)} (${r.website_host})`)
-  console.log(`      prova:     ${r.evidence_kind} = ${String(r.evidence_value).slice(0, 70)}`)
-}
-
-console.log()
-console.log("=== quanti rilevamenti sono coerenti? ===")
 let coe = 0
 for (const r of det) {
-  if (String(r.evidence_value || "").toLowerCase().includes(String(r.provider_slug).split("_")[0])) coe++
+  const ok = coerenza(r.provider_name, r.evidence_url)
+  if (ok) coe++
+  console.log(
+    `  ${ok ? "COERENTE   " : "DA GUARDARE"} ${String(r.provider_name).padEnd(18)} ${String(r.technology_type).padEnd(16)} conf=${r.confidence}`,
+  )
+  console.log(`      struttura: ${String(r.name).slice(0, 40).padEnd(40)} (${r.website_host})`)
+  console.log(`      prova:     ${r.evidence_kind} = ${String(r.evidence_url).slice(0, 72)}`)
 }
-console.log(`  coerenti: ${coe} / ${det.length}`)
+console.log()
+console.log(`  coerenti: ${coe} / ${det.length}${det.length && coe < det.length ? "  <== GUARDARE I SOSPETTI" : ""}`)
 
 console.log()
-console.log("=== host sconosciuti raccolti (i fornitori da aggiungere) ===")
+console.log("=== host sconosciuti raccolti (i fornitori da valutare) ===")
 for (const r of await q(
-  `SELECT host, occurrences, sample_urls FROM hospitality_unknown_booking_hosts ORDER BY occurrences DESC, host LIMIT 15`,
+  `SELECT host, occurrences FROM hospitality_unknown_booking_hosts ORDER BY occurrences DESC, host LIMIT 20`,
 )) {
   console.log(`  ${String(r.occurrences).padStart(3)}x ${r.host}`)
 }
