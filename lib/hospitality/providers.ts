@@ -108,6 +108,11 @@ export function estraiSegnali(html: string, urlPagina: string): {
  * Non decide nulla: dice solo cosa ha visto e con quanta fiducia. La decisione
  * (dichiarare il fornitore, o chiedere una verifica) sta in `decidiFornitori`.
  */
+// Estensioni di file scaricabili: immagini, fogli di stile, script, caratteri,
+// documenti. Il confronto si fa sul percorso SENZA la query, altrimenti un
+// `?v=2` in coda al nome del file impedirebbe il riconoscimento.
+const STATICO = /\.(jpe?g|png|gif|svg|webp|avif|ico|bmp|css|js|mjs|map|woff2?|ttf|eot|otf|pdf|zip|mp4|webm|mp3)$/i
+
 export function riconosci(
   firme: Firma[],
   segnali: { host: string[]; url: string[] },
@@ -159,11 +164,23 @@ export function riconosci(
     //
     // Togliere lo schema non indebolisce i pattern che includono l'host
     // (`booking\.slope\.it/<uuid>`): quelli continuano a combaciare.
+    // Un FILE STATICO non puo' provare un motore di prenotazione: e' materiale
+    // scaricato, non un servizio interrogato. Misurato: l'immagine
+    // `villailtrebbio.it/assets/img/booking-banner-2024.jpg` era stata
+    // attribuita a Beds24 perche' il nome del file contiene "booking".
+    //
+    // Perche' questa regola e NON "salta il dominio della struttura": molti
+    // motori sono white-label su un sottodominio dell'albergo
+    // (`booking.hotel.it` che e' davvero Scidoo). Escludere il dominio proprio
+    // sarebbe una difesa che PERDE rilevamenti veri; escludere i file statici
+    // non ne perde nessuno, perche' nessun motore vive in un .jpg.
     if (!trovato) {
       for (const p of f.url_patterns || []) {
         const re = compilaRegex(p)
         if (!re) continue
-        const u = segnali.url.find((x) => re.test(x.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")))
+        const u = segnali.url.find(
+          (x) => !STATICO.test(x.split("?")[0]) && re.test(x.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")),
+        )
         if (u) {
           trovato = {
             slug: f.slug,
