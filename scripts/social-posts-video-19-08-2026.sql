@@ -49,9 +49,24 @@ alter table public.social_posts add  constraint social_posts_media_priority_chec
 --    YouTube dichiarato tale. Cosi' nessuna via di scrittura, nemmeno futura,
 --    puo' creare un "video" che in realta' e' una foto.
 --    Nessuna riga attuale ha post_type='video', quindi e' soddisfatto subito.
+--
+--    ATTENZIONE alla logica a tre valori. La prima versione era:
+--      check (post_type <> 'video' or video_url is not null or media_kind = 'youtube')
+--    e NON rifiutava niente. Con post_type='video', video_url NULL e media_kind
+--    NULL l'esito e' FALSE OR FALSE OR NULL = NULL, e un CHECK che vale NULL
+--    Postgres lo considera SODDISFATTO. Il vincolo compariva regolarmente nel
+--    catalogo con la definizione attesa, quindi sembrava applicato: si vedeva
+--    solo provando a scrivere una riga che doveva essere respinta. Misurato:
+--    tutte le 233 righe hanno media_kind NULL, percio' era senza denti sul 100%
+--    della tabella.
+--    Con coalesce i confronti diventano TOTALI: l'esito e' sempre TRUE o FALSE.
 alter table public.social_posts drop constraint if exists social_posts_video_coerente;
 alter table public.social_posts add  constraint social_posts_video_coerente
-  check (post_type <> 'video' or video_url is not null or media_kind = 'youtube');
+  check (
+    coalesce(post_type, '') <> 'video'
+    or video_url is not null
+    or coalesce(media_kind, '') = 'youtube'
+  );
 
 alter table public.social_posts drop constraint if exists social_posts_media_kind_check;
 alter table public.social_posts add  constraint social_posts_media_kind_check
