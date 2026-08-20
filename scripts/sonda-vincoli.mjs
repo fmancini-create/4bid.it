@@ -12,7 +12,12 @@ if (!conn) {
   process.exit(2)
 }
 
-const client = new pg.Client({ connectionString: conn, ssl: { rejectUnauthorized: false } })
+// `sslmode=require` nella stringa viene interpretato da pg>=8.16 come `verify-full`
+// e SOVRASCRIVE l'opzione ssl passata a mano: va tolto dalla stringa, non solo
+// compensato con rejectUnauthorized. Il certificato di Supabase e' autofirmato in
+// catena, quindi qui la verifica va disattivata per davvero.
+const connPulita = conn.replace(/[?&]sslmode=[^&]*/g, (m) => (m[0] === "?" ? "?" : "")).replace(/\?$/, "")
+const client = new pg.Client({ connectionString: connPulita, ssl: { rejectUnauthorized: false } })
 await client.connect()
 
 const tabelle = [
