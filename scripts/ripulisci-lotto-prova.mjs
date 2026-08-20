@@ -42,10 +42,19 @@ try {
            last_crawled_at = NULL
      WHERE technology_status IN ('detected', 'unreachable', 'needs_review')`)
   // 3) la coda torna in attesa, contatore azzerato.
+  // `locked_until` NON esiste: il blocco atomico del lotto si fa con
+  // status='processing' + last_attempt_at, non con una colonna di scadenza.
+  // Avevo dedotto il nome dal significato invece di leggerlo dallo schema.
+  //
+  // `status <> 'pending'` invece di elencare i valori: elencandoli avrei dovuto
+  // indovinare di nuovo quali sono ammessi dal vincolo ('running'? 'processing'?),
+  // e un valore inesistente nell'IN non da' errore -- semplicemente non aggiorna
+  // niente, lasciando la coda ferma senza dirlo.
   const cod = await c.query(`
     UPDATE hospitality_crawl_queue
-       SET status = 'pending', attempts = 0, locked_until = NULL, last_error = NULL
-     WHERE status IN ('completed', 'failed', 'running')`)
+       SET status = 'pending', attempts = 0, last_error = NULL,
+           last_attempt_at = NULL, next_attempt_at = NULL
+     WHERE status <> 'pending'`)
   // 4) via gli host sconosciuti raccolti col difetto: alcuni erano il dominio
   //    della struttura stessa, e ripartendo si raccolgono di nuovo quelli buoni.
   const hos = await c.query("DELETE FROM hospitality_unknown_booking_hosts")
