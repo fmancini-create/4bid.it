@@ -38,6 +38,19 @@ const firma = (p: Partial<Firma> & { slug: string; provider_name: string }): Fir
 })
 
 // Le firme come stanno nel database, per i fornitori che servono a queste prove.
+//
+// ATTENZIONE, scelta voluta: qui Beds24 conserva il pattern LARGO
+// `/(booking|booking2\.php)`, che in produzione ho poi ristretto a
+// `beds24\.com/booking2?`. Non e' una dimenticanza.
+//
+// Il pattern largo e' il CASO PEGGIORE per la logica di confronto: se la logica
+// regge con un pattern che combacia con qualunque percorso `/booking`, regge a
+// maggior ragione con uno che pretende il dominio. Se invece mettessi qui il
+// pattern stretto, queste prove passerebbero per due motivi insieme (pattern
+// stretto E logica corretta) e non isolerebbero piu' il difetto della logica:
+// rimettendo il difetto, resterebbero verdi.
+//
+// La firma vera di oggi e' provata a parte, in fondo al file.
 const BEDS24 = firma({
   slug: "beds24",
   provider_name: "Beds24",
@@ -269,5 +282,66 @@ describe("la prova di un rilevamento deve essere controllabile", () => {
     expect(r.length).toBeGreaterThan(0)
     expect(r[0].evidence_url).toContain("/distributor/")
     expect(r[0].source_url).toBe("https://hotel.it/camere")
+  })
+})
+
+describe("un file scaricabile non e' un motore di prenotazione", () => {
+  // Difetto misurato nel secondo lotto: l'immagine
+  // `villailtrebbio.it/assets/img/booking-banner-2024.jpg` era stata attribuita
+  // a Beds24, perche' il NOME DEL FILE contiene "booking". Un .jpg non e' un
+  // servizio interrogato: e' materiale scaricato.
+  it("un'immagine col nome che contiene booking non prova nulla", () => {
+    const r = analizza(
+      "https://villailtrebbio.it/assets/img/booking-banner-2024.jpg",
+      "https://villailtrebbio.it/",
+    )
+    expect(r.map((x) => x.slug)).not.toContain("beds24")
+    expect(decidiFornitori(r).technology_status).toBe("unknown")
+  })
+
+  it("neanche un foglio di stile o uno script, nemmeno con la query in coda", () => {
+    const r = analizza("https://hotel.it/css/booking-widget.css?v=2", "https://hotel.it/")
+    expect(r).toHaveLength(0)
+  })
+
+  // CONTROLLO POSITIVO: la regola sui file statici non deve diventare un tappo
+  // che spegne il rilevamento. Un motore white-label su un sottodominio
+  // dell'albergo va ancora riconosciuto -- ed e' la ragione per cui ho scelto
+  // "salta i file statici" invece di "salta il dominio della struttura".
+  it("un motore white-label sul dominio dell'hotel viene ancora riconosciuto", () => {
+    const r = analizza(
+      "https://booking.hotel.it/preventivov2/camere?cod=ABC123",
+      "https://hotel.it/",
+    )
+    expect(r.map((x) => x.slug)).toContain("scidoo")
+  })
+})
+
+describe("la firma Beds24 come e' DAVVERO in produzione oggi", () => {
+  // La firma stretta applicata al database dopo i falsi positivi. Provata a
+  // parte, perche' le prove sopra usano di proposito il pattern largo storico.
+  const BEDS24_OGGI = firma({
+    slug: "beds24",
+    provider_name: "Beds24",
+    host_patterns: ["(^|\\.)beds24\\.com$"],
+    url_patterns: ["beds24\\.com/booking2?"],
+  })
+
+  it("riconosce il motore vero di Beds24", () => {
+    const r = analizza("https://www.beds24.com/booking2.php?propid=123", "https://hotel.it/", [
+      BEDS24_OGGI,
+    ])
+    expect(r.map((x) => x.slug)).toContain("beds24")
+  })
+
+  it("non rivendica Passepartout, che e' un altro gestionale italiano", () => {
+    // Caso vero: `booking.passepartout.cloud/booking?oidPortale=20609` era
+    // stato attribuito a Beds24 dal pattern generico.
+    const r = analizza(
+      "https://booking.passepartout.cloud/booking?oidPortale=20609",
+      "https://hotel.it/",
+      [BEDS24_OGGI],
+    )
+    expect(r).toHaveLength(0)
   })
 })
