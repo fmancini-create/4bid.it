@@ -1,6 +1,11 @@
 import { generateText } from "ai"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { resolveBrandImageUrl } from "@/lib/social/brand-assets"
+import {
+  mediaDelPost,
+  scegliVideoARotazione,
+  type VideoLibreria,
+} from "@/lib/social/campaign-video"
 
 export type CampaignRule = {
   id: string
@@ -24,6 +29,13 @@ export type CampaignRule = {
   min_queue_pending: number | null
   auto_publish: boolean
   notes: string | null
+  /** Se true i post usano un video della libreria a rotazione, non l'immagine. */
+  use_library_video?: boolean | null
+  /**
+   * Quali video della libreria. Lista VUOTA = TUTTI i video visibili, non
+   * "nessuno": stessa convenzione di `target_accounts`.
+   */
+  video_ids?: string[] | null
 }
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
@@ -149,6 +161,41 @@ export async function generatePostImage(rule: CampaignRule): Promise<string | nu
 }
 
 /**
+ * I video che questa campagna puo' usare, letti dalla libreria.
+ *
+ * Due regole del dominio, entrambe verificate sui dati e non supposte:
+ *  - i video NASCOSTI (`hidden`) non si usano: sono stati toccati dall'operatore
+ *    proprio per non mostrarli;
+ *  - `video_ids` VUOTO significa TUTTI i video visibili, non "nessuno". E' la
+ *    convenzione di `target_accounts`, e scriverla al contrario spegnerebbe la
+ *    funzione appena accesa, quando l'operatore non ha ancora scelto nulla.
+ *
+ * Ritorna una lista vuota (non un errore) se la libreria e' vuota o se gli id
+ * scelti non esistono piu': in quel caso il post torna a essere immagine/testo.
+ */
+export async function caricaVideoCampagna(
+  supabase: SupabaseClient,
+  rule: CampaignRule,
+): Promise<VideoLibreria[]> {
+  if (!rule.use_library_video) return []
+
+  let query = supabase
+    .from("youtube_videos")
+    .select("video_id, title, sort_order")
+    .eq("hidden", false)
+
+  const scelti = rule.video_ids ?? []
+  if (scelti.length > 0) query = query.in("video_id", scelti)
+
+  const { data, error } = await query
+  if (error) {
+    console.error(`[v0] campagna ${rule.topic_name}: libreria video non leggibile:`, error.message)
+    return []
+  }
+  return (data as VideoLibreria[]) || []
+}
+
+/**
  * Esegue 1 campagna: genera batch_size post, ognuno con immagine se richiesta,
  * e li inserisce in social_posts come "scheduled".
  * Ritorna i post creati e aggiorna last_generated_at + posts_generated_count sulla rule.
@@ -177,6 +224,9 @@ export async function runCampaign(
   const platforms = rule.platforms?.length ? rule.platforms : ["facebook", "linkedin"]
   const now = new Date()
 
+  // Raccolta video: letta UNA volta per tutto il lotto, non a ogni post.
+  const videoDisponibili = await caricaVideoCampagna(supabase, rule)
+
   let created = 0
   for (let i = 0; i < batch; i++) {
     try {
@@ -184,6 +234,18 @@ export async function runCampaign(
       const imageUrl = await generatePostImage(rule)
       const scheduledFor = pickScheduledSlot(rule, i, now)
       const hashtags = text.match(/#\w+/g) || rule.default_hashtags || []
+
+      // Rotazione: il contatore DEVE sopravvivere fra le esecuzioni, altrimenti
+      // una campagna che genera 1 post per volta ripartirebbe sempre da zero e
+      // userebbe per sempre il primo video. `posts_generated_count` e' persistito
+      // sulla regola e viene incrementato in fondo a questa funzione.
+      const video = scegliVideoARotazione({
+        video: videoDisponibili,
+        indiceGlobale: (rule.posts_generated_count || 0) + i,
+      })
+      // I quattro campi media si decidono insieme, in un punto solo: sono legati
+      // da vincoli del database che si contraddicono facilmente.
+      const media = mediaDelPost({ video, imageUrl, linkUrl: rule.link_url })
 
       const insertPayload = {
         content: text,
@@ -197,12 +259,16 @@ export async function runCampaign(
         auto_publish: rule.auto_publish,
         requires_approval: !rule.auto_publish,
         hashtags,
-        image_url: imageUrl,
-        post_type: imageUrl ? "image" : "text",
         link_url: rule.link_url,
-        // social_posts_media_priority_check: ammesso 'image' / 'video' / 'link'.
-        // Niente "text": fallback su "link" se c'e' link_url, altrimenti "image".
-        media_priority: imageUrl ? "image" : rule.link_url ? "link" : "image",
+        // I quattro campi media arrivano da `mediaDelPost`, che li decide insieme
+        // rispettando social_posts_video_coerente (post_type='video' pretende
+        // video_url o media_kind='youtube'), social_posts_media_kind_check e
+        // social_posts_media_priority_check (mai "text": 'image'/'video'/'link').
+        image_url: media.image_url,
+        post_type: media.post_type,
+        media_priority: media.media_priority,
+        video_url: media.video_url,
+        media_kind: media.media_kind,
       }
 
       // Insert + readback. Tolleriamo il caso in cui il readback fallisca

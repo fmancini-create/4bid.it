@@ -24,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Plus, Play, Pencil, Trash2, Calendar, Clock, ImageIcon, Sparkles } from "lucide-react"
+import { Loader2, Plus, Play, Pencil, Trash2, Calendar, Clock, ImageIcon, Sparkles, Video } from "lucide-react"
+import { piattaformeSenzaVideoLibreria } from "@/lib/social/campaign-video"
 
 type TopicRule = {
   id: string
@@ -47,6 +48,16 @@ type TopicRule = {
   last_generated_at: string | null
   posts_generated_count: number
   include_hashtags: boolean | null
+  use_library_video: boolean | null
+  /** Lista VUOTA = tutti i video visibili della libreria, non "nessuno". */
+  video_ids: string[] | null
+}
+
+type VideoLibreria = {
+  video_id: string
+  title: string | null
+  thumbnail_url: string | null
+  sort_order: number | null
 }
 
 type SocialAccount = {
@@ -93,6 +104,10 @@ function emptyForm(): Partial<TopicRule> {
     auto_publish: true,
     notes: "",
     include_hashtags: true,
+    // Spento di default: accendere i video cambia cio' che esce sui canali, e
+    // non deve succedere per una campagna appena creata senza che sia scelto.
+    use_library_video: false,
+    video_ids: [],
   }
 }
 
@@ -106,6 +121,10 @@ export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[]
   const [form, setForm] = useState<Partial<TopicRule>>(emptyForm())
   const [saving, setSaving] = useState(false)
   const [hashtagsRaw, setHashtagsRaw] = useState("")
+  const [videoLibreria, setVideoLibreria] = useState<VideoLibreria[]>([])
+  // Distinguo "libreria vuota" da "libreria non caricata": senza questo, un
+  // errore di rete mostrerebbe "nessun video" come se fosse un dato vero.
+  const [erroreLibreria, setErroreLibreria] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -121,8 +140,24 @@ export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[]
     }
   }
 
+  async function caricaLibreria() {
+    try {
+      const res = await fetch("/api/social/library-videos", { cache: "no-store" })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "errore")
+      setVideoLibreria(json.videos || [])
+      setErroreLibreria(null)
+    } catch (e) {
+      // Non un toast: l'errore va mostrato DOVE serve la scelta, altrimenti
+      // l'operatore vede un elenco vuoto e conclude di non avere video.
+      setErroreLibreria(e instanceof Error ? e.message : "errore")
+      setVideoLibreria([])
+    }
+  }
+
   useEffect(() => {
     load()
+    caricaLibreria()
   }, [])
 
   function openCreate() {
@@ -142,6 +177,11 @@ export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[]
       platforms: r.platforms || ["facebook", "linkedin"],
       target_accounts: r.target_accounts || [],
       default_hashtags: r.default_hashtags || [],
+      // `video_ids` e' NOT NULL nel database: inoltrare il null di una campagna
+      // creata prima di questa funzione farebbe fallire il salvataggio con un
+      // errore incomprensibile su un campo che l'operatore non ha toccato.
+      use_library_video: Boolean(r.use_library_video),
+      video_ids: r.video_ids || [],
     })
     setHashtagsRaw((r.default_hashtags || []).join(" "))
     setDialogOpen(true)
@@ -319,10 +359,20 @@ export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[]
                           <Clock className="h-3 w-3" />
                           {r.time_windows?.map((w) => `${w.start}-${w.end}`).join(", ") || "—"}
                         </span>
-                        {r.image_style_prompt && (
+                        {r.use_library_video ? (
+                          // Il video vince sull'immagine, come nel generatore: mostrare
+                          // "con immagine" per una campagna che pubblica video sarebbe
+                          // un'etichetta che contraddice cio' che esce davvero.
                           <span className="flex items-center gap-1">
-                            <ImageIcon className="h-3 w-3" /> con immagine
+                            <Video className="h-3 w-3" /> video a rotazione
+                            {(r.video_ids || []).length > 0 ? ` (${(r.video_ids || []).length})` : ""}
                           </span>
+                        ) : (
+                          r.image_style_prompt && (
+                            <span className="flex items-center gap-1">
+                              <ImageIcon className="h-3 w-3" /> con immagine
+                            </span>
+                          )
                         )}
                         <span>· {r.posts_generated_count} generati</span>
                         {(() => {
@@ -629,11 +679,121 @@ export function CampaignsManager({ accounts = [] }: { accounts?: SocialAccount[]
                 rows={2}
                 value={form.image_style_prompt || ""}
                 onChange={(e) => setForm({ ...form, image_style_prompt: e.target.value })}
-                placeholder="Modern hotel dashboard, professional photography, blue accents"
-              />
-            </div>
+                  placeholder="Modern hotel dashboard, professional photography, blue accents"
+                />
+              </div>
 
-            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="rounded-md border p-3 grid gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label htmlFor="usavideo" className="text-sm flex items-center gap-1.5">
+                      <Video className="h-3.5 w-3.5" /> Usa video dalla libreria
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      I post generati usano un video a rotazione invece dell&apos;immagine.
+                    </p>
+                  </div>
+                  <Switch
+                    id="usavideo"
+                    checked={Boolean(form.use_library_video)}
+                    onCheckedChange={(v) => setForm({ ...form, use_library_video: v })}
+                  />
+                </div>
+
+                {form.use_library_video && (
+                  <div className="grid gap-2 border-t pt-3">
+                    {erroreLibreria ? (
+                      // Un elenco vuoto per un errore direbbe "non hai video":
+                      // e' falso, e porterebbe a spegnere una funzione che va.
+                      <p className="text-xs text-destructive">
+                        Libreria video non leggibile ({erroreLibreria}). Riprova: finché non si carica,
+                        questa campagna non userà video.
+                      </p>
+                    ) : videoLibreria.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Nessun video visibile nella libreria. Senza video i post restano con
+                        l&apos;immagine, come prima.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-2">
+                          <Label className="text-xs">
+                            Video in rotazione ({(form.video_ids || []).length || videoLibreria.length} di{" "}
+                            {videoLibreria.length})
+                          </Label>
+                          {(form.video_ids || []).length > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={() => setForm({ ...form, video_ids: [] })}
+                            >
+                              Usa tutti
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Nessuna spunta = tutti i video visibili, a rotazione nell&apos;ordine della
+                          libreria.
+                        </p>
+                        <div className="max-h-44 overflow-y-auto grid gap-1">
+                          {videoLibreria.map((v) => {
+                            const scelti = form.video_ids || []
+                            const spuntato = scelti.includes(v.video_id)
+                            return (
+                              <label
+                                key={v.video_id}
+                                className="flex items-center gap-2 text-xs rounded px-1.5 py-1 hover:bg-muted cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 shrink-0"
+                                  checked={spuntato}
+                                  onChange={(e) =>
+                                    setForm({
+                                      ...form,
+                                      video_ids: e.target.checked
+                                        ? [...scelti, v.video_id]
+                                        : scelti.filter((x) => x !== v.video_id),
+                                    })
+                                  }
+                                />
+                                {v.thumbnail_url && (
+                                  <img
+                                    src={v.thumbnail_url || "/placeholder.svg"}
+                                    alt=""
+                                    className="h-6 w-10 object-cover rounded shrink-0"
+                                  />
+                                )}
+                                <span className="truncate">{v.title || v.video_id}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {/* I video della libreria sono link YouTube, e Instagram non li
+                        accetta: per un Reel serve il file video. Dirlo qui, mentre si
+                        configura, invece di lasciarlo scoprire da un canale che non
+                        pubblica niente. */}
+                    {piattaformeSenzaVideoLibreria(form.platforms || []).length > 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-500">
+                        Instagram non accetta i link YouTube: con i video accesi questa campagna
+                        pubblicherà su{" "}
+                        {(form.platforms || [])
+                          .filter((p) => p !== "instagram")
+                          .map((p) => PLATFORM_LABELS[p] || p)
+                          .join(" e ") || "nessun altro canale"}
+                        , e su Instagram niente.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border p-3">
               <div>
                 <Label htmlFor="auto" className="text-sm">
                   Pubblicazione automatica

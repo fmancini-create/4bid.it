@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
     auto_publish: body.auto_publish ?? true,
     notes: body.notes || null,
     min_queue_pending: Number(body.min_queue_pending) || 5,
+    // Senza queste due righe l'interruttore dei video sarebbe INERTE: la lista
+    // bianca scarta in silenzio i campi che non nomina, quindi l'interfaccia
+    // mostrerebbe una scelta che il salvataggio butta via.
+    use_library_video: body.use_library_video ?? false,
+    video_ids: Array.isArray(body.video_ids) ? body.video_ids : [],
   }
 
   const { data, error } = await supabase.from("social_topic_rules").insert(insert).select().single()

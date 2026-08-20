@@ -104,8 +104,6 @@ export function StructuredData({
   speakable,
   hasParts,
 }: StructuredDataProps) {
-  const now = new Date().toISOString()
-
   // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO).
   const ORG_ID = "https://www.4bid.it/#organization"
   const PERSON_ID = "https://www.4bid.it/#person"
@@ -122,10 +120,22 @@ export function StructuredData({
     inLanguage: "it-IT",
   }
 
-  // Aggiungi date solo se fornite o per tipi che le richiedono
+  // Date: SOLO quelle vere passate dalla pagina.
+  //
+  // Prima qui c'era `datePublished || now`, con `now = new Date()`. Misurato:
+  // due richieste alla stessa pagina a 3 secondi di distanza dichiaravano
+  // 10:11:31 e 10:11:34 ⇒ ogni guida diceva ai motori di ricerca di essere
+  // stata scritta E modificata nell'istante della scansione. Un articolo
+  // sempre "appena pubblicato" non accumula anzianita', e la data mostrata
+  // nei risultati di ricerca era inaffidabile.
+  //
+  // Un campo ASSENTE e' un'informazione mancante; un campo con la data
+  // sbagliata e' un'informazione FALSA, e la seconda e' peggio della prima.
+  // Quindi qui non si inventa nulla: se la pagina non passa una data, lo
+  // schema non la dichiara.
   if (type === "Article" || type === "WebPage" || type === "AboutPage" || type === "CollectionPage") {
-    mainSchema.datePublished = datePublished || now
-    mainSchema.dateModified = dateModified || now
+    if (datePublished) mainSchema.datePublished = datePublished
+    if (dateModified) mainSchema.dateModified = dateModified
   }
 
   // Aggiungi proprietà specifiche per tipo
