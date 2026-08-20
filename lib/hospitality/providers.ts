@@ -130,12 +130,29 @@ export function riconosci(
       }
     }
 
-    // 2) URL completo
+    // 2) URL, SENZA lo schema.
+    //
+    // Perche' senza schema: quasi tutti gli `url_patterns` sono pattern di
+    // PERCORSO (`/distributor/`, `/preventivov2/...`, `/(booking|booking2.php)`).
+    // Confrontandoli con l'URL intero, il `//` di `https://` fa da falso
+    // separatore di percorso: `https://booking.qualsiasi.it/pagina` contiene
+    // la sottostringa `/booking` DENTRO L'HOST, e il pattern di Beds24
+    // `/(booking|booking2\.php)` scattava su qualunque sito il cui host
+    // iniziasse per `booking.`.
+    //
+    // Misurato su due casi reali: `booking.holidayonline.org` e
+    // `booking.hotelgaribaldi.it` (un sottodominio dell'hotel STESSO) erano
+    // stati attribuiti a Beds24. In una DEM filtrata per gestionale, un falso
+    // positivo e' peggio di un "non rilevato": scrive a un albergatore
+    // parlandogli di un gestionale che non usa.
+    //
+    // Togliere lo schema non indebolisce i pattern che includono l'host
+    // (`booking\.slope\.it/<uuid>`): quelli continuano a combaciare.
     if (!trovato) {
       for (const p of f.url_patterns || []) {
         const re = compilaRegex(p)
         if (!re) continue
-        const u = segnali.url.find((x) => re.test(x))
+        const u = segnali.url.find((x) => re.test(x.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")))
         if (u) {
           trovato = {
             slug: f.slug,
