@@ -7,6 +7,9 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
+    "test": "vitest run",
+    "test:sabotaggi-video": "node scripts/sabotaggi-social-video.mjs",
+    "check:vincolo-video": "node --env-file-if-exists=/vercel/share/.env.project scripts/check-vincolo-video.mjs",
     "check:ab": "node --experimental-strip-types --import ./scripts/registra-hook-ts.mjs scripts/check-ab-oggetto.mjs",
     "dem:air-market": "node --experimental-strip-types --import ./scripts/registra-hook-ts.mjs --env-file-if-exists=/vercel/share/.env.project scripts/aggiorna-dem-air-market.mjs"
   },
@@ -92,6 +95,7 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.11"
   }
 }

@@ -101,6 +101,64 @@ export async function publishToFacebook(
   }
 }
 
+/**
+ * Pubblica un VIDEO nativo su una pagina Facebook.
+ *
+ * Endpoint dedicato `/videos`: diverso da `/feed` (testo e link) e da `/photos`
+ * (immagini). Facebook scarica il file dall'URL che gli passiamo (`file_url`),
+ * quindi il video deve essere raggiungibile pubblicamente.
+ *
+ * Questa funzione e' SEPARATA da publishToFacebook di proposito: il percorso
+ * delle foto e dei link resta identico a prima, byte per byte. Un video non
+ * passa mai per il ramo delle immagini, cosi' non puo' finire pubblicato come
+ * anteprima di un link.
+ */
+export async function publishVideoToFacebook(
+  pageId: string,
+  accessToken: string,
+  content: string,
+  videoUrl: string,
+  linkUrl?: string | null,
+): Promise<{ success: boolean; postId?: string; error?: string }> {
+  try {
+    if (!pageId) return { success: false, error: "Page ID mancante" }
+    if (!accessToken) return { success: false, error: "Access token mancante" }
+    if (!videoUrl) return { success: false, error: "URL del video mancante" }
+
+    const appSecretProof = generateAppSecretProof(accessToken)
+    // Il link non e' cliccabile nella descrizione di un video: lo aggiungiamo
+    // come testo, come si fa per le foto.
+    const description = linkUrl ? `${content}\n\n🔗 ${linkUrl}` : content
+
+    console.log("[v0] Facebook: Publishing as NATIVE VIDEO")
+    const response = await fetch(`https://graph.facebook.com/v18.0/${pageId}/videos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        file_url: videoUrl,
+        description,
+        access_token: accessToken,
+        appsecret_proof: appSecretProof,
+      }),
+    })
+
+    const data = await response.json()
+    console.log("[v0] Facebook video API response status:", response.status)
+    console.log("[v0] Facebook video API response:", JSON.stringify(data))
+
+    if (data.error) {
+      return { success: false, error: data.error.message || JSON.stringify(data.error) }
+    }
+    if (!data.id) {
+      return { success: false, error: "Facebook non ha restituito l'ID del video" }
+    }
+    return { success: true, postId: data.id }
+  } catch (error) {
+    console.error("[v0] Facebook video publish error:", error)
+    return { success: false, error: String(error) }
+  }
+}
+
 // Verifica se un token è valido
 export async function verifyFacebookToken(accessToken: string): Promise<boolean> {
   try {

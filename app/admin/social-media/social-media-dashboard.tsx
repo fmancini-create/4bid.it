@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Facebook,
@@ -28,12 +28,21 @@ import {
   Eye,
   Link2,
   LinkIcon,
+  Video,
+  Upload,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CampaignsManager } from "@/components/social/campaigns-manager"
+import {
+  type Platform,
+  destinazioniEffettive,
+  resolveMediaKind,
+  validateVideoUpload,
+  youtubeThumbnail,
+} from "@/lib/social/video"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -103,7 +112,15 @@ interface SocialPost {
   hashtags: string[] | null
   scheduled_for: string | null
   published_at: string | null
-  status: "draft" | "pending_approval" | "approved" | "scheduled" | "published" | "failed" | "pending_review"
+  status:
+    | "draft"
+    | "pending_approval"
+    | "approved"
+    | "scheduled"
+    | "processing"
+    | "published"
+    | "failed"
+    | "pending_review"
   is_ai_generated: boolean
   ai_topic: string | null
   platforms: string[]
@@ -113,7 +130,9 @@ interface SocialPost {
   created_at: string
   target_accounts?: string[] // Added target_accounts
   link_url?: string | null // Added link_url
-  media_priority: "image" | "link" // Added media_priority
+  media_priority: "image" | "link" | "video" // Added media_priority
+  video_url?: string | null // file video caricato oppure link YouTube
+  media_kind?: "image" | "video" | "youtube" | null
 }
 
 interface SocialSettings {
@@ -150,8 +169,25 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   draft: { label: "Bozza", color: "bg-gray-500", icon: FileText }, // Changed icon to FileText for drafts
   scheduled: { label: "Programmato", color: "bg-blue-500", icon: Calendar },
   published: { label: "Pubblicato", color: "bg-emerald-500", icon: CheckCircle2 },
+  // Senza questa voce un post in elaborazione non avrebbe NESSUNA etichetta:
+  // l'operatore vedrebbe una riga muta e la crederebbe rotta.
+  processing: { label: "Video in elaborazione", color: "bg-amber-500", icon: Loader2 },
   failed: { label: "Errore", color: "bg-red-500", icon: AlertCircle },
   pending_approval: { label: "In attesa approvazione", color: "bg-yellow-500", icon: Clock }, // Added pending_approval status
+}
+
+/**
+ * Traduce l'esito della rotta di pubblicazione nello stato da mostrare.
+ *
+ * Esiste per due ragioni. La prima: gli esiti sono TRE, non due — un Reel puo'
+ * essere rimasto in elaborazione su Instagram, e dedurre published/failed dal
+ * solo `success` mostrerebbe "Errore" su un video che invece sta uscendo.
+ * La seconda: questa logica era duplicata identica in creazione e modifica, e
+ * una riga ripetuta due volte e' una riga che prima o poi divergera'.
+ */
+function statoDaEsito(pubResult: { status?: string; success?: boolean }): SocialPost["status"] {
+  if (pubResult.status === "processing") return "processing"
+  return pubResult.success ? "published" : "failed"
 }
 
 export default function SocialMediaDashboard({
@@ -163,7 +199,9 @@ export default function SocialMediaDashboard({
   const router = useRouter()
   const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts)
   const [posts, setPosts] = useState<SocialPost[]>(initialPosts)
-  const [settings, setSettings] = useState<SocialSettings | null>(initialSettings)
+  // La prop e' opzionale, quindi puo' essere undefined: `?? null` rende
+  // esplicito lo stato "nessuna impostazione" (errore preesistente).
+  const [settings, setSettings] = useState<SocialSettings | null>(initialSettings ?? null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showConnectDialog, setShowConnectDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
@@ -171,6 +209,9 @@ export default function SocialMediaDashboard({
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(false) // Added loading state
+
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const [showManualConnect, setShowManualConnect] = useState<string | null>(null)
   const [manualPageId, setManualPageId] = useState("")
@@ -190,7 +231,8 @@ export default function SocialMediaDashboard({
     image_topic: "",
     image_style: "professional" as string,
     link_url: "", // Added link_url
-    media_priority: "image" as "image" | "link", // "image" = usa immagine caricata, "link" = usa anteprima link
+    media_priority: "image" as "image" | "link" | "video", // "image" = usa immagine caricata, "link" = usa anteprima link, "video" = usa il video
+    video_url: "", // file caricato su blob oppure link YouTube incollato
   })
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
@@ -341,6 +383,56 @@ export default function SocialMediaDashboard({
     }
   }
 
+  /**
+   * Tipo di media del post in creazione. Calcolato con la STESSA funzione del
+   * server: se il client giudicasse da solo, l'anteprima potrebbe promettere un
+   * Reel dove il server pubblica un link.
+   */
+  const mediaKindNuovo = resolveMediaKind({ videoUrl: newPost.video_url, imageUrl: newPost.image_url })
+
+  /**
+   * Dove uscirà davvero il post, per l'avviso sui link YouTube.
+   *
+   * Nota sulla lista VUOTA di target_accounts: non vuol dire "nessuna
+   * destinazione", vuol dire "tutti gli account attivi del canale" — è la regola
+   * della rotta di pubblicazione. Quello che esclude un canale per davvero è non
+   * avere alcun account collegato.
+   */
+  const destinazioniYoutube = destinazioniEffettive({
+    piattaforme: newPost.platforms as Platform[],
+    kind: mediaKindNuovo,
+    destinazioniPerPiattaforma: {},
+    senzaAccountCollegato: (["facebook", "instagram", "linkedin"] as Platform[]).filter(
+      (p) => !accounts.some((a) => a.platform === p && a.is_active),
+    ),
+    hasLink: Boolean(newPost.link_url),
+  })
+
+  const caricaVideo = async (file: File) => {
+    // Controllo lato client: dà una risposta immediata. Il server ricontrolla
+    // comunque, perché un controllo solo nel browser non è una difesa.
+    const errore = validateVideoUpload({ size: file.size, type: file.type, name: file.name })
+    if (errore) {
+      toast.error(errore)
+      return
+    }
+    setIsUploadingVideo(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/social/upload-video", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok || !data.url) throw new Error(data.error || "Caricamento non riuscito")
+      setNewPost((prev) => ({ ...prev, video_url: data.url, media_priority: "video" }))
+      toast.success("Video caricato")
+    } catch (e) {
+      console.error("[v0] upload video error:", e)
+      toast.error(e instanceof Error ? e.message : "Caricamento del video non riuscito")
+    } finally {
+      setIsUploadingVideo(false)
+    }
+  }
+
   const savePost = async (publishImmediately = false) => {
     // Simplified savePost to align with the update's DialogFooter
     if (!newPost.content || newPost.platforms.length === 0) return
@@ -361,6 +453,9 @@ export default function SocialMediaDashboard({
         image_url: newPost.image_url || null,
         target_accounts: newPost.target_accounts.length > 0 ? newPost.target_accounts : null,
         media_priority: newPost.media_priority,
+        video_url: newPost.video_url || null,
+        // post_type e media_kind li decide il server dal video: qui non li
+        // calcoliamo, cosi' esiste un solo giudice sul tipo di media.
       }
 
       const response = await fetch("/api/social/posts", {
@@ -384,14 +479,25 @@ export default function SocialMediaDashboard({
           const pubResult = await pubRes.json().catch(() => ({}))
           const publishedOn: string[] = pubResult.published || []
           const pubErrors: string[] = pubResult.errors || []
+          const statoPub = statoDaEsito(pubResult)
           setPosts((prev) =>
             prev.map((p) =>
               p.id === savedPost.id
-                ? { ...p, status: pubResult.success ? "published" : "failed", published_at: new Date().toISOString(), error_message: pubErrors.join("; ") || null }
+                ? {
+                    ...p,
+                    status: statoPub,
+                    // La data si scrive solo se qualcosa e' uscito davvero.
+                    published_at: statoPub === "published" ? new Date().toISOString() : p.published_at,
+                    error_message: pubErrors.join("; ") || null,
+                  }
                 : p,
             ),
           )
-          if (pubResult.success && pubErrors.length === 0) {
+          if (statoPub === "processing") {
+            toast.info(
+              "Video caricato. Instagram lo sta elaborando: verrà pubblicato automaticamente appena pronto.",
+            )
+          } else if (pubResult.success && pubErrors.length === 0) {
             toast.success(`Post pubblicato su ${publishedOn.length} ${publishedOn.length === 1 ? "canale" : "canali"}!`)
           } else if (pubResult.success && pubErrors.length > 0) {
             toast.warning(`Pubblicato in parte (${publishedOn.length}). Problemi: ${pubErrors.join("; ")}`)
@@ -419,6 +525,9 @@ export default function SocialMediaDashboard({
         image_style: "professional",
         link_url: "", // Reset link_url
         media_priority: "image",
+        // Senza questo azzeramento il video del post appena salvato restava nel
+        // modulo e finiva attaccato al post successivo.
+        video_url: "",
       })
       router.refresh()
     } catch (error) {
@@ -509,14 +618,25 @@ export default function SocialMediaDashboard({
           const pubResult = await pubRes.json().catch(() => ({}))
           const publishedOn: string[] = pubResult.published || []
           const pubErrors: string[] = pubResult.errors || []
+          const statoPub = statoDaEsito(pubResult)
           setPosts((prev) =>
             prev.map((p) =>
               p.id === savedPost.id
-                ? { ...p, status: pubResult.success ? "published" : "failed", published_at: new Date().toISOString(), error_message: pubErrors.join("; ") || null }
+                ? {
+                    ...p,
+                    status: statoPub,
+                    // La data si scrive solo se qualcosa e' uscito davvero.
+                    published_at: statoPub === "published" ? new Date().toISOString() : p.published_at,
+                    error_message: pubErrors.join("; ") || null,
+                  }
                 : p,
             ),
           )
-          if (pubResult.success && pubErrors.length === 0) {
+          if (statoPub === "processing") {
+            toast.info(
+              "Video caricato. Instagram lo sta elaborando: verrà pubblicato automaticamente appena pronto.",
+            )
+          } else if (pubResult.success && pubErrors.length === 0) {
             toast.success(`Post pubblicato su ${publishedOn.length} ${publishedOn.length === 1 ? "canale" : "canali"}!`)
           } else if (pubResult.success && pubErrors.length > 0) {
             toast.warning(`Pubblicato in parte (${publishedOn.length}). Problemi: ${pubErrors.join("; ")}`)
@@ -1110,6 +1230,119 @@ export default function SocialMediaDashboard({
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
+              )}
+            </div>
+
+            {/* Video: file caricato (nativo su tutti i canali) oppure link YouTube */}
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Video className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm sm:text-base">Video</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) caricaVideo(f)
+                      e.target.value = ""
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isUploadingVideo}
+                    onClick={() => videoInputRef.current?.click()}
+                  >
+                    {isUploadingVideo ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">{isUploadingVideo ? "Carico..." : "Carica file"}</span>
+                  </Button>
+                </div>
+              </div>
+
+              <Input
+                placeholder="oppure incolla un link YouTube"
+                value={mediaKindNuovo === "video" ? "" : newPost.video_url}
+                disabled={mediaKindNuovo === "video"}
+                onChange={(e) => setNewPost((prev) => ({ ...prev, video_url: e.target.value }))}
+                className="text-sm"
+              />
+
+              {/* Anteprima: player vero per il file, miniatura per YouTube. */}
+              {newPost.video_url && (
+                <div className="relative mt-2">
+                  {mediaKindNuovo === "video" ? (
+                    <video
+                      src={newPost.video_url}
+                      controls
+                      playsInline
+                      className="w-full h-32 sm:h-48 rounded-lg border bg-black object-contain"
+                    />
+                  ) : mediaKindNuovo === "youtube" ? (
+                    <a
+                      href={newPost.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block relative"
+                    >
+                      <img
+                        src={youtubeThumbnail(newPost.video_url) || "/placeholder.svg"}
+                        alt="Miniatura del video YouTube"
+                        className="w-full h-32 sm:h-48 object-cover rounded-lg border"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="rounded-full bg-black/70 p-3">
+                          <Video className="h-6 w-6 text-white" />
+                        </span>
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="text-xs text-destructive">
+                      Questo indirizzo non sembra un video: carica un file MP4/MOV oppure incolla un link YouTube.
+                    </p>
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 h-6 w-6 p-0"
+                    onClick={() => setNewPost((prev) => ({ ...prev, video_url: "", media_priority: "image" }))}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Avviso ONESTO: un link YouTube non diventa un Reel. Meglio dirlo
+                  qui che far fallire la pubblicazione dopo.
+                  Si basa sulle DESTINAZIONI scelte, non sulle piattaforme spuntate:
+                  un canale senza pagina/account selezionato non riceve nulla, e
+                  prima l'avviso prometteva "uscira' su Facebook e LinkedIn" anche
+                  quando nessuna destinazione era stata scelta. */}
+              {mediaKindNuovo === "youtube" && destinazioniYoutube.escluse.length > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-500 flex items-start gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    {destinazioniYoutube.escluse.join(" e ")} non pubblica i link YouTube: per un Reel serve il file
+                    video.{" "}
+                    {destinazioniYoutube.escono.length > 0
+                      ? `Questo post uscirà su ${destinazioniYoutube.escono.join(" e ")}, ma non su ${destinazioniYoutube.escluse.join(" e ")}.`
+                      : `Con le destinazioni scelte ora, questo post non uscirà da nessuna parte.`}
+                  </span>
+                </p>
+              )}
+              {mediaKindNuovo === "video" && (
+                <p className="text-xs text-muted-foreground">
+                  Verrà pubblicato come Reel su Instagram e come video nativo su Facebook e LinkedIn.
+                </p>
               )}
             </div>
 
