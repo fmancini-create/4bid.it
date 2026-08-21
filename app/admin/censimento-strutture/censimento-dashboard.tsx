@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Fornitore = { nome: string; tipo: string; affidabilita: number | null; prova: string | null }
@@ -128,7 +127,14 @@ export default function CensimentoDashboard() {
                   </p>
                   <p className="font-mono text-2xl font-semibold tabular-nums">{percentuale.toFixed(2)}%</p>
                 </div>
-                <Progress value={percentuale} aria-label={`Copertura del censimento: ${percentuale.toFixed(2)}%`} />
+                {/* Niente barra di avanzamento: allo 0,24% reale sarebbe
+                    indistinguibile da una barra vuota, e una barra vuota si legge
+                    come "non funziona" invece di "appena iniziato". Il conto di
+                    quante restano dice la stessa cosa senza poter ingannare. */}
+                <p className="text-sm text-muted-foreground">
+                  Restano <strong className="text-foreground">{NUM.format(cop.da_esaminare)}</strong> strutture da
+                  esaminare.
+                </p>
                 <dl className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-4">
                   {[
                     ["In anagrafica", cop.totali],
