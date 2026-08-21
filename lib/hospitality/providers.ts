@@ -16,6 +16,16 @@ export type Firma = {
   slug: string
   provider_name: string
   technology_types: TipoTecnologia[]
+  // Fra i `technology_types`, quali sono DEDOTTI e non osservati.
+  //
+  // Il gestionale (PMS) gira nel back-office dell'albergo: non lascia traccia
+  // sul sito pubblico. Quello che si osserva e' il motore di prenotazione. Se
+  // il fornitore vende entrambe le cose (Ericsoft, Scidoo, Passepartout...),
+  // dal motore si DEDUCE il gestionale -- ma e' una deduzione, e va detto.
+  //
+  // Assente = nulla di dedotto, tutto osservato: il valore di partenza giusto,
+  // perche' una firma che non dichiara nulla non deve inventare deduzioni.
+  inferred_types?: TipoTecnologia[]
   host_patterns: string[]
   url_patterns: string[]
   html_patterns: string[]
@@ -27,6 +37,11 @@ export type Riscontro = {
   slug: string
   provider_name: string
   technology_types: TipoTecnologia[]
+  // Copiato dalla firma: quali fra i tipi qui sopra sono deduzioni.
+  inferred_types?: TipoTecnologia[]
+  // La fiducia della PROVA OSSERVATA. Per un tipo dedotto non si usa questa:
+  // si usa `fiduciaPerTipo`, che e' piu' bassa. Tenerne una sola porterebbe a
+  // dichiarare un gestionale con la stessa certezza del motore che si e' visto.
   confidence: number
   // Da dove viene il riconoscimento. Serve a poterlo contestare: un riscontro
   // sull'host di un iframe di prenotazione vale piu' di una parola nell'HTML.
@@ -61,6 +76,28 @@ const FIDUCIA: Record<Riscontro["evidence_kind"], number> = {
 // verifica umana. Meglio "da controllare" che un dato sbagliato in una lista
 // che poi usi per mandare email.
 export const SOGLIA_ATTENDIBILE = 70
+
+/**
+ * Quanto ci fidiamo di UN TIPO di un riscontro.
+ *
+ * Per un tipo osservato e' la fiducia della prova. Per un tipo DEDOTTO (vedi
+ * `inferred_types`) e' piu' bassa, e soprattutto e' tenuta per costruzione
+ * SOTTO la soglia: cosi' una deduzione non puo' mai diventare "rilevato" da
+ * sola, ma finisce fra le cose da verificare.
+ *
+ * Perche' proporzionale e non un valore fisso: dedurre il gestionale dall'host
+ * del motore (90) e' piu' solido che dedurlo da una parola nell'HTML (55). Un
+ * valore fisso appiattirebbe questa differenza, che invece e' reale.
+ *
+ * Il `min` non e' un ornamento: se un giorno qualcuno alzasse la scala delle
+ * prove o abbassasse la penale, senza di esso una deduzione potrebbe superare
+ * la soglia e presentarsi come un dato osservato.
+ */
+export function fiduciaPerTipo(r: Riscontro, tipo: TipoTecnologia): number {
+  const dedotto = (r.inferred_types || []).includes(tipo)
+  if (!dedotto) return r.confidence
+  return Math.min(Math.round(r.confidence * 0.6), SOGLIA_ATTENDIBILE - 1)
+}
 
 function compilaRegex(pattern: string): RegExp | null {
   try {
