@@ -41,6 +41,12 @@ create table if not exists public.technical_audit_findings (
 create index if not exists technical_audit_findings_run_idx on public.technical_audit_findings(run_id, severity);
 alter table public.technical_audit_runs enable row level security;
 alter table public.technical_audit_findings enable row level security;
+
+-- Defense in depth: le tabelle non devono essere interrogabili dal Data API.
+-- Il Control Center usa esclusivamente il client server-side con service role.
+revoke all on table public.technical_audit_runs from anon, authenticated;
+revoke all on table public.technical_audit_findings from anon, authenticated;
+
 -- Nessuna policy pubblica: lettura e scrittura avvengono esclusivamente dal server con service role.
 
 commit;
