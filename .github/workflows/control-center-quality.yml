@@ -1,0 +1,38 @@
+name: Control Center quality
+
+on:
+  pull_request:
+    paths:
+      - "app/admin/control-center/**"
+      - "app/api/admin/control-center/**"
+      - "app/api/cron/technical-audit/**"
+      - "lib/control-center/**"
+      - "scripts/071_technical_audit_control_center.sql"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck Control Center (baseline-aware)
+        run: |
+          pnpm exec tsc --noEmit --pretty false 2>&1 | tee /tmp/typecheck.log || true
+          if grep -E '(app/admin/control-center|app/api/admin/control-center|app/api/cron/technical-audit|lib/control-center)' /tmp/typecheck.log; then
+            echo 'TypeScript errors found in Control Center files.'
+            exit 1
+          fi
