@@ -8,6 +8,7 @@ import {
   defaultStepContent,
   enrollWarmRecipients,
 } from "@/lib/dem/warm"
+import { checkEmailProviderHealth, pauseAllDemForProvider } from "@/lib/dem/provider-health"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -185,11 +186,21 @@ export async function POST(request: NextRequest) {
 
     const { data: campaign } = await supabase
       .from("dem_campaigns")
-      .select("id")
+      .select("id, campaign_kind, original_campaign_id, followup_id")
       .eq("id", originalCampaignId)
       .single()
     if (!campaign) {
       return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 })
+    }
+
+    // Una figlia warm non puo' diventare a sua volta una campagna madre: e'
+    // questa ricorsione che produceva nomi come "Sollecito 1 · Sollecito 3 ·
+    // Sollecito 1" e sequenze impossibili da governare.
+    if (campaign.campaign_kind === "warm_followup" || campaign.original_campaign_id || campaign.followup_id) {
+      return NextResponse.json(
+        { error: "I solleciti si configurano solo sulla campagna originale, non su un sollecito precedente." },
+        { status: 409 },
+      )
     }
 
     // Una sola sequenza per campagna: se esiste, la ritorno invece di duplicare.
@@ -341,6 +352,20 @@ export async function PATCH(request: NextRequest) {
 
       // Azioni di stato.
       const action = body.action as string | undefined
+      if (action === "activate" || action === "resume") {
+        const health = await checkEmailProviderHealth()
+        if (!health.healthy) {
+          const reason = await pauseAllDemForProvider(supabase, health)
+          await supabase
+            .from("dem_followups")
+            .update({ status: "paused", paused_reason: reason, updated_at: new Date().toISOString() })
+            .eq("id", body.followup_id)
+          return NextResponse.json(
+            { error: reason, code: "provider_unavailable", statusCode: health.statusCode },
+            { status: 503 },
+          )
+        }
+      }
       if (action === "activate") updates.status = "active"
       else if (action === "pause") updates.status = "paused"
       else if (action === "resume") updates.status = "active"

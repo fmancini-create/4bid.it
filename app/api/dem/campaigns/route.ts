@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
+import { checkEmailProviderHealth, pauseAllDemForProvider } from "@/lib/dem/provider-health"
 
 // `request` va dichiarato anche qui: senza parametro la guardia non potrebbe
 // leggere le intestazioni. Prima questa GET restituiva a CHIUNQUE, senza alcun
@@ -90,6 +91,37 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
     const updates: Record<string, unknown> = {}
+
+    if (body.auto_send === true) {
+      const { data: currentCampaign } = await supabase
+        .from("dem_campaigns")
+        .select("campaign_kind")
+        .eq("id", id)
+        .single()
+      if (currentCampaign?.campaign_kind === "warm_followup") {
+        return NextResponse.json(
+          { error: "Le campagne figlie sono gestite dal cron dei solleciti e non possono usare l'invio automatico freddo." },
+          { status: 409 },
+        )
+      }
+    }
+
+    // Riattivare o rimuovere una sospensione mentre Resend non risponde
+    // ricreerebbe immediatamente l'incidente. La verifica e' priva di invii.
+    if (body.auto_send === true || body.auto_paused_reason === null) {
+      const health = await checkEmailProviderHealth()
+      if (!health.healthy) {
+        const reason = await pauseAllDemForProvider(supabase, health)
+        await supabase
+          .from("dem_campaigns")
+          .update({ auto_send: false, auto_paused_reason: reason, updated_at: new Date().toISOString() })
+          .eq("id", id)
+        return NextResponse.json(
+          { error: reason, code: "provider_unavailable", statusCode: health.statusCode },
+          { status: 503 },
+        )
+      }
+    }
 
     // Azioni sulla coda destinatari:
     //  - "resume": riprende l'invio (paused -> pending), cosi i contatti tornano inviabili

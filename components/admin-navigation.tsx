@@ -29,6 +29,7 @@ import {
   Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDemAlerts } from "@/lib/dem/use-dem-alerts"
 
 interface AdminNavigationProps {
   userEmail: string
@@ -40,6 +41,7 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
   const [isOpen, setIsOpen] = useState(false)
   const [pendingPress, setPendingPress] = useState(0)
   const [pendingApplications, setPendingApplications] = useState(0)
+  const { data: demAlerts } = useDemAlerts()
 
   useEffect(() => {
     let active = true
@@ -276,10 +278,22 @@ export default function AdminNavigation({ userEmail, pendingProjectRoom = 0 }: A
 
           <a
             href="/admin/dem"
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-left touch-manipulation"
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-left touch-manipulation ${
+              demAlerts?.criticalCount
+                ? "bg-red-50 text-red-800 hover:bg-red-100 active:bg-red-100"
+                : "hover:bg-muted active:bg-muted/80"
+            }`}
           >
-            <Mail className="h-5 w-5 text-primary shrink-0" />
+            <Mail className={`h-5 w-5 shrink-0 ${demAlerts?.criticalCount ? "text-red-700" : "text-primary"}`} />
             <span className="font-medium text-sm sm:text-base">DEM</span>
+            {demAlerts?.criticalCount ? (
+              <span
+                className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-700 px-1.5 py-0.5 text-xs font-bold text-white"
+                aria-label={`${demAlerts.criticalCount} avvisi DEM critici`}
+              >
+                {demAlerts.criticalCount}
+              </span>
+            ) : null}
           </a>
 
           <a

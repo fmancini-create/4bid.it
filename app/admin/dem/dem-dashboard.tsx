@@ -302,6 +302,8 @@ interface Campaign {
   updated_at: string
   auto_send?: boolean
   auto_started_on?: string | null
+  campaign_kind?: string | null
+  original_campaign_id?: string | null
   // Motivo della sospensione automatica per rimbalzi troppo alti. Senza questo
   // campo in pagina la campagna risulterebbe solo "spenta", e riaccenderla
   // ricomincerebbe a bruciare la reputazione del mittente senza saperlo.
@@ -459,6 +461,7 @@ export default function DemDashboard({
   const [manualNome, setManualNome] = useState("")
   const [manualCognome, setManualCognome] = useState("")
   const [manualAzienda, setManualAzienda] = useState("")
+  const isWarmChild = selectedCampaign?.campaign_kind === "warm_followup"
 
   // Edit recipient form
   const [editRecipient, setEditRecipient] = useState<Recipient | null>(null)
@@ -1335,26 +1338,34 @@ export default function DemDashboard({
                     </Button>
                   )}
 
-                  <Button
-                    size="sm"
-                    variant={selectedCampaign.auto_send ? "default" : "outline"}
-                    onClick={toggleAutoSend}
-                    disabled={togglingAuto || (!selectedCampaign.auto_send && (!stats || stats.summary.pending === 0))}
-                    className={selectedCampaign.auto_send ? "bg-emerald-600 hover:bg-emerald-700 text-foreground" : ""}
-                    title="Invia da solo a scaglioni, ogni giorno 9:00-18:00, con volume crescente (warm-up)"
-                  >
-                    <Zap className={`h-4 w-4 mr-2 ${togglingAuto ? "animate-pulse" : ""}`} />
-                    {selectedCampaign.auto_send ? "Auto attivo" : "Invio automatico"}
-                  </Button>
+                  {isWarmChild ? (
+                    <Badge variant="outline" className="border-amber-500 text-amber-700">
+                      Gestita dai solleciti
+                    </Badge>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant={selectedCampaign.auto_send ? "default" : "outline"}
+                        onClick={toggleAutoSend}
+                        disabled={togglingAuto || (!selectedCampaign.auto_send && (!stats || stats.summary.pending === 0))}
+                        className={selectedCampaign.auto_send ? "bg-emerald-600 hover:bg-emerald-700 text-foreground" : ""}
+                        title="Invia da solo a scaglioni, ogni giorno 9:00-18:00, con volume crescente (warm-up)"
+                      >
+                        <Zap className={`h-4 w-4 mr-2 ${togglingAuto ? "animate-pulse" : ""}`} />
+                        {selectedCampaign.auto_send ? "Auto attivo" : "Invio automatico"}
+                      </Button>
 
-                  <Button
-                    size="sm"
-                    onClick={sendCampaign}
-                    disabled={sending || !stats || stats.summary.pending === 0}
-                  >
-                    <Send className={`h-4 w-4 mr-2 ${sending ? "animate-pulse" : ""}`} />
-                    {sending ? "Invio in corso..." : "Invia"}
-                  </Button>
+                      <Button
+                        size="sm"
+                        onClick={sendCampaign}
+                        disabled={sending || !stats || stats.summary.pending === 0}
+                      >
+                        <Send className={`h-4 w-4 mr-2 ${sending ? "animate-pulse" : ""}`} />
+                        {sending ? "Invio in corso..." : "Invia"}
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -2123,18 +2134,24 @@ export default function DemDashboard({
                         </span>
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0"
-                      asChild
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <a href={`/admin/dem/${campaign.id}`}>
-                        <Flame className="h-4 w-4 sm:mr-1.5" />
-                        <span className="hidden sm:inline">Solleciti caldi</span>
-                      </a>
-                    </Button>
+                    {campaign.campaign_kind === "warm_followup" ? (
+                      <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-700">
+                        Sollecito
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <a href={`/admin/dem/${campaign.id}`}>
+                          <Flame className="h-4 w-4 sm:mr-1.5" />
+                          <span className="hidden sm:inline">Solleciti caldi</span>
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

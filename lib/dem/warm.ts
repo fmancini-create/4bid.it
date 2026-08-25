@@ -398,6 +398,10 @@ export async function getOrCreateStepCampaign(
       original_campaign_id: params.originalCampaignId,
       followup_id: params.followupId,
       sequence_step: params.step.step_number,
+      // Le figlie appartengono esclusivamente al cron warm. Se entrano anche
+      // nel cron freddo vengono inviate due volte e possono sottrarre il turno
+      // alle campagne principali.
+      auto_send: false,
     })
     .select("id")
     .single()
@@ -651,14 +655,27 @@ export async function dispatchWarmStep(
   // Invio reale tramite l'endpoint collaudato.
   let sendResult: unknown = null
   try {
+    const cronSecret = process.env.CRON_SECRET
+    if (!cronSecret) {
+      return {
+        childCampaignId: childId,
+        requested: eligible.length,
+        sent: 0,
+        sendResult: { error: "CRON_SECRET non configurato", code: "cron_secret_missing", httpStatus: 500 },
+      }
+    }
     const res = await fetch(`${baseUrl}/api/dem/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cronSecret}`,
+      },
       body: JSON.stringify({ campaign_id: childId, batch_size: eligible.length }),
     })
-    sendResult = await res.json().catch(() => ({}))
+    const payload = await res.json().catch(() => ({}))
+    sendResult = { ...payload, httpStatus: res.status }
   } catch (err) {
-    sendResult = { error: err instanceof Error ? err.message : "send failed" }
+    sendResult = { error: err instanceof Error ? err.message : "send failed", httpStatus: 502 }
   }
 
   // Aggiorna i contatori commerciali per chi risulta effettivamente inviato.

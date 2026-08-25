@@ -1,4 +1,5 @@
 import { Resend } from "resend"
+import { isSystemicEmailProviderError } from "@/lib/dem/provider-health"
 
 interface EmailAttachment {
   filename: string
@@ -185,7 +186,12 @@ export async function sendEmail({
   const client = getClient()
   if (!client) {
     console.error("[v0] RESEND_API_KEY non configurata")
-    return { success: false, error: "RESEND_API_KEY non configurata" }
+    return {
+      success: false as const,
+      error: "RESEND_API_KEY non configurata",
+      systemic: true,
+      statusCode: null,
+    }
   }
 
   // Header List-Unsubscribe (one-click) generati in automatico se non disabilitati.
@@ -217,12 +223,25 @@ export async function sendEmail({
 
     if (error) {
       console.error("[v0] Errore invio Resend:", error)
-      return { success: false, error: error.message || "Errore Resend" }
+      const statusCode = "statusCode" in error && typeof error.statusCode === "number" ? error.statusCode : null
+      const message = error.message || "Errore Resend"
+      return {
+        success: false as const,
+        error: message,
+        systemic: isSystemicEmailProviderError({ message, statusCode }),
+        statusCode,
+      }
     }
 
-    return { success: true, messageId: data?.id }
+    return { success: true as const, messageId: data?.id }
   } catch (error) {
     console.error("[v0] Eccezione invio Resend:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Errore sconosciuto" }
+    const message = error instanceof Error ? error.message : "Errore sconosciuto"
+    return {
+      success: false as const,
+      error: message,
+      systemic: isSystemicEmailProviderError({ message }),
+      statusCode: null,
+    }
   }
 }
