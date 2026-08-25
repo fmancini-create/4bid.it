@@ -3,6 +3,12 @@ import { createAdminClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/email-resend"
 import { rifiutaSeNonAutorizzato } from "@/lib/dem/autorizzazione"
 import { oggettoPerDestinatario, applicaVarianteAlLink } from "@/lib/dem/ab-oggetto"
+import {
+  checkEmailProviderHealth,
+  pauseAllDemForProvider,
+  providerPauseReason,
+  type EmailProviderHealth,
+} from "@/lib/dem/provider-health"
 
 // Allow long-running sends: throttle x many recipients can exceed the default timeout.
 export const maxDuration = 300
@@ -168,6 +174,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 })
     }
 
+    const isCronCall =
+      !!process.env.CRON_SECRET && request.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`
+    if (campaign.campaign_kind === "warm_followup" && !isCronCall) {
+      return NextResponse.json(
+        { error: "Questa e' una campagna figlia: l'invio e' gestito esclusivamente dalla sequenza di solleciti." },
+        { status: 409 },
+      )
+    }
+
     if (campaign.status === "sending") {
       return NextResponse.json({ error: "Campagna gia' in fase di invio" }, { status: 400 })
     }
@@ -185,10 +200,31 @@ export async function POST(request: NextRequest) {
     if (campaign.auto_paused_reason) {
       return NextResponse.json(
         {
-          error: `Invio bloccato: la campagna e' sospesa per rimbalzi troppo alti. ${campaign.auto_paused_reason}`,
+          error: `Invio bloccato: la campagna e' sospesa dal sistema. ${campaign.auto_paused_reason}`,
           paused: true,
         },
         { status: 409 },
+      )
+    }
+
+    // Preflight senza invio: un problema di chiave/account deve fermare la
+    // macchina PRIMA che il primo destinatario venga estratto dalla coda.
+    const providerHealth = await checkEmailProviderHealth()
+    if (!providerHealth.healthy) {
+      const reason = await pauseAllDemForProvider(supabase, providerHealth)
+      await supabase
+        .from("dem_campaigns")
+        .update({ status: "draft", auto_send: false, auto_paused_reason: reason, updated_at: new Date().toISOString() })
+        .eq("id", campaign_id)
+      console.error(`[v0] DEM provider non disponibile: ${providerHealth.error}`)
+      return NextResponse.json(
+        {
+          error: reason,
+          code: "provider_unavailable",
+          systemic: true,
+          statusCode: providerHealth.statusCode,
+        },
+        { status: 503 },
       )
     }
 
@@ -291,6 +327,14 @@ export async function POST(request: NextRequest) {
       if (!erroreConteggio && typeof giaInviate === "number") sentCount = giaInviate
     }
     let failedCount = campaign.failed_count || 0
+    {
+      const { count: giaFallite, error: erroreConteggio } = await supabase
+        .from("dem_recipients")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign_id)
+        .eq("send_status", "failed")
+      if (!erroreConteggio && typeof giaFallite === "number") failedCount = giaFallite
+    }
 
     // Opzioni deliverability della campagna (default retrocompatibili).
     const trackOpens = campaign.track_opens !== false
@@ -374,6 +418,7 @@ export async function POST(request: NextRequest) {
     }
 
     let skippedCount = 0
+    let providerFailure: EmailProviderHealth | null = null
 
     // Send emails with throttling
     for (const recipient of recipients) {
@@ -465,6 +510,15 @@ export async function POST(request: NextRequest) {
               subject_variant: variante,
             })
             .eq("id", recipient.id)
+        } else if (result.systemic) {
+          // Il destinatario NON e' fallito: l'errore riguarda credenziali,
+          // account, quota o disponibilita' del provider. Resta pending e il
+          // ciclo si ferma subito, senza contaminare altre righe della coda.
+          providerFailure = {
+            healthy: false,
+            error: result.error,
+            statusCode: result.statusCode,
+          }
         } else {
           failedCount++
           await supabase
@@ -496,12 +550,49 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", campaign_id)
 
+      if (providerFailure) break
+
       // Throttle between emails
       await sleep(THROTTLE_DELAY_MS)
     }
 
-    // How many recipients are still pending after this batch
-    const remaining = Math.max(0, (pendingTotal || recipients.length) - recipients.length)
+    // Il conteggio reale evita di consumare virtualmente tutto il lotto quando
+    // il ciclo si interrompe al primo errore sistemico.
+    const { count: remainingCount } = await supabase
+      .from("dem_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign_id)
+      .eq("send_status", "pending")
+    const remaining = remainingCount ?? 0
+
+    if (providerFailure) {
+      const reason = providerPauseReason(providerFailure)
+      await pauseAllDemForProvider(supabase, providerFailure)
+      await supabase
+        .from("dem_campaigns")
+        .update({
+          status: "draft",
+          auto_send: false,
+          auto_paused_reason: reason,
+          sent_count: sentCount,
+          failed_count: failedCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", campaign_id)
+      console.error(`[v0] DEM sospesa per errore provider: ${providerFailure.error}`)
+      return NextResponse.json(
+        {
+          error: reason,
+          code: "provider_unavailable",
+          systemic: true,
+          statusCode: providerFailure.statusCode,
+          sent: sentCount,
+          failed: failedCount,
+          remaining,
+        },
+        { status: 503 },
+      )
+    }
 
     // If there are still pending recipients, keep the campaign resumable (draft) so
     // the operator can send the next batch later (e.g. the next day for SMTP limits).

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 import { MAX_STEPS, dispatchWarmStep, type FollowupStepRow } from "@/lib/dem/warm"
+import { checkEmailProviderHealth, pauseAllDemForProvider } from "@/lib/dem/provider-health"
 
 export const maxDuration = 300
 
@@ -44,6 +45,16 @@ export async function GET(request: NextRequest) {
       (process.env.VERCEL_PROJECT_PRODUCTION_URL
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : "https://www.4bid.it")
+
+    const providerHealth = await checkEmailProviderHealth()
+    if (!providerHealth.healthy) {
+      const reason = await pauseAllDemForProvider(supabase, providerHealth)
+      console.error(`[v0] dem-warm-send: ${reason}`)
+      return NextResponse.json(
+        { ok: false, error: reason, code: "provider_unavailable", statusCode: providerHealth.statusCode },
+        { status: 503 },
+      )
+    }
 
     const todayStart = utcStartOfToday()
     const nowIso = new Date().toISOString()
@@ -145,6 +156,24 @@ export async function GET(request: NextRequest) {
           })
           pausedForBounces = true
           break
+        }
+
+        const erroreInvio = dispatch.sendResult as
+          | { error?: string; code?: string; httpStatus?: number }
+          | undefined
+        if (erroreInvio?.error || (erroreInvio?.httpStatus && erroreInvio.httpStatus >= 400)) {
+          results.push({
+            followup: followup.id,
+            step: step.step_number,
+            error: erroreInvio.error || "Invio warm fallito",
+            code: erroreInvio.code,
+            httpStatus: erroreInvio.httpStatus,
+          })
+          console.error("[v0] dem-warm-send: dispatch fallito", erroreInvio)
+          return NextResponse.json(
+            { ok: false, error: erroreInvio.error || "Invio warm fallito", results },
+            { status: erroreInvio.httpStatus && erroreInvio.httpStatus >= 500 ? erroreInvio.httpStatus : 502 },
+          )
         }
 
         if (dispatch.requested > 0) {

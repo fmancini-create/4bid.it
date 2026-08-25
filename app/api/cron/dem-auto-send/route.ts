@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
+import { checkEmailProviderHealth, pauseAllDemForProvider } from "@/lib/dem/provider-health"
 
 export const maxDuration = 300
 
@@ -74,6 +75,19 @@ export async function GET(request: NextRequest) {
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : "https://www.4bid.it")
 
+    // Il provider si verifica senza inviare nulla. Se la chiave e' revocata o
+    // l'account e' indisponibile, il cron deve fallire visibilmente e fermare
+    // TUTTE le code, non marcare centinaia di contatti come falliti.
+    const providerHealth = await checkEmailProviderHealth()
+    if (!providerHealth.healthy) {
+      const reason = await pauseAllDemForProvider(supabase, providerHealth)
+      console.error(`[v0] dem-auto-send: ${reason}`)
+      return NextResponse.json(
+        { ok: false, error: reason, code: "provider_unavailable", statusCode: providerHealth.statusCode },
+        { status: 503 },
+      )
+    }
+
     // Campagne in coda con invio automatico attivo. Lo stato 'draft' e' quello in cui
     // il send lascia la campagna finche' restano destinatari pendenti.
     //
@@ -85,6 +99,10 @@ export async function GET(request: NextRequest) {
       .select("id, name, status, auto_send, auto_started_on, daily_quota_cold, updated_at")
       .eq("auto_send", true)
       .in("status", ["draft", "sending"])
+      .or("campaign_kind.is.null,campaign_kind.eq.cold")
+      // Round-robin: dopo un lotto `updated_at` cambia e la campagna va in
+      // fondo. Una lista grande non puo' piu' monopolizzare ogni esecuzione.
+      .order("updated_at", { ascending: true })
 
     if (campErr) {
       console.error("[v0] dem-auto-send: errore lettura campagne", campErr.message)
@@ -235,11 +253,17 @@ export async function GET(request: NextRequest) {
       // "Non autorizzato" e il cron, pur girando, non spediva nulla: i due
       // presidi si annullavano a vicenda. Inoltriamo quindi il segreto.
       const cronSecret = process.env.CRON_SECRET
+      if (!cronSecret) {
+        return NextResponse.json(
+          { ok: false, error: "CRON_SECRET non configurato", code: "cron_secret_missing" },
+          { status: 500 },
+        )
+      }
       const res = await fetch(`${baseUrl}/api/dem/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+          Authorization: `Bearer ${cronSecret}`,
         },
         body: JSON.stringify({ campaign_id: campaign.id, batch_size: toSend }),
       })
@@ -252,8 +276,19 @@ export async function GET(request: NextRequest) {
         dailyCap,
         sentToday: sentToday || 0,
         requested: toSend,
+        httpStatus: res.status,
         sendResult: payload,
       })
+
+      // Un errore dell'endpoint non e' un'esecuzione riuscita. Propagandolo,
+      // Vercel registra il cron come fallito e l'incidente diventa osservabile.
+      if (!res.ok) {
+        console.error(`[v0] dem-auto-send: /api/dem/send HTTP ${res.status}`, payload)
+        return NextResponse.json(
+          { ok: false, error: "Invio DEM fallito", results },
+          { status: res.status >= 500 ? res.status : 502 },
+        )
+      }
 
       // Un solo lotto reale per esecuzione, per restare entro il timeout della funzione.
       // I lotti successivi partono alle esecuzioni orarie seguenti della stessa finestra.

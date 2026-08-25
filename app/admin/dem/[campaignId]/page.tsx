@@ -47,5 +47,11 @@ export default async function DemCampaignDetailPage({
     notFound()
   }
 
+  // I solleciti si amministrano dalla campagna madre. Impedisce di creare
+  // sequenze ricorsive "Sollecito di un sollecito".
+  if (campaign.campaign_kind === "warm_followup" && campaign.original_campaign_id) {
+    redirect(`/admin/dem/${campaign.original_campaign_id}`)
+  }
+
   return <WarmFollowupClient campaignId={campaignId} initialCampaign={campaign} />
 }
