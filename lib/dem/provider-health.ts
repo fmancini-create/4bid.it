@@ -6,6 +6,8 @@
 // in centinaia di righe "failed" e consuma inutilmente tutta la coda.
 // =============================================================================
 
+const nodemailer = require("nodemailer")
+
 // Volutamente "any" per il client Supabase: e' lo stesso compromesso usato
 // dagli helper DEM per evitare tipi generati molto profondi durante il build.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,7 +31,17 @@ const SYSTEMIC_ERROR_PATTERNS = [
   /rate limit/i,
   /temporarily unavailable/i,
   /service unavailable/i,
-  /resend_api_key/i,
+  /badcredentials/i,
+  /authentication/i,
+  /invalid login/i,
+  /username and password not accepted/i,
+  /smtp_(host|user|password|pass)/i,
+  /econnrefused/i,
+  /econnreset/i,
+  /etimedout/i,
+  /socket/i,
+  /tls/i,
+  /dns/i,
 ]
 
 export function isSystemicEmailProviderError(input: {
@@ -37,59 +49,75 @@ export function isSystemicEmailProviderError(input: {
   statusCode?: number | null
 }): boolean {
   const status = input.statusCode ?? null
-  if (status === 401 || status === 403 || status === 429 || (status !== null && status >= 500)) {
+  if (status === 401 || status === 403 || status === 429 || status === 421 || status === 450 || status === 451 || status === 452 || status === 454 || status === 535 || (status !== null && status >= 500 && status < 550)) {
     return true
   }
   const message = input.message || ""
   return SYSTEMIC_ERROR_PATTERNS.some((pattern) => pattern.test(message))
 }
 
-function messageFromPayload(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null
-  const record = payload as Record<string, unknown>
-  if (typeof record.message === "string") return record.message
-  if (typeof record.error === "string") return record.error
-  return null
+function smtpPassword(): string | undefined {
+  return process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim()
+}
+
+function smtpConfig() {
+  const host = process.env.SMTP_HOST?.trim()
+  const user = process.env.SMTP_USER?.trim()
+  const pass = smtpPassword()
+  const port = Number.parseInt(process.env.SMTP_PORT || "587", 10)
+  const explicitSecure = process.env.SMTP_SECURE?.trim().toLowerCase()
+  const secure = explicitSecure ? explicitSecure === "true" : port === 465
+
+  if (!host || !user || !pass) return null
+
+  return {
+    host,
+    port: Number.isFinite(port) ? port : 587,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
+  }
+}
+
+function smtpResponseCode(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null
+  const record = error as Record<string, unknown>
+  return typeof record.responseCode === "number" ? record.responseCode : null
 }
 
 /**
- * Verifica le credenziali con una GET priva di effetti collaterali. Il controllo
- * avviene PRIMA di estrarre destinatari dalla coda e non invia alcuna email.
+ * Verifica connessione e autenticazione SMTP senza inviare email. Il controllo
+ * avviene PRIMA di estrarre destinatari dalla coda.
  */
 export async function checkEmailProviderHealth(): Promise<EmailProviderHealth> {
-  const key = process.env.RESEND_API_KEY?.trim()
-  if (!key) {
-    return { healthy: false, error: "RESEND_API_KEY non configurata", statusCode: null }
+  const config = smtpConfig()
+  if (!config) {
+    return {
+      healthy: false,
+      error: "Configurazione SMTP incompleta: verificare SMTP_HOST, SMTP_USER e SMTP_PASSWORD/SMTP_PASS",
+      statusCode: null,
+    }
   }
 
   try {
-    const response = await fetch("https://api.resend.com/domains", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${key}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    if (response.ok) return { healthy: true, error: null, statusCode: response.status }
-
-    const payload = await response.json().catch(() => null)
-    return {
-      healthy: false,
-      error: messageFromPayload(payload) || `Resend ha risposto HTTP ${response.status}`,
-      statusCode: response.status,
-    }
+    const transporter = nodemailer.createTransport(config)
+    await transporter.verify()
+    transporter.close?.()
+    return { healthy: true, error: null, statusCode: 200 }
   } catch (error) {
     return {
       healthy: false,
-      error: error instanceof Error ? error.message : "Provider email non raggiungibile",
-      statusCode: null,
+      error: error instanceof Error ? error.message : "Provider SMTP non raggiungibile",
+      statusCode: smtpResponseCode(error),
     }
   }
 }
 
 export function providerPauseReason(health: EmailProviderHealth): string {
   const detail = health.error?.trim() || "verifica del provider fallita"
-  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare Resend prima di riprendere.`
+  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare la configurazione SMTP prima di riprendere.`
 }
 
 /** Ferma insieme campagne fredde e solleciti caldi, conservando le code. */
@@ -117,8 +145,6 @@ export async function pauseAllDemForProvider(
     )
   }
 
-  // Un timeout o un errore provider puo' lasciare una campagna nello stato
-  // transitorio "sending". La coda e' intatta, quindi la rendiamo riprendibile.
   const sendingResult = await supabase
     .from("dem_campaigns")
     .update({ status: "draft", updated_at: now })
