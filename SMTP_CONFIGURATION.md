@@ -1,50 +1,61 @@
 # Configurazione SMTP per 4BID.IT
 
+## Sicurezza
+
+Non inserire mai password, App Password, API key o altri segreti in questo repository. Le credenziali SMTP devono essere salvate esclusivamente nelle Environment Variables di Vercel o nel secret manager dell'ambiente di produzione.
+
+Se una credenziale e' stata committata in passato, considerarla compromessa e ruotarla immediatamente: rimuoverla dal file corrente non la elimina dalla cronologia Git.
+
 ## Variabili d'Ambiente su Vercel
 
-Aggiungi/Aggiorna queste variabili d'ambiente nel tuo progetto Vercel (Settings → Environment Variables):
+Aggiungi o aggiorna queste variabili nel progetto Vercel che serve `4bid.it`:
 
-```
+```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=clienti@4bid.it
-SMTP_PASSWORD=Pippolo75@google
-SMTP_FROM=clienti@4bid.it
+SMTP_PASSWORD=<APP_PASSWORD_O_PASSWORD_SMTP>
+SMTP_FROM=4BID SRL <clienti@4bid.it>
+SMTP_FROM_TRANSACTIONAL=4Bid Project Room <clienti@4bid.it>
+SMTP_FROM_MARKETING=4BID SRL <clienti@4bid.it>
+SMTP_REPLY_TO=clienti@4bid.it
 ```
+
+`SMTP_PASS` e' accettata come alias di `SMTP_PASSWORD` per compatibilita' con configurazioni esistenti.
 
 ## Note Importanti
 
-- **SMTP_HOST**: `smtp.gmail.com` (Gmail/Google Workspace)
-- **SMTP_PORT**: `587` (TLS standard)
-- **SMTP_SECURE**: `false` (usa STARTTLS su porta 587)
-- **SMTP_USER**: Email completa del mittente
-- **SMTP_PASSWORD**: Password dell'account (o App Password se 2FA attivo)
-- **SMTP_FROM**: Email che apparirà come mittente
+- **SMTP_HOST**: server SMTP del provider; per Google Workspace e' `smtp.gmail.com`.
+- **SMTP_PORT**: `587` con STARTTLS oppure `465` con TLS implicito.
+- **SMTP_SECURE**: `false` su porta 587; `true` su porta 465.
+- **SMTP_USER**: casella autorizzata all'invio.
+- **SMTP_PASSWORD**: credenziale SMTP/App Password, mai da committare.
+- **SMTP_FROM**: fallback del mittente.
+- **SMTP_FROM_TRANSACTIONAL**: identita' per inviti e posta di servizio.
+- **SMTP_FROM_MARKETING**: identita' per campagne DEM; deve essere autorizzata dal provider SMTP.
+- **SMTP_REPLY_TO**: casella monitorata per le risposte.
 
-## Se la 2FA è Attiva su Google
+## Google Workspace con verifica in due passaggi
 
-Se l'account Google ha la verifica in due passaggi attiva, devi creare una **App Password**:
-
-1. Vai su https://myaccount.google.com/apppasswords
-2. Accedi con clienti@4bid.it
-3. Seleziona "Mail" e "Altro (nome personalizzato)" → scrivi "4BID Website"
-4. Clicca "Genera"
-5. Copia la password di 16 caratteri generata
-6. Usa quella password come `SMTP_PASSWORD` invece di Pippolo75@google
+Se l'account Google usa la verifica in due passaggi, utilizza una App Password valida per SMTP e salvala direttamente in Vercel come `SMTP_PASSWORD`. Non copiarla in documenti, ticket o commit.
 
 ## Verifica Funzionamento
 
-Dopo aver aggiunto le variabili d'ambiente:
+Dopo aver configurato le variabili:
 
-1. Fai un nuovo deployment su Vercel
-2. Testa il form "Proponi la tua idea" su https://4bid.it/proponi-idea
-3. Verifica che arrivino le email
+1. esegui un nuovo deployment di preview;
+2. verifica che il controllo provider SMTP risulti sano;
+3. testa una sola email transazionale verso un indirizzo controllato;
+4. verifica una campagna DEM con un destinatario di prova, inclusi `List-Unsubscribe` e reply-to;
+5. solo dopo i test abilita nuovamente le code automatiche.
 
 ## Troubleshooting
 
-Se le email non arrivano:
-- Verifica che le credenziali siano corrette
-- Se 2FA attivo, usa una App Password
-- Controlla i log di Vercel per eventuali errori SMTP
-- Verifica che l'account non sia bloccato per troppi tentativi
+Se le email non partono:
+
+- verifica host, porta, TLS e credenziali;
+- con Google Workspace, verifica che l'uso SMTP/App Password sia consentito per l'account;
+- controlla i Runtime Logs Vercel per errori di autenticazione, rete o TLS;
+- verifica che `SMTP_FROM*` usi indirizzi o alias autorizzati dal provider;
+- non riattivare le DEM finche' `checkEmailProviderHealth()` non torna sano.
