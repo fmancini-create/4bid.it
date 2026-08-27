@@ -28,6 +28,9 @@ interface EmailOptions {
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it").replace(/\/$/, "")
 const UNSUBSCRIBE_MAILTO = "clienti@4bid.it"
 
+let workspaceTransporter: any = null
+let brevoTransporter: any = null
+
 export function htmlToText(html: string): string {
   let s = html
   s = s.replace(/<!--[\s\S]*?-->/g, "")
@@ -93,13 +96,18 @@ function workspaceSmtpConfig() {
   const port = Number.parseInt(process.env.SMTP_PORT || "587", 10)
   const explicitSecure = process.env.SMTP_SECURE?.trim().toLowerCase()
   const secure = explicitSecure ? explicitSecure === "true" : port === 465
+  const normalizedPort = Number.isFinite(port) ? port : 587
 
   if (!host || !user || !pass) return null
 
   return {
     host,
-    port: Number.isFinite(port) ? port : 587,
+    port: normalizedPort,
     secure,
+    requireTLS: !secure && normalizedPort === 587,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
     auth: { user, pass },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
@@ -118,13 +126,18 @@ function brevoSmtpConfig() {
   const port = Number.parseInt(process.env.BREVO_SMTP_PORT || "587", 10)
   const explicitSecure = process.env.BREVO_SMTP_SECURE?.trim().toLowerCase()
   const secure = explicitSecure ? explicitSecure === "true" : port === 465
+  const normalizedPort = Number.isFinite(port) ? port : 587
 
   if (!user || !pass) return null
 
   return {
     host,
-    port: Number.isFinite(port) ? port : 587,
+    port: normalizedPort,
     secure,
+    requireTLS: !secure && normalizedPort === 587,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
     auth: { user, pass },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
@@ -167,18 +180,50 @@ function smtpStatusCode(error: unknown): number | null {
   return null
 }
 
-export async function sendEmail({
-  to,
-  subject,
-  html,
-  text,
-  replyTo,
-  attachments,
-  headers,
-  listUnsubscribe,
-  campaignId,
-  transactional = false,
-}: EmailOptions) {
+function getTransporter(transactional: boolean, config: Record<string, unknown>) {
+  if (transactional) {
+    if (!workspaceTransporter) workspaceTransporter = nodemailer.createTransport(config)
+    return workspaceTransporter
+  }
+  if (!brevoTransporter) brevoTransporter = nodemailer.createTransport(config)
+  return brevoTransporter
+}
+
+export async function sendEmail(options: EmailOptions): Promise<any> {
+  const { to } = options
+
+  // Gli invii multi-destinatario vengono serializzati per destinatario. In questo
+  // modo un rifiuto parziale SMTP non viene scambiato per successo globale e non
+  // rischiamo di saltare definitivamente chi e' stato rifiutato.
+  if (Array.isArray(to) && to.length > 1) {
+    const results = []
+    for (const recipient of to) {
+      results.push(await sendEmail({ ...options, to: recipient }))
+    }
+    const failed = results.filter((r) => !r.success)
+    if (failed.length > 0) {
+      return {
+        success: false as const,
+        error: `${failed.length} destinatari non accettati dal provider`,
+        systemic: failed.some((r) => r.systemic === true),
+        results,
+      }
+    }
+    return { success: true as const, provider: results[0]?.provider, results }
+  }
+
+  const {
+    subject,
+    html,
+    text,
+    replyTo,
+    attachments,
+    headers,
+    listUnsubscribe,
+    campaignId,
+    transactional = false,
+  } = options
+
   const providerName = transactional ? "Google Workspace SMTP" : "Brevo SMTP"
   const config = transactional ? workspaceSmtpConfig() : brevoSmtpConfig()
   const from = resolveFrom(transactional)
@@ -202,7 +247,7 @@ export async function sendEmail({
   }
 
   try {
-    const transporter = nodemailer.createTransport(config)
+    const transporter = getTransporter(transactional, config)
     const info = await transporter.sendMail({
       from,
       to,
@@ -220,6 +265,17 @@ export async function sendEmail({
             }))
           : undefined,
     })
+
+    const rejected = Array.isArray(info?.rejected) ? info.rejected : []
+    if (rejected.length > 0) {
+      return {
+        success: false as const,
+        error: `Destinatario rifiutato dal provider: ${rejected.join(", ")}`,
+        systemic: false,
+        statusCode: null,
+        rejected,
+      }
+    }
 
     return { success: true as const, messageId: info?.messageId, provider: providerName }
   } catch (error) {
