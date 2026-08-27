@@ -226,7 +226,6 @@ export async function fetchWarmAudience(
   const minClicks = Math.max(1, Number(config?.min_clicks ?? 1))
   const recencyDays = config?.recency_days ?? null
 
-  // Lista soppressione globale (disiscritti) -> mai "caldi".
   const { data: unsubRows } = await supabase.from("dem_unsubscribes").select("email").range(0, 99999)
   const unsubSet = new Set<string>(
     (unsubRows || []).map((r: { email: string | null }) => (r.email || "").toLowerCase()).filter(Boolean)
@@ -237,14 +236,10 @@ export async function fetchWarmAudience(
     .select("id, email, nome, cognome, nome_azienda, open_count, click_count, first_click_at, last_open_at")
     .eq("campaign_id", originalCampaignId)
     .gte("click_count", minClicks)
-    // Escludi chi non e' recapitabile: falliti, hard bounce e reclami (spam).
-    // Prima si escludeva solo 'failed', cosi' i 'bounced' rientravano tra i caldi
-    // e venivano ri-sollecitati ad ogni step (rimbalzando ogni volta).
     .not("send_status", "in", "(failed,bounced,complained)")
 
   if (recencyDays && recencyDays > 0) {
     const since = new Date(Date.now() - recencyDays * 86_400_000).toISOString()
-    // first_click_at e' il segnale di interesse piu' affidabile gia' memorizzato.
     query = query.gte("first_click_at", since)
   }
 
@@ -256,8 +251,6 @@ export async function fetchWarmAudience(
   )
 }
 
-// Arruola (o aggiorna) i candidati caldi in dem_followup_recipients.
-// Idempotente grazie a UNIQUE(followup_id, email): usa upsert ignorando i duplicati.
 export async function enrollWarmRecipients(
   supabase: SupabaseLike,
   followup: { id: string; original_campaign_id: string; audience_config: AudienceConfig }
@@ -300,10 +293,6 @@ export interface EligibleWarmRecipient {
   followups_sent: number
 }
 
-// Destinatari eleggibili a ricevere lo STEP indicato (invio sequenziale).
-// Regole: gia' ricevuti esattamente stepNumber-1 solleciti, intervallo minimo
-// rispettato (delay dello step, almeno MIN_FOLLOWUP_GAP_HOURS), non esclusi/
-// non rispondenti, stato non terminale, non disiscritti.
 export async function fetchEligibleWarmRecipients(
   supabase: SupabaseLike,
   followupId: string,
@@ -327,7 +316,6 @@ export async function fetchEligibleWarmRecipients(
     .limit(limit * 3)
   if (error) throw new Error(error.message)
 
-  // Lista soppressione globale + indirizzi non recapitabili (hard bounce/reclami).
   const emails = (data || []).map((r: { email: string }) => r.email).filter(Boolean)
   const unsubSet = new Set<string>()
   const bouncedSet = new Set<string>()
@@ -335,8 +323,6 @@ export async function fetchEligibleWarmRecipients(
     const { data: unsubRows } = await supabase.from("dem_unsubscribes").select("email").in("email", emails)
     for (const row of unsubRows || []) if (row.email) unsubSet.add(String(row.email).toLowerCase())
 
-    // Chi ha gia' fatto bounce/complaint in QUALSIASI campagna non va piu'
-    // sollecitato (difesa se il webhook non ha ancora marcato excluded).
     const { data: bouncedRows } = await supabase
       .from("dem_recipients")
       .select("email")
@@ -348,7 +334,6 @@ export async function fetchEligibleWarmRecipients(
   return (data || [])
     .filter((r: Record<string, unknown>) => !TERMINAL_COMMERCIAL_STATUSES.has(String(r.commercial_status)))
     .filter((r: Record<string, unknown>) => {
-      // Lo step 1 (delay 0) non richiede intervallo dal precedente.
       if (stepNumber <= 1) return true
       const last = r.last_followup_at as string | null
       return !last || last < gapThreshold
@@ -369,7 +354,6 @@ export async function fetchEligibleWarmRecipients(
     }))
 }
 
-// Crea (o riusa) la campagna FIGLIA collegata a uno step di sollecito.
 export async function getOrCreateStepCampaign(
   supabase: SupabaseLike,
   params: {
@@ -398,9 +382,6 @@ export async function getOrCreateStepCampaign(
       original_campaign_id: params.originalCampaignId,
       followup_id: params.followupId,
       sequence_step: params.step.step_number,
-      // Le figlie appartengono esclusivamente al cron warm. Se entrano anche
-      // nel cron freddo vengono inviate due volte e possono sottrarre il turno
-      // alle campagne principali.
       auto_send: false,
     })
     .select("id")
@@ -429,36 +410,47 @@ export interface FollowupStepRow {
   status: string
 }
 
-// Invia UNO step di sollecito: arruola gli eleggibili nella campagna figlia come
-// 'pending', delega l'invio reale a /api/dem/send (tracking/unsub/throttle inclusi)
-// e aggiorna i contatori commerciali. Idempotente: chi ha gia' ricevuto lo step
-// non viene re-arruolato (followups_sent == step_number - 1).
-// Freno sui rimbalzi per i RICHIAMI.
-//
-// I richiami sono un terzo percorso di invio: creano campagne "figlie" e le
-// spediscono con un id proprio, quindi la sospensione della campagna madre non
-// li ferma. Senza questo controllo restavano l'unica via aperta.
-//
-// La finestra NON e' temporale come per la lista fredda. Misurata la realta': i
-// richiami inviano a lotti sporadici (149 email il 12/07, 150 l'08/07, poi
-// niente per tre settimane), quindi "ultimi 3 giorni con almeno 200 email" non
-// scatterebbe MAI: un freno che non scatta e' identico a un freno che non c'e'.
-// Si misura invece sugli ULTIMI invii del richiamo, che si adatta al volume e
-// resta pesato sul recente.
-export const WARM_BOUNCE_THRESHOLD = 0.05
+// Guardrail reputazione per i richiami: campione degli ultimi invii.
+// >=1,5% warning; >=2% volume dimezzato; >=3% stop.
+export const WARM_BOUNCE_WARN_THRESHOLD = 0.015
+export const WARM_BOUNCE_SLOW_THRESHOLD = 0.02
+export const WARM_BOUNCE_STOP_THRESHOLD = 0.03
 export const WARM_BOUNCE_MIN_SAMPLE = 200
 export const WARM_BOUNCE_SAMPLE_SIZE = 500
 
 export async function checkWarmBounceRate(
   supabase: SupabaseLike,
   followupId: string
-): Promise<{ blocked: boolean; unreadable: boolean; reason: string | null; measured: number; bounced: number }> {
-  const esito = (o: Partial<{ blocked: boolean; unreadable: boolean; reason: string | null }>, m = 0, b = 0) => ({
+): Promise<{
+  blocked: boolean
+  slowed: boolean
+  warned: boolean
+  unreadable: boolean
+  reason: string | null
+  measured: number
+  bounced: number
+  rate: number
+}> {
+  const esito = (
+    o: Partial<{
+      blocked: boolean
+      slowed: boolean
+      warned: boolean
+      unreadable: boolean
+      reason: string | null
+      rate: number
+    }>,
+    m = 0,
+    b = 0,
+  ) => ({
     blocked: false,
+    slowed: false,
+    warned: false,
     unreadable: false,
     reason: null,
     measured: m,
     bounced: b,
+    rate: m > 0 ? b / m : 0,
     ...o,
   })
 
@@ -466,12 +458,9 @@ export async function checkWarmBounceRate(
     .from("dem_campaigns")
     .select("id")
     .eq("followup_id", followupId)
-  // Lettura fallita: NON si invia. Proseguire al buio e' esattamente cio' che ha
-  // permesso l'incidente del 29/06 sulla lista fredda.
   if (eFiglie) return esito({ unreadable: true, reason: eFiglie.message || "lettura campagne figlie fallita" })
 
   const ids = (figlie || []).map((c: { id: string }) => c.id)
-  // Nessuna figlia: il richiamo non ha ancora spedito nulla, niente da misurare.
   if (ids.length === 0) return esito({})
 
   const { data: righe, error: eRighe } = await supabase
@@ -479,8 +468,6 @@ export async function checkWarmBounceRate(
     .select("send_status")
     .in("campaign_id", ids)
     .not("sent_at", "is", null)
-    // Ordine UNIVOCO: `sent_at` da solo non basta a rendere stabile il campione
-    // quando molte righe condividono lo stesso istante.
     .order("sent_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(WARM_BOUNCE_SAMPLE_SIZE)
@@ -488,21 +475,47 @@ export async function checkWarmBounceRate(
 
   const misurate = (righe || []).length
   const rimbalzate = (righe || []).filter((r: { send_status: string }) => r.send_status === "bounced").length
-  // Campione troppo piccolo: 2 rimbalzi su 10 invii (20%) fermerebbero un
-  // richiamo sano.
   if (misurate < WARM_BOUNCE_MIN_SAMPLE) return esito({}, misurate, rimbalzate)
 
   const tasso = rimbalzate / misurate
-  if (tasso <= WARM_BOUNCE_THRESHOLD) return esito({}, misurate, rimbalzate)
+  if (tasso >= WARM_BOUNCE_STOP_THRESHOLD) {
+    return esito(
+      {
+        blocked: true,
+        rate: tasso,
+        reason: `Sospeso automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi sulle ultime ${misurate} email inviate (${rimbalzate} su ${misurate}), soglia stop ${WARM_BOUNCE_STOP_THRESHOLD * 100}%. Ripulire la lista prima di riprendere.`,
+      },
+      misurate,
+      rimbalzate,
+    )
+  }
 
-  return esito(
-    {
-      blocked: true,
-      reason: `Sospeso automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi sulle ultime ${misurate} email inviate (${rimbalzate} su ${misurate}), oltre la soglia del ${WARM_BOUNCE_THRESHOLD * 100}%. Ripulire la lista prima di riprendere.`,
-    },
-    misurate,
-    rimbalzate
-  )
+  if (tasso >= WARM_BOUNCE_SLOW_THRESHOLD) {
+    return esito(
+      {
+        slowed: true,
+        warned: true,
+        rate: tasso,
+        reason: `Rallentamento automatico: ${(tasso * 100).toFixed(1)}% di rimbalzi sulle ultime ${misurate} email; volume dimezzato.`,
+      },
+      misurate,
+      rimbalzate,
+    )
+  }
+
+  if (tasso >= WARM_BOUNCE_WARN_THRESHOLD) {
+    return esito(
+      {
+        warned: true,
+        rate: tasso,
+        reason: `Warning reputazione: ${(tasso * 100).toFixed(1)}% di rimbalzi sulle ultime ${misurate} email.`,
+      },
+      misurate,
+      rimbalzate,
+    )
+  }
+
+  return esito({ rate: tasso }, misurate, rimbalzate)
 }
 
 export async function dispatchWarmStep(
@@ -521,8 +534,6 @@ export async function dispatchWarmStep(
     return { childCampaignId: step.send_campaign_id, requested: 0, sent: 0 }
   }
 
-  // Il controllo sta PRIMA di arruolare e creare la campagna figlia: dopo
-  // avrebbe gia' prodotto righe e una campagna da spedire.
   const freno = await checkWarmBounceRate(supabase, followup.id)
   if (freno.unreadable) {
     console.error(`[v0] dem-warm-send: tasso rimbalzi non misurabile per ${followup.id}, salto per prudenza`)
@@ -534,9 +545,6 @@ export async function dispatchWarmStep(
     }
   }
   if (freno.blocked) {
-    // `paused` e' uno stato gia' previsto: il cron seleziona solo gli `active`,
-    // e la pagina mostra badge e pulsante di ripresa. Il motivo va scritto,
-    // altrimenti la pausa sarebbe muta e riattivare sembrerebbe innocuo.
     await supabase
       .from("dem_followups")
       .update({ status: "paused", paused_reason: freno.reason, updated_at: new Date().toISOString() })
@@ -550,12 +558,22 @@ export async function dispatchWarmStep(
     }
   }
 
+  if (freno.slowed) {
+    console.warn(`[v0] dem-warm-send: ${freno.reason}`)
+  } else if (freno.warned) {
+    console.warn(`[v0] dem-warm-send: ${freno.reason}`)
+  }
+
+  const effectiveMaxToSend = freno.slowed
+    ? Math.max(1, Math.floor(params.maxToSend * 0.5))
+    : params.maxToSend
+
   let eligible = await fetchEligibleWarmRecipients(
     supabase,
     followup.id,
     step.step_number,
     step.delay_days,
-    Math.max(params.maxToSend, 1)
+    Math.max(effectiveMaxToSend, 1)
   )
 
   if (params.onlyEmails && params.onlyEmails.length > 0) {
@@ -563,7 +581,7 @@ export async function dispatchWarmStep(
     eligible = eligible.filter((r) => set.has(r.email.toLowerCase()))
   }
 
-  eligible = eligible.slice(0, params.maxToSend)
+  eligible = eligible.slice(0, effectiveMaxToSend)
   if (eligible.length === 0) {
     return { childCampaignId: step.send_campaign_id, requested: 0, sent: 0 }
   }
@@ -576,13 +594,11 @@ export async function dispatchWarmStep(
   })
   if (!childId) return { childCampaignId: null, requested: 0, sent: 0 }
 
-  // Allinea soggetto/template della figlia all'ultima versione dello step.
   await supabase
     .from("dem_campaigns")
     .update({ subject: step.subject, html_template: step.html_template, updated_at: new Date().toISOString() })
     .eq("id", childId)
 
-  // Quali email sono gia' presenti nella figlia (per evitare duplicati)?
   const attemptedEmails = eligible.map((r) => r.email.toLowerCase())
   const { data: existingRows } = await supabase
     .from("dem_recipients")
@@ -599,10 +615,6 @@ export async function dispatchWarmStep(
       nome: r.nome,
       cognome: r.cognome,
       nome_azienda: r.nome_azienda,
-      // NB: dem_recipients ha un CHECK su tipo_contatto che ammette solo
-      // cliente/ex_cliente/potenziale/rappresentante. Sono contatti gia'
-      // toccati dalla campagna fredda -> "potenziale". (Usare un valore non
-      // ammesso faceva fallire l'insert in silenzio e la figlia restava vuota.)
       tipo_contatto: "potenziale",
       send_status: "pending",
       open_count: 0,
@@ -614,15 +626,12 @@ export async function dispatchWarmStep(
     const chunk = toInsert.slice(i, i + 100)
     const { error: insErr } = await supabase.from("dem_recipients").insert(chunk)
     if (insErr) {
-      // Non fallire in silenzio: logga cosi' un eventuale vincolo violato e' visibile.
       console.error("[v0] warm dispatch: insert destinatari figlia fallito:", insErr.message)
     } else {
       insertedOk += chunk.length
     }
   }
   if (toInsert.length > 0 && insertedOk === 0) {
-    // Nessun destinatario inserito: inutile chiamare /api/dem/send (non invierebbe
-    // nulla) e soprattutto va segnalato come errore reale.
     return {
       childCampaignId: childId,
       requested: 0,
@@ -631,9 +640,6 @@ export async function dispatchWarmStep(
     }
   }
 
-  // Se la figlia e' rimasta "appesa" in 'sending' (es. timeout di un lotto
-  // precedente), /api/dem/send rifiuterebbe l'invio. La sblocchiamo riportandola
-  // a 'draft' prima di rilanciare il lotto.
   const { data: childState } = await supabase
     .from("dem_campaigns")
     .select("status, updated_at")
@@ -647,12 +653,10 @@ export async function dispatchWarmStep(
         .update({ status: "draft", updated_at: new Date().toISOString() })
         .eq("id", childId)
     } else {
-      // Lotto probabilmente in corso: riprova alla prossima esecuzione.
       return { childCampaignId: childId, requested: 0, sent: 0, sendResult: { skipped: "sending_in_progress" } }
     }
   }
 
-  // Invio reale tramite l'endpoint collaudato.
   let sendResult: unknown = null
   try {
     const cronSecret = process.env.CRON_SECRET
@@ -678,7 +682,6 @@ export async function dispatchWarmStep(
     sendResult = { error: err instanceof Error ? err.message : "send failed", httpStatus: 502 }
   }
 
-  // Aggiorna i contatori commerciali per chi risulta effettivamente inviato.
   const { data: sentRows } = await supabase
     .from("dem_recipients")
     .select("email")
@@ -690,13 +693,11 @@ export async function dispatchWarmStep(
   const nowIso = new Date().toISOString()
   for (let i = 0; i < sentEmails.length; i += 100) {
     const batch = sentEmails.slice(i, i + 100)
-    // Avanza il contatore allo step corrente e segna l'orario.
     await supabase
       .from("dem_followup_recipients")
       .update({ followups_sent: step.step_number, last_followup_at: nowIso, updated_at: nowIso })
       .eq("followup_id", followup.id)
       .in("email", batch)
-    // Chi era solo "interessato" passa a "demo_da_prenotare" (ingaggio avviato).
     await supabase
       .from("dem_followup_recipients")
       .update({ commercial_status: "demo_da_prenotare", updated_at: nowIso })
@@ -705,7 +706,6 @@ export async function dispatchWarmStep(
       .in("email", batch)
   }
 
-  // Marca lo step come inviato (almeno una tornata effettuata).
   if (sentEmails.length > 0) {
     await supabase
       .from("dem_followup_steps")
