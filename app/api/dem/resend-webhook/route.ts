@@ -9,10 +9,12 @@ export const runtime = "nodejs"
  * Il path storico viene mantenuto per non introdurre un cambio di routing nella
  * stessa PR; il provider effettivo e' Brevo.
  *
- * Sicurezza: BREVO_WEBHOOK_SECRET e' obbligatorio in produzione. Brevo puo'
- * inviare un header personalizzato configurabile nel webhook: qui accettiamo
- * `x-brevo-webhook-secret` oppure `api-key` e confrontiamo il valore esatto.
- * Non viene loggato alcun segreto.
+ * Sicurezza: BREVO_WEBHOOK_SECRET e' obbligatorio. Brevo puo' autenticare il
+ * webhook con Bearer token oppure con header personalizzati. Accettiamo:
+ * - Authorization: Bearer <secret>
+ * - x-brevo-webhook-secret: <secret>
+ * - api-key: <secret>
+ * Il valore viene confrontato esattamente e non viene mai loggato.
  */
 
 function normalizeEmail(value: unknown): string | null {
@@ -22,11 +24,7 @@ function normalizeEmail(value: unknown): string | null {
 }
 
 function extractEmail(payload: Record<string, unknown>): string | null {
-  return (
-    normalizeEmail(payload.email) ||
-    normalizeEmail(payload.recipient) ||
-    normalizeEmail(payload.to)
-  )
+  return normalizeEmail(payload.email) || normalizeEmail(payload.recipient) || normalizeEmail(payload.to)
 }
 
 function normalizeEvent(value: unknown): string {
@@ -40,7 +38,13 @@ function verifyWebhookSecret(request: NextRequest): boolean {
     return false
   }
 
+  const authorization = request.headers.get("authorization")?.trim() || ""
+  const bearer = authorization.toLowerCase().startsWith("bearer ")
+    ? authorization.slice(7).trim()
+    : ""
+
   const provided =
+    bearer ||
     request.headers.get("x-brevo-webhook-secret")?.trim() ||
     request.headers.get("api-key")?.trim() ||
     ""
@@ -63,7 +67,6 @@ export async function POST(request: NextRequest) {
   const event = normalizeEvent(payload.event || payload.type)
   const email = extractEmail(payload)
 
-  // Brevo distingue hard bounce, soft bounce, spam e unsubscribe.
   const isHardBounce = event === "hard_bounce" || event === "hardbounce" || event === "blocked"
   const isSoftBounce = event === "soft_bounce" || event === "softbounce" || event === "deferred"
   const isComplaint = event === "spam" || event === "complaint" || event === "complained"
