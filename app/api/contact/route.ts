@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { NextResponse } from "next/server"
 import { sanitizeHtml, sanitizeInput, isValidEmail, isValidPhone } from "@/lib/security"
+import { sendEmail } from "@/lib/email-resend"
 
 export async function POST(request: Request) {
   try {
@@ -14,15 +15,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nome, email e messaggio sono obbligatori" }, { status: 400 })
     }
 
-    // Validate email format
     if (!isValidEmail(email)) {
       console.log("[v0] Invalid email format:", email)
       return NextResponse.json({ error: "Formato email non valido" }, { status: 400 })
     }
 
-    // Validate phone if provided
     if (phone && !isValidPhone(phone)) {
-      console.log("[v0] Invalid phone format:", phone)
+      console.log("[v0] Invalid phone format")
       return NextResponse.json({ error: "Formato telefono non valido" }, { status: 400 })
     }
 
@@ -33,9 +32,6 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    console.log("[v0] Attempting to save contact to database...")
-
-    // Save to database with sanitized data
     const { data, error } = await supabase
       .from("contacts")
       .insert([
@@ -55,41 +51,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Errore nel salvare il messaggio: " + error.message }, { status: 500 })
     }
 
-    console.log("[v0] Contact saved successfully:", data?.id)
-
-    // Send email notification with sanitized HTML
     try {
-      if (process.env.RESEND_API_KEY) {
-        console.log("[v0] Sending email notification...")
-        const emailResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: "delivered@resend.dev",
-            to: "filippo@hotelbid.org",
-            subject: `Nuovo contatto da ${sanitizeHtml(sanitizedName)}`,
-            html: `
-              <h2>Nuovo messaggio di contatto</h2>
-              <p><strong>Nome:</strong> ${sanitizeHtml(sanitizedName)}</p>
-              <p><strong>Email:</strong> ${sanitizeHtml(sanitizedEmail)}</p>
-              <p><strong>Telefono:</strong> ${sanitizedPhone ? sanitizeHtml(sanitizedPhone) : "Non fornito"}</p>
-              <p><strong>Messaggio:</strong></p>
-              <p>${sanitizeHtml(sanitizedMessage)}</p>
-            `,
-          }),
-        })
+      const result = await sendEmail({
+        transactional: true,
+        to: "clienti@4bid.it",
+        replyTo: sanitizedEmail,
+        listUnsubscribe: false,
+        subject: `Nuovo contatto da ${sanitizedName}`,
+        html: `
+          <h2>Nuovo messaggio di contatto</h2>
+          <p><strong>Nome:</strong> ${sanitizeHtml(sanitizedName)}</p>
+          <p><strong>Email:</strong> ${sanitizeHtml(sanitizedEmail)}</p>
+          <p><strong>Telefono:</strong> ${sanitizedPhone ? sanitizeHtml(sanitizedPhone) : "Non fornito"}</p>
+          <p><strong>Messaggio:</strong></p>
+          <p>${sanitizeHtml(sanitizedMessage)}</p>
+        `,
+      })
 
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text()
-          console.error("[v0] Email send failed:", errorText)
-        } else {
-          console.log("[v0] Email notification sent successfully")
-        }
-      } else {
-        console.log("[v0] RESEND_API_KEY not configured, skipping email")
+      if (!result.success) {
+        console.error("[v0] Contact notification email failed:", result.error)
       }
     } catch (emailError) {
       console.error("[v0] Email error:", emailError)

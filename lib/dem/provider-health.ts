@@ -1,13 +1,12 @@
 // =============================================================================
-// Guardia unica per la disponibilita' del provider email.
+// Guardia unica per la disponibilita' del provider DEM.
 //
-// Un errore di credenziali/account e' SISTEMICO: non riguarda il destinatario
-// corrente. Trattarlo come errore del singolo contatto trasforma un solo guasto
-// in centinaia di righe "failed" e consuma inutilmente tutta la coda.
+// Le email marketing/DEM viaggiano su Brevo SMTP relay. Le email operative e
+// transazionali restano su Google Workspace e non devono bloccare le code DEM.
 // =============================================================================
 
-// Volutamente "any" per il client Supabase: e' lo stesso compromesso usato
-// dagli helper DEM per evitare tipi generati molto profondi durante il build.
+const nodemailer = require("nodemailer")
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = any
 
@@ -17,7 +16,7 @@ export interface EmailProviderHealth {
   statusCode: number | null
 }
 
-export const PROVIDER_ALERT_PREFIX = "Provider email non disponibile"
+export const PROVIDER_ALERT_PREFIX = "Provider email DEM non disponibile"
 
 const SYSTEMIC_ERROR_PATTERNS = [
   /api key/i,
@@ -27,69 +26,111 @@ const SYSTEMIC_ERROR_PATTERNS = [
   /account.+disabled/i,
   /quota/i,
   /rate limit/i,
-  /temporarily unavailable/i,
   /service unavailable/i,
-  /resend_api_key/i,
+  /badcredentials/i,
+  /authentication/i,
+  /invalid login/i,
+  /username and password not accepted/i,
+  /brevo_(smtp_user|smtp_key|smtp_password)/i,
+  /econnrefused/i,
+  /econnreset/i,
+  /etimedout/i,
+  /socket/i,
+  /tls/i,
+  /dns/i,
 ]
 
+/**
+ * Distingue i guasti del provider da un normale rifiuto di un singolo
+ * destinatario. Un 450/451/452/5xx legato alla mailbox NON deve fermare tutte
+ * le campagne: il preflight SMTP e' gia' passato e la coda deve continuare.
+ */
 export function isSystemicEmailProviderError(input: {
   message?: string | null
   statusCode?: number | null
 }): boolean {
   const status = input.statusCode ?? null
-  if (status === 401 || status === 403 || status === 429 || (status !== null && status >= 500)) {
+
+  // Codici SMTP tipicamente provider/session-wide: servizio non disponibile,
+  // TLS/authentication richiesta o credenziali rifiutate.
+  if (
+    status === 421 ||
+    status === 454 ||
+    status === 530 ||
+    status === 534 ||
+    status === 535 ||
+    status === 538
+  ) {
     return true
   }
+
   const message = input.message || ""
   return SYSTEMIC_ERROR_PATTERNS.some((pattern) => pattern.test(message))
 }
 
-function messageFromPayload(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null
-  const record = payload as Record<string, unknown>
-  if (typeof record.message === "string") return record.message
-  if (typeof record.error === "string") return record.error
-  return null
+function brevoPassword(): string | undefined {
+  return process.env.BREVO_SMTP_KEY?.trim() || process.env.BREVO_SMTP_PASSWORD?.trim()
 }
 
-/**
- * Verifica le credenziali con una GET priva di effetti collaterali. Il controllo
- * avviene PRIMA di estrarre destinatari dalla coda e non invia alcuna email.
- */
+function brevoSmtpConfig() {
+  const host = process.env.BREVO_SMTP_HOST?.trim() || "smtp-relay.brevo.com"
+  const user = process.env.BREVO_SMTP_USER?.trim()
+  const pass = brevoPassword()
+  const port = Number.parseInt(process.env.BREVO_SMTP_PORT || "587", 10)
+  const explicitSecure = process.env.BREVO_SMTP_SECURE?.trim().toLowerCase()
+  const secure = explicitSecure ? explicitSecure === "true" : port === 465
+  const normalizedPort = Number.isFinite(port) ? port : 587
+
+  if (!user || !pass) return null
+
+  return {
+    host,
+    port: normalizedPort,
+    secure,
+    // Su 587 falliamo chiusi: se STARTTLS non e' disponibile non inviamo mai
+    // credenziali o contenuto in chiaro.
+    requireTLS: !secure && normalizedPort === 587,
+    auth: { user, pass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
+  }
+}
+
+function smtpResponseCode(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null
+  const record = error as Record<string, unknown>
+  return typeof record.responseCode === "number" ? record.responseCode : null
+}
+
+/** Verifica il relay Brevo senza inviare email, prima di estrarre destinatari. */
 export async function checkEmailProviderHealth(): Promise<EmailProviderHealth> {
-  const key = process.env.RESEND_API_KEY?.trim()
-  if (!key) {
-    return { healthy: false, error: "RESEND_API_KEY non configurata", statusCode: null }
+  const config = brevoSmtpConfig()
+  if (!config) {
+    return {
+      healthy: false,
+      error: "Configurazione Brevo incompleta: verificare BREVO_SMTP_USER e BREVO_SMTP_KEY/BREVO_SMTP_PASSWORD",
+      statusCode: null,
+    }
   }
 
   try {
-    const response = await fetch("https://api.resend.com/domains", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${key}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    if (response.ok) return { healthy: true, error: null, statusCode: response.status }
-
-    const payload = await response.json().catch(() => null)
-    return {
-      healthy: false,
-      error: messageFromPayload(payload) || `Resend ha risposto HTTP ${response.status}`,
-      statusCode: response.status,
-    }
+    const transporter = nodemailer.createTransport(config)
+    await transporter.verify()
+    transporter.close?.()
+    return { healthy: true, error: null, statusCode: 200 }
   } catch (error) {
     return {
       healthy: false,
-      error: error instanceof Error ? error.message : "Provider email non raggiungibile",
-      statusCode: null,
+      error: error instanceof Error ? error.message : "Brevo SMTP non raggiungibile",
+      statusCode: smtpResponseCode(error),
     }
   }
 }
 
 export function providerPauseReason(health: EmailProviderHealth): string {
   const detail = health.error?.trim() || "verifica del provider fallita"
-  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare Resend prima di riprendere.`
+  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare la configurazione Brevo prima di riprendere.`
 }
 
 /** Ferma insieme campagne fredde e solleciti caldi, conservando le code. */
@@ -117,8 +158,6 @@ export async function pauseAllDemForProvider(
     )
   }
 
-  // Un timeout o un errore provider puo' lasciare una campagna nello stato
-  // transitorio "sending". La coda e' intatta, quindi la rendiamo riprendibile.
   const sendingResult = await supabase
     .from("dem_campaigns")
     .update({ status: "draft", updated_at: now })

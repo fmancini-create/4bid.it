@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import { Resend } from "resend"
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmail } from "@/lib/email-resend"
+import { sanitizeHtml, sanitizeInput, isValidEmail } from "@/lib/security"
 
 export async function POST(request: Request) {
   try {
@@ -11,9 +10,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    await resend.emails.send({
-      from: "4BID.IT <noreply@4bid.it>",
-      to: to,
+    if (!isValidEmail(to)) {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 })
+    }
+
+    const safeTo = sanitizeInput(to, 255)
+    const safeName = sanitizeInput(name, 100)
+    const safeReply = sanitizeInput(replyMessage, 5000)
+
+    const result = await sendEmail({
+      transactional: true,
+      to: safeTo,
+      listUnsubscribe: false,
       subject: "Risposta alla tua richiesta - 4BID.IT",
       html: `
         <!DOCTYPE html>
@@ -36,16 +44,16 @@ export async function POST(request: Request) {
                 <p>Risposta alla tua richiesta</p>
               </div>
               <div class="content">
-                <p>Ciao <strong>${name}</strong>,</p>
+                <p>Ciao <strong>${sanitizeHtml(safeName)}</strong>,</p>
                 <p>Grazie per averci contattato. Ecco la nostra risposta:</p>
                 <div class="message">
-                  ${replyMessage.replace(/\n/g, "<br>")}
+                  ${sanitizeHtml(safeReply).replace(/\n/g, "<br>")}
                 </div>
                 <p>Se hai altre domande, non esitare a contattarci nuovamente.</p>
                 <p>Cordiali saluti,<br><strong>Il Team 4BID.IT</strong></p>
                 <div class="footer">
-                  <p>4BID.IT S.R.L. - ViaExample 123, 50100 Firenze (FI)<br>
-                  P.IVA: 01234567890 - info@4bid.it</p>
+                  <p>4BID SRL - San Casciano in Val di Pesa (FI)<br>
+                  P.IVA 06241710489 - clienti@4bid.it</p>
                 </div>
               </div>
             </div>
@@ -53,6 +61,10 @@ export async function POST(request: Request) {
         </html>
       `,
     })
+
+    if (!result.success) {
+      throw new Error(result.error || "Invio email fallito")
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
