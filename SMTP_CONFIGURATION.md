@@ -39,18 +39,18 @@ BREVO_SMTP_PORT=587
 BREVO_SMTP_SECURE=false
 BREVO_SMTP_USER=<LOGIN_SMTP_BREVO>
 BREVO_SMTP_KEY=<SMTP_KEY_BREVO>
-BREVO_FROM_MARKETING=4BID SRL <marketing@4bid.it>
+BREVO_FROM_MARKETING=4BID SRL <marketing@mrk.4bid.it>
 BREVO_REPLY_TO=clienti@4bid.it
 BREVO_WEBHOOK_SECRET=<SEGRETO_RANDOM_LUNGO>
 ```
 
 `BREVO_SMTP_PASSWORD` e' accettata come alias di `BREVO_SMTP_KEY`.
 
-Il mittente `BREVO_FROM_MARKETING` deve corrispondere a un dominio/mittente autorizzato in Brevo. Non riutilizzare automaticamente un mittente storico Resend se non e' stato verificato anche su Brevo.
+Il mittente `BREVO_FROM_MARKETING` deve corrispondere al dominio/mittente autorizzato in Brevo. Per 4BID il dominio marketing dedicato e' `mrk.4bid.it`.
 
 ## Webhook Brevo
 
-Configurare in Brevo un webhook transazionale verso:
+Durante i test di preview configurare il webhook transazionale verso il branch di preview. Dopo il merge in produzione l'endpoint definitivo sara':
 
 ```text
 https://www.4bid.it/api/dem/resend-webhook
@@ -58,11 +58,13 @@ https://www.4bid.it/api/dem/resend-webhook
 
 Il path mantiene il nome storico solo per compatibilita' con il codice esistente; il provider effettivo e' Brevo.
 
-Il webhook deve includere un header personalizzato:
+Metodo di autenticazione consigliato nella UI Brevo: **Token**. Brevo invia il valore come Bearer token e l'applicazione lo confronta con `BREVO_WEBHOOK_SECRET`:
 
 ```text
-x-brevo-webhook-secret: <stesso valore di BREVO_WEBHOOK_SECRET>
+Authorization: Bearer <stesso valore di BREVO_WEBHOOK_SECRET>
 ```
+
+Per compatibilita' il codice accetta anche `x-brevo-webhook-secret` e `api-key` con lo stesso segreto.
 
 Eventi da abilitare almeno:
 
@@ -70,6 +72,9 @@ Eventi da abilitare almeno:
 - soft bounce
 - spam / complaint
 - unsubscribe
+- blocked / invalid
+
+Gli altri eventi possono restare abilitati: l'handler ignora in sicurezza quelli non gestiti.
 
 L'applicazione mantiene i soft bounce fuori dalla soppressione permanente; hard bounce, complaint e unsubscribe entrano invece nella lista di soppressione e interrompono i follow-up.
 
@@ -77,12 +82,13 @@ L'applicazione mantiene i soft bounce fuori dalla soppressione permanente; hard 
 
 1. salvare le variabili in Vercel senza copiarle in ticket, commit o documentazione;
 2. verificare dominio/mittente in Brevo;
-3. configurare il webhook Brevo e il relativo header segreto;
-4. attendere un deployment di preview `READY`;
-5. testare una sola email transazionale verso un indirizzo controllato;
-6. testare una DEM verso un solo destinatario controllato;
-7. verificare `List-Unsubscribe`, reply-to e ricezione del webhook;
-8. solo dopo i test riabilitare le code automatiche.
+3. configurare il webhook Brevo e il token segreto;
+4. dopo ogni modifica a un secret Vercel creare un nuovo deployment di preview, perche' i deployment esistenti mantengono lo snapshot delle variabili al momento del build;
+5. attendere il deployment di preview `READY`;
+6. testare una sola email transazionale verso un indirizzo controllato;
+7. testare una DEM verso un solo destinatario controllato;
+8. verificare `List-Unsubscribe`, reply-to e ricezione del webhook;
+9. solo dopo i test riabilitare le code automatiche.
 
 ## Note operative
 
