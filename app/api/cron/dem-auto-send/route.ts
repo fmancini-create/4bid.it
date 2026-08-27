@@ -27,13 +27,17 @@ const WARMUP_DAILY_CAPS = [50, 100, 150, 250, 400]
 // Lotto massimo per singola invocazione (allineato a DEFAULT_BATCH_LIMIT del send).
 const PER_RUN_BATCH = 250
 
+// Guardrail reputazione: avviso -> rallentamento -> stop.
+const BOUNCE_WARN_THRESHOLD = 0.015
+const BOUNCE_SLOW_THRESHOLD = 0.02
+const BOUNCE_STOP_THRESHOLD = 0.03
+const BOUNCE_MIN_SAMPLE = 200
+
 function capForDayIndex(dayIndex: number): number {
   if (dayIndex < 0) dayIndex = 0
   return WARMUP_DAILY_CAPS[Math.min(dayIndex, WARMUP_DAILY_CAPS.length - 1)]
 }
 
-// Mezzanotte UTC di oggi. Gli invii avvengono in pieno giorno (07-16 UTC), quindi
-// usare il confine UTC per "oggi" e' sicuro e privo di ambiguita'.
 function utcStartOfToday(): Date {
   const now = new Date()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
@@ -75,9 +79,6 @@ export async function GET(request: NextRequest) {
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : "https://www.4bid.it")
 
-    // Il provider si verifica senza inviare nulla. Se la chiave e' revocata o
-    // l'account e' indisponibile, il cron deve fallire visibilmente e fermare
-    // TUTTE le code, non marcare centinaia di contatti come falliti.
     const providerHealth = await checkEmailProviderHealth()
     if (!providerHealth.healthy) {
       const reason = await pauseAllDemForProvider(supabase, providerHealth)
@@ -88,20 +89,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Campagne in coda con invio automatico attivo. Lo stato 'draft' e' quello in cui
-    // il send lascia la campagna finche' restano destinatari pendenti.
-    //
-    // Includiamo anche lo stato 'sending': se un lotto va in timeout (maxDuration)
-    // la campagna resta "appesa" in 'sending' e il cron non la riprenderebbe mai
-    // piu'. Recuperiamo quelle stantie (updated_at piu' vecchio di STALE_SENDING_MS).
     const { data: campaigns, error: campErr } = await supabase
       .from("dem_campaigns")
       .select("id, name, status, auto_send, auto_started_on, daily_quota_cold, updated_at")
       .eq("auto_send", true)
       .in("status", ["draft", "sending"])
       .or("campaign_kind.is.null,campaign_kind.eq.cold")
-      // Round-robin: dopo un lotto `updated_at` cambia e la campagna va in
-      // fondo. Una lista grande non puo' piu' monopolizzare ogni esecuzione.
       .order("updated_at", { ascending: true })
 
     if (campErr) {
@@ -111,28 +104,23 @@ export async function GET(request: NextRequest) {
 
     const todayStart = utcStartOfToday()
     const results: Array<Record<string, unknown>> = []
-    // Un lotto reale dura al massimo ~300s: oltre i 15 minuti senza aggiornamenti
-    // la campagna 'sending' e' sicuramente bloccata (timeout) e va recuperata.
     const STALE_SENDING_MS = 15 * 60 * 1000
 
     for (const campaign of campaigns || []) {
-      // Recupero campagne bloccate in 'sending' a causa di un timeout precedente.
       if (campaign.status === "sending") {
         const updatedAt = campaign.updated_at ? new Date(campaign.updated_at as string).getTime() : 0
         const isStale = Date.now() - updatedAt > STALE_SENDING_MS
         if (!isStale) {
-          // Un lotto e' probabilmente in corso: non interferire.
           results.push({ campaign: campaign.id, skipped: "sending_in_progress" })
           continue
         }
-        // Sblocca: riporta a 'draft' cosi' il flusso normale puo' riprendere.
         await supabase
           .from("dem_campaigns")
           .update({ status: "draft", updated_at: new Date().toISOString() })
           .eq("id", campaign.id)
         console.log(`[v0] dem-auto-send: recuperata campagna bloccata in sending: ${campaign.id}`)
       }
-      // Quanti destinatari restano in coda?
+
       const { count: pendingTotal } = await supabase
         .from("dem_recipients")
         .select("id", { count: "exact", head: true })
@@ -140,29 +128,14 @@ export async function GET(request: NextRequest) {
         .eq("send_status", "pending")
 
       if (!pendingTotal || pendingTotal === 0) {
-        // Coda vuota: chiudi l'automazione.
         await supabase.from("dem_campaigns").update({ auto_send: false }).eq("id", campaign.id)
         results.push({ campaign: campaign.id, skipped: "no_pending" })
         continue
       }
 
-      // FRENO SUI RIMBALZI.
-      //
-      // Perche' esiste: il 29/06 sono partite 3.291 email con il 31,2% di
-      // rimbalzi e NIENTE le ha fermate, perche' non c'era alcun controllo. Nei
-      // 12 giorni precedenti la stessa lista viaggiava allo 0,2%: il problema
-      // non e' stato accorgersi tardi, e' che nessuno stava guardando.
-      //
-      // I fornitori di posta considerano accettabile un tasso sotto il 2%: oltre
-      // il 5% la reputazione del mittente si deteriora e le email finiscono in
-      // spam ANCHE per i destinatari validi. Per questo la guardia sta PRIMA di
-      // ogni invio: sospende l'automazione invece di continuare a bruciare
-      // reputazione.
-      //
-      // Misuro sugli ultimi 3 giorni, non sullo storico: un tasso storico basso
-      // diluisce un peggioramento in corso e direbbe "tutto bene" mentre il
-      // danno avviene. Servono almeno 200 email misurate, altrimenti 2 rimbalzi
-      // su 10 invii (20%) fermerebbero una campagna sana.
+      // Freno reputazionale sui rimbalzi degli ultimi 3 giorni.
+      // >=1,5%: warning; >=2%: dimezza il volume; >=3%: stop automatico.
+      let bounceThrottle = 1
       {
         const treGiorniFa = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
         const conta = async (filtro: (q: any) => any) => {
@@ -178,20 +151,16 @@ export async function GET(request: NextRequest) {
         const inviate = await conta((q: any) => q.in("send_status", ["sent", "bounced", "opened"]))
         const rimbalzate = await conta((q: any) => q.eq("send_status", "bounced"))
 
-        // Se la misura non e' leggibile NON invio: proseguire al buio e' proprio
-        // cio' che ha permesso l'incidente. Un guasto deve fermare, non passare.
         if (inviate === null || rimbalzate === null) {
           console.error(`[v0] dem-auto-send: tasso rimbalzi non misurabile per ${campaign.id}, salto per prudenza`)
           results.push({ campaign: campaign.id, skipped: "bounce_rate_unreadable" })
           continue
         }
 
-        const SOGLIA = 0.05
-        const MINIMO_MISURABILE = 200
-        if (inviate >= MINIMO_MISURABILE) {
+        if (inviate >= BOUNCE_MIN_SAMPLE) {
           const tasso = rimbalzate / inviate
-          if (tasso > SOGLIA) {
-            const motivo = `Sospesa automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi negli ultimi 3 giorni (${rimbalzate} su ${inviate}), oltre la soglia del ${SOGLIA * 100}%. Ripulire la lista prima di riprendere.`
+          if (tasso >= BOUNCE_STOP_THRESHOLD) {
+            const motivo = `Sospesa automaticamente: ${(tasso * 100).toFixed(1)}% di rimbalzi negli ultimi 3 giorni (${rimbalzate} su ${inviate}), soglia stop ${BOUNCE_STOP_THRESHOLD * 100}%. Ripulire la lista prima di riprendere.`
             await supabase
               .from("dem_campaigns")
               .update({ auto_send: false, auto_paused_reason: motivo, updated_at: new Date().toISOString() })
@@ -200,10 +169,22 @@ export async function GET(request: NextRequest) {
             results.push({ campaign: campaign.id, paused: "bounce_rate_too_high", rate: tasso, sent: inviate })
             continue
           }
+
+          if (tasso >= BOUNCE_SLOW_THRESHOLD) {
+            bounceThrottle = 0.5
+            console.warn(
+              `[v0] dem-auto-send: rallentamento ${campaign.id} - ${(tasso * 100).toFixed(1)}% bounce, volume dimezzato`,
+            )
+            results.push({ campaign: campaign.id, warning: "bounce_rate_slowdown", rate: tasso, sent: inviate })
+          } else if (tasso >= BOUNCE_WARN_THRESHOLD) {
+            console.warn(
+              `[v0] dem-auto-send: warning ${campaign.id} - ${(tasso * 100).toFixed(1)}% bounce`,
+            )
+            results.push({ campaign: campaign.id, warning: "bounce_rate_warning", rate: tasso, sent: inviate })
+          }
         }
       }
 
-      // Primo invio in assoluto: registra la data di avvio warm-up (giorno 1).
       let startedOn = campaign.auto_started_on as string | null
       if (!startedOn) {
         startedOn = ymdUtc(todayStart)
@@ -215,15 +196,11 @@ export async function GET(request: NextRequest) {
 
       const dayIndex = daysBetweenUtc(startedOn, todayStart)
       const warmupCap = capForDayIndex(dayIndex)
-
-      // Gating quota freddi: se la campagna ha un limite freddi configurato, il
-      // tetto giornaliero e' il MINIMO tra warm-up e limite freddi. Senza quota
-      // (colonna NULL) il comportamento resta identico a prima.
       const coldLimit = (campaign as { daily_quota_cold?: number | null }).daily_quota_cold
-      const dailyCap =
+      const baseDailyCap =
         typeof coldLimit === "number" && coldLimit >= 0 ? Math.min(warmupCap, coldLimit) : warmupCap
+      const dailyCap = Math.max(1, Math.floor(baseDailyCap * bounceThrottle))
 
-      // Quante email gia' inviate OGGI (per rispettare il tetto giornaliero)?
       const { count: sentToday } = await supabase
         .from("dem_recipients")
         .select("id", { count: "exact", head: true })
@@ -245,13 +222,6 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      // Esegui il lotto tramite l'endpoint di invio collaudato.
-      //
-      // /api/dem/send e' protetto da `rifiutaSeNonAutorizzato`, che accetta le
-      // chiamate automatiche SOLO con `Authorization: Bearer ${CRON_SECRET}`.
-      // Senza questo header la guardia (aggiunta il 03/08) rispondeva
-      // "Non autorizzato" e il cron, pur girando, non spediva nulla: i due
-      // presidi si annullavano a vicenda. Inoltriamo quindi il segreto.
       const cronSecret = process.env.CRON_SECRET
       if (!cronSecret) {
         return NextResponse.json(
@@ -280,8 +250,6 @@ export async function GET(request: NextRequest) {
         sendResult: payload,
       })
 
-      // Un errore dell'endpoint non e' un'esecuzione riuscita. Propagandolo,
-      // Vercel registra il cron come fallito e l'incidente diventa osservabile.
       if (!res.ok) {
         console.error(`[v0] dem-auto-send: /api/dem/send HTTP ${res.status}`, payload)
         return NextResponse.json(
@@ -290,8 +258,6 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Un solo lotto reale per esecuzione, per restare entro il timeout della funzione.
-      // I lotti successivi partono alle esecuzioni orarie seguenti della stessa finestra.
       break
     }
 
