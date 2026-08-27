@@ -1,15 +1,12 @@
 // =============================================================================
-// Guardia unica per la disponibilita' del provider email.
+// Guardia unica per la disponibilita' del provider DEM.
 //
-// Un errore di credenziali/account e' SISTEMICO: non riguarda il destinatario
-// corrente. Trattarlo come errore del singolo contatto trasforma un solo guasto
-// in centinaia di righe "failed" e consuma inutilmente tutta la coda.
+// Le email marketing/DEM viaggiano su Brevo SMTP relay. Le email operative e
+// transazionali restano su Google Workspace e non devono bloccare le code DEM.
 // =============================================================================
 
 const nodemailer = require("nodemailer")
 
-// Volutamente "any" per il client Supabase: e' lo stesso compromesso usato
-// dagli helper DEM per evitare tipi generati molto profondi durante il build.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseLike = any
 
@@ -19,7 +16,7 @@ export interface EmailProviderHealth {
   statusCode: number | null
 }
 
-export const PROVIDER_ALERT_PREFIX = "Provider email non disponibile"
+export const PROVIDER_ALERT_PREFIX = "Provider email DEM non disponibile"
 
 const SYSTEMIC_ERROR_PATTERNS = [
   /api key/i,
@@ -35,7 +32,7 @@ const SYSTEMIC_ERROR_PATTERNS = [
   /authentication/i,
   /invalid login/i,
   /username and password not accepted/i,
-  /smtp_(host|user|password|pass)/i,
+  /brevo_(smtp_user|smtp_key|smtp_password)/i,
   /econnrefused/i,
   /econnreset/i,
   /etimedout/i,
@@ -49,26 +46,37 @@ export function isSystemicEmailProviderError(input: {
   statusCode?: number | null
 }): boolean {
   const status = input.statusCode ?? null
-  if (status === 401 || status === 403 || status === 429 || status === 421 || status === 450 || status === 451 || status === 452 || status === 454 || status === 535 || (status !== null && status >= 500 && status < 550)) {
+  if (
+    status === 401 ||
+    status === 403 ||
+    status === 429 ||
+    status === 421 ||
+    status === 450 ||
+    status === 451 ||
+    status === 452 ||
+    status === 454 ||
+    status === 535 ||
+    (status !== null && status >= 500 && status < 550)
+  ) {
     return true
   }
   const message = input.message || ""
   return SYSTEMIC_ERROR_PATTERNS.some((pattern) => pattern.test(message))
 }
 
-function smtpPassword(): string | undefined {
-  return process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim()
+function brevoPassword(): string | undefined {
+  return process.env.BREVO_SMTP_KEY?.trim() || process.env.BREVO_SMTP_PASSWORD?.trim()
 }
 
-function smtpConfig() {
-  const host = process.env.SMTP_HOST?.trim()
-  const user = process.env.SMTP_USER?.trim()
-  const pass = smtpPassword()
-  const port = Number.parseInt(process.env.SMTP_PORT || "587", 10)
-  const explicitSecure = process.env.SMTP_SECURE?.trim().toLowerCase()
+function brevoSmtpConfig() {
+  const host = process.env.BREVO_SMTP_HOST?.trim() || "smtp-relay.brevo.com"
+  const user = process.env.BREVO_SMTP_USER?.trim()
+  const pass = brevoPassword()
+  const port = Number.parseInt(process.env.BREVO_SMTP_PORT || "587", 10)
+  const explicitSecure = process.env.BREVO_SMTP_SECURE?.trim().toLowerCase()
   const secure = explicitSecure ? explicitSecure === "true" : port === 465
 
-  if (!host || !user || !pass) return null
+  if (!user || !pass) return null
 
   return {
     host,
@@ -87,16 +95,13 @@ function smtpResponseCode(error: unknown): number | null {
   return typeof record.responseCode === "number" ? record.responseCode : null
 }
 
-/**
- * Verifica connessione e autenticazione SMTP senza inviare email. Il controllo
- * avviene PRIMA di estrarre destinatari dalla coda.
- */
+/** Verifica il relay Brevo senza inviare email, prima di estrarre destinatari. */
 export async function checkEmailProviderHealth(): Promise<EmailProviderHealth> {
-  const config = smtpConfig()
+  const config = brevoSmtpConfig()
   if (!config) {
     return {
       healthy: false,
-      error: "Configurazione SMTP incompleta: verificare SMTP_HOST, SMTP_USER e SMTP_PASSWORD/SMTP_PASS",
+      error: "Configurazione Brevo incompleta: verificare BREVO_SMTP_USER e BREVO_SMTP_KEY/BREVO_SMTP_PASSWORD",
       statusCode: null,
     }
   }
@@ -109,7 +114,7 @@ export async function checkEmailProviderHealth(): Promise<EmailProviderHealth> {
   } catch (error) {
     return {
       healthy: false,
-      error: error instanceof Error ? error.message : "Provider SMTP non raggiungibile",
+      error: error instanceof Error ? error.message : "Brevo SMTP non raggiungibile",
       statusCode: smtpResponseCode(error),
     }
   }
@@ -117,7 +122,7 @@ export async function checkEmailProviderHealth(): Promise<EmailProviderHealth> {
 
 export function providerPauseReason(health: EmailProviderHealth): string {
   const detail = health.error?.trim() || "verifica del provider fallita"
-  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare la configurazione SMTP prima di riprendere.`
+  return `${PROVIDER_ALERT_PREFIX}: ${detail}. Invii fermati automaticamente; verificare la configurazione Brevo prima di riprendere.`
 }
 
 /** Ferma insieme campagne fredde e solleciti caldi, conservando le code. */
