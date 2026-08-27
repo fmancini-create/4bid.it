@@ -1,3 +1,8 @@
+// Legacy filename kept to avoid touching every caller in this migration.
+// Runtime routing is now provider-agnostic:
+// - transactional/service email -> Google Workspace (SMTP_* env vars)
+// - DEM/follow-up marketing email -> Brevo SMTP relay (BREVO_* env vars)
+
 const nodemailer = require("nodemailer")
 import { isSystemicEmailProviderError } from "@/lib/dem/provider-health"
 
@@ -81,7 +86,7 @@ function smtpPassword(): string | undefined {
   return process.env.SMTP_PASSWORD?.trim() || process.env.SMTP_PASS?.trim()
 }
 
-function smtpConfig() {
+function workspaceSmtpConfig() {
   const host = process.env.SMTP_HOST?.trim()
   const user = process.env.SMTP_USER?.trim()
   const pass = smtpPassword()
@@ -102,15 +107,57 @@ function smtpConfig() {
   }
 }
 
-function resolveFrom(transactional?: boolean): string {
-  const user = process.env.SMTP_USER?.trim() || "clienti@4bid.it"
-  const configured = transactional
-    ? process.env.SMTP_FROM_TRANSACTIONAL?.trim()
-    : process.env.SMTP_FROM_MARKETING?.trim()
-  const fallback = process.env.SMTP_FROM?.trim()
+function brevoPassword(): string | undefined {
+  return process.env.BREVO_SMTP_KEY?.trim() || process.env.BREVO_SMTP_PASSWORD?.trim()
+}
+
+function brevoSmtpConfig() {
+  const host = process.env.BREVO_SMTP_HOST?.trim() || "smtp-relay.brevo.com"
+  const user = process.env.BREVO_SMTP_USER?.trim()
+  const pass = brevoPassword()
+  const port = Number.parseInt(process.env.BREVO_SMTP_PORT || "587", 10)
+  const explicitSecure = process.env.BREVO_SMTP_SECURE?.trim().toLowerCase()
+  const secure = explicitSecure ? explicitSecure === "true" : port === 465
+
+  if (!user || !pass) return null
+
+  return {
+    host,
+    port: Number.isFinite(port) ? port : 587,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
+  }
+}
+
+function resolveFrom(transactional: boolean): string | null {
+  if (transactional) {
+    const user = process.env.SMTP_USER?.trim()
+    const configured = process.env.SMTP_FROM_TRANSACTIONAL?.trim() || process.env.SMTP_FROM?.trim()
+    if (configured) return configured
+    return user ? `4Bid Project Room <${user}>` : null
+  }
+
+  const brevoUser = process.env.BREVO_SMTP_USER?.trim()
+  const configured =
+    process.env.BREVO_FROM_MARKETING?.trim() ||
+    process.env.SMTP_FROM_MARKETING?.trim()
   if (configured) return configured
-  if (fallback) return fallback
-  return transactional ? `4Bid Project Room <${user}>` : `4BID SRL <${user}>`
+  return brevoUser ? `4BID SRL <${brevoUser}>` : null
+}
+
+function resolveReplyTo(transactional: boolean, explicit?: string): string {
+  if (explicit?.trim()) return explicit.trim()
+  if (transactional) {
+    return process.env.SMTP_REPLY_TO?.trim() || process.env.SMTP_FROM?.trim() || "clienti@4bid.it"
+  }
+  return (
+    process.env.BREVO_REPLY_TO?.trim() ||
+    process.env.SMTP_REPLY_TO?.trim() ||
+    "clienti@4bid.it"
+  )
 }
 
 function smtpStatusCode(error: unknown): number | null {
@@ -130,11 +177,16 @@ export async function sendEmail({
   headers,
   listUnsubscribe,
   campaignId,
-  transactional,
+  transactional = false,
 }: EmailOptions) {
-  const config = smtpConfig()
-  if (!config) {
-    const message = "Configurazione SMTP incompleta: verificare SMTP_HOST, SMTP_USER e SMTP_PASSWORD/SMTP_PASS"
+  const providerName = transactional ? "Google Workspace SMTP" : "Brevo SMTP"
+  const config = transactional ? workspaceSmtpConfig() : brevoSmtpConfig()
+  const from = resolveFrom(transactional)
+
+  if (!config || !from) {
+    const message = transactional
+      ? "Configurazione email transazionale incompleta: verificare SMTP_HOST, SMTP_USER, SMTP_PASSWORD/SMTP_PASS e mittente SMTP"
+      : "Configurazione Brevo incompleta: verificare BREVO_SMTP_USER, BREVO_SMTP_KEY/BREVO_SMTP_PASSWORD e BREVO_FROM_MARKETING"
     console.error(`[v0] ${message}`)
     return {
       success: false as const,
@@ -152,12 +204,12 @@ export async function sendEmail({
   try {
     const transporter = nodemailer.createTransport(config)
     const info = await transporter.sendMail({
-      from: resolveFrom(transactional),
+      from,
       to,
       subject,
       html,
       text: text && text.trim() ? text : htmlToText(html),
-      replyTo: replyTo || process.env.SMTP_REPLY_TO || process.env.SMTP_FROM || "clienti@4bid.it",
+      replyTo: resolveReplyTo(transactional, replyTo),
       headers: mergedHeaders,
       attachments:
         attachments && attachments.length > 0
@@ -169,10 +221,10 @@ export async function sendEmail({
           : undefined,
     })
 
-    return { success: true as const, messageId: info?.messageId }
+    return { success: true as const, messageId: info?.messageId, provider: providerName }
   } catch (error) {
-    console.error("[v0] Errore invio SMTP:", error)
-    const message = error instanceof Error ? error.message : "Errore SMTP sconosciuto"
+    console.error(`[v0] Errore invio ${providerName}:`, error)
+    const message = error instanceof Error ? error.message : `Errore ${providerName} sconosciuto`
     const statusCode = smtpStatusCode(error)
     return {
       success: false as const,
