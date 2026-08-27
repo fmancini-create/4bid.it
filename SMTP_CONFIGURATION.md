@@ -1,14 +1,22 @@
-# Configurazione SMTP per 4BID.IT
+# Configurazione email per 4BID.IT
+
+## Architettura
+
+Le email sono separate per funzione:
+
+- **Transazionali / operative**: Google Workspace via SMTP.
+- **DEM e follow-up commerciali**: Brevo via SMTP relay.
+- **Bounce / spam / unsubscribe DEM**: webhook Brevo verso l'endpoint applicativo.
+
+Questa separazione evita che un problema del canale marketing blocchi anche inviti, notifiche operative e comunicazioni di servizio.
 
 ## Sicurezza
 
-Non inserire mai password, App Password, API key o altri segreti in questo repository. Le credenziali SMTP devono essere salvate esclusivamente nelle Environment Variables di Vercel o nel secret manager dell'ambiente di produzione.
+Non inserire mai password, App Password, API key o altri segreti in questo repository. Le credenziali devono essere salvate esclusivamente nelle Environment Variables di Vercel o nel secret manager dell'ambiente di produzione.
 
 Se una credenziale e' stata committata in passato, considerarla compromessa e ruotarla immediatamente: rimuoverla dal file corrente non la elimina dalla cronologia Git.
 
-## Variabili d'Ambiente su Vercel
-
-Aggiungi o aggiorna queste variabili nel progetto Vercel che serve `4bid.it`:
+## Variabili Google Workspace - email transazionali
 
 ```env
 SMTP_HOST=smtp.gmail.com
@@ -18,44 +26,67 @@ SMTP_USER=clienti@4bid.it
 SMTP_PASSWORD=<APP_PASSWORD_O_PASSWORD_SMTP>
 SMTP_FROM=4BID SRL <clienti@4bid.it>
 SMTP_FROM_TRANSACTIONAL=4Bid Project Room <clienti@4bid.it>
-SMTP_FROM_MARKETING=4BID SRL <clienti@4bid.it>
 SMTP_REPLY_TO=clienti@4bid.it
 ```
 
-`SMTP_PASS` e' accettata come alias di `SMTP_PASSWORD` per compatibilita' con configurazioni esistenti.
+`SMTP_PASS` e' accettata come alias di `SMTP_PASSWORD`.
 
-## Note Importanti
+## Variabili Brevo - DEM e follow-up
 
-- **SMTP_HOST**: server SMTP del provider; per Google Workspace e' `smtp.gmail.com`.
-- **SMTP_PORT**: `587` con STARTTLS oppure `465` con TLS implicito.
-- **SMTP_SECURE**: `false` su porta 587; `true` su porta 465.
-- **SMTP_USER**: casella autorizzata all'invio.
-- **SMTP_PASSWORD**: credenziale SMTP/App Password, mai da committare.
-- **SMTP_FROM**: fallback del mittente.
-- **SMTP_FROM_TRANSACTIONAL**: identita' per inviti e posta di servizio.
-- **SMTP_FROM_MARKETING**: identita' per campagne DEM; deve essere autorizzata dal provider SMTP.
-- **SMTP_REPLY_TO**: casella monitorata per le risposte.
+```env
+BREVO_SMTP_HOST=smtp-relay.brevo.com
+BREVO_SMTP_PORT=587
+BREVO_SMTP_SECURE=false
+BREVO_SMTP_USER=<LOGIN_SMTP_BREVO>
+BREVO_SMTP_KEY=<SMTP_KEY_BREVO>
+BREVO_FROM_MARKETING=4BID SRL <marketing@4bid.it>
+BREVO_REPLY_TO=clienti@4bid.it
+BREVO_WEBHOOK_SECRET=<SEGRETO_RANDOM_LUNGO>
+```
 
-## Google Workspace con verifica in due passaggi
+`BREVO_SMTP_PASSWORD` e' accettata come alias di `BREVO_SMTP_KEY`.
 
-Se l'account Google usa la verifica in due passaggi, utilizza una App Password valida per SMTP e salvala direttamente in Vercel come `SMTP_PASSWORD`. Non copiarla in documenti, ticket o commit.
+Il mittente `BREVO_FROM_MARKETING` deve corrispondere a un dominio/mittente autorizzato in Brevo. Non riutilizzare automaticamente un mittente storico Resend se non e' stato verificato anche su Brevo.
 
-## Verifica Funzionamento
+## Webhook Brevo
 
-Dopo aver configurato le variabili:
+Configurare in Brevo un webhook transazionale verso:
 
-1. esegui un nuovo deployment di preview;
-2. verifica che il controllo provider SMTP risulti sano;
-3. testa una sola email transazionale verso un indirizzo controllato;
-4. verifica una campagna DEM con un destinatario di prova, inclusi `List-Unsubscribe` e reply-to;
-5. solo dopo i test abilita nuovamente le code automatiche.
+```text
+https://www.4bid.it/api/dem/resend-webhook
+```
 
-## Troubleshooting
+Il path mantiene il nome storico solo per compatibilita' con il codice esistente; il provider effettivo e' Brevo.
 
-Se le email non partono:
+Il webhook deve includere un header personalizzato:
 
-- verifica host, porta, TLS e credenziali;
-- con Google Workspace, verifica che l'uso SMTP/App Password sia consentito per l'account;
-- controlla i Runtime Logs Vercel per errori di autenticazione, rete o TLS;
-- verifica che `SMTP_FROM*` usi indirizzi o alias autorizzati dal provider;
-- non riattivare le DEM finche' `checkEmailProviderHealth()` non torna sano.
+```text
+x-brevo-webhook-secret: <stesso valore di BREVO_WEBHOOK_SECRET>
+```
+
+Eventi da abilitare almeno:
+
+- hard bounce
+- soft bounce
+- spam / complaint
+- unsubscribe
+
+L'applicazione mantiene i soft bounce fuori dalla soppressione permanente; hard bounce, complaint e unsubscribe entrano invece nella lista di soppressione e interrompono i follow-up.
+
+## Verifica funzionamento prima della produzione
+
+1. salvare le variabili in Vercel senza copiarle in ticket, commit o documentazione;
+2. verificare dominio/mittente in Brevo;
+3. configurare il webhook Brevo e il relativo header segreto;
+4. attendere un deployment di preview `READY`;
+5. testare una sola email transazionale verso un indirizzo controllato;
+6. testare una DEM verso un solo destinatario controllato;
+7. verificare `List-Unsubscribe`, reply-to e ricezione del webhook;
+8. solo dopo i test riabilitare le code automatiche.
+
+## Note operative
+
+- Il controllo `checkEmailProviderHealth()` verifica il relay Brevo prima di estrarre destinatari dalle code DEM.
+- Un errore sistemico Brevo mette automaticamente in pausa campagne e follow-up, conservando le code.
+- Un guasto Google Workspace non deve fermare le DEM; un guasto Brevo non deve fermare la posta transazionale.
+- La vecchia credenziale rimossa dal repository deve essere ruotata anche se non viene piu' usata.
