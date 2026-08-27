@@ -26,7 +26,6 @@ const SYSTEMIC_ERROR_PATTERNS = [
   /account.+disabled/i,
   /quota/i,
   /rate limit/i,
-  /temporarily unavailable/i,
   /service unavailable/i,
   /badcredentials/i,
   /authentication/i,
@@ -41,25 +40,30 @@ const SYSTEMIC_ERROR_PATTERNS = [
   /dns/i,
 ]
 
+/**
+ * Distingue i guasti del provider da un normale rifiuto di un singolo
+ * destinatario. Un 450/451/452/5xx legato alla mailbox NON deve fermare tutte
+ * le campagne: il preflight SMTP e' gia' passato e la coda deve continuare.
+ */
 export function isSystemicEmailProviderError(input: {
   message?: string | null
   statusCode?: number | null
 }): boolean {
   const status = input.statusCode ?? null
+
+  // Codici SMTP tipicamente provider/session-wide: servizio non disponibile,
+  // TLS/authentication richiesta o credenziali rifiutate.
   if (
-    status === 401 ||
-    status === 403 ||
-    status === 429 ||
     status === 421 ||
-    status === 450 ||
-    status === 451 ||
-    status === 452 ||
     status === 454 ||
+    status === 530 ||
+    status === 534 ||
     status === 535 ||
-    (status !== null && status >= 500 && status < 550)
+    status === 538
   ) {
     return true
   }
+
   const message = input.message || ""
   return SYSTEMIC_ERROR_PATTERNS.some((pattern) => pattern.test(message))
 }
@@ -75,13 +79,17 @@ function brevoSmtpConfig() {
   const port = Number.parseInt(process.env.BREVO_SMTP_PORT || "587", 10)
   const explicitSecure = process.env.BREVO_SMTP_SECURE?.trim().toLowerCase()
   const secure = explicitSecure ? explicitSecure === "true" : port === 465
+  const normalizedPort = Number.isFinite(port) ? port : 587
 
   if (!user || !pass) return null
 
   return {
     host,
-    port: Number.isFinite(port) ? port : 587,
+    port: normalizedPort,
     secure,
+    // Su 587 falliamo chiusi: se STARTTLS non e' disponibile non inviamo mai
+    // credenziali o contenuto in chiaro.
+    requireTLS: !secure && normalizedPort === 587,
     auth: { user, pass },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
