@@ -1,14 +1,39 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { BarChart3, Plus, ServerCog } from "lucide-react"
+import { BarChart3, MessageSquareText, Plus, RefreshCw, ServerCog } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import AdminNavigation from "@/components/admin-navigation"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import QuotesDashboard from "./quotes-dashboard"
 import type { QuoteForwardStats, SalesChannelQuote } from "@/lib/quotes/types"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
+
+const FEEDBACK_LABELS: Record<string, string> = {
+  price: "Prezzo",
+  timing: "Tempistiche",
+  priority: "Priorità cambiata",
+  features: "La proposta non rispondeva alle esigenze",
+  competitor: "Ho scelto un'altra soluzione",
+  internal: "Decisione interna / budget non approvato",
+  other: "Altro",
+}
+
+type QuoteLifecycleInfo = {
+  id: string
+  quote_number?: string | null
+  title?: string | null
+  client_name?: string | null
+  client_company?: string | null
+  accepted_at?: string | null
+  expired_at?: string | null
+  feedback_received_at?: string | null
+  feedback_reason?: string | null
+  feedback_note?: string | null
+  reactivation_requested_at?: string | null
+}
 
 export default async function QuotesPage() {
   const supabase = await createClient()
@@ -22,6 +47,14 @@ export default async function QuotesPage() {
   const adminClient = createAdminClient()
   const { data: quotes, error } = await adminClient.from("sales_channel_quotes").select("*").order("created_at", { ascending: false })
   if (error) console.error("[quotes] Error fetching quotes:", error)
+
+  const lifecycleQuotes = ((quotes || []) as QuoteLifecycleInfo[])
+  const feedbacks = lifecycleQuotes
+    .filter((quote) => quote.feedback_received_at)
+    .sort((a, b) => new Date(b.feedback_received_at || 0).getTime() - new Date(a.feedback_received_at || 0).getTime())
+  const reactivationRequests = lifecycleQuotes
+    .filter((quote) => quote.reactivation_requested_at)
+    .sort((a, b) => new Date(b.reactivation_requested_at || 0).getTime() - new Date(a.reactivation_requested_at || 0).getTime())
 
   // Gli inoltri vivono in una tabella separata: senza questa lettura la lista
   // non mostrerebbe nulla di cio' che e' stato inoltrato (il dato esisteva solo
@@ -60,6 +93,43 @@ export default async function QuotesPage() {
         <Button asChild variant="outline"><Link href="/admin/quotes/provisioning"><ServerCog className="h-4 w-4 mr-2" />Attivazioni</Link></Button>
         <Button asChild><Link href="/admin/quotes/commerce"><Plus className="h-4 w-4 mr-2" />Preventivo multi-progetto</Link></Button>
       </div>
+
+      {(feedbacks.length > 0 || reactivationRequests.length > 0) && <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-5 grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border bg-card p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2"><MessageSquareText className="h-5 w-5 text-primary" /><h2 className="font-semibold">Feedback ricevuti</h2></div>
+            <Badge variant="secondary">{feedbacks.length}</Badge>
+          </div>
+          {feedbacks.length === 0 ? <p className="text-sm text-muted-foreground">Nessun feedback ricevuto.</p> : <div className="space-y-3">
+            {feedbacks.slice(0, 5).map((quote) => <div key={`feedback-${quote.id}`} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div><p className="text-sm font-medium">{quote.client_company || quote.client_name || "Cliente"}</p><p className="text-xs text-muted-foreground">{quote.quote_number || quote.title || "Preventivo"}</p></div>
+                <span className="text-xs text-muted-foreground">{quote.feedback_received_at ? new Date(quote.feedback_received_at).toLocaleString("it-IT") : ""}</span>
+              </div>
+              <p className="text-sm mt-2"><span className="font-medium">Motivo:</span> {FEEDBACK_LABELS[quote.feedback_reason || ""] || quote.feedback_reason || "Non specificato"}</p>
+              {quote.feedback_note && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{quote.feedback_note}</p>}
+              <Button asChild variant="link" size="sm" className="px-0 mt-1"><Link href={`/admin/quotes/edit/${quote.id}`}>Apri preventivo</Link></Button>
+            </div>)}
+          </div>}
+        </section>
+
+        <section className="rounded-xl border bg-card p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2"><RefreshCw className="h-5 w-5 text-primary" /><h2 className="font-semibold">Richieste di riattivazione</h2></div>
+            <Badge variant="secondary">{reactivationRequests.length}</Badge>
+          </div>
+          {reactivationRequests.length === 0 ? <p className="text-sm text-muted-foreground">Nessuna richiesta di riattivazione.</p> : <div className="space-y-3">
+            {reactivationRequests.slice(0, 5).map((quote) => {
+              const mustReopen = Boolean(quote.accepted_at && quote.expired_at)
+              return <div key={`reactivation-${quote.id}`} className="rounded-lg border p-3 flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-sm font-medium">{quote.client_company || quote.client_name || "Cliente"}</p><p className="text-xs text-muted-foreground">{quote.quote_number || quote.title || "Preventivo"} · {quote.reactivation_requested_at ? new Date(quote.reactivation_requested_at).toLocaleString("it-IT") : ""}</p></div>
+                <Button asChild size="sm"><Link href={mustReopen ? "/admin/quotes" : `/admin/quotes/edit/${quote.id}`}>{mustReopen ? "Gestisci riapertura" : "Modifica scadenza"}</Link></Button>
+              </div>
+            })}
+          </div>}
+        </section>
+      </div>}
+
       <QuotesDashboard initialQuotes={(quotes as SalesChannelQuote[]) || []} forwardStats={forwardStats} />
     </div>
   </div>

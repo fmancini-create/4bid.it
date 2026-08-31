@@ -5,6 +5,7 @@ import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
 import ForwardQuoteButton from "../forward-quote-button"
 import QuoteView from "./quote-view"
 import QuoteCommerceView from "./quote-commerce-view"
+import ReactivationRequest from "./reactivation-request"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -14,10 +15,6 @@ export const metadata: Metadata = {
   title: PREVENTIVO_TITLE,
   description: PREVENTIVO_DESCRIPTION,
   robots: { index: false, follow: false },
-  // OG dedicato al preventivo: cosi' su WhatsApp/social il titolo dice "il tuo
-  // preventivo" invece del claim generico ereditato dal layout, e l'immagine ha
-  // un URL nuovo (WhatsApp la riscarica da zero invece di riusare quella vecchia
-  // in cache, che appariva ruotata).
   openGraph: {
     title: PREVENTIVO_TITLE,
     description: PREVENTIVO_DESCRIPTION,
@@ -57,8 +54,6 @@ export default async function PreventivoPage({
     notFound()
   }
 
-  // Registra l'apertura reale del cliente (non l'anteprima admin ?preview=1).
-  // Best-effort: un errore di tracciamento non deve impedire la visualizzazione.
   if (preview !== "1" && data.id) {
     try {
       await supabase
@@ -74,10 +69,6 @@ export default async function PreventivoPage({
     }
   }
 
-  // Decaduta se la scadenza e' passata oppure se un admin/il cron l'ha
-  // dichiarata tale. Un preventivo gia' PAGATO non e' mai "scaduto": la
-  // scadenza riguarda l'offerta, non il servizio acquistato, e mostrare
-  // "scaduto" a chi ha pagato sarebbe falso.
   const alreadyPaid = data.payment_status === "paid" || data.status === "paid"
   const expired = alreadyPaid
     ? false
@@ -95,6 +86,7 @@ export default async function PreventivoPage({
   return (
     <>
       {quoteView}
+      {expired && !alreadyPaid && <ReactivationRequest token={token} />}
       <ForwardQuoteButton token={token} />
     </>
   )
