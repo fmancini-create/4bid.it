@@ -23,7 +23,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .maybeSingle()
 
   if (error || !quote) return NextResponse.json({ error: "Preventivo non trovato" }, { status: 404 })
-  if (quote.status === "paid" || quote.accepted_at) return NextResponse.json({ error: "Il preventivo non è più modificabile" }, { status: 409 })
+  if (quote.status === "paid" || quote.status === "accepted" || quote.accepted_at) {
+    return NextResponse.json({ error: "Il preventivo non è più modificabile" }, { status: 409 })
+  }
   if (quote.expired_at || (quote.expires_at && new Date(quote.expires_at) < new Date())) {
     return NextResponse.json({ error: "Il preventivo è scaduto" }, { status: 410 })
   }
@@ -80,6 +82,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .update({ line_items: next, total_amount: totalAmount, contract_terms: contractTerms, updated_at: now })
     .eq("id", quote.id)
     .is("accepted_at", null)
+    .neq("status", "accepted")
+    .neq("status", "paid")
     .select("id")
     .maybeSingle()
 
