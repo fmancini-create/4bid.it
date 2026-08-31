@@ -4,7 +4,6 @@ import Hero from "@/components/hero"
 import Services from "@/components/services"
 import Portfolio from "@/components/portfolio"
 import ProjectsSection from "@/components/projects-section"
-import AppsSection from "@/components/apps-section"
 import About from "@/components/about"
 import Contact from "@/components/contact"
 import { Footer } from "@/components/footer"
@@ -13,15 +12,13 @@ import { StructuredData } from "@/components/seo-structured-data"
 import { LatestVideos } from "@/components/latest-videos"
 
 export const metadata: Metadata = {
-  title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
+  title: "Revenue Management per Hotel e Software Hospitality | 4BID",
   description:
-    "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette con la suite 4BID.",
-  keywords:
-    "revenue management hotel, software revenue management, aumentare ricavi hotel, dynamic pricing hotel, consulenza revenue management, prenotazioni dirette hotel, software gestionale hotel, santaddeo, 4bid",
+    "Consulenza e software di revenue management per hotel, B&B e agriturismi: pricing, dati, controllo di gestione, CRM e automazione per l'hospitality.",
   openGraph: {
-    title: "Revenue Management per Hotel, B&B e Strutture Ricettive | 4BID",
+    title: "Revenue Management per Hotel e Software Hospitality | 4BID",
     description:
-      "Software e consulenza di revenue management per hotel, B&B e agriturismi: più ricavi, prezzi ottimizzati e prenotazioni dirette.",
+      "Consulenza e software per hotel e strutture ricettive: revenue management, pricing, dati, controllo di gestione, CRM e automazione.",
     type: "website",
     url: "https://www.4bid.it",
     locale: "it_IT",
@@ -31,14 +28,15 @@ export const metadata: Metadata = {
         url: "https://www.4bid.it/og-image-4bid.jpg",
         width: 1200,
         height: 630,
-        alt: "4BID SRL - Holding di software e tool per il turismo",
+        alt: "4BID SRL - Revenue management e software per l'hospitality",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Revenue Management per Hotel e Strutture Ricettive | 4BID",
-    description: "Aumenta i ricavi del tuo hotel con consulenza e software di revenue management. La suite 4BID per il mondo HORECA.",
+    title: "Revenue Management per Hotel e Software Hospitality | 4BID",
+    description:
+      "Consulenza e software per hotel: revenue management, pricing, dati, controllo di gestione, CRM e automazione.",
     images: ["https://www.4bid.it/og-image-4bid.jpg"],
   },
   alternates: {
@@ -51,8 +49,8 @@ export default function Home() {
     <div className="min-h-screen">
       <StructuredData
         type="Organization"
-        title="4BID.IT - Innovazione e Tecnologia"
-        description="4BID offre consulenza revenue management, software innovativi e soluzioni tecnologiche per hotel e aziende"
+        title="4BID SRL - Revenue Management e Software per Hospitality"
+        description="4BID combina consulenza di revenue management e software proprietari per hotel e strutture ricettive."
         url="https://www.4bid.it"
       />
 
@@ -63,7 +61,6 @@ export default function Home() {
       <Services />
       <Portfolio />
       <ProjectsSection />
-      <AppsSection />
       <LatestVideos limit={3} />
       <About />
       <Contact />
