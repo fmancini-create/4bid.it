@@ -15,9 +15,9 @@ const FEEDBACK_LABELS: Record<string, string> = {
   price: "Prezzo",
   timing: "Tempistiche",
   priority: "Priorità cambiata",
-  fit: "Proposta non adatta alle esigenze",
-  competitor: "Scelta un'altra soluzione",
-  budget: "Decisione interna / budget non approvato",
+  features: "La proposta non rispondeva alle esigenze",
+  competitor: "Ho scelto un'altra soluzione",
+  internal: "Decisione interna / budget non approvato",
   other: "Altro",
 }
 
@@ -27,6 +27,8 @@ type QuoteLifecycleInfo = {
   title?: string | null
   client_name?: string | null
   client_company?: string | null
+  accepted_at?: string | null
+  expired_at?: string | null
   feedback_received_at?: string | null
   feedback_reason?: string | null
   feedback_note?: string | null
@@ -117,10 +119,13 @@ export default async function QuotesPage() {
             <Badge variant="secondary">{reactivationRequests.length}</Badge>
           </div>
           {reactivationRequests.length === 0 ? <p className="text-sm text-muted-foreground">Nessuna richiesta di riattivazione.</p> : <div className="space-y-3">
-            {reactivationRequests.slice(0, 5).map((quote) => <div key={`reactivation-${quote.id}`} className="rounded-lg border p-3 flex flex-wrap items-center justify-between gap-3">
-              <div><p className="text-sm font-medium">{quote.client_company || quote.client_name || "Cliente"}</p><p className="text-xs text-muted-foreground">{quote.quote_number || quote.title || "Preventivo"} · {quote.reactivation_requested_at ? new Date(quote.reactivation_requested_at).toLocaleString("it-IT") : ""}</p></div>
-              <Button asChild size="sm"><Link href={`/admin/quotes/edit/${quote.id}`}>Modifica scadenza</Link></Button>
-            </div>)}
+            {reactivationRequests.slice(0, 5).map((quote) => {
+              const mustReopen = Boolean(quote.accepted_at && quote.expired_at)
+              return <div key={`reactivation-${quote.id}`} className="rounded-lg border p-3 flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-sm font-medium">{quote.client_company || quote.client_name || "Cliente"}</p><p className="text-xs text-muted-foreground">{quote.quote_number || quote.title || "Preventivo"} · {quote.reactivation_requested_at ? new Date(quote.reactivation_requested_at).toLocaleString("it-IT") : ""}</p></div>
+                <Button asChild size="sm"><Link href={mustReopen ? "/admin/quotes" : `/admin/quotes/edit/${quote.id}`}>{mustReopen ? "Gestisci riapertura" : "Modifica scadenza"}</Link></Button>
+              </div>
+            })}
           </div>}
         </section>
       </div>}
