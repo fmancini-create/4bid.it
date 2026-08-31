@@ -30,7 +30,6 @@ export function isEcosystemOfferSelected(item: QuoteLineItem, accepted = false):
 }
 
 export function markEcosystemOffer(item: QuoteLineItem, discountPct: number): QuoteLineItem {
-  const configuration = asObject(item.configuration)
   const pct = Math.min(100, Math.max(0, Number(discountPct) || 0))
   let next = item
 
@@ -55,6 +54,7 @@ export function markEcosystemOffer(item: QuoteLineItem, discountPct: number): Qu
     }
   }
 
+  const configuration = asObject(next.configuration)
   return calculateQuoteLine({
     ...next,
     optional: true,
