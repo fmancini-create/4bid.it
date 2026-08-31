@@ -76,7 +76,9 @@ export default async function PreventivoPage({
     ? false
     : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
   const lineItems = (data.line_items || []) as QuoteLineItem[]
-  const accepted = Boolean(data.accepted_at)
+  // Alcuni preventivi storici possono avere `status=accepted` senza la data
+  // tecnica accepted_at. Lo stato commerciale resta comunque definitivo.
+  const accepted = alreadyPaid || data.status === "accepted" || Boolean(data.accepted_at)
   const ecosystemOffers = lineItems.filter(isEcosystemOffer)
   const selectedEcosystemCount = ecosystemOffers.filter(item => isEcosystemOfferSelected(item, accepted)).length
   const visibleLineItems = lineItems.filter(item => !isEcosystemOffer(item) || isEcosystemOfferSelected(item, accepted))
@@ -93,7 +95,7 @@ export default async function PreventivoPage({
   return (
     <>
       {quoteView}
-      {!accepted && !alreadyPaid && !expired ? (
+      {!accepted && !expired ? (
         <EcosystemInvite token={token} offersCount={ecosystemOffers.length} selectedCount={selectedEcosystemCount} />
       ) : null}
       {expired && !alreadyPaid && <ReactivationRequest token={token} />}
