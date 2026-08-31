@@ -24,13 +24,24 @@ const PROJECT_PROMISES: Record<string, string> = {
   manubot: "Manutenzioni, housekeeping e attività operative organizzate.",
 }
 
+const PERIOD_LABELS: Record<string, string> = {
+  monthly: "mese",
+  quarterly: "trimestre",
+  yearly: "anno",
+  one_time: "una tantum",
+}
+
 function PriceBlock({ item, currency }: { item: QuoteLineItem; currency: string }) {
-  const monthly = applyBillingPreference(item, "monthly")
-  const monthlyCalc = calculateQuoteLine(monthly)
-  const yearly = hasAnnualBillingOption(item) ? calculateQuoteLine(applyBillingPreference(item, "yearly")) : null
+  const meta = getCommercialMeta(item)
+  const hasMonthly = item.billing_period === "monthly" || Number(meta.billing_options?.monthly?.unit_amount) > 0
+  const primary = calculateQuoteLine(hasMonthly ? applyBillingPreference(item, "monthly") : item)
+  const yearly = hasMonthly && hasAnnualBillingOption(item)
+    ? calculateQuoteLine(applyBillingPreference(item, "yearly"))
+    : null
   const discountLabel = ecosystemDiscountLabel(item)
-  const list = Number(monthlyCalc.list_amount || 0)
-  const net = Number(monthlyCalc.amount || 0)
+  const list = Number(primary.list_amount || 0)
+  const net = Number(primary.amount || 0)
+  const period = PERIOD_LABELS[primary.billing_period || "one_time"] || primary.billing_period || "una tantum"
 
   return (
     <div className="rounded-xl border bg-muted/25 p-3">
@@ -38,7 +49,7 @@ function PriceBlock({ item, currency }: { item: QuoteLineItem; currency: string 
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         {list > net + 0.005 ? <span className="text-sm text-muted-foreground line-through">{formatQuoteAmount(list, currency)}</span> : null}
         <span className="text-xl font-black">{formatQuoteAmount(net, currency)}</span>
-        <span className="text-xs text-muted-foreground">/ mese</span>
+        <span className="text-xs text-muted-foreground">{primary.billing_period === "one_time" ? "una tantum" : `/ ${period}`}</span>
       </div>
       {yearly && yearly.billing_period === "yearly" ? <p className="mt-1 text-xs font-semibold text-emerald-800">Annuale: {formatQuoteAmount(yearly.amount, currency)} / anno</p> : null}
     </div>
