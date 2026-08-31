@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import { calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors, getCommercialMeta } from "@/lib/quotes/commercial"
 import { isEcosystemOffer, selectEcosystemOffer } from "@/lib/quotes/ecosystem"
+import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
+import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const { data: quote, error } = await supabase
     .from("sales_channel_quotes")
-    .select("id,status,accepted_at,expires_at,expired_at,line_items")
+    .select("id,status,accepted_at,expires_at,expired_at,line_items,contract_terms")
     .eq("token", token)
     .maybeSingle()
 
@@ -63,19 +65,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies }, { status: 422 })
   }
 
+  // Se il cliente aggiunge un prodotto di un progetto che prima non faceva
+  // parte del preventivo, aggiorniamo subito anche le condizioni contrattuali.
+  // Cosi' la pagina principale mostra le condizioni corrette prima
+  // dell'accettazione, non soltanto durante il POST finale.
+  const projects = quoteTermsProjects(active)
+  const freshTerms = await fetchContractTerms(projects)
+  const contractTerms = mergeContractTerms(parseContractTerms(quote.contract_terms), freshTerms)
+
   const now = new Date().toISOString()
-  const { error: updateError } = await supabase
+  const totalAmount = calculateQuoteTotal(next)
+  const { data: updated, error: updateError } = await supabase
     .from("sales_channel_quotes")
-    .update({ line_items: next, total_amount: calculateQuoteTotal(next), updated_at: now })
+    .update({ line_items: next, total_amount: totalAmount, contract_terms: contractTerms, updated_at: now })
     .eq("id", quote.id)
     .is("accepted_at", null)
+    .select("id")
+    .maybeSingle()
 
   if (updateError) return NextResponse.json({ error: "Impossibile aggiornare il preventivo" }, { status: 500 })
+  if (!updated) return NextResponse.json({ error: "Il preventivo è stato accettato mentre lo stavi modificando" }, { status: 409 })
 
   return NextResponse.json({
     success: true,
     selected,
-    total_amount: calculateQuoteTotal(next),
+    total_amount: totalAmount,
     selected_item_ids: next.filter(isQuoteLineSelected).map(item => item.id).filter(Boolean),
   })
 }
