@@ -48,10 +48,13 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it"
+  const adminPath = data.accepted_at && data.expired_at
+    ? "/admin/quotes"
+    : `/admin/quotes/edit/${data.id}`
   const notified = await notifyAdminQuoteReactivationRequest(
     data,
     SUPER_ADMIN_EMAIL,
-    `${baseUrl}/admin/quotes/edit/${data.id}`,
+    `${baseUrl}${adminPath}`,
   )
 
   if (notified.success) {
