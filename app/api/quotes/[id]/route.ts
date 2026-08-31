@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (readError) return NextResponse.json({ error: readError.message }, { status: 404 })
   if (current.status === "paid") return NextResponse.json({ error: "Un preventivo pagato è congelato e non può essere modificato" }, { status: 409 })
 
-  const accepted = !!current.accepted_at
+  const accepted = current.status === "accepted" || !!current.accepted_at
   if (accepted) {
     const blocked = FROZEN_AFTER_ACCEPTANCE.filter(key => key in body && changed((current as Record<string, unknown>)[key], body[key]))
     if (Array.isArray(body.line_items) && changed(economicShape(current.line_items), economicShape(body.line_items))) blocked.push("line_items" as never)
@@ -128,8 +128,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createAdminClient()
-  const { data: current } = await supabase.from("sales_channel_quotes").select("status").eq("id", id).single()
+  const { data: current } = await supabase.from("sales_channel_quotes").select("status,accepted_at").eq("id", id).single()
   if (current?.status === "paid") return NextResponse.json({ error: "Un preventivo pagato non può essere eliminato" }, { status: 409 })
+  if (current?.status === "accepted" || current?.accepted_at) return NextResponse.json({ error: "Un preventivo accettato non può essere eliminato" }, { status: 409 })
   const { error } = await supabase.from("sales_channel_quotes").delete().eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
