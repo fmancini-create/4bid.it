@@ -26,6 +26,11 @@ type QuoteRow = {
   final_notice_sent_at: string | null
   expiry_reminder_sent_at: string | null
   feedback_requested_at: string | null
+  feedback_email_opened_at: string | null
+  feedback_email_open_count: number | null
+  feedback_link_clicked_at: string | null
+  feedback_link_click_count: number | null
+  feedback_received_at: string | null
   reactivation_notified_at: string | null
 }
 
@@ -70,7 +75,7 @@ export default async function QuoteEmailHistoryPage() {
 
   const admin = createAdminClient()
   const [{ data: quotes, error: quotesError }, { data: shares, error: sharesError }] = await Promise.all([
-    admin.from("sales_channel_quotes").select("id, quote_number, title, client_name, client_company, client_email, sent_at, reminder_count, last_reminder_at, acceptance_email_sent_at, payment_confirmation_sent_at, payment_reminder_count, last_payment_reminder_at, final_notice_sent_at, expiry_reminder_sent_at, feedback_requested_at, reactivation_notified_at").order("created_at", { ascending: false }),
+    admin.from("sales_channel_quotes").select("id, quote_number, title, client_name, client_company, client_email, sent_at, reminder_count, last_reminder_at, acceptance_email_sent_at, payment_confirmation_sent_at, payment_reminder_count, last_payment_reminder_at, final_notice_sent_at, expiry_reminder_sent_at, feedback_requested_at, feedback_email_opened_at, feedback_email_open_count, feedback_link_clicked_at, feedback_link_click_count, feedback_received_at, reactivation_notified_at").order("created_at", { ascending: false }),
     admin.from("sales_channel_quote_shares").select("id, quote_id, recipient_email, sent_at, send_count, email_open_count, last_email_opened_at, view_count, last_viewed_at, last_error").order("updated_at", { ascending: false }),
   ])
 
@@ -104,7 +109,14 @@ export default async function QuoteEmailHistoryPage() {
     pushSuccess(quote, "payment-reminder", `Pagamento in attesa - ${quote.quote_number || quote.title || "Preventivo"}`, quote.last_payment_reminder_at, undefined, quote.payment_reminder_count && quote.payment_reminder_count > 1 ? `${quote.payment_reminder_count} solleciti complessivi` : undefined)
     pushSuccess(quote, "final", `Ultimo avviso: l'offerta scade domani - ${quote.title || "Preventivo"}`, quote.final_notice_sent_at)
     pushSuccess(quote, "expiry", `Il tuo preventivo 4BID scade domani - ${quote.title || "Preventivo"}`, quote.expiry_reminder_sent_at)
-    pushSuccess(quote, "feedback", "Un breve feedback sul preventivo 4BID", quote.feedback_requested_at)
+
+    const feedbackActivity: string[] = []
+    if (quote.feedback_email_opened_at) feedbackActivity.push(`Aperta ${formatDate(quote.feedback_email_opened_at)}${Number(quote.feedback_email_open_count || 0) > 1 ? ` (${quote.feedback_email_open_count} aperture)` : ""}`)
+    if (quote.feedback_link_clicked_at) feedbackActivity.push(`Link aperto ${formatDate(quote.feedback_link_clicked_at)}${Number(quote.feedback_link_click_count || 0) > 1 ? ` (${quote.feedback_link_click_count} visite)` : ""}`)
+    if (quote.feedback_received_at) feedbackActivity.push(`Feedback compilato ${formatDate(quote.feedback_received_at)}`)
+    if (quote.feedback_requested_at && feedbackActivity.length === 0) feedbackActivity.push("Non risulta ancora aperta")
+    pushSuccess(quote, "feedback", "Un breve feedback sul preventivo 4BID", quote.feedback_requested_at, undefined, feedbackActivity.join(" · "))
+
     pushSuccess(quote, "reactivation", `Riattivazione preventivo richiesta: ${quote.client_company || quote.client_name || "Cliente"}`, quote.reactivation_notified_at, SUPER_ADMIN_EMAIL)
   }
 
@@ -151,7 +163,7 @@ export default async function QuoteEmailHistoryPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-primary" /><h1 className="text-2xl font-bold">Storico comunicazioni preventivi</h1></div>
-            <p className="text-sm text-muted-foreground mt-1">Qui vedi le email registrate come inviate e gli eventuali errori degli inoltri.</p>
+            <p className="text-sm text-muted-foreground mt-1">Invii, errori e attività disponibili sulle email dei preventivi.</p>
           </div>
           <Button asChild variant="outline"><Link href="/admin/quotes"><ArrowLeft className="h-4 w-4 mr-2" />Preventivi</Link></Button>
         </div>
@@ -178,6 +190,7 @@ export default async function QuoteEmailHistoryPage() {
             </div>)}
           </div>}
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">Nota: l'apertura email è rilevata tramite immagini remote; alcuni client possono bloccarle o precaricarle. Il click sul link e il feedback compilato sono segnali più affidabili.</p>
       </div>
     </main>
   </div>

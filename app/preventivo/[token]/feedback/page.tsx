@@ -17,7 +17,7 @@ export default async function QuoteFeedbackPage({
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("sales_channel_quotes")
-    .select("title, quote_number, client_company, client_name, expires_at, accepted_at, status, feedback_received_at")
+    .select("id, title, quote_number, client_company, client_name, expires_at, accepted_at, status, feedback_received_at, feedback_link_click_count")
     .eq("token", token)
     .maybeSingle()
 
@@ -26,6 +26,16 @@ export default async function QuoteFeedbackPage({
   const accepted = Boolean(data.accepted_at) || data.status === "accepted" || data.status === "paid"
   const expired = data.expires_at ? new Date(data.expires_at).getTime() <= Date.now() : false
   if (accepted || !expired) notFound()
+
+  const now = new Date().toISOString()
+  await supabase
+    .from("sales_channel_quotes")
+    .update({
+      feedback_link_clicked_at: now,
+      feedback_link_click_count: Number(data.feedback_link_click_count || 0) + 1,
+      updated_at: now,
+    })
+    .eq("id", data.id)
 
   return (
     <div className="min-h-screen bg-muted/30">

@@ -32,7 +32,11 @@ export async function sendQuoteExpiryReminderEmail(quote: SalesChannelQuote, lin
 
 export async function sendQuoteFeedbackRequestEmail(quote: SalesChannelQuote, feedbackLink: string) {
   const client = escapeHtml(quote.client_company || quote.client_name || "Cliente")
-  const inner = `<h2>Ci aiuta a capire cosa non ha funzionato?</h2><p>Gentile ${client},</p><p>il preventivo <strong>${escapeHtml(quote.quote_number || quote.title)}</strong> è scaduto senza essere stato accettato.</p><p>Le chiediamo un feedback molto breve: ci aiuta a capire se il motivo è stato prezzo, tempi, priorità, caratteristiche della proposta o altro.</p><p style="text-align:center"><a href="${feedbackLink}" class="button">Lascia un feedback</a></p><p style="color:#6b7280;font-size:13px">La risposta richiede meno di un minuto e non comporta alcun impegno.</p>`
+  const origin = new URL(feedbackLink).origin
+  const trackingPixel = quote.token
+    ? `<img src="${origin}/api/quotes/shared/${quote.token}/feedback/open" alt="" width="1" height="1" style="display:block;width:1px;height:1px;opacity:0" />`
+    : ""
+  const inner = `<h2>Ci aiuta a capire cosa non ha funzionato?</h2><p>Gentile ${client},</p><p>il preventivo <strong>${escapeHtml(quote.quote_number || quote.title)}</strong> è scaduto senza essere stato accettato.</p><p>Le chiediamo un feedback molto breve: ci aiuta a capire se il motivo è stato prezzo, tempi, priorità, caratteristiche della proposta o altro.</p><p style="text-align:center"><a href="${feedbackLink}" class="button">Lascia un feedback</a></p><p style="color:#6b7280;font-size:13px">La risposta richiede meno di un minuto e non comporta alcun impegno.</p>${trackingPixel}`
   return sendEmail({ to: quote.client_email!, subject: `Un breve feedback sul preventivo 4BID`, html: baseLayout(inner) })
 }
 
