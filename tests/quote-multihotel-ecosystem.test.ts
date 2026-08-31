@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { applyBillingPreference, setCommercialMeta } from "@/lib/quotes/commercial"
 import {
@@ -9,6 +11,10 @@ import {
   withPropertyPricing,
 } from "@/lib/quotes/ecosystem"
 import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+
+function source(path: string) {
+  return readFileSync(resolve(process.cwd(), path), "utf8")
+}
 
 function reviewsLine(quantity: number, billing_period: "monthly" | "yearly", unit_amount: number, id = "reviews"): QuoteLineItem {
   return {
@@ -142,5 +148,30 @@ describe("multi-property quote lines", () => {
       property_name: "Hotel A",
       accommodations: 6,
     })
+  })
+})
+
+describe("quote safety guards", () => {
+  it("keeps accepted historical quotes frozen in admin and public ecosystem routes", () => {
+    const publicRoute = source("app/api/quotes/shared/[token]/ecosystem/route.ts")
+    const publicPage = source("app/preventivo/[token]/page.tsx")
+    const ecosystemPage = source("app/preventivo/[token]/ecosistema/page.tsx")
+    const adminRoute = source("app/api/quotes/[id]/route.ts")
+
+    expect(publicRoute).toContain('quote.status === "accepted"')
+    expect(publicRoute).toContain('.neq("status", "accepted")')
+    expect(publicPage).toContain('data.status === "accepted"')
+    expect(ecosystemPage).toContain('data.status === "accepted"')
+    expect(adminRoute).toContain('current.status === "accepted"')
+  })
+
+  it("replaces aggregate dynamic lines and blocks unconfigured dynamic plans in ecosystem offers", () => {
+    const editor = source("app/admin/quotes/edit/[id]/quote-expansion-editor.tsx")
+    const adminRoute = source("app/api/quotes/[id]/route.ts")
+
+    expect(editor).toContain("quoteLineFamily(line) === family")
+    expect(editor).toContain("hasDynamicCatalogPrice")
+    expect(adminRoute).toContain("DYNAMIC_PLAN_PRICE_REQUIRED")
+    expect(adminRoute).toContain('configuration.pricing_model === "per_accommodation"')
   })
 })
