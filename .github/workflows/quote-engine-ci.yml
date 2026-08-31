@@ -37,7 +37,7 @@ jobs:
       - name: Quote tests
         run: |
           set -o pipefail
-          pnpm exec vitest run lib/quotes/types.dynamic-pricing.test.ts lib/quotes/ecosystem.test.ts --reporter=verbose 2>&1 | tee quote-test-output.txt
+          pnpm exec vitest run tests/quote-multihotel-ecosystem.test.ts --reporter=verbose 2>&1 | tee quote-test-output.txt
 
       - name: Upload quote test report
         if: always()
