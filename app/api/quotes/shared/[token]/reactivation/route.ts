@@ -48,7 +48,11 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.4bid.it"
-  const notified = await notifyAdminQuoteReactivationRequest(data, SUPER_ADMIN_EMAIL, `${baseUrl}/admin/quotes`)
+  const notified = await notifyAdminQuoteReactivationRequest(
+    data,
+    SUPER_ADMIN_EMAIL,
+    `${baseUrl}/admin/quotes/edit/${data.id}`,
+  )
 
   if (notified.success) {
     await supabase
