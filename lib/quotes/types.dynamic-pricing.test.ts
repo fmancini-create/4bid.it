@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { calculateQuoteLine, type QuoteLineItem } from "./types"
+import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "./types"
 
-function reviewsLine(quantity: number, billing_period: "monthly" | "yearly", unit_amount: number): QuoteLineItem {
+function reviewsLine(quantity: number, billing_period: "monthly" | "yearly", unit_amount: number, id = "reviews"): QuoteLineItem {
   return {
-    id: "reviews",
+    id,
     kind: "module",
     project: "santaddeo",
     source_product_id: `reviews:${billing_period}`,
@@ -42,5 +42,13 @@ describe("per-accommodation pricing with a monthly minimum", () => {
     const item = reviewsLine(5, "monthly", 0.5)
     item.discount = { type: "percentage", value: 10 }
     expect(calculateQuoteLine(item).amount).toBe(4.5)
+  })
+
+  it("applies the minimum separately to every hotel in a group", () => {
+    const smallHotel = reviewsLine(6, "monthly", 0.5, "reviews-hotel-a")
+    const largerHotel = reviewsLine(24, "monthly", 0.5, "reviews-hotel-b")
+    expect(calculateQuoteLine(smallHotel).amount).toBe(5)
+    expect(calculateQuoteLine(largerHotel).amount).toBe(12)
+    expect(calculateQuoteTotal([smallHotel, largerHotel])).toBe(17)
   })
 })
