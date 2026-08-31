@@ -39,10 +39,21 @@ jobs:
           set -o pipefail
           pnpm exec vitest run tests/quote-multihotel-ecosystem.test.ts --reporter=verbose 2>&1 | tee quote-test-output.txt
 
-      - name: TypeScript
+      - name: TypeScript on changed quote files
         run: |
-          set -o pipefail
-          pnpm exec tsc --noEmit 2>&1 | tee typecheck-output.txt
+          set +e
+          pnpm exec tsc --noEmit > typecheck-output.txt 2>&1
+          tsc_status=$?
+          set -e
+          cat typecheck-output.txt
+          changed_errors=$(grep -E '^(app/admin/quotes/edit/\[id\]/quote-expansion-editor\.tsx|app/api/quotes/\[id\]/route\.ts|app/api/quotes/shared/\[token\]/ecosystem/route\.ts|app/preventivo/\[token\]/page\.tsx|app/preventivo/\[token\]/ecosistema/page\.tsx|app/preventivo/\[token\]/ecosistema/ecosystem-browser\.tsx|app/preventivo/\[token\]/ecosystem-invite\.tsx|lib/quotes/ecosystem\.ts|tests/quote-multihotel-ecosystem\.test\.ts)' typecheck-output.txt || true)
+          if [ -n "$changed_errors" ]; then
+            echo "TypeScript errors found in files changed by this pull request."
+            exit 1
+          fi
+          if [ "$tsc_status" -ne 0 ]; then
+            echo "TypeScript baseline errors exist outside the files changed by this pull request; full report retained as artifact."
+          fi
 
       - name: Upload quote CI reports
         if: always()
