@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { calculateQuoteLine, formatQuoteAmount, type QuoteLineItem, type SalesChannelQuote } from "@/lib/quotes/types"
-import { setCommercialMeta, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
+import { getCommercialMeta, setCommercialMeta, type BillingOption, type CommercialDependency } from "@/lib/quotes/commercial"
 import { getPropertyPricing, isEcosystemOffer, markEcosystemOffer, withPropertyPricing } from "@/lib/quotes/ecosystem"
 
 type CatalogItem = {
@@ -49,6 +49,11 @@ function familyOf(item: Pick<CatalogItem, "billing_family" | "source_id" | "id">
   return item.billing_family || item.source_id || item.id.replace(/:(monthly|yearly)$/i, "")
 }
 
+function quoteLineFamily(item: QuoteLineItem) {
+  return getCommercialMeta(item).billing_family
+    || String(item.source_product_id || "").replace(/:(monthly|yearly)$/i, "")
+}
+
 function canonicalItems(groups: CatalogGroup[]) {
   const rows = groups.flatMap(group => group.items || [])
   return rows.filter(item => {
@@ -58,8 +63,17 @@ function canonicalItems(groups: CatalogGroup[]) {
   })
 }
 
-function isPerAccommodation(item: CatalogItem) {
-  return obj(item.configuration_schema).pricing_model === "per_accommodation_minimum"
+function pricingModel(item: CatalogItem) {
+  return String(obj(item.configuration_schema).pricing_model || "")
+}
+
+function isPerAccommodationMinimum(item: CatalogItem) {
+  return pricingModel(item) === "per_accommodation_minimum"
+}
+
+function hasDynamicCatalogPrice(item: CatalogItem) {
+  const model = pricingModel(item)
+  return model === "per_accommodation" || model === "per_accommodation_minimum"
 }
 
 function buildCatalogLine(item: CatalogItem): QuoteLineItem {
@@ -112,6 +126,13 @@ function dynamicMonthlyTotal(item: CatalogItem, rooms: number) {
   return Math.max(minimum, unit * Math.max(1, rooms))
 }
 
+function unitAmountForExistingPeriod(item: CatalogItem, existing: QuoteLineItem) {
+  if (existing.billing_period === "yearly" && item.alternative_period?.billing_period === "yearly") {
+    return Number(item.alternative_period.unit_amount) || item.unit_amount
+  }
+  return item.unit_amount
+}
+
 export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   const [quote, setQuote] = useState<SalesChannelQuote | null>(null)
   const [catalog, setCatalog] = useState<CatalogGroup[]>([])
@@ -155,9 +176,9 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   }, [quoteId])
 
   const items = useMemo(() => canonicalItems(catalog), [catalog])
-  const dynamicItems = useMemo(() => items.filter(item => item.kind === "module" && isPerAccommodation(item)), [items])
+  const dynamicItems = useMemo(() => items.filter(item => item.kind === "module" && isPerAccommodationMinimum(item)), [items])
   const ecosystemCandidates = useMemo(
-    () => items.filter(item => (item.kind === "plan" || item.kind === "module") && !isPerAccommodation(item)),
+    () => items.filter(item => (item.kind === "plan" || item.kind === "module") && !hasDynamicCatalogPrice(item)),
     [items],
   )
   const lines = quote?.line_items || []
@@ -213,11 +234,14 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
       if (property?.family === family) managed.set(property.property_id, line)
     }
 
-    const kept = lines.filter(line => getPropertyPricing(line)?.family !== family)
+    // Quando si passa dalla vecchia riga unica a una riga per hotel, eliminiamo
+    // anche l'eventuale riga ordinaria dello stesso modulo. Altrimenti il gruppo
+    // pagherebbe sia la vecchia quantità aggregata sia le nuove righe per hotel.
+    const kept = lines.filter(line => !(line.project === activeDynamic.project && quoteLineFamily(line) === family))
     const generated = clean.map(property => {
       const previous = managed.get(property.id)
       const base = previous
-        ? { ...previous, unit_amount: activeDynamic.unit_amount, catalog_snapshot: activeDynamic.raw_snapshot || previous.catalog_snapshot }
+        ? { ...previous, unit_amount: unitAmountForExistingPeriod(activeDynamic, previous), catalog_snapshot: activeDynamic.raw_snapshot || previous.catalog_snapshot }
         : buildCatalogLine(activeDynamic)
       const unit = Number(obj(activeDynamic.configuration_schema).unit_price ?? activeDynamic.unit_amount) || 0
       const minimum = Number(obj(activeDynamic.configuration_schema).minimum_monthly) || 0
@@ -246,7 +270,7 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   async function addEcosystemOffer(item = activeEcosystem) {
     if (!item) return toast.error("Seleziona un prodotto")
     const family = familyOf(item)
-    if (lines.some(line => line.project === item.project && (line.source_product_id === item.id || obj(line.configuration).offer_family === family || (isEcosystemOffer(line) && String(obj(line.configuration).ecosystem_family || "") === family)))) {
+    if (lines.some(line => line.project === item.project && (line.source_product_id === item.id || (isEcosystemOffer(line) && String(obj(line.configuration).ecosystem_family || "") === family)))) {
       return toast.error("Questa proposta è già presente nel preventivo")
     }
 
@@ -269,7 +293,7 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
 
   async function addCompatibleEcosystem() {
     let next = [...lines]
-    const existing = new Set(next.map(line => `${line.project}:${String(obj(line.configuration).ecosystem_family || line.source_product_id || "")}`))
+    const existing = new Set(next.map(line => `${line.project}:${String(obj(line.configuration).ecosystem_family || quoteLineFamily(line) || "")}`))
     let added = 0
 
     for (const project of ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const) {
@@ -375,7 +399,7 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button type="button" onClick={addCompatibleEcosystem} disabled={saving}><Sparkles className="mr-2 h-4 w-4" />Prepara tutte le proposte compatibili</Button>
-          <p className="text-xs text-muted-foreground">Lo sconto è configurabile: non viene inventata nessuna percentuale. I piani con prezzo da configurare manualmente non vengono aggiunti automaticamente.</p>
+          <p className="text-xs text-muted-foreground">Lo sconto è configurabile: non viene inventata nessuna percentuale. I piani con prezzo dinamico vanno prima configurati nel preventivo principale.</p>
         </div>
 
         {ecosystemOffers.length ? <div className="mt-5 space-y-2"><p className="text-sm font-semibold">Proposte già disponibili al cliente</p>{ecosystemOffers.map(line => <div key={line.id} className="flex flex-col gap-2 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{PROJECT_LABELS[line.project || ""] || line.project} · {line.name}</p><p className="text-xs text-muted-foreground">{line.discount?.type === "percentage" && Number(line.discount.value) > 0 ? `Vantaggio cliente 4BID -${line.discount.value}%` : "Nessuno sconto automatico"} · inizialmente non selezionato</p></div><Button type="button" size="sm" variant="ghost" onClick={() => line.id && removeEcosystemOffer(line.id)} disabled={saving}><Trash2 className="mr-2 h-4 w-4" />Rimuovi proposta</Button></div>)}</div> : null}
