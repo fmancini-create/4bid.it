@@ -35,7 +35,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Quote tests
-        run: pnpm exec vitest run lib/quotes/types.dynamic-pricing.test.ts lib/quotes/ecosystem.test.ts
+        run: |
+          set -o pipefail
+          pnpm exec vitest run lib/quotes/types.dynamic-pricing.test.ts lib/quotes/ecosystem.test.ts --reporter=verbose 2>&1 | tee quote-test-output.txt
+
+      - name: Upload quote test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quote-test-output
+          path: quote-test-output.txt
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Build
         run: pnpm build
