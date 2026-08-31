@@ -39,12 +39,19 @@ jobs:
           set -o pipefail
           pnpm exec vitest run tests/quote-multihotel-ecosystem.test.ts --reporter=verbose 2>&1 | tee quote-test-output.txt
 
-      - name: Upload quote test report
+      - name: TypeScript
+        run: |
+          set -o pipefail
+          pnpm exec tsc --noEmit 2>&1 | tee typecheck-output.txt
+
+      - name: Upload quote CI reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quote-test-output
-          path: quote-test-output.txt
+          name: quote-ci-reports
+          path: |
+            quote-test-output.txt
+            typecheck-output.txt
           if-no-files-found: ignore
           retention-days: 3
 
