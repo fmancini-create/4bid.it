@@ -4,12 +4,16 @@ import { getAllCategories, getPublishedGuides, GLOSSARY } from "@/lib/knowledge-
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://www.4bid.it"
-  const lastModified = new Date()
 
-  // Blog: indice + articoli
+  // `lastModified` viene dichiarato solo quando esiste una data reale e
+  // verificabile. Usare `new Date()` per pagine statiche farebbe apparire ogni
+  // URL come modificato a ogni build/richiesta, producendo un falso segnale di
+  // freschezza. Per le pagine senza una data editoriale affidabile e' meglio
+  // omettere il campo.
+
+  // Blog: indice + articoli. I singoli articoli hanno una data reale.
   const blogIndex = {
     url: `${baseUrl}/blog`,
-    lastModified,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }
@@ -23,7 +27,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Homepage
   const homepage = {
     url: baseUrl,
-    lastModified,
     changeFrequency: "daily" as const,
     priority: 1.0,
   }
@@ -31,7 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const guidePages = ["guida-revenue-management-hotel", "guida-pricing-hotel", "guida-prenotazioni-dirette-hotel"].map(
     (slug) => ({
       url: `${baseUrl}/${slug}`,
-      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.9,
     }),
@@ -73,7 +75,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "problemi-hotel-soluzioni",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
-    lastModified,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }))
@@ -89,12 +90,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "mypetsenseai",
   ].map((slug) => ({
     url: `${baseUrl}/progetti/${slug}`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
 
-  // Ecomobility (linea prodotto a sé)
+  // Ecomobility (linea prodotto a se')
   const ecomobility = [
     "ecomobility/come-funziona",
     "ecomobility/piattaforma-ecomobility",
@@ -102,7 +102,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "ecomobility/registra-struttura",
   ].map((slug) => ({
     url: `${baseUrl}/${slug}`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
@@ -111,13 +110,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const hubAndEvents = [
     {
       url: `${baseUrl}/soluzioni-revenue-management`,
-      lastModified,
       changeFrequency: "weekly" as const,
       priority: 0.9,
     },
     {
       url: `${baseUrl}/eventi/santaddeo-launch`,
-      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.5,
     },
@@ -126,7 +123,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Pagine istituzionali / EEAT (autorevolezza)
   const eeatPages = ["chi-siamo", "metodo-4bid", "filippo-mancini"].map((slug) => ({
     url: `${baseUrl}/${slug}`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.8,
   }))
@@ -134,19 +130,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Knowledge Base: hub + categorie + guide pubblicate
   const kbHub = {
     url: `${baseUrl}/knowledge-base`,
-    lastModified,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }
   const kbCategories = getAllCategories().map((c) => ({
     url: `${baseUrl}/knowledge-base/${c.slug}`,
-    lastModified,
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }))
   const kbGuides = getPublishedGuides().map((g) => ({
     url: `${baseUrl}/knowledge-base/${g.categorySlug}/${g.slug}`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }))
@@ -154,13 +147,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Glossario: hub + singoli termini
   const glossaryHub = {
     url: `${baseUrl}/glossario`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }
   const glossaryTerms = GLOSSARY.map((t) => ({
     url: `${baseUrl}/glossario/${t.slug}`,
-    lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.5,
   }))
@@ -169,7 +160,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const otherPages = [
     {
       url: `${baseUrl}/prenota-demo`,
-      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.6,
     },
@@ -181,31 +171,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Restano online e funzionanti: chi ha il collegamento li apre come prima.
     {
       url: `${baseUrl}/proponi-idea`,
-      lastModified,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },
     {
-      "url": `${baseUrl}/parlano-di-noi`,
-      lastModified,
+      url: `${baseUrl}/parlano-di-noi`,
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
     {
       url: `${baseUrl}/video-guide`,
-      lastModified,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified,
       changeFrequency: "yearly" as const,
       priority: 0.3,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified,
       changeFrequency: "yearly" as const,
       priority: 0.3,
     },
