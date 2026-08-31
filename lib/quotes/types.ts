@@ -41,11 +41,8 @@ export interface QuoteLineItem {
   support?: QuoteSupportTerms | null
   configuration?: Record<string, unknown>
   catalog_snapshot?: Record<string, unknown>
-  /** If true the customer can include/exclude this item before accepting the quote. */
   optional?: boolean
-  /** Initial selection shown to the customer for an optional item. Defaults to true. */
   default_selected?: boolean
-  /** Frozen customer choice after acceptance. Mandatory items are always treated as selected. */
   customer_selected?: boolean
 }
 
@@ -97,10 +94,6 @@ export type QuotePaymentMethod = "bonifico" | "card"
 export type QuotePaymentStatus = "pending" | "awaiting_transfer" | "paid"
 export type QuoteProvisioningStatus = "not_required" | "pending" | "processing" | "partial" | "completed" | "failed" | "manual_action"
 
-/** Riepilogo per preventivo degli INOLTRI (copie personali inviate a terzi).
- *  Le visite delle copie inoltrate NON toccano view_count del preventivo: senza
- *  questo riepilogo la lista direbbe "non ancora aperto" anche dopo un inoltro
- *  letto, e l'inoltro stesso risulterebbe invisibile fuori da /admin/quotes/analytics. */
 export interface QuoteForwardStats {
   recipients: number
   sent: number
@@ -121,20 +114,15 @@ export interface SalesChannelQuote {
   client_name: string
   client_company: string | null
   client_email: string | null
-  /** Indirizzi in copia VISIBILE: vengono dichiarati al cliente nell'email. */
   copy_cc?: string[] | null
-  /** Indirizzi in copia NASCOSTA: il cliente non ne viene informato. */
   copy_bcc?: string[] | null
   client_vat: string | null
   client_address: string | null
   title: string
   description: string | null
   payment_terms: string | null
-  /** Copie delle condizioni: tipizzate come sconosciute per non creare un ciclo con terms.ts; si leggono con parseContractTerms. */
   contract_terms?: unknown
   accepted_terms?: unknown
-  /** Tabelle comparative mostrate al cliente: tipizzate come sconosciute per non
-   *  creare un ciclo con comparison.ts; si leggono con normalizeQuoteTables. */
   comparison_tables?: unknown
   line_items: QuoteLineItem[]
   total_amount: number | null
@@ -161,18 +149,13 @@ export interface SalesChannelQuote {
   provisioned_at?: string | null
   sent_at: string | null
   expires_at: string | null
-  /** Solleciti di ACCETTAZIONE (prima che il cliente dica di si'). */
   reminder_count: number
   last_reminder_at: string | null
-  /** Conferma di accettazione inviata al cliente. */
   acceptance_email_sent_at?: string | null
-  /** Conferma di pagamento inviata al cliente: evita doppioni se Stripe rimanda l'evento. */
   payment_confirmation_sent_at?: string | null
-  /** Solleciti di PAGAMENTO (dopo l'accettazione): percorso distinto da reminder_count. */
   payment_reminder_count?: number
   last_payment_reminder_at?: string | null
   final_notice_sent_at?: string | null
-  /** Decadenza per mancato pagamento: il pagamento resta bloccato finche' un admin non riapre. */
   expired_at?: string | null
   reopened_at?: string | null
   first_viewed_at: string | null
@@ -186,15 +169,42 @@ export function isQuoteLineSelected(item: QuoteLineItem): boolean {
   return item.default_selected !== false
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+}
+
+/**
+ * Alcuni moduli di catalogo sono venduti a un prezzo unitario ma con un minimo
+ * per struttura. Recensioni, ad esempio, vale 0,50 EUR/sistemazione/mese con
+ * minimo 5 EUR/mese. Il minimo va applicato sul TOTALE della riga, non sul
+ * prezzo unitario, e deve valere anche quando il cliente passa all'annuale.
+ */
+function applyDynamicMinimum(
+  item: QuoteLineItem,
+  rawListAmount: number,
+): number {
+  const config = asObject(item.configuration)
+  if (config.pricing_model !== "per_accommodation_minimum") return rawListAmount
+
+  const minimumMonthly = Math.max(0, Number(config.minimum_monthly) || 0)
+  if (minimumMonthly <= 0) return rawListAmount
+
+  const annualDiscountPct = Math.min(100, Math.max(0, Number(config.annual_discount_pct) || 0))
+  let minimum = minimumMonthly
+  if (item.billing_period === "quarterly") minimum = minimumMonthly * 3
+  else if (item.billing_period === "yearly") minimum = minimumMonthly * 12 * (1 - annualDiscountPct / 100)
+  else if (item.billing_period === "one_time") return rawListAmount
+
+  return Math.max(rawListAmount, Math.round(minimum * 100) / 100)
+}
+
 export function calculateQuoteLine(item: QuoteLineItem): QuoteLineItem {
-  // Ogni voce moltiplica per la quantita' impostata, incluse setup e servizi
-  // una tantum. NOTA: un setup agganciato in automatico a un modulo puo'
-  // ereditare la quantita' del modulo padre (n. camere/strutture/operatori) e
-  // quindi gonfiarsi; l'operatore deve impostare a mano la quantita' corretta
-  // (di norma 1) su quelle righe.
   const quantity = Math.max(1, Number(item.quantity) || 1)
   const unitAmount = Number(item.unit_amount ?? item.list_amount ?? item.amount) || 0
-  const listAmount = unitAmount * quantity
+  const rawListAmount = unitAmount * quantity
+  const listAmount = applyDynamicMinimum(item, rawListAmount)
   let discountAmount = 0
   if (item.discount?.type === "percentage") {
     discountAmount = listAmount * Math.min(100, Math.max(0, Number(item.discount.value) || 0)) / 100
