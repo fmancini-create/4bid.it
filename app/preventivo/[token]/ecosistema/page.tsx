@@ -23,7 +23,7 @@ export default async function QuoteEcosystemPage({ params }: { params: Promise<{
 
   const offers = (Array.isArray(data.line_items) ? data.line_items as QuoteLineItem[] : []).filter(isEcosystemOffer)
   const expired = Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
-  const locked = data.status === "paid" || Boolean(data.accepted_at) || expired
+  const locked = data.status === "paid" || data.status === "accepted" || Boolean(data.accepted_at) || expired
 
   return <EcosystemBrowser token={token} offers={offers} currency={data.currency || "eur"} locked={locked} />
 }
