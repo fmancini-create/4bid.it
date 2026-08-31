@@ -16,12 +16,13 @@ import {
   calculateQuoteTotal,
   formatQuoteAmount,
   isQuoteLineSelected,
-    type QuoteLineItem,
-    type QuoteProject,
-    type QuoteRequestedField,
+  type QuoteLineItem,
+  type QuoteProject,
+  type QuoteRequestedField,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { duplicateQuoteLineAt, getCommercialMeta, setCommercialMeta, syncAnnualPlanPrice, type AnnualSetupMode, type BillingOption, type CommercialDependency, type IncludedCreditsRecharge } from "@/lib/quotes/commercial"
+import { hasYearlyQuoteScenario, summarizeQuotePeriods, summarizeYearlyQuoteScenario } from "@/lib/quotes/period-summary"
 import GroupPricingReference from "../../commerce/group-pricing-reference"
 import { QuantityInput } from "../../quantity-input"
 import { quoteBrandAccent } from "@/lib/quotes/branding"
@@ -95,9 +96,6 @@ function santaddeoPrice(config: Record<string, any>) {
 function newFieldKey() {
   return `field_${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10)}`
 }
-// Gli id di catalogo non sono unici fra progetti: la chiave "gia' presente" deve
-// includere progetto e kind, altrimenti card di progetti diversi con lo stesso
-// id verrebbero marcate insieme.
 function catalogKey(project: string, kind: string, id: string | undefined | null) { return `${project}:${kind}:${id ?? ""}` }
 function manualLine(kind: ManualKind): QuoteLineItem {
   const recurring = kind === "module"
@@ -150,8 +148,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
 
   const lines = (quote?.line_items || []) as QuoteLineItem[]
   const requestedFields = (quote?.requested_fields || []) as QuoteRequestedField[]
-  // Tabelle comparative: snapshot salvato sul preventivo + prodotti (fra i 4)
-  // realmente presenti nelle voci, che sono gli unici per cui offrire la tabella.
   const comparisonTables = useMemo(
     () => normalizeQuoteTables((quote as SalesChannelQuote | null)?.comparison_tables),
     [quote],
@@ -161,27 +157,13 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     patchQuote({ comparison_tables: next } as Partial<SalesChannelQuote>)
   }
   const calculated = useMemo(() => lines.map(calculateQuoteLine), [lines])
-  // Totali RAGGRUPPATI PER PERIODO, come la vista cliente. Sommare una tantum,
-  // mensile e annuale in un unico numero (il vecchio `calculateQuoteTotal`)
-  // produce una cifra che sul front NON esiste (per XENA: 680 setup + 707,30 di
-  // UN mese = 1387,30). Qui si mostrano separati + "Totale primo anno" = una
-  // tantum + canoni x 12 mesi, identico al box "Il tuo investimento".
-  const periodTotals = useMemo(() => {
-    const g = { oneTime: 0, monthly: 0, quarterly: 0, yearly: 0 }
-    for (const item of calculated) {
-      if (!isQuoteLineSelected(item)) continue
-      if (item.billing_period === "monthly") g.monthly += item.amount
-      else if (item.billing_period === "quarterly") g.quarterly += item.amount
-      else if (item.billing_period === "yearly") g.yearly += item.amount
-      else g.oneTime += item.amount
-    }
-    return { ...g, firstYear: g.oneTime + g.monthly * 12 + g.quarterly * 4 + g.yearly }
-  }, [calculated])
-  // Prodotti gia' presenti nel preventivo in modifica: servono a colorare di
-  // verde le card di catalogo corrispondenti, come nel builder di creazione.
+  // Il riepilogo deve distinguere le due formule commerciali. In particolare,
+  // un setup marcato "azzerato con annuale" resta correttamente valorizzato
+  // nella formula mensile, ma deve diventare 0 nella formula annuale.
+  const periodTotals = useMemo(() => summarizeQuotePeriods(lines), [lines])
+  const yearlyPeriodTotals = useMemo(() => summarizeYearlyQuoteScenario(lines), [lines])
+  const hasYearlyScenario = useMemo(() => hasYearlyQuoteScenario(lines), [lines])
   const selectedCatalogIds = useMemo(() => new Set(lines.filter(l => l.source_product_id).map(l => catalogKey(l.project, l.kind, l.source_product_id))), [lines])
-  // Totale ricorrente configurato normalizzato AL MESE (solo voci selezionate):
-  // il riferimento gruppo confronta canoni omogenei a prescindere dalla cadenza.
   const configuredMonthlyTotal = useMemo(() => calculated.reduce((sum, item) => {
     if (!isQuoteLineSelected(item)) return sum
     if (item.billing_period === "monthly") return sum + item.amount
@@ -189,8 +171,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     if (item.billing_period === "yearly") return sum + item.amount / 12
     return sum
   }, 0), [calculated])
-  // Riferimento "singola struttura": piano ricorrente piu' economico a catalogo,
-  // normalizzato al mese. Stessa logica del builder di creazione.
   const suggestedReferenceMonthly = useMemo(() => {
     let min = 0
     for (const group of catalog) for (const it of group.items || []) {
@@ -203,10 +183,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
 
   function patchQuote(patch: Partial<SalesChannelQuote>) { setQuote(current => current ? { ...current, ...patch } : current) }
 
-  // Su un preventivo GIA' ESISTENTE i campi sono quasi sempre pieni: qui il
-  // rischio di cancellare dati corretti e' piu' alto che in creazione, percio'
-  // si riempie solo cio' che e' vuoto. La partita IVA e' l'unica che si
-  // allinea, perche' e' proprio il dato appena verificato.
   function applyCompany(d: CompanyLookupData) {
     patchQuote({
       client_company: quote?.client_company?.trim() || d.denominazione || null,
@@ -223,11 +199,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       if (line.kind === "setup" && line.billing_period === "one_time" && patch.unit_amount != null) {
         next = setCommercialMeta(next, { normal_price: Math.max(0, Number(patch.unit_amount) || 0) })
       }
-      // Le voci ricorrenti conservano il canone anche in `billing_options`, da cui
-      // la vista cliente deriva il prezzo col toggle mensile/annuale. Se qui si
-      // cambia prezzo o periodicita' senza aggiornare quella struttura, il
-      // cliente vedrebbe il vecchio valore (o 0). Riallineiamo l'opzione del
-      // periodo corrente al prezzo appena impostato.
       if (next.billing_period !== "one_time" && (patch.unit_amount != null || patch.billing_period != null)) {
         const period = next.billing_period
         if (period === "monthly" || period === "yearly") {
@@ -235,9 +206,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           next = setCommercialMeta(next, { billing_options: { ...opts, [period]: { ...(opts[period] || {}), billing_period: period, unit_amount: Math.max(0, Number(next.unit_amount) || 0) } } })
         }
       }
-      // Se e' impostato uno sconto per pagamento anticipato, il prezzo annuale
-      // (canone x 12 scontato) va ricalcolato ogni volta che cambia il canone
-      // mensile, altrimenti resterebbe un valore obsoleto salvato in precedenza.
       next = syncAnnualPlanPrice(next)
       return calculateQuoteLine(next)
     }))
@@ -253,11 +221,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(next) : row))
   }
-  // Sconto sul PAGAMENTO ANTICIPATO (annuale) di un piano/modulo ricorrente.
-  // Salva la percentuale in meta e lascia che `syncAnnualPlanPrice` derivi il
-  // prezzo annuale (canone x 12 scontato) in `billing_options.yearly`, da cui la
-  // vista cliente offre la formula "paga subito". enabled=false azzera lo sconto
-  // e rimuove l'opzione annuale (niente formula fantasma a 0€).
   function patchAnnualPlan(index: number, patch: { enabled?: boolean; pct?: number }) {
     const line = lines[index]
     const meta = getCommercialMeta(line)
@@ -267,12 +230,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
     const withMeta = setCommercialMeta(line, { annual_plan_discount_pct: pct })
     setLines(lines.map((row, i) => i === index ? calculateQuoteLine(syncAnnualPlanPrice(withMeta)) : row))
   }
-  // Crediti inclusi (addon a consumo): allowance informativa, non tocca i totali.
-  // enabled=false azzera il campo; altrimenti salva importo e tipo di ricarica.
   function patchIncludedCredits(index: number, patch: { enabled?: boolean; amount?: number; recharge?: IncludedCreditsRecharge }) {
     const line = lines[index]
-    // Meta GREZZO (non normalizzato): conserva importo/ricarica anche a 0, cosi'
-    // il blocco resta attivo mentre l'operatore digita e le scelte non si perdono.
     const current = getCommercialMeta(line).included_credits
     if (patch.enabled === false) {
       setLines(lines.map((row, i) => i === index ? setCommercialMeta(row, { included_credits: null }) : row))
@@ -444,10 +403,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         {!isSantaddeo(item) ? <div className="grid sm:grid-cols-3 gap-3"><div><Label>Tipo sconto</Label><Select value={item.discount?.type || "none"} onValueChange={v => patchLine(index, { discount: v === "none" ? null : { type: v as "percentage" | "fixed", value: item.discount?.value || 0 } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Nessuno</SelectItem><SelectItem value="percentage">Percentuale</SelectItem><SelectItem value="fixed">Importo fisso</SelectItem></SelectContent></Select></div><div><Label>Valore sconto</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.value || 0} onChange={e => patchLine(index, { discount: item.discount ? { ...item.discount, value: Number(e.target.value) } : null })} /></div><div><Label>Durata sconto (mesi)</Label><Input disabled={!item.discount} type="number" min="0" value={item.discount?.duration_months || ""} onChange={e => patchLine(index, { discount: item.discount ? { ...item.discount, duration_months: e.target.value ? Number(e.target.value) : null } : null })} /></div></div> : null}
         {item.kind === "setup" && item.billing_period === "one_time" ? <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3"><div className="flex items-center justify-between gap-3"><div><strong>Agevolazione setup con piano annuale</strong><p className="text-xs text-muted-foreground">Scegli se il setup resta a prezzo pieno, viene scontato o azzerato quando il cliente seleziona la quota annuale.</p></div><Switch checked={setupAnnualMode !== "full"} onCheckedChange={enabled => patchSetupAnnualPolicy(index, enabled ? "free" : "full")} /></div>{setupAnnualMode !== "full" ? <div className="grid sm:grid-cols-2 gap-3"><div><Label>Trattamento con annuale</Label><Select value={setupAnnualMode} onValueChange={value => patchSetupAnnualPolicy(index, value as AnnualSetupMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="discount">Scontato</SelectItem><SelectItem value="free">Azzerato / omaggio</SelectItem></SelectContent></Select></div>{setupAnnualMode === "discount" ? <div><Label>Sconto setup %</Label><Input type="number" min="0" max="100" step="0.1" value={meta.annual_setup_discount_pct || 0} onChange={e => patchSetupAnnualPolicy(index, "discount", Number(e.target.value))} /></div> : <div className="flex items-end"><p className="rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Setup azzerato con formula annuale</p></div>}</div> : <p className="text-xs text-muted-foreground">Disattivato: il setup viene addebitato per intero anche con formula annuale.</p>}</div> : null}
         {item.billing_period === "monthly" && !isSantaddeo(item) ? (() => {
-          // Sconto sul PAGAMENTO ANTICIPATO (annuale). Il canone mensile e' su
-          // item.unit_amount; il prezzo annuale = canone x 12 scontato e finisce
-          // in billing_options.yearly (derivato da syncAnnualPlanPrice). Lo stato
-          // "attivo" e' pct > 0: un'opzione annuale a 0 non e' un vero prezzo.
           const pct = Math.min(100, Math.max(0, Number(meta.annual_plan_discount_pct) || 0))
           const enabled = pct > 0
           const monthly = Math.max(0, Number(item.unit_amount) || 0)
@@ -470,24 +425,13 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           </div>
         })() : null}
         {item.project === "manubot" && item.kind === "plan" && /corporate/i.test(item.name || "") ? (() => {
-          // Limiti inclusi nel piano Corporate, riferiti all'INTERO GRUPPO:
-          // asset max (es. camere/oggetti) e utenti max. Solo informativi: non
-          // toccano i totali. Salvati in commercial_meta e mostrati in vista
-          // cliente accanto al numero di strutture (quantity). Vuoti = nascosti.
           const maxAssets = Number(meta.corporate_max_assets) || 0
           const maxUsers = Number(meta.corporate_max_users) || 0
-          // Default retrocompatibile: se il flag non e' mai stato impostato, mostra.
           const showStructure = meta.corporate_show_per_structure !== false
           const showAsset = meta.corporate_show_per_asset !== false
           const showUser = meta.corporate_show_per_user !== false
-          // Anteprima nell'editor: STESSO calcolo della vista cliente. Ripartisce
-          // il ricorrente annualizzato (canoni mensili x12 + canoni annuali, solo
-          // voci selezionate, come `recurringYearly` nel front) per strutture /
-          // asset / utenti. Cosi' l'operatore vede a schermo cio' che vedra' il
-          // cliente, senza dover aprire l'anteprima.
           const structures = Number(item.quantity) || 0
           const recurringYearlyGroup = periodTotals.monthly * 12 + periodTotals.yearly
-          // Il cliente vede il costo MENSILE ripartito: dividiamo anche per 12.
           const recurringMonthlyGroup = recurringYearlyGroup / 12
           const perStructure = structures > 0 ? formatQuoteAmount(recurringMonthlyGroup / structures, quote.currency) : null
           const perAsset = maxAssets > 0 ? formatQuoteAmount(recurringMonthlyGroup / maxAssets, quote.currency) : null
@@ -519,10 +463,6 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
           </div>
         })() : null}
         {item.project === "hotelprofitai" ? (() => {
-          // Stato dello switch e dei campi dal meta GREZZO: `getIncludedCredits`
-          // ritorna null con importo 0 (giusto per totali/provisioning), ma qui
-          // serve tenere il blocco aperto mentre l'operatore digita l'importo,
-          // altrimenti lo switch si rispegne subito e sembra "non attivabile".
           const rawCredits = getCommercialMeta(item).included_credits
           const creditsEnabled = rawCredits != null
           const creditsAmount = Math.max(0, Number(rawCredits?.amount) || 0)
@@ -557,7 +497,8 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
         {periodTotals.monthly > 0 ? <div><p className="text-xs text-muted-foreground">Canone mensile</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.monthly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /mese</span></p></div> : null}
         {periodTotals.quarterly > 0 ? <div><p className="text-xs text-muted-foreground">Canone trimestrale</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.quarterly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /trim.</span></p></div> : null}
         {periodTotals.yearly > 0 ? <div><p className="text-xs text-muted-foreground">Canone annuale</p><p className="text-xl font-bold">{formatQuoteAmount(periodTotals.yearly, quote.currency)}<span className="text-sm font-normal text-muted-foreground"> /anno</span></p></div> : null}
-        <div className="border-l pl-8"><p className="text-xs uppercase tracking-wide text-muted-foreground">Totale primo anno</p><p className="text-2xl font-black">{formatQuoteAmount(periodTotals.firstYear, quote.currency)}</p><p className="text-[11px] text-muted-foreground">una tantum + canoni per 12 mesi · {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}</p></div>
+        <div className="border-l pl-8"><p className="text-xs uppercase tracking-wide text-muted-foreground">Primo anno · formula mensile</p><p className="text-2xl font-black">{formatQuoteAmount(periodTotals.firstYear, quote.currency)}</p><p className="text-[11px] text-muted-foreground">setup + canoni ricorrenti · {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}</p></div>
+        {hasYearlyScenario ? <div className="border-l pl-8"><p className="text-xs uppercase tracking-wide text-emerald-700">Primo anno · formula annuale</p><p className="text-2xl font-black text-emerald-700">{formatQuoteAmount(yearlyPeriodTotals.firstYear, quote.currency)}</p><p className="text-[11px] text-muted-foreground">applica setup omaggio/scontato e prezzi annuali configurati · {quote.vat_included ? "IVA inclusa" : "IVA esclusa"}</p></div> : null}
       </div>
       <Button size="lg" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Salvataggio…" : "Salva modifiche"}</Button></section>
   </div>
