@@ -36,6 +36,24 @@ function changed(before: unknown, after: unknown) {
   return JSON.stringify(before ?? null) !== JSON.stringify(after ?? null)
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+}
+
+/**
+ * Un piano con formula dinamica (es. Santaddeo RMS) non ha un canone valido
+ * finché l'operatore non inserisce i parametri della struttura nel configuratore
+ * principale. Non deve poter diventare una proposta Ecosistema a prezzo 0.
+ */
+function hasUnconfiguredDynamicEcosystemPrice(item: QuoteLineItem) {
+  const configuration = asObject(item.configuration)
+  return configuration.offer_channel === "4bid_ecosystem"
+    && item.kind === "plan"
+    && configuration.pricing_model === "per_accommodation"
+}
+
 /** Solo cio' che incide sull'accordo economico: l'ordine delle voci non conta. */
 function economicShape(items: unknown) {
   if (!Array.isArray(items)) return []
@@ -84,6 +102,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (Array.isArray(body.line_items)) {
     const lines = body.line_items.map((item: QuoteLineItem) => calculateQuoteLine({ ...item, id: item.id || randomUUID(), catalog_snapshot: item.catalog_snapshot ?? {} }))
+    const unconfiguredDynamic = lines.find(hasUnconfiguredDynamicEcosystemPrice)
+    if (unconfiguredDynamic) {
+      return NextResponse.json({
+        error: `Configura prima il prezzo di ${unconfiguredDynamic.name || unconfiguredDynamic.description} nel preventivo principale: un piano a prezzo dinamico non può essere proposto a 0 € nell'Ecosistema 4BID.`,
+        code: "DYNAMIC_PLAN_PRICE_REQUIRED",
+      }, { status: 422 })
+    }
     const dependencies = dependencyErrors(lines)
     if (dependencies.length) return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies }, { status: 422 })
     update.line_items = lines
