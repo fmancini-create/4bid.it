@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Quote tests
+        run: pnpm exec vitest run lib/quotes/types.dynamic-pricing.test.ts lib/quotes/ecosystem.test.ts
+
       - name: Build
         run: pnpm build
         env:
