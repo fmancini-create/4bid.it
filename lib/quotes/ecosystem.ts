@@ -1,4 +1,5 @@
 import { calculateQuoteLine, type QuoteLineItem } from "./types"
+import { getCommercialMeta, setCommercialMeta } from "./commercial"
 
 const ECOSYSTEM_MARKER = "4bid_ecosystem"
 const MULTI_PROPERTY_MARKER = "multi_property"
@@ -31,8 +32,31 @@ export function isEcosystemOfferSelected(item: QuoteLineItem, accepted = false):
 export function markEcosystemOffer(item: QuoteLineItem, discountPct: number): QuoteLineItem {
   const configuration = asObject(item.configuration)
   const pct = Math.min(100, Math.max(0, Number(discountPct) || 0))
+  let next = item
+
+  // `applyBillingPreference` elimina lo sconto di riga quando il cliente passa
+  // all'annuale, per non sommare le normali promo mensili allo sconto annuale.
+  // Il vantaggio cliente 4BID invece deve restare valido anche sull'annuale:
+  // lo incorporiamo quindi nell'opzione annuale congelata sul preventivo, mentre
+  // sul mensile resta uno sconto di riga ben visibile e barrabile.
+  if (pct > 0) {
+    const meta = getCommercialMeta(next)
+    const yearly = meta.billing_options?.yearly
+    if (yearly && Number(yearly.unit_amount) > 0) {
+      next = setCommercialMeta(next, {
+        billing_options: {
+          ...(meta.billing_options || {}),
+          yearly: {
+            ...yearly,
+            unit_amount: Math.round(Number(yearly.unit_amount) * (1 - pct / 100) * 100) / 100,
+          },
+        },
+      })
+    }
+  }
+
   return calculateQuoteLine({
-    ...item,
+    ...next,
     optional: true,
     default_selected: false,
     customer_selected: false,
