@@ -1,8 +1,18 @@
 import type { MetadataRoute } from "next"
 
-// Crawler AI esplicitamente ammessi (GEO): consentono a 4BID di essere
-// citata da ChatGPT, Gemini, Claude, Perplexity, ecc.
-const AI_CRAWLERS = ["GPTBot", "Google-Extended", "anthropic-ai", "ClaudeBot", "CCBot", "PerplexityBot", "Bytespider"]
+// User-agent AI esplicitamente ammessi (GEO / AI discovery).
+// OAI-SearchBot e' il crawler di OpenAI usato per la discovery in ChatGPT
+// Search; GPTBot ha uno scopo distinto legato al potenziale training.
+const AI_CRAWLERS = [
+  "OAI-SearchBot",
+  "GPTBot",
+  "Google-Extended",
+  "anthropic-ai",
+  "ClaudeBot",
+  "CCBot",
+  "PerplexityBot",
+  "Bytespider",
+]
 
 export default function robots(): MetadataRoute.Robots {
   return {
