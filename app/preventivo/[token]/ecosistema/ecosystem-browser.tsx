@@ -73,10 +73,16 @@ const PRODUCT_META: Record<ProductKey, {
   },
   manubot: {
     label: "ManuBot",
-    category: "Operations e housekeeping",
-    promise: "Meno caos operativo, attività tracciate e camere sotto controllo.",
-    description: "Organizza manutenzioni, housekeeping e task del team anche da WhatsApp o Telegram, trasformando messaggi e vocali in attività assegnate e verificabili.",
-    benefits: ["Manutenzioni", "Housekeeping", "Task via bot"],
+    category: "Operations, housekeeping e controllo camera",
+    promise: "Gli operatori lavorano con un vocale WhatsApp: ManuBot capisce, assegna e traccia il lavoro.",
+    description: "Pensato per chi lavora sul campo: operai, manutentori e addetti housekeeping non devono aprire software o compilare moduli. Inviano un normale messaggio o, soprattutto, un vocale WhatsApp; ManuBot lo interpreta, crea l'attività, la assegna alla persona giusta e ne segue stato e chiusura. Oltre a manutenzioni e housekeeping gestisce Camera Pronta, modulo biancheria e controllo biancheria, oltre alla rilevazione dei consumi frigobar e ai relativi addebiti.",
+    benefits: [
+      "Vocali WhatsApp trasformati in attività automatiche",
+      "Manutenzioni e housekeeping assegnati e tracciati",
+      "Camera Pronta e controllo degli standard della camera",
+      "Biancheria e controllo biancheria",
+      "Frigobar: rilevazione consumi e addebiti",
+    ],
     surface: "border-violet-200 bg-violet-50/70",
     iconSurface: "bg-violet-100 text-violet-900",
     accent: "text-violet-900",
@@ -390,6 +396,15 @@ export default function EcosystemBrowser({
                   </div>
                 </div>
                 <p className="mt-5 max-w-3xl text-base leading-relaxed text-muted-foreground">{selectedMeta.description}</p>
+                {selectedProject === "manubot" ? (
+                  <div className="mt-5 max-w-3xl rounded-2xl border border-violet-200 bg-background/85 p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-violet-800">La forza per chi lavora sul campo</p>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground">
+                      <strong>Operai, manutentori e addetti housekeeping usano semplicemente i vocali di WhatsApp.</strong>{" "}
+                      Niente app da imparare o moduli da compilare: ManuBot interpreta il vocale, crea il task, lo instrada alla persona giusta e ne traccia presa in carico e chiusura.
+                    </p>
+                  </div>
+                ) : null}
               </div>
               <div className="rounded-2xl bg-background/80 p-5 shadow-sm ring-1 ring-black/5">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">In pratica ti aiuta a</p>
