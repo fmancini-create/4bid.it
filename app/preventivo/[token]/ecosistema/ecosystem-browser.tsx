@@ -56,12 +56,7 @@ function PriceBlock({ item, currency }: { item: QuoteLineItem; currency: string 
   )
 }
 
-export default function EcosystemBrowser({
-  token,
-  offers,
-  currency,
-  locked,
-}: {
+export default function EcosystemBrowser({ token, offers, currency, locked }: {
   token: string
   offers: QuoteLineItem[]
   currency: string
@@ -81,10 +76,14 @@ export default function EcosystemBrowser({
     pendingRef.current = true
     setPendingId(item.id)
     try {
+      const discovered = item.id.startsWith("catalog:")
+      const payload = discovered
+        ? { catalog_item_id: item.source_product_id, project: item.project, selected: true }
+        : { line_id: item.id, selected }
       const response = await fetch(`/api/quotes/shared/${token}/ecosystem`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ line_id: item.id, selected }),
+        body: JSON.stringify(payload),
       })
       const body = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(body.error || "Impossibile aggiornare il preventivo")
@@ -104,7 +103,7 @@ export default function EcosystemBrowser({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">Ecosistema 4BID</p>
-            <h1 className="text-2xl font-black sm:text-3xl">Amplia la tua soluzione</h1>
+            <h1 className="text-2xl font-black sm:text-3xl">Completa la tua soluzione</h1>
           </div>
           <Button asChild variant="outline"><Link href={`/preventivo/${token}`}><ArrowLeft className="mr-2 h-4 w-4" />Torna al preventivo</Link></Button>
         </div>
@@ -115,13 +114,13 @@ export default function EcosystemBrowser({
           <div className="flex items-start gap-3">
             <Sparkles className="mt-1 h-6 w-6 shrink-0 text-emerald-700" />
             <div>
-              <h2 className="text-xl font-bold text-emerald-950">Più prodotti, un unico ecosistema</h2>
-              <p className="mt-1 text-sm leading-relaxed text-emerald-950/80">Qui trovi le soluzioni che 4BID ha preparato come possibile estensione della proposta. Prezzi e sconti sono già congelati nel preventivo: puoi scegliere cosa aggiungere, ma non puoi modificarli.</p>
+              <h2 className="text-xl font-bold text-emerald-950">Un ecosistema, tanti moduli che lavorano insieme</h2>
+              <p className="mt-1 text-sm leading-relaxed text-emerald-950/80">Esplora i prodotti 4BID e aggiungi direttamente al preventivo i piani e i moduli compatibili. Prezzi, dipendenze e condizioni vengono verificati dal sistema prima dell'aggiunta.</p>
             </div>
           </div>
         </section>
 
-        {offers.length === 0 ? <div className="rounded-2xl border bg-card p-8 text-center"><p className="font-semibold">Non ci sono ancora proposte integrative disponibili.</p><p className="mt-1 text-sm text-muted-foreground">Contatta 4BID se vuoi valutare altri moduli.</p></div> : null}
+        {offers.length === 0 ? <div className="rounded-2xl border bg-card p-8 text-center"><p className="font-semibold">Nessun modulo aggiuntivo disponibile in questo momento.</p><p className="mt-1 text-sm text-muted-foreground">Il preventivo principale resta comunque valido.</p></div> : null}
 
         {Array.from(grouped.entries()).map(([project, items]) => (
           <section key={project} className="space-y-4">
@@ -132,7 +131,8 @@ export default function EcosystemBrowser({
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               {items.map(item => {
-                const selected = isEcosystemOfferSelected(item, false)
+                const discovered = Boolean(item.id?.startsWith("catalog:"))
+                const selected = discovered ? false : isEcosystemOfferSelected(item, false)
                 const busy = pendingId !== null
                 const currentBusy = pendingId === item.id
                 const dependency = getCommercialMeta(item).dependency
@@ -150,9 +150,9 @@ export default function EcosystemBrowser({
 
                     <div className="mt-4"><PriceBlock item={item} currency={currency} /></div>
 
-                    {item.features?.length ? <details className="mt-4 rounded-xl border bg-muted/15 p-4" open><summary className="cursor-pointer font-bold">Tutte le funzionalità ({item.features.length})</summary><ul className="mt-3 space-y-2">{item.features.map((feature, index) => <li key={`${feature}-${index}`} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /><span>{feature}</span></li>)}</ul></details> : null}
+                    {item.features?.length ? <details className="mt-4 rounded-xl border bg-muted/15 p-4"><summary className="cursor-pointer font-bold">Funzionalità incluse ({item.features.length})</summary><ul className="mt-3 space-y-2">{item.features.map((feature, index) => <li key={`${feature}-${index}`} className="flex items-start gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /><span>{feature}</span></li>)}</ul></details> : null}
 
-                    {dependency?.requires_base ? <p className="mt-3 text-xs text-muted-foreground">Questo modulo richiede il piano base {PROJECT_LABELS[dependency.project || project] || dependency.project || project}. Se necessario, viene aggiunto insieme al modulo.</p> : null}
+                    {dependency?.requires_base ? <p className="mt-3 text-xs text-muted-foreground">Richiede il piano base {PROJECT_LABELS[dependency.project || project] || dependency.project || project}. Se non è già presente, il sistema lo aggiunge insieme al modulo.</p> : null}
 
                     <Button type="button" className="mt-5 w-full" variant={selected ? "outline" : "default"} disabled={locked || busy} onClick={() => toggle(item, !selected)}>
                       {currentBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : selected ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
