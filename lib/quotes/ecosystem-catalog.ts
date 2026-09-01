@@ -70,7 +70,7 @@ export function canonicalEcosystemCatalogItems(groups: FederatedCatalogGroup[]) 
   })
 }
 
-export function buildEcosystemCatalogLine(item: QuoteCatalogItem, id?: string): QuoteLineItem {
+export function buildEcosystemCatalogLine(item: QuoteCatalogItem, id?: string, discountPct = 0): QuoteLineItem {
   const options: Partial<Record<"monthly" | "yearly", BillingOption>> = {}
   if (item.billing_period === "monthly" || item.billing_period === "yearly") {
     options[item.billing_period] = {
@@ -124,5 +124,5 @@ export function buildEcosystemCatalogLine(item: QuoteCatalogItem, id?: string): 
     dependency: item.dependency || null,
   })
 
-  return markEcosystemOffer(calculateQuoteLine(line), 0)
+  return markEcosystemOffer(calculateQuoteLine(line), discountPct)
 }
