@@ -44,14 +44,10 @@ interface StructuredDataProps {
   keywords?: string[]
   softwareCategory?: string
   operatingSystem?: string
-  // Entity SEO: entità trattate (about) e citate (mentions), collegate via @id.
   about?: Array<Record<string, unknown>>
   mentions?: Array<Record<string, unknown>>
-  // HowTo: procedura passo-passo (per pagine guida con step reali).
   howTo?: HowToData
-  // Speakable: selettori CSS dei contenuti adatti alla lettura vocale (GEO).
   speakable?: string[]
-  // CollectionPage: elementi raccolti (es. guide di una categoria) → hasPart.
   hasParts?: Array<{ name: string; url: string }>
 }
 
@@ -104,12 +100,10 @@ export function StructuredData({
   speakable,
   hasParts,
 }: StructuredDataProps) {
-  // @id stabili per collegare le entità tra loro (knowledge graph EEAT/GEO).
   const ORG_ID = "https://www.4bid.it/#organization"
   const PERSON_ID = "https://www.4bid.it/#person"
   const WEBSITE_ID = "https://www.4bid.it/#website"
 
-  // Schema principale
   const mainSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": type,
@@ -120,25 +114,13 @@ export function StructuredData({
     inLanguage: "it-IT",
   }
 
-  // Date: SOLO quelle vere passate dalla pagina.
-  //
-  // Prima qui c'era `datePublished || now`, con `now = new Date()`. Misurato:
-  // due richieste alla stessa pagina a 3 secondi di distanza dichiaravano
-  // 10:11:31 e 10:11:34 ⇒ ogni guida diceva ai motori di ricerca di essere
-  // stata scritta E modificata nell'istante della scansione. Un articolo
-  // sempre "appena pubblicato" non accumula anzianita', e la data mostrata
-  // nei risultati di ricerca era inaffidabile.
-  //
-  // Un campo ASSENTE e' un'informazione mancante; un campo con la data
-  // sbagliata e' un'informazione FALSA, e la seconda e' peggio della prima.
-  // Quindi qui non si inventa nulla: se la pagina non passa una data, lo
-  // schema non la dichiara.
+  // Date: SOLO quelle vere passate dalla pagina. Una data assente e' preferibile
+  // a una data inventata al momento della scansione.
   if (type === "Article" || type === "WebPage" || type === "AboutPage" || type === "CollectionPage") {
     if (datePublished) mainSchema.datePublished = datePublished
     if (dateModified) mainSchema.dateModified = dateModified
   }
 
-  // Aggiungi proprietà specifiche per tipo
   if (type === "Service") {
     mainSchema.serviceType = "Revenue Management Hotel"
     mainSchema.areaServed = companyData.areaServed
@@ -157,11 +139,15 @@ export function StructuredData({
   if (type === "SoftwareApplication") {
     mainSchema.applicationCategory = softwareCategory || "BusinessApplication"
     mainSchema.operatingSystem = operatingSystem
-    mainSchema.offers = {
-      "@type": "Offer",
-      price: price || "0",
-      priceCurrency: currency,
-      availability: "https://schema.org/InStock",
+    // Non dichiarare mai un prezzo fittizio pari a zero. Lo schema Offer viene
+    // pubblicato soltanto se la pagina fornisce un prezzo reale e visibile.
+    if (price) {
+      mainSchema.offers = {
+        "@type": "Offer",
+        price,
+        priceCurrency: currency,
+        availability: "https://schema.org/InStock",
+      }
     }
     mainSchema.author = {
       "@type": "Organization",
@@ -202,8 +188,6 @@ export function StructuredData({
   }
 
   if (type === "WebPage" || type === "Article" || type === "AboutPage" || type === "CollectionPage") {
-    // headline: campo raccomandato da Google per Article, migliora la
-    // comprensione del titolo principale della pagina.
     if (type === "Article") {
       mainSchema.headline = title
     }
@@ -229,7 +213,6 @@ export function StructuredData({
     }
   }
 
-  // isPartOf: la pagina fa parte del sito (collega l'entità al WebSite via @id).
   if (
     type === "WebPage" ||
     type === "Article" ||
@@ -240,7 +223,6 @@ export function StructuredData({
     mainSchema.isPartOf = { "@id": WEBSITE_ID }
   }
 
-  // Speakable: porzioni della pagina adatte alla lettura vocale (assistenti, GEO).
   if (speakable && speakable.length > 0) {
     mainSchema.speakable = {
       "@type": "SpeakableSpecification",
@@ -248,7 +230,6 @@ export function StructuredData({
     }
   }
 
-  // hasPart: elementi raccolti da una CollectionPage (es. guide di una categoria).
   if (hasParts && hasParts.length > 0) {
     mainSchema.hasPart = hasParts.map((p) => ({
       "@type": "WebPage",
@@ -257,7 +238,6 @@ export function StructuredData({
     }))
   }
 
-  // about / mentions: entità trattate e citate, per rafforzare l'Entity SEO.
   if (about && about.length > 0) {
     mainSchema.about = about
   }
@@ -265,16 +245,11 @@ export function StructuredData({
     mainSchema.mentions = mentions
   }
 
-  // Schema FAQ separato
   const faqSchema =
     faqs && faqs.length > 0
       ? {
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          // Il blocco FAQ e' un nodo separato dal principale: senza @id ne'
-          // url restava un'entita' anonima, non collegata alla pagina che la
-          // contiene. Ancorarlo all'URL canonico permette ai crawler di
-          // attribuire le FAQ a questa pagina.
           "@id": `${url}#faq`,
           url,
           mainEntityOfPage: { "@id": url },
@@ -289,7 +264,6 @@ export function StructuredData({
         }
       : null
 
-  // Schema Breadcrumb separato
   const breadcrumbSchema =
     breadcrumbs && breadcrumbs.length > 0
       ? {
@@ -304,7 +278,6 @@ export function StructuredData({
         }
       : null
 
-  // Schema HowTo separato (procedura passo-passo con step reali della pagina).
   const howToSchema =
     howTo && howTo.steps.length > 0
       ? {
@@ -321,8 +294,6 @@ export function StructuredData({
         }
       : null
 
-  // Grafo entità sempre incluso: WebSite + Organization + Person (founder),
-  // collegati via @id. Dati reali presenti sul sito (Filippo Mancini, founder).
   const entityGraphSchema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -330,9 +301,9 @@ export function StructuredData({
         "@type": "WebSite",
         "@id": WEBSITE_ID,
         name: "4BID.IT",
+        alternateName: "4BID",
         url: companyData.url,
-        description:
-          "Innovazione e Tecnologia per il Tuo Business - Revenue Management Hotel, Software e Soluzioni Tecnologiche",
+        description: "Revenue management e software per hotel e strutture ricettive",
         inLanguage: "it-IT",
         publisher: { "@id": ORG_ID },
       },
@@ -365,6 +336,7 @@ export function StructuredData({
         "@type": "Person",
         "@id": PERSON_ID,
         name: "Filippo Mancini",
+        url: "https://www.4bid.it/filippo-mancini",
         jobTitle: "Founder & CEO",
         image: "https://www.4bid.it/filippo.jpg",
         worksFor: { "@id": ORG_ID },
@@ -373,42 +345,23 @@ export function StructuredData({
     ],
   }
 
-  // JSON-LD reso con tag <script> nativi (non next/script): così il markup è
-  // presente nell'HTML server-side ed è leggibile da tutti i crawler e bot AI,
-  // senza dipendere dall'esecuzione JS lato client (afterInteractive).
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(mainSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(mainSchema) }} />
       {faqSchema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
       {breadcrumbSchema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       )}
       {howToSchema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
       )}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(entityGraphSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(entityGraphSchema) }} />
     </>
   )
 }
 
-// Componente semplificato per pagine che non hanno già StructuredData
 export function PageSEO({
   title,
   description,
