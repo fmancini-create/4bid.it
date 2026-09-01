@@ -67,6 +67,28 @@ function hasUnconfiguredEcosystemPrice(item: QuoteLineItem) {
     && !isExplicitlyFreeCatalogLine(item)
 }
 
+/**
+ * Santaddeo RMS usa `annual_plan_discount_pct` esclusivamente per il pagamento
+ * anticipato annuale. Alcuni draft storici conservano anche un `discount` di
+ * riga con la stessa percentuale: quel campo abbassa invece il canone mensile e
+ * produce il doppio -10% visto dal cliente. In salvataggio rimuoviamo quel
+ * residuo dai piani RMS ordinari. Le offerte Ecosistema 4BID restano escluse,
+ * perche' il loro sconto cross-sell e' una policy distinta e puo' valere anche
+ * sul mensile.
+ */
+function normalizeSantaddeoAnnualOnlyDiscount(item: QuoteLineItem): QuoteLineItem {
+  const configuration = asObject(item.configuration)
+  const commercial = asObject(configuration.commercial)
+  const annualPct = Math.max(0, Number(commercial.annual_plan_discount_pct) || 0)
+  const isSantaddeoRms = item.project === "santaddeo"
+    && item.kind === "plan"
+    && String(item.source_product_id || "").startsWith("rms-fee:")
+  const isEcosystem = configuration.offer_channel === "4bid_ecosystem"
+
+  if (!isSantaddeoRms || isEcosystem || annualPct <= 0 || !item.discount) return item
+  return { ...item, discount: null }
+}
+
 /** Solo cio' che incide sull'accordo economico: l'ordine delle voci non conta. */
 function economicShape(items: unknown) {
   if (!Array.isArray(items)) return []
@@ -114,7 +136,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   if (Array.isArray(body.line_items)) {
-    const lines = body.line_items.map((item: QuoteLineItem) => calculateQuoteLine({ ...item, id: item.id || randomUUID(), catalog_snapshot: item.catalog_snapshot ?? {} }))
+    const lines = body.line_items.map((item: QuoteLineItem) => {
+      const normalized = normalizeSantaddeoAnnualOnlyDiscount(item)
+      return calculateQuoteLine({ ...normalized, id: normalized.id || randomUUID(), catalog_snapshot: normalized.catalog_snapshot ?? {} })
+    })
     const unconfigured = lines.find(hasUnconfiguredEcosystemPrice)
     if (unconfigured) {
       return NextResponse.json({
