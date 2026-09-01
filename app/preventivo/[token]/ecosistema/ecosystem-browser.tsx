@@ -193,6 +193,7 @@ export default function EcosystemBrowser({
   const router = useRouter()
   const pendingRef = useRef(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const busy = pendingId !== null
 
   const initialProject = useMemo(() => {
     const included = PRODUCT_ORDER.find(project => includedItems.some(item => item.project === project && (item.kind === "plan" || item.kind === "module")))
@@ -269,7 +270,7 @@ export default function EcosystemBrowser({
           </div>
         ) : null}
 
-        <Button type="button" className="mt-5 w-full" variant={selected ? "outline" : "default"} disabled={locked || pendingId !== null} onClick={() => toggle(item, !selected)}>
+        <Button type="button" className="mt-5 w-full" variant={selected ? "outline" : "default"} disabled={locked || busy} onClick={() => toggle(item, !selected)}>
           {currentBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : selected ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {locked ? "Preventivo non più modificabile" : selected ? "Rimuovi dal preventivo" : "Aggiungi al preventivo"}
         </Button>
@@ -293,7 +294,7 @@ export default function EcosystemBrowser({
           </div>
         </div>
         {removable ? (
-          <Button type="button" variant="outline" className="mt-4" disabled={locked || pendingId !== null} onClick={() => toggle(item, false)}>
+          <Button type="button" variant="outline" className="mt-4" disabled={locked || busy} onClick={() => toggle(item, false)}>
             {currentBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
             Rimuovi
           </Button>
