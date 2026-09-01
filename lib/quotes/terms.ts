@@ -151,7 +151,7 @@ export function generalConditions(): string[] {
     "Il Cliente prende atto e accetta che il servizio possa essere temporaneamente sospeso, rallentato o interrotto per attivit\u00e0 di manutenzione ordinaria o straordinaria, aggiornamenti, migrazioni, interventi di sicurezza o miglioramenti tecnici. Ove possibile tali attivit\u00e0 sono comunicate con ragionevole preavviso; quelle urgenti o legate alla sicurezza possono essere eseguite senza preavviso.",
     "4BID S.r.l. non \u00e8 responsabile per malfunzionamenti, indisponibilit\u00e0, perdita di dati, cali di prestazioni o danni, diretti o indiretti, derivanti da: (a) aggiornamenti, manutenzione o evoluzioni dei propri sistemi; (b) guasti, sospensioni, limitazioni o modifiche di servizi, API o infrastrutture di terze parti (a titolo esemplificativo: hosting, connettivit\u00e0, PMS, channel manager, gateway di pagamento, provider di messaggistica e fornitori cloud); (c) cause di forza maggiore o eventi comunque non imputabili a 4BID S.r.l., inclusi guasti di rete, attacchi informatici, interruzioni di energia elettrica ed eventi naturali; (d) uso improprio, errato o non conforme del servizio da parte del Cliente o di terzi.",
     "Le interruzioni o i disservizi riconducibili alle attivit\u00e0 e alle cause sopra indicate non danno diritto a rimborsi, indennizzi, riduzioni del canone o risoluzione anticipata del contratto.",
-    "In ogni caso, ove una responsabilit\u00e0 di 4BID S.r.l. dovesse essere accertata, essa sara' limitata all'importo effettivamente corrisposto dal Cliente per il servizio interessato nei 3 (tre) mesi precedenti l'evento, restando esclusi danni indiretti, mancati guadagni e perdite di opportunita'.",
+    "In ogni caso, ove una responsabilit\u00e0 di 4BID S.r.l. dovesse essere accertata, essa sarà limitata all'importo effettivamente corrisposto dal Cliente per il servizio interessato nei 3 (tre) mesi precedenti l'evento, restando esclusi danni indiretti, mancati guadagni e perdite di opportunità.",
   ]
 }
 
@@ -194,7 +194,7 @@ export function economicTerms(
       const parent = meta.parent_line_id ? selectedById.get(meta.parent_line_id) : undefined
       const linkedTo = parent ? `, collegata a ${parent.name || parent.description || "servizio ricorrente"}` : ""
       const quantity = Math.max(1, Number(item.quantity) || 1)
-      const quantityText = quantity > 1 ? `, quantita' ${quantity}` : ""
+      const quantityText = quantity > 1 ? `, quantità ${quantity}` : ""
       const currentAmount = Math.max(0, Number(item.amount ?? item.unit_amount) || 0)
       const promo = annualSetupPromo(item)
 
