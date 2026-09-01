@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
-import { applyBillingPreference, setCommercialMeta } from "@/lib/quotes/commercial"
+import { applyBillingPreference, getCommercialMeta, setCommercialMeta } from "@/lib/quotes/commercial"
+import { normalizeDependentParentRefs } from "@/lib/quotes/dependent-lines"
 import {
   getPropertyPricing,
   isEcosystemOffer,
@@ -149,6 +150,41 @@ describe("multi-property quote lines", () => {
       accommodations: 6,
     })
   })
+
+  it("heals a stale one-time parent after a single-property row is regenerated", () => {
+    const parent = setCommercialMeta({
+      id: "new-reviews-parent",
+      kind: "module",
+      project: "santaddeo",
+      source_product_id: "reviews:monthly",
+      name: "Recensioni · Hotel A",
+      description: "Recensioni",
+      quantity: 6,
+      unit_amount: 0.5,
+      amount: 5,
+      billing_period: "monthly",
+    }, { billing_family: "reviews" })
+    const setup = setCommercialMeta({
+      id: "old-reviews-parent:full_setup",
+      kind: "setup",
+      project: "santaddeo",
+      source_product_id: "reviews:monthly:full_setup",
+      name: "Setup completo · Recensioni",
+      description: "Setup",
+      quantity: 1,
+      unit_amount: 100,
+      amount: 100,
+      billing_period: "one_time",
+      optional: true,
+    }, { parent_line_id: "old-reviews-parent", service_type: "full_setup" })
+
+    const healed = normalizeDependentParentRefs([parent, setup])
+    expect(getCommercialMeta(healed[1]).parent_line_id).toBe("new-reviews-parent")
+
+    const secondParent = { ...parent, id: "another-reviews-parent", name: "Recensioni · Hotel B" }
+    const ambiguous = normalizeDependentParentRefs([parent, secondParent, setup])
+    expect(getCommercialMeta(ambiguous[2]).parent_line_id).toBe("old-reviews-parent")
+  })
 })
 
 describe("quote safety guards", () => {
@@ -222,5 +258,15 @@ describe("quote safety guards", () => {
 
     expect(editor).toContain("const hasOtherBase")
     expect(editor).toContain("return !getCommercialMeta(line).dependency?.requires_base")
+  })
+
+  it("renders the one-time breakdown inside the investment summary", () => {
+    const page = source("app/preventivo/[token]/page.tsx")
+    const details = source("app/preventivo/[token]/quote-one-time-investment-details.tsx")
+
+    expect(page).toContain("QuoteOneTimeInvestmentDetails")
+    expect(details).toContain('node.textContent?.trim() === "Il tuo investimento"')
+    expect(details).toContain("Una tantum collegate ai canoni")
+    expect(details).toContain("Nessuna una tantum è selezionata")
   })
 })
