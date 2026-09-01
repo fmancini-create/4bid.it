@@ -4,10 +4,15 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import { getFederatedCatalog } from "@/lib/quotes/catalog"
 import { calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors, getCommercialMeta } from "@/lib/quotes/commercial"
-import { isEcosystemOffer, selectEcosystemOffer } from "@/lib/quotes/ecosystem"
+import { isEcosystemOffer, markEcosystemOffer, selectEcosystemOffer } from "@/lib/quotes/ecosystem"
 import { buildEcosystemCatalogLine, canonicalEcosystemCatalogItems, catalogFamily, quoteLineFamily } from "@/lib/quotes/ecosystem-catalog"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
+import {
+  crossSellDiscountForTarget,
+  getSuiteCommercialPolicy,
+  selectedSuiteProducts,
+} from "@/lib/quotes/suite-commercial-policy"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -37,6 +42,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const current = Array.isArray(quote.line_items) ? quote.line_items as QuoteLineItem[] : []
+  const policy = await getSuiteCommercialPolicy()
+  const customerProducts = selectedSuiteProducts(current)
+  const discountFor = (project: string | null | undefined) => crossSellDiscountForTarget(policy, customerProducts, project)
+
   let next = [...current]
   let target: QuoteLineItem | undefined
   let selected = requestedSelected
@@ -61,10 +70,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (existing) {
-      target = existing
-      next = current.map(line => line.id === existing.id ? selectEcosystemOffer(line, true) : line)
+      const repriced = markEcosystemOffer(existing, discountFor(existing.project))
+      target = repriced
+      next = current.map(line => line.id === existing.id ? selectEcosystemOffer(repriced, true) : line)
     } else {
-      target = selectEcosystemOffer(buildEcosystemCatalogLine(item, randomUUID()), true)
+      target = selectEcosystemOffer(buildEcosystemCatalogLine(item, randomUUID(), discountFor(item.project)), true)
       next.push(target)
     }
 
@@ -74,7 +84,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const baseAlready = next.find(line => line.project === project && line.kind === "plan")
       if (baseAlready) {
         if (isEcosystemOffer(baseAlready)) {
-          next = next.map(line => line.id === baseAlready.id ? selectEcosystemOffer(line, true) : line)
+          const repricedBase = markEcosystemOffer(baseAlready, discountFor(baseAlready.project))
+          next = next.map(line => line.id === baseAlready.id ? selectEcosystemOffer(repricedBase, true) : line)
         }
       } else {
         const baseItem = candidates.find(candidate => candidate.project === project && candidate.kind === "plan")
@@ -84,7 +95,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             code: "MISSING_BASE_PRODUCT",
           }, { status: 422 })
         }
-        next.push(selectEcosystemOffer(buildEcosystemCatalogLine(baseItem, randomUUID()), true))
+        next.push(selectEcosystemOffer(buildEcosystemCatalogLine(baseItem, randomUUID(), discountFor(baseItem.project)), true))
       }
     }
   } else {
@@ -93,7 +104,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Questa voce non è una proposta Ecosistema modificabile" }, { status: 422 })
     }
 
-    next = current.map(item => item.id === lineId ? selectEcosystemOffer(item, selected) : item)
+    if (selected) {
+      const repriced = markEcosystemOffer(target, discountFor(target.project))
+      target = repriced
+      next = current.map(item => item.id === lineId ? selectEcosystemOffer(repriced, true) : item)
+    } else {
+      next = current.map(item => item.id === lineId ? selectEcosystemOffer(item, false) : item)
+    }
 
     if (selected) {
       const dependency = getCommercialMeta(target).dependency
@@ -107,7 +124,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           }, { status: 422 })
         }
         if (isEcosystemOffer(base)) {
-          next = next.map(item => item.id === base.id ? selectEcosystemOffer(item, true) : item)
+          const repricedBase = markEcosystemOffer(base, discountFor(base.project))
+          next = next.map(item => item.id === base.id ? selectEcosystemOffer(repricedBase, true) : item)
         }
       }
     } else if (target.kind === "plan" && target.project) {
