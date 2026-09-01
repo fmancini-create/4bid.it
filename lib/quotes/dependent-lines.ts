@@ -1,6 +1,12 @@
 import { calculateQuoteLine, type QuoteLineItem } from "./types"
 import { getCommercialMeta, setCommercialMeta, type CommercialServiceConfig } from "./commercial"
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+}
+
 /**
  * Returns the catalog source id of the recurring product a generated one-time
  * setup/service belongs to. Example:
@@ -100,8 +106,10 @@ export function ensureDependentServiceLines(input: QuoteLineItem[]): QuoteLineIt
 
   for (const parent of items) {
     if (parent.billing_period === "one_time" || !parent.id) continue
-    const parentMeta = getCommercialMeta(parent)
-    const baseName = (parent.name || parent.description || "Modulo").replace(/\s+·\s+.+$/, "")
+    // Ecosystem offers that are merely proposed are hidden from the main quote;
+    // do not leak their generated setup rows into the visible solution.
+    if (asObject(parent.configuration).offer_channel === "4bid_ecosystem") continue
+    const baseName = parent.name || parent.description || "Modulo"
 
     for (const type of SERVICE_TYPES) {
       const config = serviceConfig(parent, type)
