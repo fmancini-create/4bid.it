@@ -211,18 +211,11 @@ export async function proxy(request: NextRequest) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' https://fonts.gstatic.com",
-      // connect-src is what actually gated the two analytics failures found in
-      // production:
-      //
-      // 1. Session replay (webvisor) uploads the recorded DOM over XHR/beacon,
-      //    not as an image. Page-view hits survived only because they are sent
-      //    as pixels and img-src allows https:. With mc.yandex.com missing here
-      //    every recording upload was blocked, so Metrika showed page views
-      //    while Session Replay stayed permanently empty.
-      // 2. GA4 posts to analytics.google.com and www.google.com/g/collect in
-      //    addition to www.google-analytics.com. Measured on every page load:
-      //    2 blocked requests per navigation.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.google.com https://region1.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
+      // Google Analytics can route collection requests through regional
+      // subdomains such as region1.analytics.google.com. Keep both apex and
+      // wildcard hosts so CSP does not block present or future regional GA4
+      // endpoints while remaining scoped to Google's analytics domains.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
       // youtube-nocookie.com e' il dominio "privacy-enhanced" usato dalla facade
       // dei video (Video guide): senza di esso Chrome blocca l'iframe al click
       // mostrando "Questi contenuti sono bloccati".
