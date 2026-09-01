@@ -10,6 +10,10 @@ function asObject(value: unknown): Record<string, unknown> {
     : {}
 }
 
+function boundedPercent(value: unknown) {
+  return Math.min(100, Math.max(0, Number(value) || 0))
+}
+
 export type QuotePropertyPricing = {
   managed_by: typeof MULTI_PROPERTY_MARKER
   family: string
@@ -30,28 +34,36 @@ export function isEcosystemOfferSelected(item: QuoteLineItem, accepted = false):
 }
 
 export function markEcosystemOffer(item: QuoteLineItem, discountPct: number): QuoteLineItem {
-  const pct = Math.min(100, Math.max(0, Number(discountPct) || 0))
+  const pct = boundedPercent(discountPct)
+  const originalConfiguration = asObject(item.configuration)
+  const previousPct = boundedPercent(originalConfiguration.ecosystem_discount_pct)
   let next = item
+  let yearlyListUnitAmount = Math.max(0, Number(originalConfiguration.ecosystem_yearly_list_unit_amount) || 0)
 
   // `applyBillingPreference` elimina lo sconto di riga quando il cliente passa
-  // all'annuale, per non sommare le normali promo mensili allo sconto annuale.
-  // Il vantaggio cliente 4BID invece deve restare valido anche sull'annuale:
-  // lo incorporiamo quindi nell'opzione annuale congelata sul preventivo, mentre
-  // sul mensile resta uno sconto di riga ben visibile e barrabile.
-  if (pct > 0) {
-    const meta = getCommercialMeta(next)
-    const yearly = meta.billing_options?.yearly
-    if (yearly && Number(yearly.unit_amount) > 0) {
-      next = setCommercialMeta(next, {
-        billing_options: {
-          ...(meta.billing_options || {}),
-          yearly: {
-            ...yearly,
-            unit_amount: Math.round(Number(yearly.unit_amount) * (1 - pct / 100) * 100) / 100,
-          },
-        },
-      })
+  // all'annuale. Il vantaggio cliente 4BID deve invece restare valido anche
+  // sull'annuale, quindi viene incorporato nell'opzione annuale congelata.
+  // Conserviamo il prezzo annuale PRE-vantaggio per poter cambiare la percentuale
+  // senza applicarla due volte a una proposta già preparata.
+  const meta = getCommercialMeta(next)
+  const yearly = meta.billing_options?.yearly
+  if (yearly && Number(yearly.unit_amount) > 0) {
+    const currentYearly = Number(yearly.unit_amount)
+    if (yearlyListUnitAmount <= 0) {
+      yearlyListUnitAmount = previousPct > 0 && previousPct < 100
+        ? currentYearly / (1 - previousPct / 100)
+        : currentYearly
     }
+    const discountedYearly = Math.round(yearlyListUnitAmount * (1 - pct / 100) * 100) / 100
+    next = setCommercialMeta(next, {
+      billing_options: {
+        ...(meta.billing_options || {}),
+        yearly: {
+          ...yearly,
+          unit_amount: discountedYearly,
+        },
+      },
+    })
   }
 
   const configuration = asObject(next.configuration)
@@ -67,6 +79,7 @@ export function markEcosystemOffer(item: QuoteLineItem, discountPct: number): Qu
       ...configuration,
       offer_channel: ECOSYSTEM_MARKER,
       ecosystem_discount_pct: pct,
+      ...(yearlyListUnitAmount > 0 ? { ecosystem_yearly_list_unit_amount: Math.round(yearlyListUnitAmount * 100) / 100 } : {}),
     },
   })
 }
