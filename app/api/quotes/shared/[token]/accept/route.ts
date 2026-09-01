@@ -11,6 +11,7 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { ensureDependentServiceLines } from "@/lib/quotes/dependent-lines"
 import { acceptanceDeclaration, economicTerms, generalConditions, mergeContractTerms, missingTermsProjects, parseContractTerms, quoteTermsProjects, termsLabel } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
@@ -41,7 +42,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       : [],
   )
 
-  let lineItems = (quote.line_items || []).map((item) => {
+  // Prima ricostruiamo le eventuali opzioni setup/configurazione mancanti ma
+  // gia' previste dal metadata commerciale del canone. Sono sempre opzionali e
+  // partono NON selezionate; diventano addebitabili solo se il loro id e'
+  // esplicitamente presente in selected_item_ids inviato dal cliente.
+  let lineItems = ensureDependentServiceLines(quote.line_items || []).map((item) => {
     const preferred = applyBillingPreference(calculateQuoteLine(item), billingPreference)
     const customerSelected = !preferred.optional || (!!preferred.id && selectedIds.has(preferred.id))
     return { ...preferred, customer_selected: customerSelected }
