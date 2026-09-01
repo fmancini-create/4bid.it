@@ -1,0 +1,79 @@
+name: Apply focused quote annual service fix
+
+on:
+  push:
+    branches:
+      - fix/quote-annual-service-and-monthly-discount
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[quote-fix-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch quote editor
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/admin/quotes/edit/[id]/quote-catalog-editor.tsx')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  'if (line.kind === "setup" && line.billing_period === "one_time" && patch.unit_amount != null) {',
+                  'if ((line.kind === "setup" || line.kind === "service") && line.billing_period === "one_time" && patch.unit_amount != null) {'
+              ),
+              (
+                  '{item.kind === "setup" && item.billing_period === "one_time" ? <div',
+                  '{(item.kind === "setup" || item.kind === "service") && item.billing_period === "one_time" ? <div'
+              ),
+              (
+                  '<strong>Agevolazione setup con piano annuale</strong>',
+                  '<strong>{item.kind === "service" ? "Agevolazione servizio con piano annuale" : "Agevolazione setup con piano annuale"}</strong>'
+              ),
+              (
+                  'Scegli se il setup resta a prezzo pieno, viene scontato o azzerato quando il cliente seleziona la quota annuale.',
+                  'Scegli se questa voce una tantum resta a prezzo pieno, viene scontata o azzerata quando il cliente seleziona la quota annuale.'
+              ),
+              (
+                  '<Label>Sconto setup %</Label>',
+                  '<Label>{item.kind === "service" ? "Sconto servizio %" : "Sconto setup %"}</Label>'
+              ),
+              (
+                  '>Setup azzerato con formula annuale</p>',
+                  '>{item.kind === "service" ? "Servizio azzerato con formula annuale" : "Setup azzerato con formula annuale"}</p>'
+              ),
+              (
+                  'Disattivato: il setup viene addebitato per intero anche con formula annuale.',
+                  'Disattivato: la voce una tantum viene addebitata per intero anche con formula annuale.'
+              ),
+              (
+                  'const pct = Math.min(100, Math.max(0, Number(meta.annual_plan_discount_pct) || 0))\n          const enabled = pct > 0',
+                  'const monthlyOption = Math.max(0, Number(meta.billing_options?.monthly?.unit_amount ?? item.unit_amount) || 0)\n          const yearlyOption = Math.max(0, Number(meta.billing_options?.yearly?.unit_amount) || 0)\n          const inferredPct = monthlyOption > 0 && yearlyOption > 0 ? (1 - yearlyOption / (monthlyOption * 12)) * 100 : 0\n          const optionPct = Number(meta.billing_options?.yearly?.discount_pct) || 0\n          const explicitPct = Number(meta.annual_plan_discount_pct) || 0\n          const pct = Math.min(100, Math.max(0, explicitPct > 0 ? explicitPct : optionPct > 0 ? optionPct : inferredPct))\n          const enabled = pct > 0'
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one occurrence, found {count}: {old[:90]}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit focused fix
+        shell: bash
+        run: |
+          git config user.name "4BID Automation"
+          git config user.email "f.mancini@4bid.it"
+          git rm .github/workflows/apply-quote-fix.yml
+          git add 'app/admin/quotes/edit/[id]/quote-catalog-editor.tsx'
+          git commit -m '[quote-fix-applied] Fix annual discounts for one-time services'
+          git push
