@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 
 export default function About() {
   return (
@@ -7,42 +8,42 @@ export default function About() {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-6">Chi siamo</h2>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-blue mb-3">4BID SRL</p>
+              <h2 className="text-4xl md:text-5xl font-light text-gray-800 mb-6">Esperienza hospitality, dati e software</h2>
               <p className="text-gray-600 leading-relaxed mb-6">
-                4 Bid è una società di consulenza specializzata nel settore turistico-ricettivo. Offriamo servizi di
-                revenue management, consulenza strategica e supporto operativo per strutture ricettive, hotel e B&B.
+                4BID è una società italiana con sede a San Casciano in Val di Pesa (Firenze), specializzata in revenue
+                management e nello sviluppo di software per il settore turistico-ricettivo.
               </p>
               <p className="text-gray-600 leading-relaxed mb-6">
-                Con anni di esperienza nel settore, il nostro team di professionisti è in grado di fornire soluzioni
-                personalizzate per massimizzare i profitti e ottimizzare la gestione della vostra struttura ricettiva.
+                L'approccio nasce dall'esperienza diretta nella gestione alberghiera e unisce strategia tariffaria,
+                analisi dei dati, intelligenza artificiale e automazione operativa.
               </p>
-              <p className="text-gray-600 leading-relaxed">
-                La nostra missione è aiutare i nostri clienti a raggiungere il successo attraverso strategie innovative,
-                tecnologia avanzata e un supporto costante.
+              <p className="text-gray-600 leading-relaxed mb-8">
+                Le soluzioni 4BID sono progettate per hotel, B&B, agriturismi e resort e includono consulenza di revenue
+                management e prodotti software proprietari dedicati a pricing, controllo di gestione, CRM e operations.
               </p>
+              <div className="flex flex-wrap gap-4">
+                <Link href="/chi-siamo" className="font-semibold text-primary-blue hover:underline">
+                  Chi siamo
+                </Link>
+                <Link href="/metodo-4bid" className="font-semibold text-primary-blue hover:underline">
+                  Il Metodo 4BID
+                </Link>
+                <Link href="/filippo-mancini" className="font-semibold text-primary-blue hover:underline">
+                  Il fondatore
+                </Link>
+                <Link href="/parlano-di-noi" className="font-semibold text-primary-blue hover:underline">
+                  Parlano di noi
+                </Link>
+              </div>
             </div>
             <div className="relative h-[400px] rounded-lg overflow-hidden shadow-lg">
-              <Image src="/parallax1.jpg" alt="Team 4 Bid" fill className="object-cover" />
-            </div>
-          </div>
-
-          {/* Testimonial */}
-          <div className="mt-20 text-center">
-            <div className="flex justify-center gap-4 mb-8">
-              <span className="text-6xl text-gray-300">"</span>
-            </div>
-            <div className="max-w-3xl mx-auto">
-              <div className="flex justify-center mb-6">
-                <Image src="/filippo.jpg" alt="Filippo Mancini" width={80} height={80} className="rounded-full" />
-              </div>
-              <p className="text-xl text-gray-700 italic mb-4">
-                "Grazie a 4 Bid abbiamo incrementato il nostro fatturato del 45% e ottimizzato completamente la gestione
-                della nostra struttura. Un team di professionisti eccezionale!"
-              </p>
-              <p className="text-gray-500 font-medium">Cliente Soddisfatto</p>
-            </div>
-            <div className="flex justify-center gap-4 mt-8">
-              <span className="text-6xl text-gray-300">"</span>
+              <Image
+                src="/parallax1.jpg"
+                alt="4BID: revenue management, tecnologia e software per l'hospitality"
+                fill
+                className="object-cover"
+              />
             </div>
           </div>
         </div>

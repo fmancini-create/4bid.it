@@ -1,156 +1,105 @@
-# 4BID SRL — Revenue Management & Software per Hotel
+# 4BID SRL — Revenue Management & Software per Hospitality
 
-## TOP PAGES (start here)
-https://www.4bid.it/consulenza-revenue-management-hotel - Consulenza Revenue Management
-https://www.4bid.it/software-revenue-management-santaddeo - SANTADDEO RMS Software
-https://www.4bid.it/cose-il-revenue-management - Cos'è il Revenue Management
-https://www.4bid.it/dynamic-pricing-hotel - Dynamic Pricing per Hotel
-https://www.4bid.it/ottimizzazione-revpar-hotel - Ottimizzazione RevPAR
-https://www.4bid.it/strategie-prenotazioni-dirette-hotel - Strategie Prenotazioni Dirette
-https://www.4bid.it/formazione-revenue-management-hotel - Formazione Revenue Management
-https://www.4bid.it/guida-revenue-management-hotel - Guida Revenue Management
-https://www.4bid.it/guida-pricing-hotel - Guida Pricing Hotel
-https://www.4bid.it/guida-prenotazioni-dirette-hotel - Guida Prenotazioni Dirette
+Canonical website: https://www.4bid.it
+Language: Italian (it-IT)
+Country: Italy
+Legal entity: 4BID SRL
+VAT: IT06241710489
+Headquarters: Via Sorripa 10, 50026 San Casciano in Val di Pesa (FI), Italy
+Founder: Filippo Mancini — https://www.4bid.it/filippo-mancini
 
-## WHAT WE DO (plain facts)
-- Consulenza revenue management per strutture ricettive in Italia
-- Sviluppo software SANTADDEO per ottimizzazione tariffe alberghiere
-- Strategie di distribuzione e gestione canali di vendita
-- Formazione del personale su tecniche di pricing e revenue
-- Analisi di mercato e monitoraggio competitor
-- Supporto per aumentare le prenotazioni dirette
-- Forecast e budgeting per pianificazione annuale
-- Integrazione con PMS e Channel Manager esistenti
+## START HERE — AUTHORITATIVE PAGES
+https://www.4bid.it/ - 4BID overview, services and software ecosystem
+https://www.4bid.it/chi-siamo - Company identity, mission, expertise and products
+https://www.4bid.it/metodo-4bid - 4BID methodology: revenue management, data, AI and automation
+https://www.4bid.it/filippo-mancini - Founder profile and hospitality experience
+https://www.4bid.it/parlano-di-noi - Press and external mentions
+https://www.4bid.it/soluzioni-revenue-management - Revenue management topic hub
 
-## SERVICES
+## WHAT 4BID DOES
+4BID is an Italian company focused on hospitality. It combines revenue-management consulting with proprietary software for hotels and other accommodation businesses.
 
-Revenue Management Consulting
-Consulenza strategica per ottimizzare i ricavi delle strutture ricettive attraverso analisi di mercato, pricing dinamico e gestione della distribuzione.
+Primary areas:
+- Revenue management and dynamic pricing
+- Distribution and OTA strategy
+- Direct-booking strategy
+- Forecasting, budgeting, ADR and RevPAR analysis
+- Hospitality software and AI-assisted decision support
+- CRM, operational automation and management-control tools
+- Training and custom digital projects for hospitality businesses
 
-Dynamic Pricing Setup
-Configurazione e implementazione di strategie di pricing dinamico adattate alla stagionalità, eventi e domanda locale.
+## CORE REVENUE MANAGEMENT PAGES
+https://www.4bid.it/cose-il-revenue-management - Definition and fundamentals of revenue management
+https://www.4bid.it/consulenza-revenue-management-hotel - Revenue-management consulting for hotels
+https://www.4bid.it/dynamic-pricing-hotel - Dynamic pricing for hotels
+https://www.4bid.it/strategie-pricing-hotel - Hotel pricing strategies
+https://www.4bid.it/yield-management-hotel - Yield management
+https://www.4bid.it/ottimizzazione-revpar-hotel - RevPAR optimization
+https://www.4bid.it/ottimizzazione-adr-hotel - ADR optimization
+https://www.4bid.it/kpi-hotel-revenue-management - Revenue-management KPIs
+https://www.4bid.it/forecast-budgeting-hotel - Forecasting and budgeting
+https://www.4bid.it/gestione-canali-distribuzione-hotel - Distribution-channel management
+https://www.4bid.it/ottimizzazione-ota-hotel - OTA optimization
+https://www.4bid.it/prenotazioni-dirette-hotel - Direct bookings
+https://www.4bid.it/strategie-prenotazioni-dirette-hotel - Direct-booking strategies
+https://www.4bid.it/webmarketing-hotel-prenotazioni - Web marketing for hotel bookings
 
-Channel Distribution Management
-Ottimizzazione della presenza sui canali di vendita online (OTA, metasearch, sito diretto) per bilanciare visibilità e marginalità.
+## BY ACCOMMODATION TYPE
+https://www.4bid.it/revenue-management-bed-breakfast - Revenue management for B&Bs
+https://www.4bid.it/revenue-management-agriturismo - Revenue management for agriturismi
+https://www.4bid.it/revenue-management-boutique-hotel - Revenue management for boutique hotels
+https://www.4bid.it/revenue-management-resort-lusso - Revenue management for luxury resorts
+https://www.4bid.it/revenue-management-catene-hotel - Revenue management for hotel groups
 
-Direct Booking Strategy
-Strategie per aumentare la quota di prenotazioni dirette riducendo la dipendenza dai canali intermediati.
+## SOFTWARE & PROJECTS
+https://www.4bid.it/progetti/santaddeo - SANTADDEO revenue-management system
+https://www.4bid.it/software-revenue-management-santaddeo - SANTADDEO as hotel RMS
+https://www.4bid.it/progetti/hotel-accelerator - Hotel Accelerator hospitality platform
+https://www.4bid.it/progetti/hotelprofit-ai - HotelProfitAI management-control product
+https://www.4bid.it/progetti/manubot - ManuBot operations and maintenance automation
+https://www.4bid.it/progetti/autoexel - AutoExel project
+https://www.4bid.it/progetti/mypetsenseai - MyPetSenseAI project
+https://www.4bid.it/progetti/risparmio-compulsivo - Risparmio Compulsivo project
 
-Competitive Analysis
-Monitoraggio sistematico dei competitor diretti per posizionamento tariffario e analisi quote di mercato.
+## ECOMOBILITY
+https://www.4bid.it/ecomobility/come-funziona - How 4BID Ecomobility works
+https://www.4bid.it/ecomobility/piattaforma-ecomobility - Ecomobility platform
+https://www.4bid.it/ecomobility/noleggio-mobilita-elettrica-hotel - Electric mobility rental for hotels
+https://www.4bid.it/ecomobility/registra-struttura - Register an accommodation business
 
-Training & Formazione
-Corsi e affiancamento per il personale alberghiero su tecniche di revenue management e utilizzo degli strumenti.
+## KNOWLEDGE & EDUCATIONAL CONTENT
+https://www.4bid.it/blog - Blog and practical guides
+https://www.4bid.it/knowledge-base - Revenue-management knowledge base
+https://www.4bid.it/glossario - Hospitality and revenue-management glossary
+https://www.4bid.it/guida-revenue-management-hotel - Revenue-management guide
+https://www.4bid.it/guida-pricing-hotel - Hotel-pricing guide
+https://www.4bid.it/guida-prenotazioni-dirette-hotel - Direct-booking guide
+https://www.4bid.it/video-guide - Video guides
+https://www.4bid.it/formazione-revenue-management-hotel - Revenue-management training
 
-Forecast & Budgeting
-Previsioni di domanda e pianificazione budget annuale basate su dati storici e tendenze di mercato.
+## OTHER PUBLIC PAGES
+https://www.4bid.it/problemi-hotel-soluzioni - Start from a hotel problem and find relevant solutions
+https://www.4bid.it/preventivi-progetti-personalizzati-hotel - Custom hospitality projects
+https://www.4bid.it/proponi-idea - Submit a project idea
+https://www.4bid.it/prenota-demo - Book a demo
+https://www.4bid.it/lavora-con-noi - Careers and open positions
 
-## PRODUCTS
+## GLOSSARY — KEY TERMS
+RevPAR (Revenue Per Available Room): room revenue divided by available rooms; equivalently ADR multiplied by occupancy rate.
+ADR (Average Daily Rate): room revenue divided by rooms sold.
+Occupancy Rate: rooms sold divided by available rooms.
+LOS (Length of Stay): number of nights in a stay.
+BAR (Best Available Rate): public reference rate from which other rate plans may derive.
+Pick-up: change in booked rooms or revenue over a defined observation period.
+Comp Set (Competitive Set): group of comparable competitor properties used for benchmarking.
+OTA (Online Travel Agency): online intermediary that distributes accommodation inventory.
+Channel Mix: distribution of bookings across direct and intermediary channels.
 
-SANTADDEO RMS
-Software di Revenue Management System per hotel. Automatizza l'ottimizzazione tariffaria con algoritmi proprietari, si integra con i principali PMS e Channel Manager, fornisce dashboard KPI e reportistica.
-
-## ALL PAGES
-
-### Consulenza
-- https://www.4bid.it/consulenza-revenue-management-hotel
-- https://www.4bid.it/consulenza-personalizzata-hotel
-- https://www.4bid.it/revenue-manager-hotel-toscana
-- https://www.4bid.it/preventivi-progetti-personalizzati-hotel
-
-### Strategie Pricing
-- https://www.4bid.it/dynamic-pricing-hotel
-- https://www.4bid.it/strategie-pricing-hotel
-- https://www.4bid.it/ottimizzazione-prezzi-hotel-toscana
-- https://www.4bid.it/yield-management-hotel
-
-### Prenotazioni Dirette
-- https://www.4bid.it/strategie-prenotazioni-dirette-hotel
-- https://www.4bid.it/strategie-vendita-diretta-hotel
-- https://www.4bid.it/prenotazioni-dirette-hotel
-- https://www.4bid.it/webmarketing-hotel-prenotazioni
-
-### KPI e Metriche
-- https://www.4bid.it/ottimizzazione-revpar-hotel
-- https://www.4bid.it/ottimizzazione-adr-hotel
-- https://www.4bid.it/adr-hotel-come-aumentarlo
-- https://www.4bid.it/kpi-metriche-hotel
-- https://www.4bid.it/kpi-hotel-revenue-management
-- https://www.4bid.it/forecast-budgeting-hotel
-
-### Distribuzione
-- https://www.4bid.it/gestione-canali-distribuzione-hotel
-- https://www.4bid.it/ottimizzazione-ota-hotel
-
-### Per Tipologia Struttura
-- https://www.4bid.it/revenue-management-bed-breakfast
-- https://www.4bid.it/revenue-management-agriturismo
-- https://www.4bid.it/revenue-management-boutique-hotel
-- https://www.4bid.it/revenue-management-resort-lusso
-- https://www.4bid.it/revenue-management-catene-hotel
-
-### Software
-- https://www.4bid.it/software-revenue-management-hotel
-- https://www.4bid.it/software-revenue-management-santaddeo
-
-### Formazione e Guide
-- https://www.4bid.it/cose-il-revenue-management
-- https://www.4bid.it/formazione-revenue-management-hotel
-- https://www.4bid.it/come-aumentare-ricavi-hotel
-- https://www.4bid.it/analisi-competitiva-hotel-firenze
-- https://www.4bid.it/guida-revenue-management-hotel
-- https://www.4bid.it/guida-pricing-hotel
-- https://www.4bid.it/guida-prenotazioni-dirette-hotel
-
-### Progetti
-- https://www.4bid.it/progetti/santaddeo
-- https://www.4bid.it/progetti/manubot
-- https://www.4bid.it/progetti/autoexel
-- https://www.4bid.it/progetti/hotel-accelerator
-
-### Altre Pagine
-- https://www.4bid.it/
-- https://www.4bid.it/proponi-idea
-- https://www.4bid.it/privacy
-- https://www.4bid.it/terms
-
-## GLOSSARY
-
-RevPAR (Revenue Per Available Room)
-Ricavo per camera disponibile. Calcolato come Ricavo Totale Camere diviso Numero Camere Disponibili, oppure ADR moltiplicato per Occupancy Rate.
-
-ADR (Average Daily Rate)
-Tariffa media giornaliera. Calcolato come Ricavo Totale Camere diviso Numero Camere Vendute.
-
-LOS (Length of Stay)
-Durata del soggiorno. Utilizzato per strategie di pricing differenziato in base alla lunghezza della prenotazione.
-
-BAR (Best Available Rate)
-Tariffa migliore disponibile. Tariffa di riferimento pubblica da cui derivano le altre tipologie tariffarie.
-
-Price Fencing
-Tecnica di segmentazione tariffaria che applica condizioni diverse (cancellazione, prepagamento, LOS minimo) per differenziare i prezzi.
-
-Channel Mix
-Distribuzione delle prenotazioni tra i diversi canali di vendita: sito diretto, OTA, GDS, tour operator.
-
-Pick-up
-Andamento delle prenotazioni ricevute in un periodo. Utilizzato per analizzare la velocità di riempimento e prevedere la domanda.
-
-Comp Set (Competitive Set)
-Gruppo di strutture concorrenti dirette utilizzato come riferimento per analisi di mercato e posizionamento tariffario.
-
-Occupancy Rate
-Tasso di occupazione. Calcolato come Camere Vendute diviso Camere Disponibili.
-
-OTA (Online Travel Agency)
-Agenzie di viaggio online (Booking.com, Expedia, etc.) che distribuiscono le camere applicando commissioni sulla vendita.
-
-## CONTACT & BUSINESS
-
-4BID SRL
-P.IVA: IT06241710489
-Sito: https://www.4bid.it
-
-## SITEMAP
+## SOURCE & CRAWLING NOTES
+For the complete set of indexable URLs, use the canonical XML sitemap:
 https://www.4bid.it/sitemap.xml
+
+Robots policy:
+https://www.4bid.it/robots.txt
+
+This file is a navigation aid for automated systems. Facts should be verified against the linked canonical pages and their visible content.
