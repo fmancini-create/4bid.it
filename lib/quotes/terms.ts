@@ -173,6 +173,7 @@ export function economicTerms(
   const selected = items.filter(item => item.customer_selected !== false)
   const recurring = selected.filter(item => item.billing_period && item.billing_period !== "one_time")
   const oneTime = selected.filter(item => item.billing_period === "one_time")
+  const selectedById = new Map(selected.filter(item => item.id).map(item => [item.id as string, item]))
   const lines: string[] = []
 
   if (recurring.length) {
@@ -186,13 +187,31 @@ export function economicTerms(
   }
 
   if (oneTime.length) {
-    lines.push("Le voci una tantum (setup, attivazioni e servizi manuali) sono addebitate una sola volta e non si rinnovano.")
+    lines.push("Le voci una tantum (setup, attivazioni e servizi manuali) sono addebitate una sola volta e non si rinnovano. Il dettaglio seguente fa parte delle condizioni economiche del preventivo.")
     for (const item of oneTime) {
+      const label = item.name || item.description || "Voce una tantum"
+      const meta = getCommercialMeta(item)
+      const parent = meta.parent_line_id ? selectedById.get(meta.parent_line_id) : undefined
+      const linkedTo = parent ? `, collegata a ${parent.name || parent.description || "servizio ricorrente"}` : ""
+      const quantity = Math.max(1, Number(item.quantity) || 1)
+      const quantityText = quantity > 1 ? `, quantità ${quantity}` : ""
+      const currentAmount = Math.max(0, Number(item.amount ?? item.unit_amount) || 0)
       const promo = annualSetupPromo(item)
-      if (!promo) continue
-      lines.push(promo.mode === "free"
-        ? `${item.name || item.description}: in omaggio con la formula annuale (${euro(promo.normalPrice, currency)} con la formula mensile).`
-        : `${item.name || item.description}: ${euro(promo.annualPrice, currency)} con la formula annuale anziche' ${euro(promo.normalPrice, currency)}.`)
+
+      if (!promo) {
+        lines.push(`${label}${linkedTo}${quantityText}: ${euro(currentAmount, currency)} una tantum, addebitata una sola volta e senza rinnovo.`)
+        continue
+      }
+
+      if (billingPreference === "yearly") {
+        lines.push(promo.mode === "free"
+          ? `${label}${linkedTo}${quantityText}: in omaggio una tantum con la formula annuale (valore ${euro(promo.normalPrice, currency)}; con la formula mensile ${euro(promo.normalPrice, currency)}).`
+          : `${label}${linkedTo}${quantityText}: ${euro(promo.annualPrice, currency)} una tantum con la formula annuale anziche' ${euro(promo.normalPrice, currency)}.`)
+      } else {
+        lines.push(promo.mode === "free"
+          ? `${label}${linkedTo}${quantityText}: ${euro(currentAmount, currency)} una tantum con la formula mensile; in omaggio scegliendo la formula annuale.`
+          : `${label}${linkedTo}${quantityText}: ${euro(currentAmount, currency)} una tantum con la formula mensile; ${euro(promo.annualPrice, currency)} con la formula annuale anziche' ${euro(promo.normalPrice, currency)}.`)
+      }
     }
   }
 
