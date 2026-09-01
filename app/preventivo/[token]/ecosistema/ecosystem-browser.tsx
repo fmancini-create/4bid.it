@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { ArrowLeft, Check, CheckCircle2, Loader2, Plus, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -68,6 +68,7 @@ export default function EcosystemBrowser({
   locked: boolean
 }) {
   const router = useRouter()
+  const pendingRef = useRef(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const grouped = new Map<string, QuoteLineItem[]>()
   for (const offer of offers) {
@@ -76,7 +77,8 @@ export default function EcosystemBrowser({
   }
 
   async function toggle(item: QuoteLineItem, selected: boolean) {
-    if (!item.id || locked) return
+    if (!item.id || locked || pendingRef.current) return
+    pendingRef.current = true
     setPendingId(item.id)
     try {
       const response = await fetch(`/api/quotes/shared/${token}/ecosystem`, {
@@ -91,6 +93,7 @@ export default function EcosystemBrowser({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Errore durante l'aggiornamento")
     } finally {
+      pendingRef.current = false
       setPendingId(null)
     }
   }
@@ -130,7 +133,8 @@ export default function EcosystemBrowser({
             <div className="grid gap-4 lg:grid-cols-2">
               {items.map(item => {
                 const selected = isEcosystemOfferSelected(item, false)
-                const busy = pendingId === item.id
+                const busy = pendingId !== null
+                const currentBusy = pendingId === item.id
                 const dependency = getCommercialMeta(item).dependency
                 return (
                   <article key={item.id} className={`rounded-2xl border-2 bg-card p-5 shadow-sm ${selected ? "border-emerald-400" : "border-border"}`}>
@@ -151,7 +155,7 @@ export default function EcosystemBrowser({
                     {dependency?.requires_base ? <p className="mt-3 text-xs text-muted-foreground">Questo modulo richiede il piano base {PROJECT_LABELS[dependency.project || project] || dependency.project || project}. Se necessario, viene aggiunto insieme al modulo.</p> : null}
 
                     <Button type="button" className="mt-5 w-full" variant={selected ? "outline" : "default"} disabled={locked || busy} onClick={() => toggle(item, !selected)}>
-                      {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : selected ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                      {currentBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : selected ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
                       {locked ? "Preventivo non più modificabile" : selected ? "Rimuovi dal preventivo" : "Aggiungi al preventivo"}
                     </Button>
                   </article>

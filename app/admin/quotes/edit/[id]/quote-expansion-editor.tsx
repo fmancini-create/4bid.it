@@ -23,6 +23,7 @@ type CatalogItem = {
   currency: string
   billing_period: "one_time" | "monthly" | "quarterly" | "yearly"
   trial_days?: number
+  support?: QuoteLineItem["support"]
   configuration_schema?: Record<string, unknown>
   raw_snapshot: Record<string, unknown>
   stripe_price_id?: string | null
@@ -59,7 +60,10 @@ function canonicalItems(groups: CatalogGroup[]) {
   return rows.filter(item => {
     if (item.billing_period !== "yearly") return true
     const family = familyOf(item)
-    return !rows.some(other => other !== item && familyOf(other) === family && other.billing_period === "monthly")
+    return !rows.some(other => other !== item
+      && other.project === item.project
+      && familyOf(other) === family
+      && other.billing_period === "monthly")
   })
 }
 
@@ -76,6 +80,50 @@ function hasDynamicCatalogPrice(item: CatalogItem) {
   return model === "per_accommodation" || model === "per_accommodation_minimum"
 }
 
+function isExplicitlyFreeCatalogItem(item: CatalogItem) {
+  const configuration = obj(item.configuration_schema)
+  const snapshot = obj(item.raw_snapshot)
+  return configuration.is_free === true
+    || configuration.free === true
+    || configuration.pricing_model === "free"
+    || snapshot.is_free === true
+    || snapshot.free === true
+}
+
+function effectiveCatalogUnitAmount(item: CatalogItem) {
+  if (item.billing_period === "yearly" && item.alternative_period?.billing_period === "monthly") {
+    return Math.max(0, Number(item.alternative_period.unit_amount) || 0)
+  }
+  return Math.max(0, Number(item.unit_amount) || 0)
+}
+
+function isCatalogItemReadyForEcosystem(item: CatalogItem) {
+  return effectiveCatalogUnitAmount(item) > 0 || isExplicitlyFreeCatalogItem(item)
+}
+
+function roundCurrency(value: number) {
+  return Math.round((Number(value) || 0) * 100) / 100
+}
+
+function distributeFixedDiscount(total: number, grossAmounts: number[]) {
+  const gross = grossAmounts.map(value => Math.max(0, Number(value) || 0))
+  const available = gross.reduce((sum, value) => sum + value, 0)
+  const capped = roundCurrency(Math.min(Math.max(0, Number(total) || 0), available))
+  if (capped <= 0 || available <= 0) return gross.map(() => 0)
+
+  let remaining = capped
+  let remainingGross = available
+  return gross.map((amount, index) => {
+    if (index === gross.length - 1) return roundCurrency(Math.min(amount, remaining))
+    const share = remainingGross > 0
+      ? roundCurrency(Math.min(amount, remaining * amount / remainingGross))
+      : 0
+    remaining = roundCurrency(Math.max(0, remaining - share))
+    remainingGross = Math.max(0, remainingGross - amount)
+    return share
+  })
+}
+
 function buildCatalogLine(item: CatalogItem): QuoteLineItem {
   const options: Partial<Record<"monthly" | "yearly", BillingOption>> = {}
   if (item.billing_period === "monthly" || item.billing_period === "yearly") {
@@ -89,6 +137,9 @@ function buildCatalogLine(item: CatalogItem): QuoteLineItem {
   if (item.alternative_period) options[item.alternative_period.billing_period] = item.alternative_period
 
   const billingPeriod = item.billing_period === "yearly" && options.monthly ? "monthly" : item.billing_period
+  const initialOption = billingPeriod === "monthly" || billingPeriod === "yearly" ? options[billingPeriod] : undefined
+  const initialUnitAmount = Math.max(0, Number(initialOption?.unit_amount ?? item.unit_amount) || 0)
+  const initialTrialDays = Math.max(0, Number(initialOption?.trial_days ?? item.trial_days) || 0)
   let line: QuoteLineItem = {
     id: crypto.randomUUID(),
     kind: item.kind,
@@ -98,10 +149,11 @@ function buildCatalogLine(item: CatalogItem): QuoteLineItem {
     description: item.description || item.name,
     features: item.features || [],
     quantity: 1,
-    unit_amount: item.unit_amount,
-    amount: item.unit_amount,
+    unit_amount: initialUnitAmount,
+    amount: initialUnitAmount,
     billing_period: billingPeriod,
-    trial_days: item.trial_days || 0,
+    trial_days: initialTrialDays,
+    support: item.support ?? null,
     configuration: item.configuration_schema || {},
     catalog_snapshot: item.raw_snapshot || {},
     optional: item.kind === "module",
@@ -124,13 +176,6 @@ function dynamicMonthlyTotal(item: CatalogItem, rooms: number) {
   const unit = Math.max(0, Number(config.unit_price ?? item.unit_amount) || 0)
   const minimum = Math.max(0, Number(config.minimum_monthly) || 0)
   return Math.max(minimum, unit * Math.max(1, rooms))
-}
-
-function unitAmountForExistingPeriod(item: CatalogItem, existing: QuoteLineItem) {
-  if (existing.billing_period === "yearly" && item.alternative_period?.billing_period === "yearly") {
-    return Number(item.alternative_period.unit_amount) || item.unit_amount
-  }
-  return item.unit_amount
 }
 
 export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
@@ -178,7 +223,9 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   const items = useMemo(() => canonicalItems(catalog), [catalog])
   const dynamicItems = useMemo(() => items.filter(item => item.kind === "module" && isPerAccommodationMinimum(item)), [items])
   const ecosystemCandidates = useMemo(
-    () => items.filter(item => (item.kind === "plan" || item.kind === "module") && !hasDynamicCatalogPrice(item)),
+    () => items.filter(item => (item.kind === "plan" || item.kind === "module")
+      && !hasDynamicCatalogPrice(item)
+      && isCatalogItemReadyForEcosystem(item)),
     [items],
   )
   const lines = quote?.line_items || []
@@ -233,25 +280,44 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
       const property = getPropertyPricing(line)
       if (property?.family === family) managed.set(property.property_id, line)
     }
+    const aggregate = lines.find(line => line.project === activeDynamic.project
+      && quoteLineFamily(line) === family
+      && !getPropertyPricing(line))
+    const aggregateFixedDiscount = aggregate?.discount?.type === "fixed" ? aggregate.discount : null
 
     // Quando si passa dalla vecchia riga unica a una riga per hotel, eliminiamo
     // anche l'eventuale riga ordinaria dello stesso modulo. Altrimenti il gruppo
     // pagherebbe sia la vecchia quantità aggregata sia le nuove righe per hotel.
     const kept = lines.filter(line => !(line.project === activeDynamic.project && quoteLineFamily(line) === family))
-    const generated = clean.map(property => {
+    const generatedFromAggregate: number[] = []
+    let generated = clean.map((property, index) => {
       const previous = managed.get(property.id)
-      const base = previous
-        ? { ...previous, unit_amount: unitAmountForExistingPeriod(activeDynamic, previous), catalog_snapshot: activeDynamic.raw_snapshot || previous.catalog_snapshot }
+      const seed = previous || aggregate
+      let base = seed
+        ? {
+            ...seed,
+            id: previous?.id || crypto.randomUUID(),
+            catalog_snapshot: { ...(activeDynamic.raw_snapshot || {}), ...(seed.catalog_snapshot || {}) },
+            support: seed.support ?? activeDynamic.support ?? null,
+          }
         : buildCatalogLine(activeDynamic)
+
+      // Uno sconto fisso apparteneva alla vecchia riga aggregata una sola volta:
+      // viene ripartito tra gli hotel, non duplicato integralmente su ogni riga.
+      if (!previous && aggregateFixedDiscount) {
+        generatedFromAggregate.push(index)
+        base = { ...base, discount: null }
+      }
+
       const unit = Number(obj(activeDynamic.configuration_schema).unit_price ?? activeDynamic.unit_amount) || 0
       const minimum = Number(obj(activeDynamic.configuration_schema).minimum_monthly) || 0
       const named = {
         ...base,
         name: `${activeDynamic.name.replace(/\s*[—–-]\s*annuale\s*$/i, "")} · ${property.name}`,
         description: `${activeDynamic.description || activeDynamic.name} — ${property.name}: ${property.accommodations} sistemazioni · ${formatQuoteAmount(unit, activeDynamic.currency)}/sistemazione/mese${minimum > 0 ? ` · minimo ${formatQuoteAmount(minimum, activeDynamic.currency)}/mese per struttura` : ""}.`,
-        features: activeDynamic.features || base.features,
-        optional: true,
-        default_selected: previous?.default_selected ?? true,
+        features: activeDynamic.features?.length ? activeDynamic.features : base.features,
+        optional: base.optional ?? true,
+        default_selected: base.default_selected ?? true,
       }
       return withPropertyPricing(named, {
         family,
@@ -260,6 +326,20 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
         accommodations: property.accommodations,
       })
     })
+
+    if (aggregateFixedDiscount && generatedFromAggregate.length) {
+      const grossAmounts = generatedFromAggregate.map(index => Number(calculateQuoteLine(generated[index]).list_amount) || 0)
+      const allocations = distributeFixedDiscount(Number(aggregateFixedDiscount.value) || 0, grossAmounts)
+      const allocationByIndex = new Map<number, number>(generatedFromAggregate.map((index, position) => [index, allocations[position]] as const))
+      generated = generated.map((line, index) => {
+        const value = allocationByIndex.get(index)
+        return value == null ? line : calculateQuoteLine({
+          ...line,
+          discount: { ...aggregateFixedDiscount, value },
+        })
+      })
+    }
+
     await saveLines([...kept, ...generated], `${activeDynamic.name}: ${generated.length} strutture aggiornate`)
   }
 
@@ -270,14 +350,15 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   async function addEcosystemOffer(item = activeEcosystem) {
     if (!item) return toast.error("Seleziona un prodotto")
     const family = familyOf(item)
-    if (lines.some(line => line.project === item.project && (line.source_product_id === item.id || (isEcosystemOffer(line) && String(obj(line.configuration).ecosystem_family || "") === family)))) {
+    if (lines.some(line => line.project === item.project
+      && String(obj(line.configuration).ecosystem_family || quoteLineFamily(line)) === family)) {
       return toast.error("Questa proposta è già presente nel preventivo")
     }
 
     let next = [...lines]
     if (item.kind === "module" && item.dependency?.requires_base && !hasBase(next, item.dependency.project || item.project)) {
       const base = ecosystemCandidates.find(candidate => candidate.project === item.project && candidate.kind === "plan")
-      if (!base || base.unit_amount <= 0) {
+      if (!base || !isCatalogItemReadyForEcosystem(base)) {
         return toast.error(`Prima configura il piano base ${PROJECT_LABELS[item.project] || item.project} nel preventivo principale`)
       }
       const baseLine = buildEcosystemItem(base)
@@ -301,7 +382,7 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
       const base = projectItems.find(item => item.kind === "plan")
       const needsBase = projectItems.some(item => item.kind === "module" && item.dependency?.requires_base)
       if (needsBase && !hasBase(next, project)) {
-        if (!base || base.unit_amount <= 0) continue
+        if (!base || !isCatalogItemReadyForEcosystem(base)) continue
         const key = `${project}:${familyOf(base)}`
         if (!existing.has(key)) {
           const baseLine = buildEcosystemItem(base)
@@ -331,8 +412,19 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
   async function removeEcosystemOffer(id: string) {
     const target = lines.find(line => line.id === id)
     if (!target || !isEcosystemOffer(target)) return
-    const next = lines.filter(line => line.id !== id)
-    await saveLines(next, "Proposta Ecosistema rimossa")
+    const hasOtherBase = !!target.project && lines.some(line => line.id !== id
+      && line.project === target.project
+      && line.kind === "plan")
+    const next = lines.filter(line => {
+      if (line.id === id) return false
+      if (target.kind !== "plan" || !target.project || hasOtherBase) return true
+      if (!isEcosystemOffer(line) || line.project !== target.project || line.kind !== "module") return true
+      return !getCommercialMeta(line).dependency?.requires_base
+    })
+    const removed = lines.length - next.length
+    await saveLines(next, removed > 1
+      ? `Piano e ${removed - 1} proposte dipendenti rimossi`
+      : "Proposta Ecosistema rimossa")
   }
 
   if (loading) return <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">Caricamento strumenti multi-struttura…</div>
@@ -399,7 +491,7 @@ export default function QuoteExpansionEditor({ quoteId }: { quoteId: string }) {
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button type="button" onClick={addCompatibleEcosystem} disabled={saving}><Sparkles className="mr-2 h-4 w-4" />Prepara tutte le proposte compatibili</Button>
-          <p className="text-xs text-muted-foreground">Lo sconto è configurabile: non viene inventata nessuna percentuale. I piani con prezzo dinamico vanno prima configurati nel preventivo principale.</p>
+          <p className="text-xs text-muted-foreground">Lo sconto è configurabile: non viene inventata nessuna percentuale. I piani o moduli con prezzo dinamico o da configurare vanno prima valorizzati nel preventivo principale.</p>
         </div>
 
         {ecosystemOffers.length ? <div className="mt-5 space-y-2"><p className="text-sm font-semibold">Proposte già disponibili al cliente</p>{ecosystemOffers.map(line => <div key={line.id} className="flex flex-col gap-2 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{PROJECT_LABELS[line.project || ""] || line.project} · {line.name}</p><p className="text-xs text-muted-foreground">{line.discount?.type === "percentage" && Number(line.discount.value) > 0 ? `Vantaggio cliente 4BID -${line.discount.value}%` : "Nessuno sconto automatico"} · inizialmente non selezionato</p></div><Button type="button" size="sm" variant="ghost" onClick={() => line.id && removeEcosystemOffer(line.id)} disabled={saving}><Trash2 className="mr-2 h-4 w-4" />Rimuovi proposta</Button></div>)}</div> : null}

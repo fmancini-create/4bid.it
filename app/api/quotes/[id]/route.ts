@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto"
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+import { calculateQuoteLine, calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors } from "@/lib/quotes/commercial"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
@@ -43,15 +43,28 @@ function asObject(value: unknown): Record<string, unknown> {
 }
 
 /**
- * Un piano con formula dinamica (es. Santaddeo RMS) non ha un canone valido
- * finché l'operatore non inserisce i parametri della struttura nel configuratore
- * principale. Non deve poter diventare una proposta Ecosistema a prezzo 0.
+ * I cataloghi federati usano 0 anche come segnaposto per piani e moduli il cui
+ * prezzo deve essere configurato (es. Santaddeo RMS, HotelAccelerator e
+ * ManuBot Corporate). Solo una voce marcata esplicitamente come gratuita puo'
+ * essere proposta a 0 EUR nell'Ecosistema.
  */
-function hasUnconfiguredDynamicEcosystemPrice(item: QuoteLineItem) {
+function isExplicitlyFreeCatalogLine(item: QuoteLineItem) {
   const configuration = asObject(item.configuration)
+  const snapshot = asObject(item.catalog_snapshot)
+  return configuration.is_free === true
+    || configuration.free === true
+    || configuration.pricing_model === "free"
+    || snapshot.is_free === true
+    || snapshot.free === true
+}
+
+function hasUnconfiguredEcosystemPrice(item: QuoteLineItem) {
+  const configuration = asObject(item.configuration)
+  const recurringProduct = item.kind === "plan" || item.kind === "module"
   return configuration.offer_channel === "4bid_ecosystem"
-    && item.kind === "plan"
-    && configuration.pricing_model === "per_accommodation"
+    && recurringProduct
+    && !(Number(item.unit_amount) > 0)
+    && !isExplicitlyFreeCatalogLine(item)
 }
 
 /** Solo cio' che incide sull'accordo economico: l'ordine delle voci non conta. */
@@ -102,20 +115,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (Array.isArray(body.line_items)) {
     const lines = body.line_items.map((item: QuoteLineItem) => calculateQuoteLine({ ...item, id: item.id || randomUUID(), catalog_snapshot: item.catalog_snapshot ?? {} }))
-    const unconfiguredDynamic = lines.find(hasUnconfiguredDynamicEcosystemPrice)
-    if (unconfiguredDynamic) {
+    const unconfigured = lines.find(hasUnconfiguredEcosystemPrice)
+    if (unconfigured) {
       return NextResponse.json({
-        error: `Configura prima il prezzo di ${unconfiguredDynamic.name || unconfiguredDynamic.description} nel preventivo principale: un piano a prezzo dinamico non può essere proposto a 0 € nell'Ecosistema 4BID.`,
+        error: `Configura prima il prezzo di ${unconfigured.name || unconfigured.description} nel preventivo principale: un piano o modulo a prezzo configurabile non può essere proposto a 0 € nell'Ecosistema 4BID.`,
         code: "DYNAMIC_PLAN_PRICE_REQUIRED",
       }, { status: 422 })
     }
-    const dependencies = dependencyErrors(lines)
+    const selectedLines = lines.filter(isQuoteLineSelected)
+    const dependencies = dependencyErrors(selectedLines)
     if (dependencies.length) return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies }, { status: 422 })
     update.line_items = lines
     update.total_amount = calculateQuoteTotal(lines)
-    // Cambiando i prodotti cambiano i progetti coinvolti: le condizioni li seguono.
+    // Le condizioni seguono soltanto le voci realmente incluse. Le proposte
+    // Ecosistema non selezionate non devono ampliare l'accordo del cliente.
     if (!accepted) {
-      const fresh = await fetchContractTerms(quoteTermsProjects(lines))
+      const fresh = await fetchContractTerms(quoteTermsProjects(selectedLines))
       update.contract_terms = mergeContractTerms(parseContractTerms(current.contract_terms), fresh)
     }
   }

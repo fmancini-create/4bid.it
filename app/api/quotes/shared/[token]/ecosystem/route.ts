@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const { data: quote, error } = await supabase
     .from("sales_channel_quotes")
-    .select("id,status,accepted_at,expires_at,expired_at,line_items,contract_terms")
+    .select("id,status,accepted_at,expires_at,expired_at,updated_at,line_items,contract_terms")
     .eq("token", token)
     .maybeSingle()
 
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .from("sales_channel_quotes")
     .update({ line_items: next, total_amount: totalAmount, contract_terms: contractTerms, updated_at: now })
     .eq("id", quote.id)
+    .eq("updated_at", quote.updated_at)
     .is("accepted_at", null)
     .neq("status", "accepted")
     .neq("status", "paid")
@@ -88,7 +89,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .maybeSingle()
 
   if (updateError) return NextResponse.json({ error: "Impossibile aggiornare il preventivo" }, { status: 500 })
-  if (!updated) return NextResponse.json({ error: "Il preventivo è stato accettato mentre lo stavi modificando" }, { status: 409 })
+  if (!updated) {
+    return NextResponse.json({
+      error: "Il preventivo è cambiato mentre lo stavi modificando. Ricarica la pagina e riprova.",
+      code: "QUOTE_VERSION_CONFLICT",
+    }, { status: 409 })
+  }
 
   return NextResponse.json({
     success: true,

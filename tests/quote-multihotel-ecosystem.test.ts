@@ -165,13 +165,62 @@ describe("quote safety guards", () => {
     expect(adminRoute).toContain('current.status === "accepted"')
   })
 
-  it("replaces aggregate dynamic lines and blocks unconfigured dynamic plans in ecosystem offers", () => {
+  it("preserves negotiated aggregate terms when generating one line per hotel", () => {
+    const editor = source("app/admin/quotes/edit/[id]/quote-expansion-editor.tsx")
+
+    expect(editor).toContain("const aggregate = lines.find")
+    expect(editor).toContain("id: previous?.id || crypto.randomUUID()")
+    expect(editor).toContain("distributeFixedDiscount")
+    expect(editor).toContain("support: seed.support ?? activeDynamic.support ?? null")
+    expect(editor).toContain("quoteLineFamily(line) === family")
+  })
+
+  it("blocks every unconfigured zero-price ecosystem product except explicitly free plans", () => {
     const editor = source("app/admin/quotes/edit/[id]/quote-expansion-editor.tsx")
     const adminRoute = source("app/api/quotes/[id]/route.ts")
 
-    expect(editor).toContain("quoteLineFamily(line) === family")
-    expect(editor).toContain("hasDynamicCatalogPrice")
+    expect(editor).toContain("isCatalogItemReadyForEcosystem")
+    expect(editor).toContain("snapshot.is_free === true")
+    expect(adminRoute).toContain("hasUnconfiguredEcosystemPrice")
+    expect(adminRoute).toContain('item.kind === "module"')
+    expect(adminRoute).toContain("snapshot.is_free === true")
     expect(adminRoute).toContain("DYNAMIC_PLAN_PRICE_REQUIRED")
-    expect(adminRoute).toContain('configuration.pricing_model === "per_accommodation"')
+  })
+
+  it("normalizes catalog variants inside the same project and uses the actual initial billing price", () => {
+    const editor = source("app/admin/quotes/edit/[id]/quote-expansion-editor.tsx")
+
+    expect(editor).toContain("other.project === item.project")
+    expect(editor).toContain("initialOption?.unit_amount")
+    expect(editor).toContain("unit_amount: initialUnitAmount")
+    expect(editor).toContain("support: item.support ?? null")
+    expect(editor).toContain("String(obj(line.configuration).ecosystem_family || quoteLineFamily(line)) === family")
+  })
+
+  it("builds contract terms only from quote lines that are really selected", () => {
+    const adminRoute = source("app/api/quotes/[id]/route.ts")
+
+    expect(adminRoute).toContain("const selectedLines = lines.filter(isQuoteLineSelected)")
+    expect(adminRoute).toContain("quoteTermsProjects(selectedLines)")
+    expect(adminRoute).toContain("dependencyErrors(selectedLines)")
+  })
+
+  it("serializes public selections and rejects stale concurrent writes", () => {
+    const publicRoute = source("app/api/quotes/shared/[token]/ecosystem/route.ts")
+    const browser = source("app/preventivo/[token]/ecosistema/ecosystem-browser.tsx")
+
+    expect(publicRoute).toContain("updated_at,line_items")
+    expect(publicRoute).toContain('.eq("updated_at", quote.updated_at)')
+    expect(publicRoute).toContain("QUOTE_VERSION_CONFLICT")
+    expect(browser).toContain("pendingRef.current")
+    expect(browser).toContain("const busy = pendingId !== null")
+    expect(browser).toContain("disabled={locked || busy}")
+  })
+
+  it("removes orphan dependent proposals together with their ecosystem base", () => {
+    const editor = source("app/admin/quotes/edit/[id]/quote-expansion-editor.tsx")
+
+    expect(editor).toContain("const hasOtherBase")
+    expect(editor).toContain("return !getCommercialMeta(line).dependency?.requires_base")
   })
 })
