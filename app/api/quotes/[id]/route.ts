@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto"
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
+import { calculateQuoteLine, calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors } from "@/lib/quotes/commercial"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
@@ -36,6 +36,37 @@ function changed(before: unknown, after: unknown) {
   return JSON.stringify(before ?? null) !== JSON.stringify(after ?? null)
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+}
+
+/**
+ * I cataloghi federati usano 0 anche come segnaposto per piani e moduli il cui
+ * prezzo deve essere configurato (es. Santaddeo RMS, HotelAccelerator e
+ * ManuBot Corporate). Solo una voce marcata esplicitamente come gratuita puo'
+ * essere proposta a 0 EUR nell'Ecosistema.
+ */
+function isExplicitlyFreeCatalogLine(item: QuoteLineItem) {
+  const configuration = asObject(item.configuration)
+  const snapshot = asObject(item.catalog_snapshot)
+  return configuration.is_free === true
+    || configuration.free === true
+    || configuration.pricing_model === "free"
+    || snapshot.is_free === true
+    || snapshot.free === true
+}
+
+function hasUnconfiguredEcosystemPrice(item: QuoteLineItem) {
+  const configuration = asObject(item.configuration)
+  const recurringProduct = item.kind === "plan" || item.kind === "module"
+  return configuration.offer_channel === "4bid_ecosystem"
+    && recurringProduct
+    && !(Number(item.unit_amount) > 0)
+    && !isExplicitlyFreeCatalogLine(item)
+}
+
 /** Solo cio' che incide sull'accordo economico: l'ordine delle voci non conta. */
 function economicShape(items: unknown) {
   if (!Array.isArray(items)) return []
@@ -61,7 +92,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (readError) return NextResponse.json({ error: readError.message }, { status: 404 })
   if (current.status === "paid") return NextResponse.json({ error: "Un preventivo pagato è congelato e non può essere modificato" }, { status: 409 })
 
-  const accepted = !!current.accepted_at
+  const accepted = current.status === "accepted" || !!current.accepted_at
   if (accepted) {
     const blocked = FROZEN_AFTER_ACCEPTANCE.filter(key => key in body && changed((current as Record<string, unknown>)[key], body[key]))
     if (Array.isArray(body.line_items) && changed(economicShape(current.line_items), economicShape(body.line_items))) blocked.push("line_items" as never)
@@ -84,13 +115,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (Array.isArray(body.line_items)) {
     const lines = body.line_items.map((item: QuoteLineItem) => calculateQuoteLine({ ...item, id: item.id || randomUUID(), catalog_snapshot: item.catalog_snapshot ?? {} }))
-    const dependencies = dependencyErrors(lines)
+    const unconfigured = lines.find(hasUnconfiguredEcosystemPrice)
+    if (unconfigured) {
+      return NextResponse.json({
+        error: `Configura prima il prezzo di ${unconfigured.name || unconfigured.description} nel preventivo principale: un piano o modulo a prezzo configurabile non può essere proposto a 0 € nell'Ecosistema 4BID.`,
+        code: "DYNAMIC_PLAN_PRICE_REQUIRED",
+      }, { status: 422 })
+    }
+    const selectedLines = lines.filter(isQuoteLineSelected)
+    const dependencies = dependencyErrors(selectedLines)
     if (dependencies.length) return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies }, { status: 422 })
     update.line_items = lines
     update.total_amount = calculateQuoteTotal(lines)
-    // Cambiando i prodotti cambiano i progetti coinvolti: le condizioni li seguono.
+    // Le condizioni seguono soltanto le voci realmente incluse. Le proposte
+    // Ecosistema non selezionate non devono ampliare l'accordo del cliente.
     if (!accepted) {
-      const fresh = await fetchContractTerms(quoteTermsProjects(lines))
+      const fresh = await fetchContractTerms(quoteTermsProjects(selectedLines))
       update.contract_terms = mergeContractTerms(parseContractTerms(current.contract_terms), fresh)
     }
   }
@@ -103,8 +143,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createAdminClient()
-  const { data: current } = await supabase.from("sales_channel_quotes").select("status").eq("id", id).single()
+  const { data: current } = await supabase.from("sales_channel_quotes").select("status,accepted_at").eq("id", id).single()
   if (current?.status === "paid") return NextResponse.json({ error: "Un preventivo pagato non può essere eliminato" }, { status: 409 })
+  if (current?.status === "accepted" || current?.accepted_at) return NextResponse.json({ error: "Un preventivo accettato non può essere eliminato" }, { status: 409 })
   const { error } = await supabase.from("sales_channel_quotes").delete().eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

@@ -2,10 +2,12 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
+import { isEcosystemOffer, isEcosystemOfferSelected } from "@/lib/quotes/ecosystem"
 import ForwardQuoteButton from "../forward-quote-button"
 import QuoteView from "./quote-view"
 import QuoteCommerceView from "./quote-commerce-view"
 import ReactivationRequest from "./reactivation-request"
+import EcosystemInvite from "./ecosystem-invite"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -74,18 +76,28 @@ export default async function PreventivoPage({
     ? false
     : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
   const lineItems = (data.line_items || []) as QuoteLineItem[]
-  const structuredQuote = lineItems.some((item) =>
+  // Alcuni preventivi storici possono avere `status=accepted` senza la data
+  // tecnica accepted_at. Lo stato commerciale resta comunque definitivo.
+  const accepted = alreadyPaid || data.status === "accepted" || Boolean(data.accepted_at)
+  const ecosystemOffers = lineItems.filter(isEcosystemOffer)
+  const selectedEcosystemCount = ecosystemOffers.filter(item => isEcosystemOfferSelected(item, accepted)).length
+  const visibleLineItems = lineItems.filter(item => !isEcosystemOffer(item) || isEcosystemOfferSelected(item, accepted))
+  const displayQuote: Partial<SalesChannelQuote> = { ...data, line_items: visibleLineItems }
+  const structuredQuote = visibleLineItems.some((item) =>
     Boolean(item.project || item.features?.length || item.discount || item.trial_days || item.support),
   )
   const quoteView = structuredQuote ? (
-    <QuoteCommerceView token={token} quote={data} expired={expired} />
+    <QuoteCommerceView token={token} quote={displayQuote} expired={expired} />
   ) : (
-    <QuoteView token={token} quote={data} expired={expired} />
+    <QuoteView token={token} quote={displayQuote} expired={expired} />
   )
 
   return (
     <>
       {quoteView}
+      {!accepted && !expired ? (
+        <EcosystemInvite token={token} offersCount={ecosystemOffers.length} selectedCount={selectedEcosystemCount} />
+      ) : null}
       {expired && !alreadyPaid && <ReactivationRequest token={token} />}
       <ForwardQuoteButton token={token} />
     </>
