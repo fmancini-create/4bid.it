@@ -11,6 +11,7 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { applyBillingPreference, dependencyErrors, getCommercialMeta, type QuoteBillingPreference } from "@/lib/quotes/commercial"
+import { normalizeDependentParentRefs } from "@/lib/quotes/dependent-lines"
 import { acceptanceDeclaration, economicTerms, generalConditions, mergeContractTerms, missingTermsProjects, parseContractTerms, quoteTermsProjects, termsLabel } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const customerSelected = !preferred.optional || (!!preferred.id && selectedIds.has(preferred.id))
     return { ...preferred, customer_selected: customerSelected }
   })
+
+  // Prima del controllo delle dipendenze ripariamo i parent_line_id storici
+  // rimasti agganciati alla vecchia riga aggregata dopo il multi-struttura.
+  // Senza questo passaggio un setup selezionato correttamente nel browser
+  // verrebbe scartato dal server proprio al momento dell'accettazione.
+  lineItems = normalizeDependentParentRefs(lineItems)
 
   // A setup/configuration service can never survive without its parent module.
   // The client UI visually disables it; the server also normalizes stale selections
