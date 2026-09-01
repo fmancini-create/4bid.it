@@ -18,6 +18,12 @@ const NO_DISCOUNT: SuiteCommercialPolicy = {
   allowPromotionStacking: false,
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+}
+
 export async function getSuiteCommercialPolicy(): Promise<SuiteCommercialPolicy> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 4_000)
@@ -43,10 +49,16 @@ export async function getSuiteCommercialPolicy(): Promise<SuiteCommercialPolicy>
   }
 }
 
+/**
+ * Prodotti che qualificano il cliente al vantaggio cross-sell. Le proposte
+ * Ecosistema aggiunte dentro questo stesso preventivo NON diventano da sole
+ * prova di una precedente relazione commerciale 4BID.
+ */
 export function selectedSuiteProducts(items: QuoteLineItem[]): Set<SuiteProductKey> {
   const products = new Set<SuiteProductKey>()
   for (const item of items) {
     if (!isQuoteLineSelected(item)) continue
+    if (asObject(item.configuration).offer_channel === "4bid_ecosystem") continue
     if (SUITE_PRODUCT_KEYS.includes(item.project as SuiteProductKey)) products.add(item.project as SuiteProductKey)
   }
   return products
@@ -54,8 +66,8 @@ export function selectedSuiteProducts(items: QuoteLineItem[]): Set<SuiteProductK
 
 /**
  * Il vantaggio si applica all'acquisto di un prodotto 4BID diverso da almeno
- * un prodotto già presente nella soluzione del cliente. Se il target è già
- * incluso, non si scontano ulteriormente i suoi moduli.
+ * un prodotto già presente nella soluzione principale del cliente. Se il target
+ * è già il prodotto principale, non si scontano ulteriormente i suoi moduli.
  */
 export function crossSellDiscountForTarget(
   policy: SuiteCommercialPolicy,
