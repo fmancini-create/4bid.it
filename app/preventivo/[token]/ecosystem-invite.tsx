@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
+import { ArrowRight, Sparkles } from "lucide-react"
 
 export default function EcosystemInvite({
   token,
@@ -11,23 +11,37 @@ export default function EcosystemInvite({
   selectedCount: number
 }) {
   return (
-    <aside className="fixed bottom-5 left-4 right-4 z-40 mx-auto max-w-md rounded-2xl border border-emerald-300 bg-background/95 p-4 shadow-xl backdrop-blur sm:left-5 sm:right-auto sm:mx-0 sm:w-[360px]">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-          <Sparkles className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-bold">Completa la tua soluzione 4BID</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Scopri HotelAccelerator, Santaddeo, HotelProfitAI e ManuBot e aggiungi direttamente i moduli compatibili al preventivo.
-          </p>
-          {offersCount > 0 ? <p className="mt-1 text-xs text-muted-foreground">Ci sono già {offersCount} {offersCount === 1 ? "proposta personalizzata" : "proposte personalizzate"} per te.</p> : null}
-          {selectedCount > 0 ? <p className="mt-1 text-xs font-semibold text-emerald-700">Hai già aggiunto {selectedCount} {selectedCount === 1 ? "soluzione" : "soluzioni"}.</p> : null}
-          <Link href={`/preventivo/${token}/ecosistema`} className="mt-3 inline-flex rounded-lg bg-emerald-700 px-3 py-2 text-sm font-bold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+    <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <div className="overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-background to-background shadow-sm">
+        <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex items-start gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <Sparkles className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Ecosistema 4BID</p>
+              <h2 className="mt-1 text-xl font-black sm:text-2xl">Vuoi completare la soluzione?</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Scopri prima cosa fanno HotelAccelerator, Santaddeo, HotelProfitAI e ManuBot; poi scegli soltanto i moduli che servono davvero alla tua struttura.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                <span className="rounded-full bg-background px-3 py-1.5 shadow-sm ring-1 ring-border">4 prodotti spiegati chiaramente</span>
+                <span className="rounded-full bg-background px-3 py-1.5 shadow-sm ring-1 ring-border">Moduli compatibili e prezzi</span>
+                {offersCount > 0 ? <span className="rounded-full bg-background px-3 py-1.5 shadow-sm ring-1 ring-border">{offersCount} proposte disponibili</span> : null}
+                {selectedCount > 0 ? <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">{selectedCount} già aggiunte</span> : null}
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href={`/preventivo/${token}/ecosistema`}
+            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+          >
             Scopri prodotti e moduli
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </div>
       </div>
-    </aside>
+    </section>
   )
 }

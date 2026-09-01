@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import { getFederatedCatalog } from "@/lib/quotes/catalog"
 import { isEcosystemOffer } from "@/lib/quotes/ecosystem"
 import { buildEcosystemCatalogLine, canonicalEcosystemCatalogItems, quoteLineFamily } from "@/lib/quotes/ecosystem-catalog"
-import type { QuoteLineItem } from "@/lib/quotes/types"
+import { isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import EcosystemBrowser from "./ecosystem-browser"
 
 export const metadata: Metadata = {
@@ -25,6 +25,7 @@ export default async function QuoteEcosystemPage({ params }: { params: Promise<{
 
   const lines = Array.isArray(data.line_items) ? data.line_items as QuoteLineItem[] : []
   const preparedOffers = lines.filter(isEcosystemOffer)
+  const includedItems = lines.filter(isQuoteLineSelected)
   const occupiedFamilies = new Set(lines.map(line => `${line.project}:${quoteLineFamily(line)}`))
 
   let discoveredOffers: QuoteLineItem[] = []
@@ -41,5 +42,13 @@ export default async function QuoteEcosystemPage({ params }: { params: Promise<{
   const expired = Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
   const locked = data.status === "paid" || data.status === "accepted" || Boolean(data.accepted_at) || expired
 
-  return <EcosystemBrowser token={token} offers={offers} currency={data.currency || "eur"} locked={locked} />
+  return (
+    <EcosystemBrowser
+      token={token}
+      offers={offers}
+      includedItems={includedItems}
+      currency={data.currency || "eur"}
+      locked={locked}
+    />
+  )
 }
