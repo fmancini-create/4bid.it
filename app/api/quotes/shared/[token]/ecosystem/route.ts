@@ -1,8 +1,11 @@
+import { randomUUID } from "crypto"
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
+import { getFederatedCatalog } from "@/lib/quotes/catalog"
 import { calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors, getCommercialMeta } from "@/lib/quotes/commercial"
 import { isEcosystemOffer, selectEcosystemOffer } from "@/lib/quotes/ecosystem"
+import { buildEcosystemCatalogLine, canonicalEcosystemCatalogItems, catalogFamily, quoteLineFamily } from "@/lib/quotes/ecosystem-catalog"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
@@ -11,9 +14,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null)
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Dati non validi" }, { status: 400 })
 
-  const lineId = String((body as Record<string, unknown>).line_id || "").trim()
-  const selected = (body as Record<string, unknown>).selected === true
-  if (!lineId) return NextResponse.json({ error: "Prodotto non valido" }, { status: 400 })
+  const input = body as Record<string, unknown>
+  const lineId = String(input.line_id || "").trim()
+  const catalogItemId = String(input.catalog_item_id || "").trim()
+  const requestedProject = String(input.project || "").trim()
+  const requestedSelected = input.selected === true
+  if (!lineId && !catalogItemId) return NextResponse.json({ error: "Prodotto non valido" }, { status: 400 })
 
   const supabase = createAdminClient()
   const { data: quote, error } = await supabase
@@ -31,34 +37,86 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const current = Array.isArray(quote.line_items) ? quote.line_items as QuoteLineItem[] : []
-  const target = current.find(item => item.id === lineId)
-  if (!target || !target.optional || !isEcosystemOffer(target)) {
-    return NextResponse.json({ error: "Questa voce non è una proposta Ecosistema modificabile" }, { status: 422 })
-  }
+  let next = [...current]
+  let target: QuoteLineItem | undefined
+  let selected = requestedSelected
 
-  let next = current.map(item => item.id === lineId ? selectEcosystemOffer(item, selected) : item)
+  if (catalogItemId) {
+    selected = true
+    let catalog
+    try {
+      catalog = await getFederatedCatalog()
+    } catch {
+      return NextResponse.json({ error: "Catalogo 4BID temporaneamente non disponibile" }, { status: 503 })
+    }
 
-  if (selected) {
+    const candidates = canonicalEcosystemCatalogItems(catalog)
+    const item = candidates.find(candidate => candidate.id === catalogItemId && (!requestedProject || candidate.project === requestedProject))
+    if (!item) return NextResponse.json({ error: "Questa soluzione non è disponibile per l'aggiunta online" }, { status: 422 })
+
+    const family = catalogFamily(item)
+    const existing = current.find(line => line.project === item.project && quoteLineFamily(line) === family)
+    if (existing && !isEcosystemOffer(existing)) {
+      return NextResponse.json({ error: `${existing.name || "Questa soluzione"} è già inclusa nel preventivo.` }, { status: 422 })
+    }
+
+    if (existing) {
+      target = existing
+      next = current.map(line => line.id === existing.id ? selectEcosystemOffer(line, true) : line)
+    } else {
+      target = selectEcosystemOffer(buildEcosystemCatalogLine(item, randomUUID()), true)
+      next.push(target)
+    }
+
     const dependency = getCommercialMeta(target).dependency
     if (dependency?.requires_base) {
       const project = dependency.project || target.project
-      const base = next.find(item => item.project === project && item.kind === "plan")
-      if (!base) {
-        return NextResponse.json({
-          error: `Per aggiungere ${target.name || target.description} serve prima il piano base ${project || "collegato"}.`,
-          code: "MISSING_BASE_PRODUCT",
-        }, { status: 422 })
-      }
-      if (isEcosystemOffer(base)) {
-        next = next.map(item => item.id === base.id ? selectEcosystemOffer(item, true) : item)
+      const baseAlready = next.find(line => line.project === project && line.kind === "plan")
+      if (baseAlready) {
+        if (isEcosystemOffer(baseAlready)) {
+          next = next.map(line => line.id === baseAlready.id ? selectEcosystemOffer(line, true) : line)
+        }
+      } else {
+        const baseItem = candidates.find(candidate => candidate.project === project && candidate.kind === "plan")
+        if (!baseItem) {
+          return NextResponse.json({
+            error: `Per aggiungere ${target.name || target.description} serve il piano base ${project || "collegato"}, che richiede una configurazione commerciale.`,
+            code: "MISSING_BASE_PRODUCT",
+          }, { status: 422 })
+        }
+        next.push(selectEcosystemOffer(buildEcosystemCatalogLine(baseItem, randomUUID()), true))
       }
     }
-  } else if (target.kind === "plan" && target.project) {
-    next = next.map(item => {
-      if (!isEcosystemOffer(item) || item.project !== target.project || item.kind !== "module") return item
-      const dependency = getCommercialMeta(item).dependency
-      return dependency?.requires_base ? selectEcosystemOffer(item, false) : item
-    })
+  } else {
+    target = current.find(item => item.id === lineId)
+    if (!target || !target.optional || !isEcosystemOffer(target)) {
+      return NextResponse.json({ error: "Questa voce non è una proposta Ecosistema modificabile" }, { status: 422 })
+    }
+
+    next = current.map(item => item.id === lineId ? selectEcosystemOffer(item, selected) : item)
+
+    if (selected) {
+      const dependency = getCommercialMeta(target).dependency
+      if (dependency?.requires_base) {
+        const project = dependency.project || target.project
+        const base = next.find(item => item.project === project && item.kind === "plan")
+        if (!base) {
+          return NextResponse.json({
+            error: `Per aggiungere ${target.name || target.description} serve prima il piano base ${project || "collegato"}.`,
+            code: "MISSING_BASE_PRODUCT",
+          }, { status: 422 })
+        }
+        if (isEcosystemOffer(base)) {
+          next = next.map(item => item.id === base.id ? selectEcosystemOffer(item, true) : item)
+        }
+      }
+    } else if (target.kind === "plan" && target.project) {
+      next = next.map(item => {
+        if (!isEcosystemOffer(item) || item.project !== target!.project || item.kind !== "module") return item
+        const dependency = getCommercialMeta(item).dependency
+        return dependency?.requires_base ? selectEcosystemOffer(item, false) : item
+      })
+    }
   }
 
   const active = next.filter(isQuoteLineSelected)
@@ -67,10 +125,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: dependencies[0], dependency_errors: dependencies }, { status: 422 })
   }
 
-  // Se il cliente aggiunge un prodotto di un progetto che prima non faceva
-  // parte del preventivo, aggiorniamo subito anche le condizioni contrattuali.
-  // Cosi' la pagina principale mostra le condizioni corrette prima
-  // dell'accettazione, non soltanto durante il POST finale.
   const projects = quoteTermsProjects(active)
   const freshTerms = await fetchContractTerms(projects)
   const contractTerms = mergeContractTerms(parseContractTerms(quote.contract_terms), freshTerms)
