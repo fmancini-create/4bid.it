@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import type { QuoteLineItem, SalesChannelQuote } from "@/lib/quotes/types"
 import { isEcosystemOffer, isEcosystemOfferSelected } from "@/lib/quotes/ecosystem"
-import { normalizeDependentParentRefs } from "@/lib/quotes/dependent-lines"
+import { ensureDependentServiceLines } from "@/lib/quotes/dependent-lines"
 import ForwardQuoteButton from "../forward-quote-button"
 import QuoteView from "./quote-view"
 import QuoteCommerceView from "./quote-commerce-view"
@@ -77,10 +77,11 @@ export default async function PreventivoPage({
   const expired = alreadyPaid
     ? false
     : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
-  // Ripara in memoria i parent_line_id storici rimasti agganciati alla vecchia
-  // riga aggregata dopo la trasformazione multi-struttura. Non cambia prezzi o
-  // selezioni: rende soltanto nuovamente utilizzabili i relativi setup/servizi.
-  const lineItems = normalizeDependentParentRefs((data.line_items || []) as QuoteLineItem[])
+  // Ripara i parent_line_id storici e ricostruisce le sole opzioni una tantum
+  // mancanti ma gia' previste nel metadata commerciale congelato del canone.
+  // Restano tutte opzionali e NON selezionate: nessun costo viene aggiunto in
+  // automatico al preventivo.
+  const lineItems = ensureDependentServiceLines((data.line_items || []) as QuoteLineItem[])
   // Alcuni preventivi storici possono avere `status=accepted` senza la data
   // tecnica accepted_at. Lo stato commerciale resta comunque definitivo.
   const accepted = alreadyPaid || data.status === "accepted" || Boolean(data.accepted_at)
