@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { calculateQuoteLine, calculateQuoteTotal, isQuoteLineSelected, type QuoteLineItem } from "@/lib/quotes/types"
 import { dependencyErrors } from "@/lib/quotes/commercial"
-import { normalizeDependentParentRefs } from "@/lib/quotes/dependent-lines"
+import { ensureDependentServiceLines } from "@/lib/quotes/dependent-lines"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   if (Array.isArray(body.line_items)) {
-    const lines = normalizeDependentParentRefs(body.line_items.map((item: QuoteLineItem) => {
+    const lines = ensureDependentServiceLines(body.line_items.map((item: QuoteLineItem) => {
       const normalized = normalizeSantaddeoAnnualOnlyDiscount(item)
       return calculateQuoteLine({ ...normalized, id: normalized.id || randomUUID(), catalog_snapshot: normalized.catalog_snapshot ?? {} })
     }))
