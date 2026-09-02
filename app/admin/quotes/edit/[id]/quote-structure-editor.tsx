@@ -60,7 +60,8 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
   const alternative = Boolean(choiceKey(item))
   const badge = (item.sales_badge || "").trim()
   const presetBadge = SALES_BADGES.includes(badge as (typeof SALES_BADGES)[number])
-  const badgeSelectValue = !badge ? "__none__" : presetBadge ? badge : "__custom__"
+  const [customMode, setCustomMode] = useState(Boolean(badge && !presetBadge))
+  const badgeSelectValue = customMode ? "__custom__" : !badge ? "__none__" : presetBadge ? badge : "__custom__"
 
   return (
     <article className="rounded-xl border bg-background p-4 shadow-sm">
@@ -92,9 +93,16 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
             <Select
               value={badgeSelectValue}
               onValueChange={value => {
-                if (value === "__none__") onBadgeChange(null)
-                else if (value === "__custom__") onBadgeChange(presetBadge ? "" : badge)
-                else onBadgeChange(value)
+                if (value === "__none__") {
+                  setCustomMode(false)
+                  onBadgeChange(null)
+                } else if (value === "__custom__") {
+                  setCustomMode(true)
+                  if (presetBadge) onBadgeChange(null)
+                } else {
+                  setCustomMode(false)
+                  onBadgeChange(value)
+                }
               }}
             >
               <SelectTrigger><SelectValue placeholder="Nessun badge" /></SelectTrigger>
@@ -104,12 +112,12 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
                 <SelectItem value="__custom__">Personalizzato…</SelectItem>
               </SelectContent>
             </Select>
-            {badgeSelectValue === "__custom__" ? (
+            {customMode ? (
               <Input
                 className="mt-2"
                 maxLength={42}
                 placeholder="Es. Condizione riservata Jada Hotels"
-                value={badge}
+                value={presetBadge ? "" : badge}
                 onChange={event => onBadgeChange(event.target.value || null)}
               />
             ) : null}
