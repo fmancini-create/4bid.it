@@ -1,11 +1,30 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Bot, Sparkles } from "lucide-react"
 import InteractiveVideoAssistant from "./voce/interactive-video-assistant"
 import LiveSalesAvatar from "./voce/live-sales-avatar"
 import QuoteNarration from "./quote-narration"
 
 export default function VirtualQuoteIntro({ token, clientName }: { token: string; clientName?: string | null }) {
+  const [liveEnabled, setLiveEnabled] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled) setLiveEnabled(Boolean(data.enabled))
+      })
+      .catch(() => {
+        if (!cancelled) setLiveEnabled(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 pt-6 sm:px-6">
       <section className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-background to-blue-50 p-5 shadow-sm">
@@ -21,9 +40,9 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
         </div>
       </section>
 
-      <LiveSalesAvatar token={token} />
-      <InteractiveVideoAssistant token={token} clientName={clientName} />
-      <QuoteNarration token={token} label="Ascolta il tuo preventivo" />
+      {liveEnabled !== false ? <LiveSalesAvatar token={token} /> : null}
+      {liveEnabled === false ? <InteractiveVideoAssistant token={token} clientName={clientName} /> : null}
+      {liveEnabled === false ? <QuoteNarration token={token} label="Ascolta il tuo preventivo" /> : null}
     </div>
   )
 }
