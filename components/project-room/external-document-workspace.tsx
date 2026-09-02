@@ -1,73 +1,103 @@
 "use client"
 
-import { ExternalLink, FileText } from "lucide-react"
+import { useRef } from "react"
+import { Maximize2, Presentation } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { DocumentWorkspaceProps } from "@/components/project-room/document-workspace"
-import { canDownload } from "@/lib/project-room/permissions"
+
+function toEmbeddedPresentationUrl(filePath: string | null | undefined): string | null {
+  if (!filePath) return null
+
+  try {
+    const url = new URL(filePath)
+    if (url.protocol !== "https:") return null
+
+    if (url.hostname === "docs.google.com") {
+      const match = url.pathname.match(/^\/presentation\/d\/([^/]+)/)
+      if (!match?.[1]) return null
+      return `https://docs.google.com/presentation/d/${encodeURIComponent(match[1])}/preview?rm=minimal`
+    }
+
+    if (url.hostname === "drive.google.com") {
+      const match = url.pathname.match(/^\/file\/d\/([^/]+)/)
+      if (!match?.[1]) return null
+      return `https://drive.google.com/file/d/${encodeURIComponent(match[1])}/preview`
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
 
 /**
- * Workspace for files that live in an approved external document provider.
+ * Embedded workspace for approved external presentations.
  *
- * Project Room remains the authorization gate: users always enter through the
- * protected version route, which validates their membership before redirecting
- * them to the provider. This is intentionally separate from the PDF workspace,
- * because pdf.js cannot render PowerPoint and other Office formats.
+ * Users stay inside the 4BID Project Room while the provider renders the file
+ * in an iframe. The original source URL is never presented as a normal outbound
+ * navigation action, so reviewing a presentation does not take the user away
+ * from the project workspace.
  */
-export function ExternalDocumentWorkspace({
-  document,
-  activeVersion,
-  role,
-  memberCanDownload,
-}: DocumentWorkspaceProps) {
-  const mayDownload = canDownload(role, memberCanDownload)
+export function ExternalDocumentWorkspace({ document, activeVersion }: DocumentWorkspaceProps) {
+  const fullscreenRef = useRef<HTMLDivElement>(null)
+  const embedUrl = toEmbeddedPresentationUrl(activeVersion.file_path)
 
-  return (
-    <div className="rounded-xl border border-border bg-card p-6 md:p-8">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex min-w-0 items-start gap-4">
+  async function enterFullscreen() {
+    if (!fullscreenRef.current?.requestFullscreen) return
+    await fullscreenRef.current.requestFullscreen()
+  }
+
+  if (!embedUrl) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+        <div className="flex items-start gap-4">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-secondary">
-            <FileText className="size-6 text-primary-blue" aria-hidden="true" />
+            <Presentation className="size-6 text-primary-blue" aria-hidden="true" />
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-brand-navy">Presentazione collegata</p>
-            <p className="mt-1 break-words text-sm text-foreground">
-              {activeVersion.file_name ?? document.title}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {activeVersion.version_label} · il file viene aperto dal provider esterno dopo il controllo degli accessi della Project Room.
+          <div>
+            <p className="text-sm font-semibold text-brand-navy">Presentazione non visualizzabile</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Questa versione non usa un formato incorporabile nella Project Room. Carica una presentazione Google Slides o un file Drive compatibile per mantenerne la consultazione dentro 4BID.
             </p>
           </div>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button asChild>
-            <a
-              href={`/api/project-room/versions/${activeVersion.id}/file`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink className="mr-2 size-4" aria-hidden="true" />
-              Apri presentazione
-            </a>
-          </Button>
-          {mayDownload ? (
-            <Button asChild variant="outline">
-              <a
-                href={`/api/project-room/versions/${activeVersion.id}/file?download=1`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Apri / scarica da Drive
-              </a>
-            </Button>
-          ) : null}
         </div>
       </div>
+    )
+  }
 
-      <p className="mt-6 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-        Le presentazioni PowerPoint non vengono convertite nel visualizzatore PDF: resta disponibile il file originale, mantenendo layout, animazioni e contenuti editabili.
-      </p>
+  return (
+    <div ref={fullscreenRef} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm fullscreen:rounded-none fullscreen:border-0">
+      <div className="flex flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
+            <Presentation className="size-5 text-primary-blue" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-brand-navy">{document.title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {activeVersion.version_label} · visualizzazione integrata nella Project Room
+            </p>
+          </div>
+        </div>
+
+        <Button type="button" variant="outline" size="sm" onClick={enterFullscreen} className="shrink-0">
+          <Maximize2 className="mr-2 size-4" aria-hidden="true" />
+          Schermo intero
+        </Button>
+      </div>
+
+      <div className="bg-black/5 p-2 sm:p-3 fullscreen:h-[calc(100vh-65px)] fullscreen:p-0">
+        <iframe
+          src={embedUrl}
+          title={`Presentazione ${document.title}`}
+          className="h-[68vh] min-h-[480px] w-full rounded-lg border-0 bg-white fullscreen:h-full fullscreen:min-h-0 fullscreen:rounded-none"
+          allow="fullscreen"
+          allowFullScreen
+          loading="eager"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
     </div>
   )
 }
