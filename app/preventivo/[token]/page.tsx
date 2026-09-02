@@ -11,6 +11,7 @@ import QuoteOneTimeInvestmentDetails from "./quote-one-time-investment-details"
 import ReactivationRequest from "./reactivation-request"
 import EcosystemInvite from "./ecosystem-invite"
 import AnnualDiscountLabelFix from "./annual-discount-label-fix"
+import QuoteSalesBadgeHydrator from "./quote-sales-badge-hydrator"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -102,6 +103,7 @@ export default async function PreventivoPage({
   return (
     <>
       <AnnualDiscountLabelFix />
+      <QuoteSalesBadgeHydrator items={visibleLineItems} />
       {quoteView}
       {structuredQuote ? (
         <QuoteOneTimeInvestmentDetails
