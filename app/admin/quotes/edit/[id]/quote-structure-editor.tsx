@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CheckCircle2, CircleDot, Loader2, Save, Settings2, Sparkles } from "lucide-react"
+import { CircleDot, Loader2, Save, Settings2, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -10,6 +10,7 @@ import { formatQuoteAmount } from "@/lib/quotes/types"
 import { getCommercialMeta } from "@/lib/quotes/commercial"
 
 const MODULE_KINDS = new Set(["plan", "module"])
+const PLATFORM_PROJECTS = new Set(["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"])
 
 function isModule(item: QuoteLineItem) {
   return MODULE_KINDS.has(String(item.kind || ""))
@@ -22,7 +23,7 @@ function choiceKey(item: QuoteLineItem) {
 }
 
 function typeLabel(item: QuoteLineItem) {
-  if (item.kind === "plan") return "Obbligatorio"
+  if (item.kind === "plan") return item.optional ? "Facoltativo" : "Obbligatorio"
   if (choiceKey(item)) return "Alternativo"
   return item.optional ? "Facoltativo" : "Incluso"
 }
@@ -34,7 +35,7 @@ function periodLabel(item: QuoteLineItem) {
   return "una tantum"
 }
 
-function LineSummary({ item, onOptionalChange }: { item: QuoteLineItem; onOptionalChange: (value: boolean) => void }) {
+function LineSummary({ item, canBeOptional = true, onOptionalChange }: { item: QuoteLineItem; canBeOptional?: boolean; onOptionalChange: (value: boolean) => void }) {
   const alternative = Boolean(choiceKey(item))
   return (
     <article className="rounded-xl border bg-background p-4 shadow-sm">
@@ -51,13 +52,12 @@ function LineSummary({ item, onOptionalChange }: { item: QuoteLineItem; onOption
             {formatQuoteAmount(Number(item.unit_amount || item.amount || 0), "eur")} <span className="font-normal text-muted-foreground">{periodLabel(item)}</span>
           </p>
         </div>
-        {item.kind !== "plan" ? (
-          <div className="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2">
-            <Switch checked={Boolean(item.optional)} onCheckedChange={onOptionalChange} />
-            <span className="text-xs font-medium">Facoltativo per il cliente</span>
-          </div>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2">
+          <Switch checked={Boolean(item.optional)} disabled={!canBeOptional} onCheckedChange={onOptionalChange} />
+          <span className="text-xs font-medium">{item.kind === "plan" ? "Piattaforma opzionale" : "Facoltativo per il cliente"}</span>
+        </div>
       </div>
+      {item.kind === "plan" && !canBeOptional ? <p className="mt-2 text-xs text-muted-foreground">La prima piattaforma del preventivo resta obbligatoria. Le piattaforme aggiunte dopo possono essere rese opzionali.</p> : null}
     </article>
   )
 }
@@ -145,7 +145,13 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
           <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-black text-primary-foreground">1</span><div><h3 className="text-xl font-bold">Moduli desiderati</h3><p className="text-sm text-muted-foreground">Software, piani e moduli: obbligatori oppure facoltativi.</p></div></div>
         </div>
         <div className="space-y-3 p-5">
-          {modules.length ? modules.map(({ item, index }) => <LineSummary key={item.id || index} item={item} onOptionalChange={value => patchLine(index, { optional: value })} />) : <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Nessun modulo ancora inserito. Aggiungilo dall'editor avanzato qui sotto.</p>}
+          {modules.length ? modules.map(({ item, index }) => {
+            const earlierPlatformExists = lines.slice(0, index).some(candidate =>
+              candidate.project !== item.project && PLATFORM_PROJECTS.has(String(candidate.project || "")),
+            )
+            const canBeOptional = item.kind !== "plan" || earlierPlatformExists
+            return <LineSummary key={item.id || index} item={item} canBeOptional={canBeOptional} onOptionalChange={value => patchLine(index, { optional: value, default_selected: value ? item.default_selected !== false : true })} />
+          }) : <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Nessun modulo ancora inserito. Aggiungilo dall'editor avanzato qui sotto.</p>}
         </div>
       </section>
 
@@ -161,7 +167,7 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
                 {block.entries.map(({ item, index }, optionIndex) => (
                   <div key={item.id || index}>
                     {optionIndex > 0 && block.alternative ? <div className="my-3 flex items-center gap-3"><div className="h-px flex-1 bg-violet-200" /><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black tracking-widest text-violet-800">OPPURE</span><div className="h-px flex-1 bg-violet-200" /></div> : null}
-                    <LineSummary item={item} onOptionalChange={value => patchLine(index, { optional: value })} />
+                    <LineSummary item={item} onOptionalChange={value => patchLine(index, { optional: value, default_selected: value ? item.default_selected !== false : true })} />
                   </div>
                 ))}
               </div>
