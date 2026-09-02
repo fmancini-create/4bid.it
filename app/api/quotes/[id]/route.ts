@@ -7,6 +7,8 @@ import { ensureDependentServiceLines } from "@/lib/quotes/dependent-lines"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
+type QuoteLineWithBadge = QuoteLineItem & { sales_badge?: string | null }
+
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createAdminClient()
@@ -41,6 +43,24 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {}
+}
+
+/**
+ * Un editor secondario può avere in memoria una copia delle line_items caricata
+ * prima che il superadmin assegni un badge commerciale. Se quel vecchio editor
+ * salva dopo, non deve cancellare il badge appena scritto. Il badge viene quindi
+ * mantenuto dal DB salvo quando il payload lo contiene esplicitamente.
+ */
+function preservePersistedSalesBadges(incoming: QuoteLineItem[], current: unknown): QuoteLineWithBadge[] {
+  const currentLines = Array.isArray(current) ? current as QuoteLineWithBadge[] : []
+  const currentById = new Map(currentLines.filter(line => line.id).map(line => [line.id as string, line]))
+
+  return incoming.map(raw => {
+    const item = raw as QuoteLineWithBadge
+    if (!item.id || Object.prototype.hasOwnProperty.call(item, "sales_badge")) return item
+    const persisted = currentById.get(item.id)?.sales_badge
+    return persisted ? { ...item, sales_badge: persisted } : item
+  })
 }
 
 /**
@@ -137,7 +157,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   if (Array.isArray(body.line_items)) {
-    const lines = ensureDependentServiceLines(body.line_items.map((item: QuoteLineItem) => {
+    const incoming = preservePersistedSalesBadges(body.line_items as QuoteLineItem[], current.line_items)
+    const lines = ensureDependentServiceLines(incoming.map((item: QuoteLineItem) => {
       const normalized = normalizeSantaddeoAnnualOnlyDiscount(item)
       return calculateQuoteLine({ ...normalized, id: normalized.id || randomUUID(), catalog_snapshot: normalized.catalog_snapshot ?? {} })
     }))
