@@ -9,8 +9,10 @@ const sessionWindows = new Map<string, number[]>()
 const REQUESTS_PER_MINUTE = 3
 
 function configured() {
+  const explicitlyEnabled = process.env.TAVUS_LIVE_ENABLED === "true"
+  const safePreview = process.env.VERCEL_ENV === "preview"
   return Boolean(
-    process.env.TAVUS_LIVE_ENABLED === "true" &&
+    (explicitlyEnabled || safePreview) &&
       process.env.TAVUS_API_KEY &&
       (process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID) &&
       (process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID),
