@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 import { createAdminClient } from "@/lib/supabase/server-admin"
+import { createClient } from "@/lib/supabase/server"
 import { dependencyErrors } from "@/lib/quotes/commercial"
 import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/lib/quotes/types"
 import { quoteTermsProjects } from "@/lib/quotes/terms"
@@ -29,6 +30,36 @@ function presentationMode(request: NextRequest, body: Record<string, unknown>): 
   if (body.presentation_mode === "classic") return "classic"
   const fromCookie = request.cookies.get("quote_presentation_mode")?.value
   return fromCookie === "virtual" ? "virtual" : "classic"
+}
+
+async function quoteCreatorSnapshot(admin: ReturnType<typeof createAdminClient>) {
+  try {
+    const auth = await createClient()
+    const { data: { user } } = await auth.auth.getUser()
+    if (!user?.id) return { created_by_user_id: null, created_by_name: null, created_by_last_name: null }
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("first_name, last_name, email")
+      .eq("id", user.id)
+      .maybeSingle<{ first_name?: string | null; last_name?: string | null; email?: string | null }>()
+
+    const firstName = (profile?.first_name || "").trim()
+    const lastName = (profile?.last_name || "").trim()
+    const metadataName = String(user.user_metadata?.full_name || user.user_metadata?.name || "").trim()
+    const profileName = [firstName, lastName].filter(Boolean).join(" ").trim()
+    const fallbackEmail = profile?.email || user.email || ""
+    const fallbackName = fallbackEmail.includes("@") ? fallbackEmail.split("@")[0] : fallbackEmail
+
+    return {
+      created_by_user_id: user.id,
+      created_by_name: profileName || metadataName || fallbackName || null,
+      created_by_last_name: lastName || null,
+    }
+  } catch (error) {
+    console.error("[quotes] creator snapshot error:", error)
+    return { created_by_user_id: null, created_by_name: null, created_by_last_name: null }
+  }
 }
 
 export async function GET() {
@@ -77,6 +108,7 @@ export async function POST(request: NextRequest) {
   const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
 
   const contractTerms = await fetchContractTerms(quoteTermsProjects(lineItems))
+  const creator = await quoteCreatorSnapshot(supabase)
 
   const CHIAVI_FATTURAZIONE = ["company", "vat", "tax_code", "address", "zip", "city", "province", "sdi_code", "pec", "reference"] as const
   const billingIn = body.billing_details && typeof body.billing_details === "object" && !Array.isArray(body.billing_details)
@@ -91,6 +123,7 @@ export async function POST(request: NextRequest) {
     : {}
 
   const insert = {
+    ...creator,
     contract_terms: contractTerms,
     billing_details: billingDetails,
     quote_number: quoteNumber,
