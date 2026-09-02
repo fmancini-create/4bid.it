@@ -10,6 +10,7 @@
  *
  * Kept as a single shared predicate so the header scripts, the SPA pageview
  * tracker and the support chat can never disagree about what is private.
+ * Business-plan shares deliberately use first-party engagement tracking only.
  */
 export const PRIVATE_AREA_PREFIXES = ["/area-riservata", "/admin", "/business-plan"] as const
 
