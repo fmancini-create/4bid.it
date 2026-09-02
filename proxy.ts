@@ -21,6 +21,25 @@ function isAdminApiRoute(pathname: string): boolean {
 }
 
 /**
+ * A genuine browser Server Action POST is same-origin and carries an Origin
+ * header. Automated scanners frequently spoof only Next-Action; letting those
+ * requests reach Next.js makes the framework log "Failed to find Server Action".
+ */
+function isTrustedServerActionRequest(request: NextRequest): boolean {
+  if (!request.headers.get("next-action")) return true
+  if (request.method !== "POST") return false
+
+  const origin = request.headers.get("origin")
+  if (!origin) return false
+
+  try {
+    return new URL(origin).host === request.nextUrl.host
+  } catch {
+    return false
+  }
+}
+
+/**
  * Paths inside /area-riservata that must stay reachable without a session,
  * otherwise a user could never sign in or accept an invitation.
  * `/area-riservata` itself is the public entry page.
@@ -67,6 +86,13 @@ function checkRateLimit(ip: string, endpoint: string): { allowed: boolean; remai
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Drop malformed/spoofed Server Action requests before the framework action
+  // resolver sees them. This keeps scanner traffic out of production error logs
+  // without affecting normal JSON/form POST endpoints.
+  if (!isTrustedServerActionRequest(request)) {
+    return new NextResponse(null, { status: 404 })
+  }
 
   // Skip static files and internal routes
   if (

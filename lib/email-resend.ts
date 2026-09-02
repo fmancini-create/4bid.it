@@ -1,6 +1,7 @@
 // Legacy filename kept to avoid touching every caller in this migration.
 // Runtime routing is now provider-agnostic:
-// - transactional/service email -> Google Workspace (SMTP_* env vars)
+// - transactional/service email -> Google Workspace (SMTP_* env vars), with a
+//   Brevo failover only when Workspace fails before an SMTP session starts
 // - DEM/follow-up marketing email -> Brevo SMTP relay (BREVO_* env vars)
 
 const nodemailer = require("nodemailer")
@@ -109,8 +110,11 @@ function workspaceSmtpConfig() {
     maxConnections: 3,
     maxMessages: 100,
     auth: { user, pass },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
+    // A connection that has not produced an SMTP greeting within five seconds
+    // is considered unavailable. On transactional mail we can then use the
+    // Brevo fallback while still being comfortably inside cron execution time.
+    connectionTimeout: 5_000,
+    greetingTimeout: 5_000,
     socketTimeout: 30_000,
   }
 }
@@ -154,11 +158,13 @@ function resolveFrom(transactional: boolean): string | null {
   }
 
   const brevoUser = process.env.BREVO_SMTP_USER?.trim()
-  const configured =
-    process.env.BREVO_FROM_MARKETING?.trim() ||
-    process.env.SMTP_FROM_MARKETING?.trim()
+  const configured = process.env.BREVO_FROM_MARKETING?.trim() || process.env.SMTP_FROM_MARKETING?.trim()
   if (configured) return configured
   return brevoUser ? `4BID SRL <${brevoUser}>` : null
+}
+
+function resolveTransactionalFallbackFrom(): string | null {
+  return process.env.BREVO_FROM_TRANSACTIONAL?.trim() || resolveFrom(false)
 }
 
 function resolveReplyTo(transactional: boolean, explicit?: string): string {
@@ -166,11 +172,7 @@ function resolveReplyTo(transactional: boolean, explicit?: string): string {
   if (transactional) {
     return process.env.SMTP_REPLY_TO?.trim() || process.env.SMTP_FROM?.trim() || "clienti@4bid.it"
   }
-  return (
-    process.env.BREVO_REPLY_TO?.trim() ||
-    process.env.SMTP_REPLY_TO?.trim() ||
-    "clienti@4bid.it"
-  )
+  return process.env.BREVO_REPLY_TO?.trim() || process.env.SMTP_REPLY_TO?.trim() || "clienti@4bid.it"
 }
 
 function smtpStatusCode(error: unknown): number | null {
@@ -180,6 +182,19 @@ function smtpStatusCode(error: unknown): number | null {
   return null
 }
 
+function isPreDeliveryConnectionError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const record = error as Record<string, unknown>
+  const command = typeof record.command === "string" ? record.command.toUpperCase() : ""
+  const code = typeof record.code === "string" ? record.code.toUpperCase() : ""
+
+  // CONN means Nodemailer never completed the initial SMTP connection, so the
+  // original provider could not have accepted the message. Restrict fallback to
+  // network-level failures to avoid ever retrying an ambiguous delivery state.
+  if (command !== "CONN") return false
+  return ["ETIMEDOUT", "ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH", "ENOTFOUND", "EAI_AGAIN"].includes(code)
+}
+
 function getTransporter(transactional: boolean, config: Record<string, unknown>) {
   if (transactional) {
     if (!workspaceTransporter) workspaceTransporter = nodemailer.createTransport(config)
@@ -187,6 +202,47 @@ function getTransporter(transactional: boolean, config: Record<string, unknown>)
   }
   if (!brevoTransporter) brevoTransporter = nodemailer.createTransport(config)
   return brevoTransporter
+}
+
+function mailPayload(
+  options: Pick<EmailOptions, "to" | "subject" | "html" | "text" | "replyTo" | "attachments">,
+  from: string,
+  headers: Record<string, string>,
+  transactionalReplyTo: boolean,
+) {
+  const { to, subject, html, text, replyTo, attachments } = options
+  return {
+    from,
+    to,
+    subject,
+    html,
+    text: text && text.trim() ? text : htmlToText(html),
+    replyTo: resolveReplyTo(transactionalReplyTo, replyTo),
+    headers,
+    attachments:
+      attachments && attachments.length > 0
+        ? attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            contentType: a.contentType,
+          }))
+        : undefined,
+  }
+}
+
+function successFromInfo(info: any, providerName: string) {
+  const rejected = Array.isArray(info?.rejected) ? info.rejected : []
+  if (rejected.length > 0) {
+    return {
+      success: false as const,
+      error: `Destinatario rifiutato dal provider: ${rejected.join(", ")}`,
+      systemic: false,
+      statusCode: null,
+      rejected,
+    }
+  }
+
+  return { success: true as const, messageId: info?.messageId, provider: providerName }
 }
 
 export async function sendEmail(options: EmailOptions): Promise<any> {
@@ -245,41 +301,47 @@ export async function sendEmail(options: EmailOptions): Promise<any> {
     ...buildUnsubscribeHeaders(to, listUnsubscribe, campaignId, headers),
     ...headers,
   }
+  const payloadOptions = { to, subject, html, text, replyTo, attachments }
 
   try {
     const transporter = getTransporter(transactional, config)
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-      text: text && text.trim() ? text : htmlToText(html),
-      replyTo: resolveReplyTo(transactional, replyTo),
-      headers: mergedHeaders,
-      attachments:
-        attachments && attachments.length > 0
-          ? attachments.map((a) => ({
-              filename: a.filename,
-              content: a.content,
-              contentType: a.contentType,
-            }))
-          : undefined,
-    })
+    const info = await transporter.sendMail(mailPayload(payloadOptions, from, mergedHeaders, transactional))
+    return successFromInfo(info, providerName)
+  } catch (error) {
+    console.error(`[v0] Errore invio ${providerName}:`, error)
 
-    const rejected = Array.isArray(info?.rejected) ? info.rejected : []
-    if (rejected.length > 0) {
-      return {
-        success: false as const,
-        error: `Destinatario rifiutato dal provider: ${rejected.join(", ")}`,
-        systemic: false,
-        statusCode: null,
-        rejected,
+    if (transactional && isPreDeliveryConnectionError(error)) {
+      // The pooled connection may be poisoned after a network failure; force a
+      // fresh Workspace connection on the next independent send.
+      workspaceTransporter = null
+
+      const fallbackConfig = brevoSmtpConfig()
+      const fallbackFrom = resolveTransactionalFallbackFrom()
+      if (fallbackConfig && fallbackFrom) {
+        try {
+          console.warn("[v0] Google Workspace non raggiungibile prima della sessione SMTP: fallback transazionale su Brevo")
+          const fallbackTransporter = getTransporter(false, fallbackConfig)
+          const fallbackInfo = await fallbackTransporter.sendMail(
+            mailPayload(payloadOptions, fallbackFrom, mergedHeaders, true),
+          )
+          const result = successFromInfo(fallbackInfo, "Brevo SMTP (transactional fallback)")
+          if (result.success) return result
+          return result
+        } catch (fallbackError) {
+          console.error("[v0] Errore fallback transazionale Brevo SMTP:", fallbackError)
+          const fallbackMessage =
+            fallbackError instanceof Error ? fallbackError.message : "Errore Brevo SMTP fallback sconosciuto"
+          const fallbackStatusCode = smtpStatusCode(fallbackError)
+          return {
+            success: false as const,
+            error: `Google Workspace non raggiungibile; fallback Brevo fallito: ${fallbackMessage}`,
+            systemic: isSystemicEmailProviderError({ message: fallbackMessage, statusCode: fallbackStatusCode }),
+            statusCode: fallbackStatusCode,
+          }
+        }
       }
     }
 
-    return { success: true as const, messageId: info?.messageId, provider: providerName }
-  } catch (error) {
-    console.error(`[v0] Errore invio ${providerName}:`, error)
     const message = error instanceof Error ? error.message : `Errore ${providerName} sconosciuto`
     const statusCode = smtpStatusCode(error)
     return {
