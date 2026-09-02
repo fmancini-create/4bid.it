@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { experimental_generateSpeech as generateSpeech, gateway, generateText } from "ai"
+import { generateText } from "ai"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import {
   calculateQuoteLine,
@@ -73,28 +73,52 @@ function quoteSource(quote: Partial<SalesChannelQuote>, items: QuoteLineItem[]):
 }
 
 async function synthesizeSpeech(text: string): Promise<Uint8Array> {
-  const result = await generateSpeech({
-    model: gateway.speechModel("openai/tts-1-hd"),
-    text,
-    voice: "shimmer",
-    outputFormat: "mp3",
-    speed: 0.96,
-    language: "it",
-    maxRetries: 1,
+  const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN
+  if (!token) throw new Error("AI Gateway non configurato")
+
+  const authMethod = process.env.AI_GATEWAY_API_KEY ? "api-key" : "oidc"
+  const response = await fetch("https://ai-gateway.vercel.sh/v4/ai/speech-model", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "ai-model-id": "openai/tts-1-hd",
+      "ai-gateway-protocol-version": "0.0.1",
+      "ai-gateway-auth-method": authMethod,
+    },
+    body: JSON.stringify({
+      text,
+      voice: "shimmer",
+      outputFormat: "mp3",
+      speed: 0.96,
+      language: "it",
+    }),
   })
 
-  return result.audio.uint8Array
+  if (!response.ok) {
+    const details = await response.text()
+    throw new Error(`Sintesi vocale non disponibile (${response.status}): ${details.slice(0, 300)}`)
+  }
+
+  const payload = await response.json() as { audio?: string }
+  if (!payload.audio) throw new Error("Audio non restituito dal provider")
+  return Uint8Array.from(Buffer.from(payload.audio, "base64"))
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     const { token } = await params
-    const body = await request.json().catch(() => ({})) as { lineId?: string | null }
+    const body = await request.json().catch(() => ({})) as { lineId?: string | null; spokenText?: string | null }
     const lineId = typeof body.lineId === "string" && body.lineId.trim() ? body.lineId.trim() : null
+    const spokenText = typeof body.spokenText === "string" ? body.spokenText.trim() : ""
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
 
     if (isRateLimited(`${token}:${ip}`)) {
       return Response.json({ error: "Troppe richieste audio. Riprova tra un minuto." }, { status: 429 })
+    }
+
+    if (spokenText.length > 1200) {
+      return Response.json({ error: "Risposta troppo lunga per la sintesi vocale" }, { status: 400 })
     }
 
     const supabase = createAdminClient()
@@ -105,6 +129,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .maybeSingle<Partial<SalesChannelQuote>>()
 
     if (error || !data) return Response.json({ error: "Preventivo non trovato" }, { status: 404 })
+
+    if (spokenText) {
+      const audio = await synthesizeSpeech(spokenText)
+      return new Response(audio, {
+        status: 200,
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Length": String(audio.byteLength),
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      })
+    }
 
     const items = (data.line_items || []) as QuoteLineItem[]
     const requestedLine = lineId ? items.find((item) => item.id === lineId) : null
