@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { generateText } from "ai"
+import { experimental_generateSpeech as generateSpeech, gateway, generateText } from "ai"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import {
   calculateQuoteLine,
@@ -73,33 +73,17 @@ function quoteSource(quote: Partial<SalesChannelQuote>, items: QuoteLineItem[]):
 }
 
 async function synthesizeSpeech(text: string): Promise<Uint8Array> {
-  const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN
-  if (!token) throw new Error("AI Gateway non configurato")
-
-  const response = await fetch("https://ai-gateway.vercel.sh/v4/ai/speech-model", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "ai-model-id": "openai/tts-1-hd",
-    },
-    body: JSON.stringify({
-      text,
-      voice: "shimmer",
-      outputFormat: "mp3",
-      speed: 0.96,
-      language: "it",
-    }),
+  const result = await generateSpeech({
+    model: gateway.speechModel("openai/tts-1-hd"),
+    text,
+    voice: "shimmer",
+    outputFormat: "mp3",
+    speed: 0.96,
+    language: "it",
+    maxRetries: 1,
   })
 
-  if (!response.ok) {
-    const details = await response.text()
-    throw new Error(`Sintesi vocale non disponibile (${response.status}): ${details.slice(0, 300)}`)
-  }
-
-  const payload = await response.json() as { audio?: string }
-  if (!payload.audio) throw new Error("Audio non restituito dal provider")
-  return Uint8Array.from(Buffer.from(payload.audio, "base64"))
+  return result.audio.uint8Array
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
