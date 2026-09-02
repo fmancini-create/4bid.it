@@ -52,6 +52,14 @@ export async function POST(request: Request) {
     const result = await remediateFindings(project, findings as any)
     return NextResponse.json(result, { status: result.ok || result.requiresReview ? 200 : 409 })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Intervento non riuscito" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Intervento non riuscito"
+    console.error("[control-center/remediate]", {
+      project: projectSlug,
+      repository: project.repository,
+      branch: project.branch,
+      findingCodes: findings.map((finding) => finding.code),
+      message,
+    })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
