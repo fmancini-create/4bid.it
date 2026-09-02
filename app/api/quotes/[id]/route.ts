@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 const EDITABLE_FIELDS = [
   "client_name", "client_company", "client_email", "client_vat", "client_address",
   "title", "description", "payment_terms", "deposit_amount", "vat_included", "currency",
-  "requested_fields", "expires_at",
+  "requested_fields", "expires_at", "presentation_mode",
   // Tabelle comparative: materiale di posizionamento, non parte dell'accordo
   // economico -> restano modificabili anche dopo l'accettazione.
   "comparison_tables",
@@ -127,6 +127,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params
   const supabase = createAdminClient()
   const body = await request.json()
+
+  if ("presentation_mode" in body && body.presentation_mode !== "classic" && body.presentation_mode !== "virtual") {
+    return NextResponse.json({ error: "Modalità preventivo non valida" }, { status: 400 })
+  }
 
   const { data: current, error: readError } = await supabase
     .from("sales_channel_quotes")
