@@ -52,10 +52,12 @@ function periodLabel(item: QuoteLineItem) {
   return "una tantum"
 }
 
-function LineSummary({ item, onOptionalChange, onBadgeChange }: {
+function LineSummary({ item, badgeSaving, onOptionalChange, onBadgeChange, onBadgeCommit }: {
   item: QuoteLineWithBadge
+  badgeSaving: boolean
   onOptionalChange: (value: boolean) => void
   onBadgeChange: (value: string | null) => void
+  onBadgeCommit: (value: string | null) => void
 }) {
   const alternative = Boolean(choiceKey(item))
   const badge = (item.sales_badge || "").trim()
@@ -89,19 +91,24 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
           </div>
 
           <div className="rounded-lg border p-3">
-            <div className="mb-2 flex items-center gap-2"><Tag className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Slogan / badge sul preventivo</p></div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2"><Tag className="h-4 w-4 text-primary" /><p className="text-xs font-semibold">Slogan / badge sul preventivo</p></div>
+              {badgeSaving ? <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Salvataggio…</span> : null}
+            </div>
             <Select
               value={badgeSelectValue}
               onValueChange={value => {
                 if (value === "__none__") {
                   setCustomMode(false)
                   onBadgeChange(null)
+                  onBadgeCommit(null)
                 } else if (value === "__custom__") {
                   setCustomMode(true)
                   if (presetBadge) onBadgeChange(null)
                 } else {
                   setCustomMode(false)
                   onBadgeChange(value)
+                  onBadgeCommit(value)
                 }
               }}
             >
@@ -119,9 +126,10 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
                 placeholder="Es. Condizione riservata Jada Hotels"
                 value={presetBadge ? "" : badge}
                 onChange={event => onBadgeChange(event.target.value || null)}
+                onBlur={event => onBadgeCommit(event.target.value || null)}
               />
             ) : null}
-            <p className="mt-2 text-[11px] text-muted-foreground">Compare in evidenza nel box del modulo sulla pagina pubblica. È solo comunicazione commerciale: non modifica prezzi o condizioni.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">Si salva automaticamente e compare in evidenza nel box del modulo sulla pagina pubblica. Non modifica prezzi o condizioni.</p>
           </div>
         </div>
       </div>
@@ -132,6 +140,7 @@ function LineSummary({ item, onOptionalChange, onBadgeChange }: {
 export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
   const [quote, setQuote] = useState<SalesChannelQuote | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savingBadges, setSavingBadges] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     fetch(`/api/quotes/${quoteId}`, { cache: "no-store" })
@@ -172,6 +181,34 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
     } : current)
   }
 
+  async function persistBadge(index: number, value: string | null) {
+    const line = lines[index]
+    if (!line?.id) return toast.error("Impossibile salvare il badge: voce senza ID")
+    const lineId = line.id
+
+    setSavingBadges(current => new Set(current).add(lineId))
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}/badge`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ line_id: lineId, sales_badge: value }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || "Salvataggio badge fallito")
+      if (data?.quote?.line_items) {
+        setQuote(current => current ? { ...current, line_items: data.quote.line_items } : current)
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Errore nel salvataggio del badge")
+    } finally {
+      setSavingBadges(current => {
+        const next = new Set(current)
+        next.delete(lineId)
+        return next
+      })
+    }
+  }
+
   async function saveStructure() {
     if (!quote) return
     setSaving(true)
@@ -186,8 +223,7 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
       setQuote(data)
       toast.success("Struttura del preventivo aggiornata")
       // QuoteStructureEditor e QuoteCatalogEditor mantengono stati client separati.
-      // Ricaricando dopo il salvataggio entrambi ripartono dalla stessa versione DB:
-      // l'editor avanzato non può più riscrivere un vecchio optional=false.
+      // Ricaricando dopo il salvataggio entrambi ripartono dalla stessa versione DB.
       window.setTimeout(() => window.location.reload(), 250)
     } catch (error: any) {
       toast.error(error.message)
@@ -220,8 +256,10 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
             <LineSummary
               key={item.id || index}
               item={item}
+              badgeSaving={Boolean(item.id && savingBadges.has(item.id))}
               onOptionalChange={value => patchLine(index, { optional: value, default_selected: value ? item.default_selected !== false : true })}
               onBadgeChange={value => patchLine(index, { sales_badge: value })}
+              onBadgeCommit={value => persistBadge(index, value)}
             />
           )) : <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Nessun modulo ancora inserito. Aggiungilo dall'editor avanzato qui sotto.</p>}
         </div>
@@ -241,8 +279,10 @@ export default function QuoteStructureEditor({ quoteId }: { quoteId: string }) {
                     {optionIndex > 0 && block.alternative ? <div className="my-3 flex items-center gap-3"><div className="h-px flex-1 bg-violet-200" /><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black tracking-widest text-violet-800">OPPURE</span><div className="h-px flex-1 bg-violet-200" /></div> : null}
                     <LineSummary
                       item={item}
+                      badgeSaving={Boolean(item.id && savingBadges.has(item.id))}
                       onOptionalChange={value => patchLine(index, { optional: value, default_selected: value ? item.default_selected !== false : true })}
                       onBadgeChange={value => patchLine(index, { sales_badge: value })}
+                      onBadgeCommit={value => persistBadge(index, value)}
                     />
                   </div>
                 ))}
