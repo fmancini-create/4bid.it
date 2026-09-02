@@ -12,6 +12,11 @@ import { DIGITAL_SALES_AGENT_PROMPT } from "@/lib/quotes/digital-sales-agent"
 
 const CORE_4BID_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
+type QuoteWithCreator = Partial<SalesChannelQuote> & {
+  created_by_name?: string | null
+  created_by_last_name?: string | null
+}
+
 export interface QuoteChatContext {
   prompt: string
   quoteId: string | null
@@ -20,6 +25,9 @@ export interface QuoteChatContext {
   clientEmail: string | null
   quoteNumber: string | null
   quotedProjects: string[]
+  description: string | null
+  creatorName: string | null
+  creatorLastName: string | null
 }
 
 export function extractQuoteToken(pathname: string | null | undefined): string | null {
@@ -81,8 +89,8 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase.from("sales_channel_quotes")
-      .select("id, quote_number, title, description, line_items, total_amount, deposit_amount, vat_included, currency, payment_terms, client_name, client_company, client_email, status, payment_status, expires_at, expired_at, accepted_at, paid_at")
-      .eq("token", token).maybeSingle<Partial<SalesChannelQuote>>()
+      .select("id, quote_number, title, description, line_items, total_amount, deposit_amount, vat_included, currency, payment_terms, client_name, client_company, client_email, status, payment_status, expires_at, expired_at, accepted_at, paid_at, created_by_name, created_by_last_name")
+      .eq("token", token).maybeSingle<QuoteWithCreator>()
     if (error || !data) return null
 
     const currency = data.currency || "eur"
@@ -95,7 +103,8 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
     const status = paid ? "pagato" : expired ? "decaduto (serve una riapertura da parte nostra)" : data.accepted_at ? "accettato, in attesa di pagamento" : "in attesa di accettazione"
 
     const rows: string[] = [`Numero preventivo: ${data.quote_number || "non assegnato"}`, `Nome destinatario: ${data.client_name || "non indicato"}`, `Azienda/struttura destinataria: ${data.client_company || "non indicata"}`, `Intestato a: ${[data.client_name, data.client_company].filter(Boolean).join(" - ") || "non indicato"}`, `Oggetto: ${data.title || "non indicato"}`]
-    if (data.description) rows.push(`Descrizione: ${data.description}`)
+    if (data.created_by_name) rows.push(`Preparato da: ${data.created_by_name}`)
+    if (data.description) rows.push(`Nota personale di chi ha preparato il preventivo: ${data.description}`)
     rows.push(`Stato attuale: ${status}`)
     if (quotedProjects.length) rows.push(`Prodotti/progetti inclusi o proposti in questo preventivo: ${quotedProjects.join(", ")}`)
     if (quotedNames.length) rows.push(`Nomi delle voci del preventivo: ${quotedNames.join("; ")}`)
@@ -119,7 +128,8 @@ ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI risp
 ${rows.join("\n")}${ecosystemBlock}
 
 REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
-- Sai esattamente a chi e' intestata l'offerta. Quando e' naturale, rivolgiti al destinatario per nome e ragiona sulla sua azienda/struttura.
+- Sai a chi e' INTESTATA l'offerta, ma non presumere che il destinatario sia necessariamente la persona che sta parlando in una sessione live. Se l'interlocutore si presenta con un altro nome, usa il nome dichiarato dall'interlocutore per tutta la conversazione.
+- La descrizione generale del preventivo, quando presente, e' una NOTA PERSONALE di chi ha preparato l'offerta: trattala come messaggio del commerciale, senza alterarla o trasformarla in una promessa non scritta.
 - Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?", "Mensile o annuale?" e "Raccontami la proposta" come riferite PRIMA DI TUTTO a questo preventivo.
 - Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di configurazione riportati qui sopra.
 - Non limitarti a elencare funzioni: collega sempre funzione -> problema -> vantaggio concreto per questa struttura.
@@ -137,7 +147,18 @@ REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
 === FINE PREVENTIVO ===
 `.trim()
 
-    return { prompt, quoteId: data.id || null, clientName: data.client_name || null, clientCompany: data.client_company || null, clientEmail: data.client_email || null, quoteNumber: data.quote_number || null, quotedProjects }
+    return {
+      prompt,
+      quoteId: data.id || null,
+      clientName: data.client_name || null,
+      clientCompany: data.client_company || null,
+      clientEmail: data.client_email || null,
+      quoteNumber: data.quote_number || null,
+      quotedProjects,
+      description: data.description?.trim() || null,
+      creatorName: data.created_by_name?.trim() || null,
+      creatorLastName: data.created_by_last_name?.trim() || null,
+    }
   } catch (error) {
     console.error("[v0] buildQuoteChatContext error:", error)
     return null
