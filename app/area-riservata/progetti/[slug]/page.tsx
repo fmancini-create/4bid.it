@@ -7,6 +7,7 @@ import { getProfile, getProjectBySlug, listDocuments, listProjectMembers } from 
 import { ProjectRoomShell } from "@/components/project-room/shell"
 import { BreadcrumbTrail } from "@/components/project-room/breadcrumb-trail"
 import { ProjectStatusBadge, VersionStatusBadge } from "@/components/project-room/status-badge"
+import { SmartUniformProposal } from "@/components/project-room/smartuniform-proposal"
 import { ROLE_LABELS, displayName } from "@/lib/project-room/types"
 import { canManageMembers } from "@/lib/project-room/permissions"
 import { recordAudit } from "@/lib/project-room/activity"
@@ -47,6 +48,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     entityId: project.id,
   })
 
+  const isSmartUniform = project.slug === "smartuniform"
+
   return (
     <ProjectRoomShell
       profile={profile}
@@ -75,6 +78,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <span className="text-xs text-muted-foreground">Il tuo ruolo: {ROLE_LABELS[project.role]}</span>
         </div>
       </header>
+
+      {isSmartUniform ? <SmartUniformProposal /> : null}
 
       <section aria-labelledby="documenti-title" className="mt-8">
         <h2 id="documenti-title" className="mb-4 flex items-center gap-2 text-lg font-semibold text-brand-navy">
