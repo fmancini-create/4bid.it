@@ -6,11 +6,15 @@ import { isPrivateArea } from "@/lib/is-private-area"
 
 declare global {
   interface Window {
-    ym: (id: number, method: string, ...args: any[]) => void
+    ym?: (id: number, method: string, ...args: any[]) => void
+    initYandexMetrika?: () => void
+    yandexMetrikaLoaded?: boolean
+    yandexMetrikaLoading?: boolean
   }
 }
 
-// Necessario perché Next.js App Router non ricarica la pagina durante la navigazione
+// Next.js App Router non ricarica la pagina durante la navigazione: l'hit
+// iniziale lo invia Metrika con init(), mentre qui tracciamo solo i cambi rotta.
 export function YandexMetrika() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -18,42 +22,47 @@ export function YandexMetrika() {
   const prevSearchParamsRef = useRef<string | null>(null)
 
   useEffect(() => {
+    const currentSearchParams = searchParams?.toString() || ""
+
     // Le aree riservate non vengono tracciate: i path conterrebbero slug di
     // progetto e nomi di documenti riservati.
     if (isPrivateArea(pathname)) {
       prevPathnameRef.current = pathname
-      prevSearchParamsRef.current = searchParams?.toString() || ""
+      prevSearchParamsRef.current = currentSearchParams
       return
     }
 
-    // Build current URL
-    let url = window.origin + pathname
-    if (searchParams?.toString()) {
-      url = url + `?${searchParams.toString()}`
+    // Se si arriva sul sito pubblico tramite navigazione client-side da una
+    // pagina privata, il loader nel <head> esiste ma non era stato avviato.
+    if (!window.yandexMetrikaLoaded && typeof window.initYandexMetrika === "function") {
+      window.initYandexMetrika()
     }
 
-    const currentSearchParams = searchParams?.toString() || ""
+    // L'hit iniziale viene gia' inviato da ym(..., "init", ...). Evitiamo un
+    // secondo pageview della stessa pagina e usiamo questo componente solo per
+    // le navigazioni SPA successive.
+    if (prevPathnameRef.current === null) {
+      prevPathnameRef.current = pathname
+      prevSearchParamsRef.current = currentSearchParams
+      return
+    }
+
     const prevPathname = prevPathnameRef.current
     const prevSearchParams = prevSearchParamsRef.current
 
-    // Track only if route actually changed
     if (pathname !== prevPathname || currentSearchParams !== prevSearchParams) {
-      const trackPageView = () => {
-        if (typeof window !== "undefined" && window.ym) {
-          window.ym(105859080, "hit", url)
-          console.log("[v0] Yandex page view tracked:", url)
-        }
+      let url = window.origin + pathname
+      if (currentSearchParams) {
+        url += `?${currentSearchParams}`
       }
 
-      // Se Yandex è già caricato, traccia immediatamente
-      if (window.yandexMetrikaLoaded) {
-        trackPageView()
-      } else {
-        // Altrimenti attendi un po' e riprova (per la prima visita dopo il consenso)
-        setTimeout(trackPageView, 1000)
+      // ym() e' una coda ufficiale: se tag.js non ha ancora finito di caricare,
+      // l'hit resta in attesa e viene consegnato appena lo script e' disponibile.
+      if (typeof window.ym === "function") {
+        window.ym(105859080, "hit", url)
+        console.info("[4BID] Yandex SPA pageview queued:", url)
       }
 
-      // Update previous values
       prevPathnameRef.current = pathname
       prevSearchParamsRef.current = currentSearchParams
     }
