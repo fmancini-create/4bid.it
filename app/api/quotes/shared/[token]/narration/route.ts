@@ -9,13 +9,14 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { getCommercialMeta, getIncludedCredits } from "@/lib/quotes/commercial"
-import { quoteBenefits } from "@/lib/quotes/branding"
+import { QUOTE_BRANDS, quoteBenefits } from "@/lib/quotes/branding"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
 
 const REQUESTS_PER_MINUTE = 8
 const requestWindows = new Map<string, number[]>()
+const CORE_4BID_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
 function isRateLimited(key: string): boolean {
   const now = Date.now()
@@ -51,11 +52,19 @@ function describeLine(item: QuoteLineItem, currency: string): string {
   return parts.join("\n")
 }
 
+function complementaryProducts(items: QuoteLineItem[]): string[] {
+  const quoted = new Set(items.map((item) => (item.project || "").trim().toLowerCase()).filter(Boolean))
+  return CORE_4BID_PROJECTS
+    .filter((project) => !quoted.has(project))
+    .map((project) => `${QUOTE_BRANDS[project].name}: ${QUOTE_BRANDS[project].promise} [NON incluso nel preventivo attuale]`)
+}
+
 function quoteSource(quote: Partial<SalesChannelQuote>, items: QuoteLineItem[]): string {
   const currency = quote.currency || "eur"
   const recipient = [quote.client_name, quote.client_company].filter(Boolean).join(" - ") || "cliente"
   const selected = items.filter(isQuoteLineSelected)
   const optional = items.filter((item) => item.optional && !isQuoteLineSelected(item))
+  const complements = complementaryProducts(items)
 
   return [
     `Destinatario: ${recipient}`,
@@ -69,6 +78,8 @@ function quoteSource(quote: Partial<SalesChannelQuote>, items: QuoteLineItem[]):
     ...selected.map((item) => describeLine(item, currency)),
     optional.length ? "\nOPZIONI NON ANCORA SELEZIONATE:" : null,
     ...optional.map((item) => describeLine(item, currency)),
+    complements.length ? "\nECOSISTEMA 4BID COMPLEMENTARE (NON incluso nel preventivo):" : null,
+    ...complements,
   ].filter(Boolean).join("\n\n")
 }
 
@@ -155,8 +166,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { text } = await generateText({
       model: "openai/gpt-4o-mini",
       temperature: 0.55,
-      maxOutputTokens: requestedLine ? 180 : 320,
-      system: `Sei la voce commerciale di 4BID. Trasforma esclusivamente i dati forniti in una breve presentazione parlata in italiano.\n\nTONO: caldo, elegante, rassicurante, umano, competente e coinvolgente. Deve far percepire il valore concreto senza sembrare una televendita.\n\nREGOLE:\n- Non inventare mai funzioni, risultati, numeri, tempi o garanzie non presenti nei dati.\n- Parla direttamente al destinatario; usa il nome con naturalezza al massimo una volta.\n- Spiega prima il problema/beneficio, poi la funzione: non leggere una lista tecnica.\n- Se racconti un singolo modulo: 55-85 parole, circa 25-35 secondi.\n- Se racconti l'intero preventivo: 120-170 parole, circa 60-80 secondi.\n- Prezzi e sconti vanno citati solo quando aiutano a capire la proposta; niente elenco notarile.\n- Chiudi con una frase morbida che faccia immaginare il risultato operativo, senza promesse assolute.\n- Niente markdown, titoli, emoji o elenchi: solo testo naturale da pronunciare.`,
+      maxOutputTokens: requestedLine ? 180 : 360,
+      system: `Sei la voce commerciale di 4BID. Trasforma esclusivamente i dati forniti in una breve presentazione parlata in italiano.\n\nTONO: caldo, elegante, rassicurante, umano, competente e coinvolgente. Deve far percepire il valore concreto senza sembrare una televendita.\n\nREGOLE:\n- Non inventare mai funzioni, risultati, numeri, tempi o garanzie non presenti nei dati.\n- Parla direttamente al destinatario; usa il nome con naturalezza al massimo una volta.\n- Spiega prima il problema/beneficio, poi la funzione: non leggere una lista tecnica.\n- Se racconti un singolo modulo: 55-85 parole, circa 25-35 secondi; NON introdurre altri prodotti 4BID, perche' il focus e' quel modulo.\n- Se racconti l'intero preventivo: 130-190 parole. Prima racconta bene cio' che e' incluso/proposto. Poi, solo in chiusura e se naturale, puoi citare 1-2 prodotti complementari dell'ecosistema 4BID presenti nei dati, dichiarando chiaramente che NON sono inclusi nel preventivo attuale.\n- Scegli eventuali prodotti complementari in base alla struttura e al problema che il preventivo sta risolvendo; niente catalogo completo e niente cross-sell casuale.\n- Prezzi e sconti vanno citati solo quando aiutano a capire la proposta; niente elenco notarile.\n- Non attribuire mai a un prodotto complementare prezzi, condizioni o funzioni che non siano esplicitamente indicate nei dati.\n- Chiudi con una frase morbida che faccia immaginare il risultato operativo, senza promesse assolute.\n- Niente markdown, titoli, emoji o elenchi: solo testo naturale da pronunciare.`,
       prompt: source,
     })
 
