@@ -9,7 +9,7 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
 
   const { data: share, error: shareError } = await supabase
     .from("business_plan_shares")
-    .select("*, business_plans(*)")
+    .select("id, email, can_edit, can_download, expires_at, business_plans(name, client_name)")
     .eq("token", token)
     .single()
 
