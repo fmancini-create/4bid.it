@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { buildQuoteChatContext } from "@/lib/quotes/chat-context"
+import { buildQuoteChatContext, type QuoteChatContext } from "@/lib/quotes/chat-context"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -27,15 +27,24 @@ function rateLimited(key: string) {
   return recent.length > REQUESTS_PER_MINUTE
 }
 
-function buildGreeting(name: string | null) {
-  const firstName = name?.trim().split(/\s+/)[0]
-  return firstName
-    ? `Ciao ${firstName}, sono la consulente digitale 4BID. Ho qui il tuo preventivo e posso ragionarci insieme a te in tempo reale. Da dove vuoi partire?`
-    : "Ciao, sono la consulente digitale 4BID. Ho qui il tuo preventivo e posso ragionarci insieme a te in tempo reale. Da dove vuoi partire?"
+function buildGreeting() {
+  return "Ciao, sono la consulente digitale 4BID. Prima di iniziare, come posso chiamarti?"
 }
 
-function spokenContext(prompt: string) {
-  return `${prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
+function creatorNoteInstruction(context: QuoteChatContext) {
+  if (!context.description) return "- Non c'e' una nota personale del commerciale da introdurre: passa naturalmente alla proposta dopo aver appreso il nome dell'interlocutore."
+
+  const attribution = context.creatorLastName
+    ? `il signor ${context.creatorLastName}, che ha preparato questa proposta, ci tiene a farle sapere che`
+    : context.creatorName
+      ? `${context.creatorName}, che ha preparato questa proposta, ci tiene a farle sapere che`
+      : "chi ha preparato questa proposta ci tiene a farle sapere che"
+
+  return `- APERTURA PERSONALE OBBLIGATORIA, UNA SOLA VOLTA: dopo che l'interlocutore ti ha detto come si chiama e tu lo hai salutato per nome, introduci con naturalezza la nota del commerciale. Usa una frase elegante equivalente a: "Prima di entrare nel merito, mi preme segnalarle una cosa: ${attribution} ${context.description}". Mantieni fedelmente il significato della nota, senza inventare dettagli, promesse o condizioni e senza chiamarla "descrizione" o "campo del preventivo".`
+}
+
+function spokenContext(context: QuoteChatContext) {
+  return `${context.prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- La persona indicata come destinatario del preventivo NON e' necessariamente chi e' entrato in videochiamata. Il primo nome che l'interlocutore ti dichiara all'inizio e' il nome da usare durante QUESTA call. Non sostituirlo mai con il nome dell'intestatario salvo che l'interlocutore dica esplicitamente di essere quella persona.\n${creatorNoteInstruction(context)}\n- Parla con ritmo calmo e professionale, circa il 20% piu' lentamente di una normale risposta sintetica. Fai micro-pause dopo nomi, numeri, prezzi e concetti importanti. Non correre per riempire i silenzi.\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
 }
 
 export async function GET() {
@@ -76,8 +85,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID ${quoteContext.quoteNumber || "Preventivo"} - ${quoteContext.clientCompany || quoteContext.clientName || "Cliente"}`.slice(0, 120),
-      conversational_context: spokenContext(quoteContext.prompt),
-      custom_greeting: buildGreeting(quoteContext.clientName),
+      conversational_context: spokenContext(quoteContext),
+      custom_greeting: buildGreeting(),
       audio_only: false,
       require_auth: true,
       max_participants: 2,
@@ -127,6 +136,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         client_name: quoteContext.clientName,
         client_company: quoteContext.clientCompany,
         quoted_projects: quoteContext.quotedProjects,
+        creator_name: quoteContext.creatorName,
+        creator_last_name: quoteContext.creatorLastName,
+        has_personal_note: Boolean(quoteContext.description),
       },
     })
     if (sessionError) console.error("[live-avatar] session persistence error", sessionError)
