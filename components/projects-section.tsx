@@ -128,6 +128,20 @@ export default function ProjectsSection() {
       isLive: true,
     },
     {
+      id: "daynext",
+      name: "DAYNEXT",
+      tagline: "Ciò che conta, resta.",
+      description:
+        "Custodisci memorie digitali e documenti personali, scegli le persone importanti della tua vita e stabilisci cosa dovrà accadere a questi contenuti in futuro.",
+      logo: "https://daynext.it/brand/daynext-lockup.png",
+      icon: Heart,
+      color: "from-blue-600 to-amber-500",
+      progress: "On line",
+      href: "https://daynext.it/come-funziona",
+      isLive: true,
+      externalUrl: "https://daynext.it",
+    },
+    {
       id: "risparmio-compulsivo",
       name: "RISPARMIO COMPULSIVO",
       tagline: "Save. Play. Win.",
@@ -213,18 +227,29 @@ export default function ProjectsSection() {
         <div className="p-8 flex flex-col flex-1">
           {/* Logo */}
           <div className="flex items-center justify-center mb-6 h-32 relative bg-gray-50 rounded-xl p-4">
-                <Image
-                  src={project.logo || "/placeholder.svg"}
-                  alt={`${project.name} Logo`}
-                  width={200}
-                  height={120}
-                  /* `w-auto` alone leaves height driven by the 200x120 attrs while
-                     width is derived from CSS, which distorts logos whose real
-                     ratio differs and trips Next's aspect-ratio warning. Pairing
-                     it with `h-auto` lets both axes follow the intrinsic ratio,
-                     capped by `max-h-full`. */
-                  className={`object-contain max-h-full w-auto h-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
-                />
+            {project.logo.startsWith("http") ? (
+              <img
+                src={project.logo}
+                alt={`${project.name} Logo`}
+                width={200}
+                height={120}
+                loading="lazy"
+                className={`object-contain max-h-full w-auto h-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
+              />
+            ) : (
+              <Image
+                src={project.logo || "/placeholder.svg"}
+                alt={`${project.name} Logo`}
+                width={200}
+                height={120}
+                /* `w-auto` alone leaves height driven by the 200x120 attrs while
+                   width is derived from CSS, which distorts logos whose real
+                   ratio differs and trips Next's aspect-ratio warning. Pairing
+                   it with `h-auto` lets both axes follow the intrinsic ratio,
+                   capped by `max-h-full`. */
+                className={`object-contain max-h-full w-auto h-auto ${project.blendLogo ? "mix-blend-multiply" : ""}`}
+              />
+            )}
           </div>
 
           {/* Icon Badge */}
@@ -355,8 +380,8 @@ export default function ProjectsSection() {
               Altri progetti
             </h3>
             <p className="text-lg text-gray-600 max-w-3xl leading-relaxed text-pretty">
-              Le altre creazioni della holding 4BID, in settori diversi dal turismo: produttività, salute degli animali
-              e finanza personale.
+              Le altre creazioni della holding 4BID, in settori diversi dal turismo: produttività, salute degli animali,
+              continuità digitale e finanza personale.
             </p>
           </div>
 
