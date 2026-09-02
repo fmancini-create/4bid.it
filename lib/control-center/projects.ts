@@ -14,10 +14,10 @@ export const AUDIT_PROJECTS: AuditProject[] = [
   { slug: "daynext", name: "DayNext", repository: "fmancini-create/daynext-it", branch: "main" },
   { slug: "dev", name: "DEV", repository: "fmancini-create/DEV", branch: "main" },
 
-  // Repository storici/archiviati: restano visibili e analizzabili dal Control Center.
-  { slug: "mypetsenseai-legacy", name: "MyPetSenseAI (archivio)", repository: "fmancini-create/v0-my-pet-sense-ai", branch: "main" },
-  { slug: "santaddeo-legacy", name: "Santaddeo (archivio)", repository: "fmancini-create/v0-santaddeo", branch: "SANTADDEO" },
-  { slug: "4bid-legacy", name: "4 BID (archivio)", repository: "fmancini-create/v0-4-bid-it", branch: "4bid" },
+  // Repository storici/archiviati: restano visibili e analizzabili, ma non modificabili dal Control Center.
+  { slug: "mypetsenseai-legacy", name: "MyPetSenseAI (archivio)", repository: "fmancini-create/v0-my-pet-sense-ai", branch: "main", archived: true },
+  { slug: "santaddeo-legacy", name: "Santaddeo (archivio)", repository: "fmancini-create/v0-santaddeo", branch: "SANTADDEO", archived: true },
+  { slug: "4bid-legacy", name: "4 BID (archivio)", repository: "fmancini-create/v0-4-bid-it", branch: "4bid", archived: true },
 ]
 
 export function getAuditProject(slug: string) {
