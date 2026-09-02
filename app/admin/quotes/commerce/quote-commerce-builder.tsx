@@ -484,7 +484,10 @@ export default function QuoteCommerceBuilder() {
       const yearlyLine = yearlyUnit != null ? yearlyUnit * lineQty : null
       const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
-      const canBeOptional = item.kind !== "plan" || items.slice(0, index).some(candidate => candidate.kind === "plan")
+      const earlierPlatformExists = items.slice(0, index).some(candidate =>
+        candidate.project !== item.project && ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"].includes(String(candidate.project || "")),
+      )
+      const canBeOptional = item.kind !== "plan" || earlierPlatformExists
       return <div
         key={item.id || index}
         draggable={dragArmed === index}
