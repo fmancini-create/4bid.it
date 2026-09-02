@@ -107,6 +107,9 @@ export async function POST(request: Request) {
 
   const project = getAuditProject(body.project)
   if (!project) return NextResponse.json({ error: "Repository non riconosciuto" }, { status: 400 })
+  if (project.archived) {
+    return NextResponse.json({ error: "Merge bloccato: il repository e' archiviato su GitHub." }, { status: 409 })
+  }
 
   const [owner, repo] = project.repository.split("/")
 
@@ -173,6 +176,14 @@ export async function POST(request: Request) {
 
     if (!merge.merged) {
       return NextResponse.json({ error: merge.message || "GitHub non ha completato il merge." }, { status: 409 })
+    }
+
+    // Il merge e' gia' concluso: la pulizia della branch non deve mai cambiare l'esito.
+    try {
+      const encodedRef = pr.head.ref.split("/").map(encodeURIComponent).join("/")
+      await githubResponse(`/repos/${owner}/${repo}/git/refs/heads/${encodedRef}`, { method: "DELETE" })
+    } catch {
+      // La branch puo' essere eliminata automaticamente da GitHub o restare disponibile per audit/debug.
     }
 
     let audit: { status: string; score: number } | null = null
