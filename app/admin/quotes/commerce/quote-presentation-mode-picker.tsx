@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Bot, FileText, Sparkles } from "lucide-react"
 
 type Mode = "classic" | "virtual"
@@ -9,8 +9,12 @@ function persistMode(mode: Mode) {
   document.cookie = `quote_presentation_mode=${mode}; Path=/; SameSite=Lax; Max-Age=3600`
 }
 
-export default function QuotePresentationModePicker({ initialMode = "classic" }: { initialMode?: Mode }) {
-  const [mode, setMode] = useState<Mode>(initialMode)
+export default function QuotePresentationModePicker() {
+  const [mode, setMode] = useState<Mode>("classic")
+
+  useEffect(() => {
+    persistMode("classic")
+  }, [])
 
   function choose(next: Mode) {
     setMode(next)
@@ -25,7 +29,7 @@ export default function QuotePresentationModePicker({ initialMode = "classic" }:
         </span>
         <div>
           <h2 className="text-lg font-semibold">Esperienza del preventivo</h2>
-          <p className="text-sm text-muted-foreground">Scegli cosa vedrà il cliente quando aprirà il link pubblico. La scelta viene salvata sul singolo preventivo.</p>
+          <p className="text-sm text-muted-foreground">Scegli cosa vedrà il cliente quando aprirà il link pubblico. Ogni nuovo preventivo parte da Classico e la scelta viene salvata solo sul preventivo che stai creando.</p>
         </div>
       </div>
 
