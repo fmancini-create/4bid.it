@@ -2,6 +2,7 @@
 
 import { Bot, Sparkles } from "lucide-react"
 import InteractiveVideoAssistant from "./voce/interactive-video-assistant"
+import LiveSalesAvatar from "./voce/live-sales-avatar"
 import QuoteNarration from "./quote-narration"
 
 export default function VirtualQuoteIntro({ token, clientName }: { token: string; clientName?: string | null }) {
@@ -15,11 +16,12 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
               <h2 className="text-lg font-bold">Preventivo virtuale 4BID</h2>
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Sparkles className="h-3 w-3" /> Interattivo</span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Puoi farti raccontare la proposta, parlare con la consulente virtuale o farle domande specifiche. Il preventivo completo con opzioni, condizioni, accettazione e pagamento resta disponibile subito sotto.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Puoi entrare in videochiamata con la consulente AI 4BID, farti raccontare la proposta oppure farle domande specifiche. Il preventivo completo con opzioni, condizioni, accettazione e pagamento resta disponibile subito sotto.</p>
           </div>
         </div>
       </section>
 
+      <LiveSalesAvatar token={token} />
       <InteractiveVideoAssistant token={token} clientName={clientName} />
       <QuoteNarration token={token} label="Ascolta il tuo preventivo" />
     </div>
