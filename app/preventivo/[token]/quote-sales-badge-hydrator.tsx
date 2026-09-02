@@ -27,25 +27,24 @@ function normalized(value: string | undefined | null) {
 }
 
 /**
- * QuoteCommerceView e' un componente storico molto esteso. Questo piccolo
- * enhancer applica i badge commerciali congelati sulla singola line_item
- * senza duplicare o cambiare la logica economica del preventivo.
+ * Applica ai box del preventivo il badge commerciale salvato sulla line_item.
+ * Non entra nei calcoli e non modifica la selezione del cliente.
  */
 export default function QuoteSalesBadgeHydrator({ items }: Props) {
   useEffect(() => {
-    const taggedItems = items
-      .map(item => ({
-        key: normalized(item.name || item.description),
-        badge: (item.sales_badge || "").trim(),
-      }))
-      .filter(item => item.key && item.badge)
+    const expected = new Map(
+      items
+        .map(item => [normalized(item.name || item.description), (item.sales_badge || "").trim()] as const)
+        .filter(([key, badge]) => Boolean(key && badge)),
+    )
 
+    let scheduled = false
     const applyBadges = () => {
-      const expected = new Map(taggedItems.map(item => [item.key, item.badge]))
-
+      scheduled = false
       document.querySelectorAll<HTMLElement>("article").forEach(article => {
         const title = article.querySelector<HTMLElement>("h3")
         if (!title) return
+
         const badgeText = expected.get(normalized(title.textContent))
         const existing = article.querySelector<HTMLElement>("[data-4bid-sales-badge]")
 
@@ -57,16 +56,23 @@ export default function QuoteSalesBadgeHydrator({ items }: Props) {
         const headerRow = article.querySelector<HTMLElement>(":scope > div:first-child > div")
         if (!headerRow) return
 
+        const className = `mr-auto inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] shadow-sm ${badgeClasses[badgeText] || "border-primary/20 bg-primary/10 text-primary"}`
         const badge = existing || document.createElement("span")
-        badge.dataset["4bidSalesBadge"] = "true"
-        badge.textContent = badgeText
-        badge.className = `mr-auto inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] shadow-sm ${badgeClasses[badgeText] || "border-primary/20 bg-primary/10 text-primary"}`
+        badge.setAttribute("data-4bid-sales-badge", "true")
+        if (badge.textContent !== badgeText) badge.textContent = badgeText
+        if (badge.className !== className) badge.className = className
         if (!existing) headerRow.prepend(badge)
       })
     }
 
+    const scheduleApply = () => {
+      if (scheduled) return
+      scheduled = true
+      window.requestAnimationFrame(applyBadges)
+    }
+
     applyBadges()
-    const observer = new MutationObserver(() => window.requestAnimationFrame(applyBadges))
+    const observer = new MutationObserver(scheduleApply)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [items])
