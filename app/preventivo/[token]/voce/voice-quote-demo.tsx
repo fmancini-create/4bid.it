@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { ArrowLeft, Check, FileText, Mic2, Volume2 } from "lucide-react"
 import QuoteNarration from "../quote-narration"
+import InteractiveVideoAssistant from "./interactive-video-assistant"
 import { ProjectBrand } from "@/components/quotes/project-brand"
 import { quoteBenefits, quoteBrand } from "@/lib/quotes/branding"
 import { calculateQuoteLine, formatQuoteAmount, type QuoteLineItem } from "@/lib/quotes/types"
@@ -64,7 +65,7 @@ export default function VoiceQuoteDemo({ token, quoteNumber, title, description,
           </div>
         </section>
 
-        <QuoteNarration token={token} label="Ascolta il tuo preventivo" />
+        <InteractiveVideoAssistant token={token} clientName={clientName} />
 
         <section className="rounded-2xl border bg-card p-6">
           <div className="flex items-start gap-3">
@@ -134,7 +135,7 @@ export default function VoiceQuoteDemo({ token, quoteNumber, title, description,
         </section>
 
         <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-muted-foreground">
-          Questa è ancora una preview separata: la grafica ora segue lo stesso linguaggio visivo del preventivo pubblico. Dopo il test definitivo, i controlli vocali possono essere inseriti direttamente nella pagina ufficiale.
+          Preview interattiva: la consulente conosce il preventivo aperto, accetta domande scritte o vocali e risponde anche a voce. Il volto è ancora un presenter animato di prova; il lip-sync video fotorealistico può essere collegato a un provider avatar dedicato dopo la validazione dell'esperienza.
         </section>
       </main>
     </div>
