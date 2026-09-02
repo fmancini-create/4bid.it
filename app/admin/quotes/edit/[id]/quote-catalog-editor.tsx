@@ -355,6 +355,10 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
       const isManual = obj(item.catalog_snapshot).source === "manual"
       const setupAnnualMode: AnnualSetupMode = meta.annual_setup_mode ?? (meta.free_on_annual ? "free" : "full")
       const accent = quoteBrandAccent(item.project)
+      const earlierPlatformExists = lines.slice(0, index).some(candidate =>
+        candidate.project !== item.project && ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"].includes(String(candidate.project || "")),
+      )
+      const canBeOptional = item.kind !== "plan" || earlierPlatformExists
       return <div
         key={item.id || index}
         draggable={dragArmed === index}
@@ -487,7 +491,7 @@ export default function QuoteCatalogEditor({ quoteId }: { quoteId: string }) {
             </div> : <p className="text-xs text-muted-foreground">Disattivato: nessun credito incluso viene ricaricato automaticamente.</p>}
           </div>
         })() : null}
-        <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={item.kind === "plan"} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>Opzionale per il cliente</Label></div>
+        <div className="flex items-center gap-2"><Switch checked={!!item.optional} disabled={!canBeOptional} onCheckedChange={v => patchLine(index, { optional: v, default_selected: v ? item.default_selected !== false : true })} /><Label>{item.kind === "plan" ? "Piattaforma opzionale" : "Opzionale per il cliente"}</Label></div>
       </div>
     })}</section>
 
