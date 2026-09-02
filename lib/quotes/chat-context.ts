@@ -7,7 +7,9 @@ import {
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
 import { getCommercialMeta, getIncludedCredits } from "@/lib/quotes/commercial"
-import { quoteBenefits } from "@/lib/quotes/branding"
+import { QUOTE_BRANDS, quoteBenefits } from "@/lib/quotes/branding"
+
+const CORE_4BID_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
 export interface QuoteChatContext {
   /** Testo da aggiungere al prompt: descrive l'offerta al posto di "non ho informazioni". */
@@ -117,6 +119,16 @@ function describeLine(item: QuoteLineItem, currency: string): string {
   return riga
 }
 
+function describeComplementaryProducts(quotedProjects: string[]): string[] {
+  const quoted = new Set(quotedProjects)
+  return CORE_4BID_PROJECTS
+    .filter((project) => !quoted.has(project))
+    .map((project) => {
+      const brand = QUOTE_BRANDS[project]
+      return `- ${brand.name}: ${brand.promise} [NON incluso nel preventivo attuale]`
+    })
+}
+
 /**
  * Costruisce il contesto del preventivo per la chat.
  *
@@ -149,6 +161,7 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
     const quotedNames = Array.from(
       new Set(lineItems.map((item) => (item.name || "").trim()).filter(Boolean)),
     )
+    const complementaryProducts = describeComplementaryProducts(quotedProjects)
 
     const pagato = data.payment_status === "paid" || data.status === "paid"
     const scaduto = pagato
@@ -171,8 +184,8 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
     righe.push(`Oggetto: ${data.title || "non indicato"}`)
     if (data.description) righe.push(`Descrizione: ${data.description}`)
     righe.push(`Stato attuale: ${stato}`)
-    if (quotedProjects.length) righe.push(`Prodotti/progetti ammessi: ${quotedProjects.join(", ")}`)
-    if (quotedNames.length) righe.push(`Nomi delle voci ammesse: ${quotedNames.join("; ")}`)
+    if (quotedProjects.length) righe.push(`Prodotti/progetti inclusi o proposti in questo preventivo: ${quotedProjects.join(", ")}`)
+    if (quotedNames.length) righe.push(`Nomi delle voci del preventivo: ${quotedNames.join("; ")}`)
 
     if (lineItems.length) {
       righe.push("", "Voci del preventivo:")
@@ -192,21 +205,25 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
       righe.push(`Valido fino al: ${new Date(data.expires_at).toLocaleDateString("it-IT")}`)
     }
 
+    const ecosystemBlock = complementaryProducts.length
+      ? `\n\n=== ECOSISTEMA 4BID COMPLEMENTARE ===\nQuesti prodotti NON sono inclusi nel preventivo attuale, ma puoi presentarli come possibili estensioni quando sono pertinenti:\n${complementaryProducts.join("\n")}`
+      : ""
+
     const prompt = `
 === PREVENTIVO CHE L'UTENTE STA GUARDANDO IN QUESTO MOMENTO ===
 ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI
 risposta relativa al preventivo e prevale su qualunque knowledge base generica
 riportata prima nel prompt.
 
-${righe.join("\n")}
+${righe.join("\n")}${ecosystemBlock}
 
 REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
 - Sai esattamente a chi e' intestata l'offerta. Quando e' naturale, rivolgiti al
   destinatario per nome e ragiona sulla sua azienda/struttura, senza ripetere il
   nome in ogni risposta e senza risultare artificiale.
 - Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?",
-  "Mensile o annuale?" e "Raccontami la proposta" come riferite ESCLUSIVAMENTE
-  a questo preventivo e ai prodotti/progetti elencati qui sopra.
+  "Mensile o annuale?" e "Raccontami la proposta" come riferite PRIMA DI TUTTO
+  a questo preventivo e ai prodotti/progetti elencati nelle sue voci.
 - Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di
   selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di
   configurazione riportati qui sopra. Usa questi dati per spiegare COSA fa,
@@ -215,12 +232,27 @@ REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
   selezionata. Non presentare come acquistato cio' che e' solo un'opzione.
 - Se l'utente chiede un confronto mensile/annuale, usa esclusivamente gli importi
   e gli sconti riportati nel preventivo e spiega la differenza con chiarezza.
-- NON menzionare, citare, proporre, confrontare o descrivere brand, prodotti,
-  moduli o servizi che non compaiono nelle voci del preventivo. Se una knowledge
-  base generica contiene altri prodotti 4BID, ignorali completamente.
-- NON usare ne' mostrare come fonte URL relativi a prodotti che non compaiono
-  nel preventivo. Per le risposte sul preventivo, la fonte primaria e' il
-  preventivo stesso.
+- Per la parte principale della risposta NON sostituire mai i prodotti del
+  preventivo con altri prodotti 4BID e NON usare altri prodotti per spiegare
+  funzioni, prezzi o condizioni dell'offerta corrente.
+- Gli altri prodotti dell'ecosistema 4BID possono essere presentati SOLO come
+  estensioni complementari e devono essere sempre dichiarati chiaramente come
+  NON inclusi nel preventivo attuale.
+- Se il contesto lo rende naturale, dopo aver risposto completamente alla domanda
+  suggerisci al massimo 1-2 prodotti complementari, spiegando in una frase perche'
+  potrebbero avere senso per quella specifica struttura. Evita cross-sell casuali.
+- Nelle risposte di panoramica (es. "Raccontami la proposta" o "Perche conviene?")
+  puoi chiudere con una breve frase che presenti anche l'ecosistema 4BID piu' ampio,
+  senza trasformare la risposta in un catalogo e senza confondere cio' che e' incluso.
+- Su domande strettamente fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi
+  prima in modo netto; l'eventuale richiamo ad altri prodotti deve essere separato,
+  breve e chiaramente opzionale.
+- Per gli altri prodotti 4BID non inventare prezzi, sconti, funzioni o condizioni:
+  usa solo la descrizione dell'ecosistema qui sopra e, se davvero necessaria,
+  informazione specifica e coerente presente nella knowledge base.
+- NON mostrare come fonte URL di un altro prodotto come se supportasse una voce
+  del preventivo. Se citi un prodotto complementare, la fonte deve riguardare
+  esplicitamente quel prodotto e deve essere separata dalla spiegazione dell'offerta.
 - L'utente e' gia' un cliente con un'offerta in mano: NON trattarlo come un
   contatto da acquisire e non chiedergli dati che sono gia' qui sopra.
 - Interagisci come una consulente commerciale competente: rispondi prima alla
