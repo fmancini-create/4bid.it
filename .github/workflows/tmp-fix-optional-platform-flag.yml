@@ -1,0 +1,38 @@
+name: Temp Fix Optional Platform Flag
+
+on:
+  push:
+    branches:
+      - fix/optional-platform-flag
+
+permissions:
+  contents: write
+
+jobs:
+  apply-change:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/optional-platform-flag
+      - name: Apply targeted change
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/admin/quotes/commerce/quote-commerce-builder.tsx")
+          text = path.read_text()
+          old = '      const canBeOptional = item.kind !== "plan" || items.slice(0, index).some(candidate => candidate.kind === "plan")\n'
+          new = '''      const earlierPlatformExists = items.slice(0, index).some(candidate =>\n        candidate.project !== item.project && ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"].includes(String(candidate.project || "")),\n      )\n      const canBeOptional = item.kind !== "plan" || earlierPlatformExists\n'''
+          if old not in text:
+              raise SystemExit("Target canBeOptional line not found")
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+      - name: Commit targeted change
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/admin/quotes/commerce/quote-commerce-builder.tsx
+          git commit -m "fix(quotes): unlock optional secondary platform flag"
+          git push origin HEAD:fix/optional-platform-flag
