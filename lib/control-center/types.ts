@@ -22,6 +22,7 @@ export type AuditProject = {
   repository: string
   branch: string
   productUrl?: string
+  archived?: boolean
 }
 
 export type AuditResult = {
@@ -44,4 +45,3 @@ export type AuditResult = {
   }
   engineVersion: string
 }
-
