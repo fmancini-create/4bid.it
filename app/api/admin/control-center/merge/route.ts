@@ -23,11 +23,28 @@ type PullRequestPayload = {
 
 type PullRequestFile = { filename: string }
 
-type CheckRun = {
-  name: string
-  status: "queued" | "in_progress" | "completed"
-  conclusion: string | null
+type WorkflowRun = {
+  name?: string | null
+  display_title?: string | null
+  status?: string | null
+  conclusion?: string | null
   html_url?: string | null
+  head_sha?: string | null
+}
+
+type CommitStatus = {
+  context?: string | null
+  state?: string | null
+  target_url?: string | null
+}
+
+type CiSummary = {
+  available: boolean
+  pending: string[]
+  failed: string[]
+  passed: string[]
+  sourceCount: number
+  bootstrap: boolean
 }
 
 function fixToken() {
@@ -64,35 +81,80 @@ async function github<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-async function readChecks(owner: string, repo: string, sha: string) {
-  const response = await githubResponse(`/repos/${owner}/${repo}/commits/${sha}/check-runs?per_page=100`)
+async function readWorkflowRuns(owner: string, repo: string, sha: string) {
+  const response = await githubResponse(`/repos/${owner}/${repo}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=100`)
   if (response.status === 403) {
-    throw new Error("Impossibile verificare la CI: aggiungere a GITHUB_FIX_TOKEN il permesso Repository permissions > Checks > Read-only.")
+    throw new Error("Impossibile verificare GitHub Actions: aggiungere a GITHUB_FIX_TOKEN Repository permissions > Actions > Read-only.")
   }
   if (response.status === 404) {
-    throw new Error("Impossibile verificare i controlli GitHub per questo commit. Merge bloccato per sicurezza.")
+    throw new Error("Impossibile leggere GitHub Actions per questo repository. Merge bloccato per sicurezza.")
   }
   if (!response.ok) {
     const detail = await response.text()
-    throw new Error(`Impossibile verificare la CI (GitHub ${response.status}): ${detail.slice(0, 200)}`)
+    throw new Error(`Impossibile verificare GitHub Actions (GitHub ${response.status}): ${detail.slice(0, 200)}`)
   }
-  const payload = (await response.json()) as { check_runs?: CheckRun[] }
-  return payload.check_runs || []
+  const payload = (await response.json()) as { workflow_runs?: WorkflowRun[] }
+  return (payload.workflow_runs || []).filter((run) => !run.head_sha || run.head_sha === sha)
 }
 
-function summarizeChecks(checks: CheckRun[]) {
-  const pending = checks.filter((check) => check.status !== "completed" || !check.conclusion)
-  const failed = checks.filter((check) =>
-    check.status === "completed" && !["success", "neutral", "skipped"].includes(check.conclusion || ""),
-  )
-  const passed = checks.filter((check) =>
-    check.status === "completed" && ["success", "neutral", "skipped"].includes(check.conclusion || ""),
-  )
+async function readCommitStatuses(owner: string, repo: string, sha: string) {
+  const response = await githubResponse(`/repos/${owner}/${repo}/commits/${encodeURIComponent(sha)}/status`)
+  if (response.status === 403) {
+    throw new Error("Impossibile verificare gli status del commit: aggiungere a GITHUB_FIX_TOKEN Repository permissions > Commit statuses > Read-only.")
+  }
+  if (response.status === 404) {
+    throw new Error("Impossibile leggere gli status del commit. Merge bloccato per sicurezza.")
+  }
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new Error(`Impossibile verificare gli status del commit (GitHub ${response.status}): ${detail.slice(0, 200)}`)
+  }
+  const payload = (await response.json()) as { statuses?: CommitStatus[] }
+  return payload.statuses || []
+}
+
+function workflowLabel(run: WorkflowRun, index: number) {
+  return run.name || run.display_title || `GitHub Actions #${index + 1}`
+}
+
+async function summarizeCi(owner: string, repo: string, sha: string, files: PullRequestFile[]): Promise<CiSummary> {
+  const [runs, statuses] = await Promise.all([
+    readWorkflowRuns(owner, repo, sha),
+    readCommitStatuses(owner, repo, sha),
+  ])
+
+  const pending: string[] = []
+  const failed: string[] = []
+  const passed: string[] = []
+
+  runs.forEach((run, index) => {
+    const label = workflowLabel(run, index)
+    if (run.status !== "completed" || !run.conclusion) {
+      pending.push(label)
+      return
+    }
+    if (["success", "neutral", "skipped"].includes(run.conclusion)) passed.push(label)
+    else failed.push(label)
+  })
+
+  statuses.forEach((status, index) => {
+    const label = status.context || `Commit status #${index + 1}`
+    if (status.state === "success") passed.push(label)
+    else if (status.state === "pending") pending.push(label)
+    else if (status.state === "failure" || status.state === "error") failed.push(label)
+    else pending.push(label)
+  })
+
+  const sourceCount = runs.length + statuses.length
+  const bootstrap = sourceCount === 0 && files.some((file) => file.filename === ".github/workflows/control-center-ci.yml")
+
   return {
-    available: true,
-    pending: pending.map((check) => check.name),
-    failed: failed.map((check) => check.name),
-    passed: passed.map((check) => check.name),
+    available: sourceCount > 0 || bootstrap,
+    pending: [...new Set(pending)],
+    failed: [...new Set(failed)],
+    passed: [...new Set(passed)],
+    sourceCount,
+    bootstrap,
   }
 }
 
@@ -161,12 +223,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Merge bloccato: ${reason}.`, mergeableState: pr.mergeable_state }, { status: 409 })
     }
 
-    const checks = summarizeChecks(await readChecks(owner, repo, pr.head.sha))
+    const checks = await summarizeCi(owner, repo, pr.head.sha, files)
     if (checks.failed.length) {
       return NextResponse.json({ error: `Merge bloccato: controlli falliti (${checks.failed.join(", ")}).`, checks }, { status: 409 })
     }
     if (checks.pending.length) {
       return NextResponse.json({ error: `Merge bloccato: CI ancora in corso (${checks.pending.join(", ")}).`, checks }, { status: 409 })
+    }
+    if (!checks.available) {
+      return NextResponse.json({
+        error: "Merge bloccato: non risultano GitHub Actions o commit status verificabili per questa PR.",
+        checks,
+      }, { status: 409 })
     }
 
     const merge = await github<{ sha?: string; merged?: boolean; message?: string }>(
