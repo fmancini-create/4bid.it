@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import QuoteCatalogEditor from "./quote-catalog-editor"
 import QuoteExpansionEditor from "./quote-expansion-editor"
 import QuotePresentationModeEditor from "./quote-presentation-mode-editor"
@@ -7,6 +9,16 @@ export default async function QuoteEditPage({ params }: { params: Promise<{ id: 
   const { id } = await params
   return (
     <div className="space-y-6 pb-10">
+      <div className="mx-auto max-w-7xl">
+        <Link
+          href="/admin/quotes"
+          className="inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-muted"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Torna ai preventivi
+        </Link>
+      </div>
+
       <QuotePresentationModeEditor quoteId={id} />
       <QuoteStructureEditor quoteId={id} />
 
