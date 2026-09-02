@@ -57,20 +57,6 @@ export const metadata: Metadata = {
       "Consulenza e software di revenue management per hotel, B&B e agriturismi: aumenta i ricavi e ottimizza prezzi e prenotazioni dirette.",
     images: ["/og-image-4bid.jpg"],
   },
-  /**
-   * NIENTE `alternates.canonical` qui.
-   *
-   * I metadata del layout radice vengono EREDITATI da ogni pagina che non li
-   * sovrascrive: un canonical dichiarato qui faceva dire a 10 pagine "sono un
-   * doppione della home, indicizza quella al mio posto". Erano cosi' escluse
-   * dai risultati per loro stessa dichiarazione, e non potevano posizionarsi
-   * per nulla: tra queste /prenotazioni-dirette-hotel,
-   * /strategie-vendita-diretta-hotel e /revenue-manager-hotel-toscana.
-   *
-   * Il canonical e' per definizione l'indirizzo DELLA singola pagina, quindi va
-   * dichiarato nella pagina. La home ha il suo in `app/page.tsx`, percio' qui
-   * non si perde nulla.
-   */
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
@@ -90,22 +76,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  /**
-   * Perimetro della misurazione: SOLO il sito pubblico in produzione.
-   *
-   * Prima la condizione era `NODE_ENV === "production"`, che su Vercel e' vero
-   * per OGNI distribuzione, anteprime comprese: ogni deploy di prova finiva
-   * nella stessa proprieta' GA e nello stesso contatore Yandex del sito vero.
-   * Le anteprime sono protette, quindi le apriamo solo noi dal pannello v0: quel
-   * traffico e' lavoro interno, non visite. Nel rapporto degli ultimi 90 giorni
-   * `v0.app / referral` e' infatti la PRIMA sorgente con 143 utenti su 237
-   * (60%), mentre la ricerca organica ne porta 2 in totale.
-   *
-   * `VERCEL_ENV` distingue quello che `NODE_ENV` non distingue: vale
-   * "production" solo sul dominio di produzione, "preview" sulle anteprime,
-   * "development" in locale. Se e' assente (build fuori da Vercel) non si
-   * misura: meglio un dato mancante che un dato falso.
-   */
   const isProduction = process.env.VERCEL_ENV === "production"
 
   return (
@@ -113,9 +83,6 @@ export default function RootLayout({
       <head>
         {isProduction && (
           <>
-            {/* Google Tag Manager - script HTML standard nel head per essere immediatamente visibile ai crawler.
-                Non viene inizializzato nelle aree riservate: i path conterrebbero
-                slug di progetto e nomi di documenti riservati. */}
             <script
               dangerouslySetInnerHTML={{
                 __html: `if(!${IS_PRIVATE_AREA_JS}){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -126,7 +93,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               }}
             />
 
-            {/* Google Analytics - script tag standard per garantire rilevamento da crawler */}
             <script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" />
             <script
               dangerouslySetInnerHTML={{
@@ -139,58 +105,98 @@ gtag('config', 'G-S6YEEXE4C3');
               }}
             />
 
-            {/* Script inline ufficiale Yandex con Session Replay (webvisor) abilitato */}
+            {/*
+              Yandex Metrika: lo stato "loaded" viene impostato SOLO dopo il vero
+              onload di tag.js. Prima veniva impostato subito dopo aver inserito lo
+              script nel DOM, quindi ad blocker/errori di rete potevano produrre un
+              falso positivo. Manteniamo la coda ym ufficiale e un retry controllato.
+            */}
             <script
               dangerouslySetInnerHTML={{
                 __html: `
-              window.initYandexMetrika = function() {
-                if (window.yandexMetrikaLoaded) {
-                  return;
-                }
-                (function(m,e,t,r,i,k,a){
-                  m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-                  m[i].l=1*new Date();
-                  for (var j = 0; j < document.scripts.length; j++) {
-                    if (document.scripts[j].src === r) { return; }
-                  }
-                  k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-                })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-                ym(105859080, "init", {
-                  clickmap: true,
-                  trackLinks: true,
-                  accurateTrackBounce: true,
-                  webvisor: true,
-                  ecommerce: "dataLayer"
-                });
-                window.yandexMetrikaLoaded = true;
-              };
-              // AVVIO IMMEDIATO, allineato a Google Analytics.
-              //
-              // Prima la Metrika partiva solo con localStorage["cookie-consent"]
-              // === "accepted". Misurato in produzione: su una pagina senza consenso
-              // Google aveva gtag attivo, 5 eventi in dataLayer e 2 richieste
-              // partite, mentre Yandex era a ZERO richieste. Chi ignorava il banner
-              // e navigava non veniva visto da Yandex per tutta la sessione: e'
-              // questa la ragione per cui i segnali non arrivavano piu'.
-              //
-              // Il fallback <noscript> in fondo al body, invece, ha SEMPRE inviato
-              // l'hit senza consenso: i due percorsi erano incoerenti fra loro.
-              //
-              // L'UNICO cancello che resta e' l'area riservata, e va tenuto: la
-              // Metrika gira con webvisor (session replay), quindi registra il DOM.
-              // Nelle pagine riservate il DOM contiene i documenti dei clienti, che
-              // finirebbero a un provider terzo. La' non parte affatto.
-              if (typeof window !== "undefined" && !${IS_PRIVATE_AREA_JS}) {
-                window.initYandexMetrika();
-              }
-            `,
+(function () {
+  var YANDEX_SRC = "https://mc.yandex.ru/metrika/tag.js";
+  var YANDEX_ID = 105859080;
+  var retryTimer = null;
+
+  window.yandexMetrikaLoaded = false;
+  window.yandexMetrikaLoading = false;
+
+  window.initYandexMetrika = function () {
+    if (window.yandexMetrikaLoaded || window.yandexMetrikaLoading) return;
+
+    window.ym = window.ym || function () {
+      (window.ym.a = window.ym.a || []).push(arguments);
+    };
+    window.ym.l = window.ym.l || 1 * new Date();
+
+    var existing = Array.prototype.find.call(document.scripts, function (script) {
+      return script.src === YANDEX_SRC;
+    });
+
+    var onReady = function () {
+      window.yandexMetrikaLoading = false;
+      window.yandexMetrikaLoaded = true;
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      console.info("[4BID] Yandex Metrika tag.js loaded");
+    };
+
+    var onError = function () {
+      window.yandexMetrikaLoading = false;
+      window.yandexMetrikaLoaded = false;
+      console.warn("[4BID] Yandex Metrika tag.js failed to load");
+
+      var failedScript = document.querySelector('script[data-4bid-yandex="true"]');
+      if (failedScript && failedScript.parentNode) {
+        failedScript.parentNode.removeChild(failedScript);
+      }
+
+      if (!retryTimer) {
+        retryTimer = setTimeout(function () {
+          retryTimer = null;
+          if (!${IS_PRIVATE_AREA_JS}) window.initYandexMetrika();
+        }, 5000);
+      }
+    };
+
+    window.yandexMetrikaLoading = true;
+
+    if (existing) {
+      existing.addEventListener("load", onReady, { once: true });
+      existing.addEventListener("error", onError, { once: true });
+    } else {
+      var script = document.createElement("script");
+      script.async = true;
+      script.src = YANDEX_SRC;
+      script.setAttribute("data-4bid-yandex", "true");
+      script.addEventListener("load", onReady, { once: true });
+      script.addEventListener("error", onError, { once: true });
+      (document.head || document.documentElement).appendChild(script);
+    }
+
+    window.ym(YANDEX_ID, "init", {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: true,
+      ecommerce: "dataLayer"
+    });
+  };
+
+  if (typeof window !== "undefined" && !${IS_PRIVATE_AREA_JS}) {
+    window.initYandexMetrika();
+  }
+})();
+`,
               }}
             />
           </>
         )}
       </head>
       <body className={`${inter.className} antialiased`}>
-        {/* GTM noscript fallback - solo produzione */}
         {isProduction && (
           <noscript>
             <iframe
@@ -202,7 +208,6 @@ gtag('config', 'G-S6YEEXE4C3');
           </noscript>
         )}
 
-        {/* Yandex.Metrika noscript fallback - solo produzione */}
         {isProduction && (
           <noscript>
             <div>
