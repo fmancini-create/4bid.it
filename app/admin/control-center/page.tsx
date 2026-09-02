@@ -43,7 +43,7 @@ export default async function ControlCenterPage() {
       history={runs}
       storageReady={storageReady}
       githubReady={Boolean(process.env.GITHUB_AUDIT_TOKEN)}
+      githubFixReady={Boolean(process.env.GITHUB_FIX_TOKEN)}
     />
   )
 }
-
