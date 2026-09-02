@@ -27,6 +27,7 @@ export default async function QuoteVoicePreviewPage({ params }: { params: Promis
       description={data.description || null}
       clientName={data.client_name || null}
       clientCompany={data.client_company || null}
+      currency={data.currency || "eur"}
       lineItems={(data.line_items || []) as QuoteLineItem[]}
     />
   )
