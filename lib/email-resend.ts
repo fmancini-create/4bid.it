@@ -308,9 +308,9 @@ export async function sendEmail(options: EmailOptions): Promise<any> {
     const info = await transporter.sendMail(mailPayload(payloadOptions, from, mergedHeaders, transactional))
     return successFromInfo(info, providerName)
   } catch (error) {
-    console.error(`[v0] Errore invio ${providerName}:`, error)
+    const recoverableWorkspaceConnectionError = transactional && isPreDeliveryConnectionError(error)
 
-    if (transactional && isPreDeliveryConnectionError(error)) {
+    if (recoverableWorkspaceConnectionError) {
       // The pooled connection may be poisoned after a network failure; force a
       // fresh Workspace connection on the next independent send.
       workspaceTransporter = null
@@ -324,11 +324,9 @@ export async function sendEmail(options: EmailOptions): Promise<any> {
           const fallbackInfo = await fallbackTransporter.sendMail(
             mailPayload(payloadOptions, fallbackFrom, mergedHeaders, true),
           )
-          const result = successFromInfo(fallbackInfo, "Brevo SMTP (transactional fallback)")
-          if (result.success) return result
-          return result
+          return successFromInfo(fallbackInfo, "Brevo SMTP (transactional fallback)")
         } catch (fallbackError) {
-          console.error("[v0] Errore fallback transazionale Brevo SMTP:", fallbackError)
+          console.error("[v0] Google Workspace non raggiungibile e fallback transazionale Brevo SMTP fallito:", fallbackError)
           const fallbackMessage =
             fallbackError instanceof Error ? fallbackError.message : "Errore Brevo SMTP fallback sconosciuto"
           const fallbackStatusCode = smtpStatusCode(fallbackError)
@@ -342,6 +340,7 @@ export async function sendEmail(options: EmailOptions): Promise<any> {
       }
     }
 
+    console.error(`[v0] Errore invio ${providerName}:`, error)
     const message = error instanceof Error ? error.message : `Errore ${providerName} sconosciuto`
     const statusCode = smtpStatusCode(error)
     return {
