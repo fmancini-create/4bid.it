@@ -1,4 +1,4 @@
-export const QUOTE_SALES_MODEL = "openai/gpt-5.5"
+export const QUOTE_SALES_MODEL = "openai/gpt-5.6-sol"
 
 /**
  * Commercial operating system for the public quote assistant.
