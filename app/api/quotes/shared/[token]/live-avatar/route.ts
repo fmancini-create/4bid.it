@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
-    const usesNewNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
+    const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID ${quoteContext.quoteNumber || "Preventivo"} - ${quoteContext.clientCompany || quoteContext.clientName || "Cliente"}`.slice(0, 120),
       conversational_context: spokenContext(quoteContext.prompt),
@@ -78,9 +78,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       audio_only: false,
       require_auth: true,
       max_participants: 2,
-      policy: "eu",
+      properties: {
+        language: "italian",
+        enable_closed_captions: true,
+        max_call_duration: 1800,
+        participant_left_timeout: 30,
+        participant_absent_timeout: 120,
+      },
       ...(callbackUrl ? { callback_url: callbackUrl } : {}),
-      ...(usesNewNaming ? { pal_id: palId, face_id: faceId } : { persona_id: palId, replica_id: faceId }),
+      ...(usesPalNaming ? { pal_id: palId, face_id: faceId } : { persona_id: palId, replica_id: faceId }),
     }
 
     const tavusResponse = await fetch("https://tavusapi.com/v2/conversations", {
