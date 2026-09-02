@@ -64,16 +64,23 @@ async function github<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-async function optionalChecks(owner: string, repo: string, sha: string) {
+async function readChecks(owner: string, repo: string, sha: string) {
   const response = await githubResponse(`/repos/${owner}/${repo}/commits/${sha}/check-runs?per_page=100`)
-  if (response.status === 403 || response.status === 404) return null
-  if (!response.ok) return null
+  if (response.status === 403) {
+    throw new Error("Impossibile verificare la CI: aggiungere a GITHUB_FIX_TOKEN il permesso Repository permissions > Checks > Read-only.")
+  }
+  if (response.status === 404) {
+    throw new Error("Impossibile verificare i controlli GitHub per questo commit. Merge bloccato per sicurezza.")
+  }
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new Error(`Impossibile verificare la CI (GitHub ${response.status}): ${detail.slice(0, 200)}`)
+  }
   const payload = (await response.json()) as { check_runs?: CheckRun[] }
   return payload.check_runs || []
 }
 
-function summarizeChecks(checks: CheckRun[] | null) {
-  if (!checks) return { available: false, pending: [], failed: [], passed: [] }
+function summarizeChecks(checks: CheckRun[]) {
   const pending = checks.filter((check) => check.status !== "completed" || !check.conclusion)
   const failed = checks.filter((check) =>
     check.status === "completed" && !["success", "neutral", "skipped"].includes(check.conclusion || ""),
@@ -154,7 +161,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Merge bloccato: ${reason}.`, mergeableState: pr.mergeable_state }, { status: 409 })
     }
 
-    const checks = summarizeChecks(await optionalChecks(owner, repo, pr.head.sha))
+    const checks = summarizeChecks(await readChecks(owner, repo, pr.head.sha))
     if (checks.failed.length) {
       return NextResponse.json({ error: `Merge bloccato: controlli falliti (${checks.failed.join(", ")}).`, checks }, { status: 409 })
     }
