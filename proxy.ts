@@ -220,6 +220,7 @@ export async function proxy(request: NextRequest) {
 
   // Add security headers to all responses
   const response = NextResponse.next()
+  const isVirtualQuoteExperience = pathname.startsWith("/preventivo/")
 
   // Content Security Policy
   response.headers.set(
@@ -243,13 +244,24 @@ export async function proxy(request: NextRequest) {
       // endpoints while remaining scoped to Google's analytics domains.
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
       // youtube-nocookie.com e' il dominio "privacy-enhanced" usato dalla facade
-      // dei video (Video guide): senza di esso Chrome blocca l'iframe al click
-      // mostrando "Questi contenuti sono bloccati".
-      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://calendar.google.com",
+      // dei video (Video guide): senza di esso Chrome blocca l'iframe al click.
+      // Tavus CVI serves the real-time WebRTC room through Daily; allow those
+      // frames without relaxing frame-src for unrelated providers.
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://calendar.google.com https://*.daily.co https://*.tavus.io",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),
+  )
+
+  // Keep camera and microphone denied across the rest of 4bid.it. The public
+  // virtual-quote experience is the only surface that intentionally embeds a
+  // WebRTC advisor, and its iframe also carries an explicit allow attribute.
+  response.headers.set(
+    "Permissions-Policy",
+    isVirtualQuoteExperience
+      ? 'camera=(self "https://tavus.daily.co" "https://*.daily.co"), microphone=(self "https://tavus.daily.co" "https://*.daily.co"), geolocation=()'
+      : "camera=(), microphone=(), geolocation=()",
   )
 
   return response
