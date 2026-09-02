@@ -32,9 +32,23 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
   }
 
   const planMeta = Array.isArray(share.business_plans) ? share.business_plans[0] : share.business_plans
-  if (planMeta?.project_type === "corporate_saas") {
-    return <CorporateSharedBusinessPlanView share={{ ...share, business_plans: planMeta }} token={token} />
+  const normalizedShare = {
+    id: share.id,
+    email: share.email || undefined,
+    can_edit: share.can_edit || false,
+    can_download: share.can_download || false,
+    business_plans: planMeta
+      ? {
+          name: planMeta.name || undefined,
+          client_name: planMeta.client_name || undefined,
+          project_type: planMeta.project_type || undefined,
+        }
+      : null,
   }
 
-  return <SecureSharedBusinessPlanView share={share} token={token} />
+  if (planMeta?.project_type === "corporate_saas") {
+    return <CorporateSharedBusinessPlanView share={normalizedShare} token={token} />
+  }
+
+  return <SecureSharedBusinessPlanView share={normalizedShare} token={token} />
 }
