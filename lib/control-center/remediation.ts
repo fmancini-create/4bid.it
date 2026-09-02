@@ -18,6 +18,12 @@ type FileChange = {
   message: string
 }
 
+type ChangePlan = {
+  changes: FileChange[]
+  appliedCodes: string[]
+  reviewMessages: string[]
+}
+
 export const AUTO_REMEDIATION_CODES = new Set(["ENV_NOT_IGNORED", "NO_CI"])
 
 function fixToken() {
@@ -84,8 +90,76 @@ async function writeText(repository: string, branch: string, change: FileChange)
   })
 }
 
-async function buildChanges(project: AuditProject, findings: FindingRow[]) {
+function scriptStep(name: string, script: string, runner: "npm" | "pnpm") {
+  return `      - name: ${name}\n        shell: bash\n        run: |\n          if node -e \"process.exit(require('./package.json').scripts?.['${script}'] ? 0 : 1)\"; then ${runner} run ${script}; fi\n`
+}
+
+function detectPnpmVersion(packageJson: string | null, lockfile: string) {
+  if (packageJson) {
+    try {
+      const pkg = JSON.parse(packageJson) as { packageManager?: string }
+      const match = pkg.packageManager?.match(/^pnpm@(\d+)/)
+      if (match?.[1]) return match[1]
+    } catch {
+      // Il package.json verra' validato dall'audit; qui basta un fallback prudente.
+    }
+  }
+  if (/lockfileVersion:\s*['\"]?5(?:\.\d+)?['\"]?/i.test(lockfile)) return "7"
+  if (/lockfileVersion:\s*['\"]?6(?:\.\d+)?['\"]?/i.test(lockfile)) return "8"
+  if (/lockfileVersion:\s*['\"]?9(?:\.\d+)?['\"]?/i.test(lockfile)) return "10"
+  return "10"
+}
+
+async function buildCiChange(project: AuditProject) {
+  const [packageJson, pnpmLock, packageLock, yarnLock, bunLock, bunLockb] = await Promise.all([
+    readText(project.repository, "package.json", project.branch),
+    readText(project.repository, "pnpm-lock.yaml", project.branch),
+    readText(project.repository, "package-lock.json", project.branch),
+    readText(project.repository, "yarn.lock", project.branch),
+    readText(project.repository, "bun.lock", project.branch),
+    readText(project.repository, "bun.lockb", project.branch),
+  ])
+
+  if (yarnLock) {
+    return { change: null, review: "CI non creata automaticamente: il repository usa Yarn e richiede una pipeline coerente con la versione/configurazione Yarn presente." }
+  }
+  if (bunLock || bunLockb) {
+    return { change: null, review: "CI non creata automaticamente: il repository usa Bun e richiede una pipeline coerente con la versione/configurazione Bun presente." }
+  }
+
+  let setup = ""
+  let install = ""
+  let runner: "npm" | "pnpm"
+
+  if (pnpmLock) {
+    runner = "pnpm"
+    const pnpmVersion = detectPnpmVersion(packageJson?.text || null, pnpmLock.text)
+    setup = `      - name: Setup pnpm\n        uses: pnpm/action-setup@v4\n        with:\n          version: ${pnpmVersion}\n      - name: Setup Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: pnpm\n`
+    install = "      - name: Install dependencies\n        run: pnpm install --frozen-lockfile\n"
+  } else if (packageLock) {
+    runner = "npm"
+    setup = `      - name: Setup Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n`
+    install = "      - name: Install dependencies\n        run: npm ci\n"
+  } else {
+    return { change: null, review: "CI non creata automaticamente: non e' stato rilevato un lockfile npm/pnpm. Serve scegliere il package manager prima di generare la pipeline." }
+  }
+
+  const workflow = `name: Control Center CI\n\non:\n  pull_request:\n  push:\n    branches:\n      - ${project.branch}\n\npermissions:\n  contents: read\n\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n${setup}${install}${scriptStep("Lint", "lint", runner)}${scriptStep("Test", "test", runner)}${scriptStep("Build", "build", runner)}`
+
+  return {
+    change: {
+      path: ".github/workflows/control-center-ci.yml",
+      content: workflow,
+      message: "ci: add baseline validation workflow",
+    } satisfies FileChange,
+    review: null,
+  }
+}
+
+async function buildChanges(project: AuditProject, findings: FindingRow[]): Promise<ChangePlan> {
   const changes: FileChange[] = []
+  const appliedCodes: string[] = []
+  const reviewMessages: string[] = []
 
   if (findings.some((item) => item.code === "ENV_NOT_IGNORED")) {
     const current = await readText(project.repository, ".gitignore", project.branch)
@@ -99,19 +173,21 @@ async function buildChanges(project: AuditProject, findings: FindingRow[]) {
         content: `${base.replace(/\s+$/, "")}\n\n# Environment secrets\n${additions.join("\n")}\n`,
         message: "fix(security): ignore environment secret files",
       })
+      appliedCodes.push("ENV_NOT_IGNORED")
     }
   }
 
   if (findings.some((item) => item.code === "NO_CI")) {
-    const workflow = `name: Control Center CI\n\non:\n  pull_request:\n  push:\n    branches:\n      - ${project.branch}\n\npermissions:\n  contents: read\n\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Setup Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n      - name: Install dependencies\n        run: npm ci\n      - name: Lint\n        run: npm run lint --if-present\n      - name: Test\n        run: npm test --if-present\n      - name: Build\n        run: npm run build --if-present\n`
-    changes.push({
-      path: ".github/workflows/control-center-ci.yml",
-      content: workflow,
-      message: "ci: add baseline validation workflow",
-    })
+    const ci = await buildCiChange(project)
+    if (ci.change) {
+      changes.push(ci.change)
+      appliedCodes.push("NO_CI")
+    } else if (ci.review) {
+      reviewMessages.push(ci.review)
+    }
   }
 
-  return changes
+  return { changes, appliedCodes, reviewMessages }
 }
 
 export function remediationCapability(code: string) {
@@ -137,8 +213,11 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     }
   }
 
-  const changes = await buildChanges(project, supported)
-  if (!changes.length) {
+  const plan = await buildChanges(project, supported)
+  if (!plan.changes.length) {
+    if (plan.reviewMessages.length) {
+      return { ok: false, requiresReview: true, message: plan.reviewMessages.join(" ") }
+    }
     return { ok: false, requiresReview: false, message: "Nessuna modifica necessaria: il repository risulta gia' corretto per questi controlli." }
   }
 
@@ -153,13 +232,13 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: baseRef.object.sha }),
   })
 
-  for (const change of changes) await writeText(project.repository, branch, change)
+  for (const change of plan.changes) await writeText(project.repository, branch, change)
 
-  const titles = supported.map((item) => item.title)
+  const titles = supported.filter((item) => plan.appliedCodes.includes(item.code)).map((item) => item.title)
   const pr = await github<{ html_url: string; number: number }>(`/repos/${owner}/${repo}/pulls`, {
     method: "POST",
     body: JSON.stringify({
-      title: `Control Center: correggi ${supported.length} problema/i`,
+      title: `Control Center: correggi ${plan.appliedCodes.length} problema/i`,
       head: branch,
       base: project.branch,
       body: [
@@ -170,7 +249,8 @@ export async function remediateFindings(project: AuditProject, findings: Finding
         ...titles.map((title) => `- ${title}`),
         "",
         "### File modificati",
-        ...changes.map((change) => `- \`${change.path}\``),
+        ...plan.changes.map((change) => `- \`${change.path}\``),
+        ...(plan.reviewMessages.length ? ["", "### Da revisionare manualmente", ...plan.reviewMessages.map((message) => `- ${message}`)] : []),
         "",
         "Verificare CI e diff prima del merge.",
       ].join("\n"),
@@ -183,7 +263,8 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     branch,
     prUrl: pr.html_url,
     prNumber: pr.number,
-    changedFiles: changes.map((change) => change.path),
-    fixedCodes: supported.map((item) => item.code),
+    changedFiles: plan.changes.map((change) => change.path),
+    fixedCodes: plan.appliedCodes,
+    reviewMessages: plan.reviewMessages,
   }
 }
