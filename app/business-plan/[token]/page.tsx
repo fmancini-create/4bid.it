@@ -1,6 +1,12 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import SecureSharedBusinessPlanView from "./secure-shared-view"
+import CorporateSharedBusinessPlanView from "./corporate-shared-view"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+}
 
 export default async function SharedBusinessPlanPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -8,7 +14,7 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
 
   const { data: share, error: shareError } = await supabase
     .from("business_plan_shares")
-    .select("id, email, can_edit, can_download, expires_at, business_plans(name, client_name)")
+    .select("id, email, can_edit, can_download, expires_at, business_plans(name, client_name, project_type)")
     .eq("token", token)
     .single()
 
@@ -23,6 +29,11 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
         </div>
       </div>
     )
+  }
+
+  const planMeta = Array.isArray(share.business_plans) ? share.business_plans[0] : share.business_plans
+  if (planMeta?.project_type === "corporate_saas") {
+    return <CorporateSharedBusinessPlanView share={{ ...share, business_plans: planMeta }} token={token} />
   }
 
   return <SecureSharedBusinessPlanView share={share} token={token} />
