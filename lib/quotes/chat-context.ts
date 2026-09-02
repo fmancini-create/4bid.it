@@ -8,6 +8,7 @@ import {
 } from "@/lib/quotes/types"
 import { getCommercialMeta, getIncludedCredits } from "@/lib/quotes/commercial"
 import { QUOTE_BRANDS, quoteBenefits } from "@/lib/quotes/branding"
+import { DIGITAL_SALES_AGENT_PROMPT } from "@/lib/quotes/digital-sales-agent"
 
 const CORE_4BID_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
@@ -21,14 +22,6 @@ export interface QuoteChatContext {
   quoteNumber: string | null
 }
 
-/**
- * Estrae il token da un percorso tipo `/preventivo/<token>`.
- *
- * Il percorso arriva dal client, quindi non e' una prova d'identita': il token
- * e' pero' la stessa credenziale che apre la pagina, per cui chi lo possiede
- * vede gia' il preventivo. Non si concede nulla in piu' di quanto sia gia'
- * visibile a schermo.
- */
 export function extractQuoteToken(pathname: string | null | undefined): string | null {
   if (typeof pathname !== "string") return null
   const match = pathname.match(/^\/preventivo\/([A-Za-z0-9_-]{8,128})(?:\/|$)/)
@@ -80,10 +73,9 @@ function describeLine(item: QuoteLineItem, currency: string): string {
     if (dettagli.length) riga += `\n  Assistenza: ${dettagli.join(", ")}`
   }
   if (item.discount) {
-    const sconto =
-      item.discount.type === "percentage"
-        ? `${item.discount.value}%`
-        : formatQuoteAmount(item.discount.value, currency)
+    const sconto = item.discount.type === "percentage"
+      ? `${item.discount.value}%`
+      : formatQuoteAmount(item.discount.value, currency)
     riga += `\n  Sconto applicato: ${sconto}${item.discount.reason ? ` (${item.discount.reason})` : ""}`
   }
   if (credits) {
@@ -129,16 +121,6 @@ function describeComplementaryProducts(quotedProjects: string[]): string[] {
     })
 }
 
-/**
- * Costruisce il contesto del preventivo per la chat.
- *
- * ATTENZIONE — cosa NON viene letto, di proposito:
- * `submitted_fields` contiene le credenziali che il cliente ci consegna
- * (vedi `decodeCredential` in lib/quotes/types.ts: id + password in chiaro).
- * Finirebbero nel prompt del modello e, da li', in una risposta in chat.
- * Anche `requested_fields` resta fuori: descrive quali credenziali chiediamo.
- * Qui si leggono SOLO i dati commerciali gia' visibili nella pagina.
- */
 export async function buildQuoteChatContext(token: string): Promise<QuoteChatContext | null> {
   try {
     const supabase = createAdminClient()
@@ -210,6 +192,8 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
       : ""
 
     const prompt = `
+${DIGITAL_SALES_AGENT_PROMPT}
+
 === PREVENTIVO CHE L'UTENTE STA GUARDANDO IN QUESTO MOMENTO ===
 ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI
 risposta relativa al preventivo e prevale su qualunque knowledge base generica
@@ -218,48 +202,22 @@ riportata prima nel prompt.
 ${righe.join("\n")}${ecosystemBlock}
 
 REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
-- Sai esattamente a chi e' intestata l'offerta. Quando e' naturale, rivolgiti al
-  destinatario per nome e ragiona sulla sua azienda/struttura, senza ripetere il
-  nome in ogni risposta e senza risultare artificiale.
-- Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?",
-  "Mensile o annuale?" e "Raccontami la proposta" come riferite PRIMA DI TUTTO
-  a questo preventivo e ai prodotti/progetti elencati nelle sue voci.
-- Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di
-  selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di
-  configurazione riportati qui sopra. Usa questi dati per spiegare COSA fa,
-  PERCHE' puo' essere utile a questa struttura e COME si inserisce nella proposta.
-- Distingui sempre fra voce inclusa, opzionale selezionata e opzionale non
-  selezionata. Non presentare come acquistato cio' che e' solo un'opzione.
-- Se l'utente chiede un confronto mensile/annuale, usa esclusivamente gli importi
-  e gli sconti riportati nel preventivo e spiega la differenza con chiarezza.
-- Per la parte principale della risposta NON sostituire mai i prodotti del
-  preventivo con altri prodotti 4BID e NON usare altri prodotti per spiegare
-  funzioni, prezzi o condizioni dell'offerta corrente.
-- Gli altri prodotti dell'ecosistema 4BID possono essere presentati SOLO come
-  estensioni complementari e devono essere sempre dichiarati chiaramente come
-  NON inclusi nel preventivo attuale.
-- Se il contesto lo rende naturale, dopo aver risposto completamente alla domanda
-  suggerisci al massimo 1-2 prodotti complementari, spiegando in una frase perche'
-  potrebbero avere senso per quella specifica struttura. Evita cross-sell casuali.
-- Nelle risposte di panoramica (es. "Raccontami la proposta" o "Perche conviene?")
-  puoi chiudere con una breve frase che presenti anche l'ecosistema 4BID piu' ampio,
-  senza trasformare la risposta in un catalogo e senza confondere cio' che e' incluso.
-- Su domande strettamente fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi
-  prima in modo netto; l'eventuale richiamo ad altri prodotti deve essere separato,
-  breve e chiaramente opzionale.
-- Per gli altri prodotti 4BID non inventare prezzi, sconti, funzioni o condizioni:
-  usa solo la descrizione dell'ecosistema qui sopra e, se davvero necessaria,
-  informazione specifica e coerente presente nella knowledge base.
-- NON mostrare come fonte URL di un altro prodotto come se supportasse una voce
-  del preventivo. Se citi un prodotto complementare, la fonte deve riguardare
-  esplicitamente quel prodotto e deve essere separata dalla spiegazione dell'offerta.
-- L'utente e' gia' un cliente con un'offerta in mano: NON trattarlo come un
-  contatto da acquisire e non chiedergli dati che sono gia' qui sopra.
-- Interagisci come una consulente commerciale competente: rispondi prima alla
-  domanda, poi eventualmente suggerisci il passo successivo pertinente. Niente
-  risposte generiche, niente liste di marketing scollegate dall'offerta.
-- Se una cosa NON compare qui sopra (per esempio una funzione non elencata),
-  dillo chiaramente invece di dedurla: e' il team che deve confermarla.
+- Sai esattamente a chi e' intestata l'offerta. Quando e' naturale, rivolgiti al destinatario per nome e ragiona sulla sua azienda/struttura.
+- Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?", "Mensile o annuale?" e "Raccontami la proposta" come riferite PRIMA DI TUTTO a questo preventivo.
+- Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di configurazione riportati qui sopra.
+- Non limitarti a elencare funzioni: collega sempre la funzione al problema che risolve e al vantaggio operativo/economico per questa specifica struttura.
+- Distingui sempre fra voce inclusa, opzionale selezionata e opzionale non selezionata. Non presentare come acquistato cio' che e' solo un'opzione.
+- Se l'utente chiede un confronto mensile/annuale, usa esclusivamente gli importi e gli sconti riportati nel preventivo.
+- Per la parte principale della risposta NON sostituire mai i prodotti del preventivo con altri prodotti 4BID e NON usare altri prodotti per spiegare funzioni, prezzi o condizioni dell'offerta corrente.
+- Gli altri prodotti dell'ecosistema 4BID possono essere presentati SOLO come estensioni complementari e devono essere sempre dichiarati chiaramente come NON inclusi nel preventivo attuale.
+- Se il contesto lo rende naturale, dopo aver risposto completamente alla domanda suggerisci al massimo 1-2 prodotti complementari, spiegando perche' potrebbero avere senso per quella specifica struttura.
+- Nelle risposte di panoramica puoi chiudere con un breve richiamo all'ecosistema 4BID piu' ampio, senza trasformare la risposta in un catalogo.
+- Su domande fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi prima in modo netto; il cross-sell, se utile, viene dopo e resta separato.
+- Per gli altri prodotti 4BID non inventare prezzi, sconti, funzioni o condizioni: usa soltanto dati presenti nel contesto.
+- NON mostrare come fonte URL di un altro prodotto come se supportasse una voce del preventivo.
+- L'utente e' gia' un cliente con un'offerta in mano: NON trattarlo come un contatto da acquisire e non chiedergli dati che sono gia' qui sopra.
+- Gestisci le obiezioni come un venditore senior: capisci il vero dubbio, rispondi con fatti e valore, poi proponi una micro-azione naturale. Mai pressione, mai urgenza inventata.
+- Se una cosa NON compare qui sopra, dillo chiaramente invece di dedurla.
 - Non rivelare mai credenziali, password o dati di accesso.
 === FINE PREVENTIVO ===
 `.trim()
