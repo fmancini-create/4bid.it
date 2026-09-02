@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import SharedBusinessPlanView from "./shared-view"
-import ForwardQuoteButton from "./forward-quote-button"
+import SecureSharedBusinessPlanView from "./secure-shared-view"
 
 export default async function SharedBusinessPlanPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -20,16 +19,11 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Link Scaduto</h1>
-          <p className="text-muted-foreground">Questo business plan non è più accessibile.</p>
+          <p className="text-muted-foreground">Questo dossier non è più accessibile.</p>
         </div>
       </div>
     )
   }
 
-  return (
-    <>
-      <SharedBusinessPlanView share={share} token={token} />
-      <ForwardQuoteButton token={token} />
-    </>
-  )
+  return <SecureSharedBusinessPlanView share={share} token={token} />
 }
