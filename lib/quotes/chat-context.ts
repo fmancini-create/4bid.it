@@ -103,6 +103,12 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
 
     const currency = data.currency || "eur"
     const lineItems = (data.line_items || []) as QuoteLineItem[]
+    const quotedProjects = Array.from(
+      new Set(lineItems.map((item) => (item.project || "").trim().toLowerCase()).filter(Boolean)),
+    )
+    const quotedNames = Array.from(
+      new Set(lineItems.map((item) => (item.name || "").trim()).filter(Boolean)),
+    )
 
     const pagato = data.payment_status === "paid" || data.status === "paid"
     const scaduto = pagato
@@ -123,6 +129,8 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
     righe.push(`Oggetto: ${data.title || "non indicato"}`)
     if (data.description) righe.push(`Descrizione: ${data.description}`)
     righe.push(`Stato attuale: ${stato}`)
+    if (quotedProjects.length) righe.push(`Prodotti/progetti ammessi: ${quotedProjects.join(", ")}`)
+    if (quotedNames.length) righe.push(`Nomi delle voci ammesse: ${quotedNames.join("; ")}`)
 
     if (lineItems.length) {
       righe.push("", "Voci del preventivo:")
@@ -144,12 +152,22 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
 
     const prompt = `
 === PREVENTIVO CHE L'UTENTE STA GUARDANDO IN QUESTO MOMENTO ===
-Questi dati sono veri e aggiornati. Usali per rispondere alle domande sul
-preventivo: hanno la precedenza sulla knowledge base generica.
+ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI
+risposta relativa al preventivo e prevale su qualunque knowledge base generica
+riportata prima nel prompt.
 
 ${righe.join("\n")}
 
-REGOLE SU QUESTO PREVENTIVO:
+REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
+- Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?",
+  "Mensile o annuale?" e "Raccontami la proposta" come riferite ESCLUSIVAMENTE
+  a questo preventivo e ai prodotti/progetti elencati qui sopra.
+- NON menzionare, citare, proporre, confrontare o descrivere brand, prodotti,
+  moduli o servizi che non compaiono nelle voci del preventivo. Se una knowledge
+  base generica contiene altri prodotti 4BID, ignorali completamente.
+- NON usare ne' mostrare come fonte URL relativi a prodotti che non compaiono
+  nel preventivo. Per le risposte sul preventivo, la fonte primaria e' il
+  preventivo stesso.
 - L'utente e' gia' un cliente con un'offerta in mano: NON trattarlo come un
   contatto da acquisire e non chiedergli dati che sono gia' qui sopra.
 - Rispondi nel merito citando le voci e gli importi reali.
