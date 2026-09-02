@@ -41,10 +41,15 @@ const OBJECTION_TERMS: Array<[string, string[]]> = [
 
 const POSITIVE_TERMS: Array<[string, string[]]> = [
   ["richiesta prezzo", ["quanto costa", "prezzo", "mensile", "annuale", "sconto annuale"]],
-  ["richiesta avvio", ["come si parte", "come iniziare", "attivare", "attivazione", "setup", "onboarding"]],
-  ["richiesta acquisto", ["acquistare", "procedere", "accettare", "firmare", "pagare", "lo voglio", "va bene procediamo"]],
+  ["richiesta avvio", ["come si parte", "come iniziare", "attivare", "attivarlo", "attivarla", "attivazione", "setup", "onboarding"]],
+  ["richiesta acquisto", ["acquistare", "procedere", "procediamo", "procedo", "andiamo avanti", "accettare", "accetto", "firmare", "firmo", "pagare", "pago", "lo voglio", "va bene procediamo"]],
   ["richiesta contatto/demo", ["demo", "chiamatemi", "richiamatemi", "contattatemi", "appuntamento"]],
   ["valutazione concreta", ["cosa e incluso", "cosa è incluso", "confronto", "differenza", "integrazione", "tempi"]],
+]
+
+const STRONG_BUYING_TERMS = [
+  "procedere", "procediamo", "procedo", "andiamo avanti", "accettare", "accetto", "firmare", "firmo",
+  "pagare", "pago", "acquistare", "lo voglio", "attivarlo", "attivarla",
 ]
 
 function unique(values: string[]): string[] {
@@ -71,18 +76,18 @@ export function analyzeQuoteSalesSignals(messages: SalesChatMessage[], context: 
   score += Math.min(userMessages.length * 4, 20)
   score += positiveSignals.length * 10
   score += interestedProducts.length > 1 ? 8 : interestedProducts.length === 1 ? 4 : 0
-  if (includesAny(last, ["procedere", "accettare", "firmare", "pagare", "acquistare", "lo voglio"])) score += 25
+  if (includesAny(last, STRONG_BUYING_TERMS)) score += 25
   if (includesAny(last, ["demo", "chiamatemi", "richiamatemi", "contattatemi", "appuntamento"])) score += 18
-  if (includesAny(last, ["quanto costa", "annuale", "mensile", "sconto", "tempi", "attivazione"])) score += 8
+  if (includesAny(last, ["quanto costa", "annuale", "mensile", "sconto", "tempi", "attivazione", "attivarlo", "attivarla"])) score += 8
   if (objections.includes("tempo/decisione")) score -= 8
   if (includesAny(last, ["non mi interessa", "lasciamo perdere", "non mi serve"])) score -= 20
   score = Math.max(0, Math.min(100, score))
 
   const temperature: SalesSignal["temperature"] = score >= 70 ? "hot" : score >= 38 ? "warm" : "cold"
   let intent = "esplorazione"
-  if (includesAny(last, ["procedere", "accettare", "firmare", "pagare", "acquistare"])) intent = "decisione_acquisto"
+  if (includesAny(last, STRONG_BUYING_TERMS)) intent = "decisione_acquisto"
   else if (includesAny(last, ["quanto costa", "prezzo", "mensile", "annuale", "sconto"])) intent = "valutazione_economica"
-  else if (includesAny(last, ["integrazione", "pms", "channel manager", "setup", "attivazione", "onboarding"])) intent = "fattibilita_implementazione"
+  else if (includesAny(last, ["integrazione", "pms", "channel manager", "setup", "attivazione", "attivarlo", "attivarla", "onboarding"])) intent = "fattibilita_implementazione"
   else if (objections.length) intent = "gestione_obiezione"
   else if (includesAny(last, ["differenza", "confronto", "alternativa"])) intent = "confronto"
   else if (includesAny(last, ["cosa fa", "come funziona", "perche", "perché", "vantaggio", "beneficio"])) intent = "comprensione_valore"
