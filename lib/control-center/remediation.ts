@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import type { AuditProject } from "./types"
 
 type FindingRow = {
@@ -44,6 +45,9 @@ async function github<T>(url: string, init?: RequestInit): Promise<T> {
   })
   if (!response.ok) {
     const detail = await response.text()
+    if (response.status === 403 && url.includes("/contents/.github/workflows/")) {
+      throw new Error("Il token GITHUB_FIX_TOKEN non puo' modificare workflow GitHub. Aggiungere al token il permesso Repository permissions > Workflows > Read and write.")
+    }
     throw new Error(`GitHub ${response.status}: ${detail.slice(0, 300)}`)
   }
   return response.json() as Promise<T>
@@ -116,6 +120,14 @@ export function remediationCapability(code: string) {
 }
 
 export async function remediateFindings(project: AuditProject, findings: FindingRow[]) {
+  if (project.archived) {
+    return {
+      ok: false,
+      requiresReview: true,
+      message: "Repository archiviato: resta monitorabile, ma il Control Center non applica modifiche automatiche finche' non viene riattivato su GitHub.",
+    }
+  }
+
   const supported = findings.filter((item) => AUTO_REMEDIATION_CODES.has(item.code))
   if (!supported.length) {
     return {
@@ -135,7 +147,7 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(project.branch)}`,
   )
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)
-  const branch = `control-center/fix-${stamp}`
+  const branch = `control-center/fix-${stamp}-${randomUUID().slice(0, 8)}`
   await github(`/repos/${owner}/${repo}/git/refs`, {
     method: "POST",
     body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: baseRef.object.sha }),
