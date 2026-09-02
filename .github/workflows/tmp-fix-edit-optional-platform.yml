@@ -16,8 +16,9 @@ jobs:
         with:
           ref: fix/edit-optional-platform
       - name: Apply targeted change
-        shell: python
+        shell: bash
         run: |
+          python3 - <<'PY'
           from pathlib import Path
 
           path = Path("app/admin/quotes/edit/[id]/quote-catalog-editor.tsx")
@@ -33,7 +34,9 @@ jobs:
           if old not in text:
               raise SystemExit("Target optional block not found")
           path.write_text(text.replace(old, new, 1))
+          PY
       - name: Commit targeted change
+        shell: bash
         run: |
           if git diff --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
