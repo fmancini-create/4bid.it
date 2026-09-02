@@ -10,7 +10,8 @@ const REQUESTS_PER_MINUTE = 3
 
 function configured() {
   return Boolean(
-    process.env.TAVUS_API_KEY &&
+    process.env.TAVUS_LIVE_ENABLED === "true" &&
+      process.env.TAVUS_API_KEY &&
       (process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID) &&
       (process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID),
   )
@@ -42,7 +43,7 @@ export async function GET() {
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     if (!configured()) {
-      return Response.json({ error: "Consulente video live non ancora configurata", enabled: false }, { status: 503 })
+      return Response.json({ error: "Consulente video live non ancora attivata", enabled: false }, { status: 503 })
     }
 
     const { token } = await params
