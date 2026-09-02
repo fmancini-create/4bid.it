@@ -24,6 +24,15 @@ type ChangePlan = {
   reviewMessages: string[]
 }
 
+type ExistingPullRequest = {
+  number: number
+  html_url: string
+  state: string
+  body?: string | null
+  head: { ref: string }
+  base: { ref: string }
+}
+
 export const AUTO_REMEDIATION_CODES = new Set(["ENV_NOT_IGNORED", "NO_CI"])
 
 function fixToken() {
@@ -195,6 +204,18 @@ export function remediationCapability(code: string) {
   return { mode: "review" as const, label: "Prepara intervento" }
 }
 
+async function findExistingControlCenterPr(owner: string, repo: string, base: string) {
+  const pulls = await github<ExistingPullRequest[]>(
+    `/repos/${owner}/${repo}/pulls?state=open&base=${encodeURIComponent(base)}&per_page=100`,
+  )
+  return pulls.find((pr) =>
+    pr.state === "open" &&
+    pr.base.ref === base &&
+    pr.head.ref.startsWith("control-center/fix-") &&
+    Boolean(pr.body?.includes("## Intervento automatico 4 BID Control Center")),
+  ) || null
+}
+
 export async function remediateFindings(project: AuditProject, findings: FindingRow[]) {
   if (project.archived) {
     return {
@@ -213,6 +234,22 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     }
   }
 
+  const [owner, repo] = project.repository.split("/")
+  const existingPr = await findExistingControlCenterPr(owner, repo, project.branch)
+  if (existingPr) {
+    return {
+      ok: true,
+      requiresReview: false,
+      reused: true,
+      branch: existingPr.head.ref,
+      prUrl: existingPr.html_url,
+      prNumber: existingPr.number,
+      changedFiles: [],
+      fixedCodes: [],
+      reviewMessages: ["Esiste gia' una PR aperta del Control Center per questo repository. Viene riutilizzata invece di crearne una duplicata."],
+    }
+  }
+
   const plan = await buildChanges(project, supported)
   if (!plan.changes.length) {
     if (plan.reviewMessages.length) {
@@ -221,7 +258,6 @@ export async function remediateFindings(project: AuditProject, findings: Finding
     return { ok: false, requiresReview: false, message: "Nessuna modifica necessaria: il repository risulta gia' corretto per questi controlli." }
   }
 
-  const [owner, repo] = project.repository.split("/")
   const baseRef = await github<{ object: { sha: string } }>(
     `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(project.branch)}`,
   )
