@@ -1,6 +1,7 @@
 export type QuoteProject = "consulting" | "hotelaccelerator" | "santaddeo" | "hotelprofitai" | "manubot" | "custom"
 export type QuoteBillingPeriod = "one_time" | "monthly" | "quarterly" | "yearly"
 export type QuoteDiscountType = "percentage" | "fixed"
+export type QuotePresentationMode = "classic" | "virtual"
 
 export interface QuoteSupportTerms {
   level?: string
@@ -129,6 +130,7 @@ export interface SalesChannelQuote {
   deposit_amount: number | null
   vat_included: boolean
   currency: string
+  presentation_mode?: QuotePresentationMode
   requested_fields: QuoteRequestedField[]
   submitted_fields: Record<string, string>
   billing_details: QuoteBillingDetails

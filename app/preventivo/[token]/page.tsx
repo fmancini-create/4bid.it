@@ -12,6 +12,7 @@ import ReactivationRequest from "./reactivation-request"
 import EcosystemInvite from "./ecosystem-invite"
 import AnnualDiscountLabelFix from "./annual-discount-label-fix"
 import QuoteSalesBadgeHydrator from "./quote-sales-badge-hydrator"
+import VirtualQuoteIntro from "./virtual-quote-intro"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -51,7 +52,7 @@ export default async function PreventivoPage({
   const { data, error } = await supabase
     .from("sales_channel_quotes")
     .select(
-      "id, quote_number, created_at, title, description, payment_terms, contract_terms, accepted_terms, comparison_tables, line_items, total_amount, deposit_amount, vat_included, currency, client_name, client_company, client_email, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, expired_at, paid_at, first_viewed_at, view_count",
+      "id, quote_number, created_at, title, description, payment_terms, contract_terms, accepted_terms, comparison_tables, line_items, total_amount, deposit_amount, vat_included, currency, presentation_mode, client_name, client_company, client_email, client_vat, client_address, requested_fields, submitted_fields, billing_details, submitted_at, accepted_at, acceptance_name, payment_method, payment_status, status, expires_at, expired_at, paid_at, first_viewed_at, view_count",
     )
     .eq("token", token)
     .maybeSingle<Partial<SalesChannelQuote>>()
@@ -79,13 +80,7 @@ export default async function PreventivoPage({
   const expired = alreadyPaid
     ? false
     : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
-  // Ripara i parent_line_id storici e ricostruisce le sole opzioni una tantum
-  // mancanti ma gia' previste nel metadata commerciale congelato del canone.
-  // Restano tutte opzionali e NON selezionate: nessun costo viene aggiunto in
-  // automatico al preventivo.
   const lineItems = ensureDependentServiceLines((data.line_items || []) as QuoteLineItem[])
-  // Alcuni preventivi storici possono avere `status=accepted` senza la data
-  // tecnica accepted_at. Lo stato commerciale resta comunque definitivo.
   const accepted = alreadyPaid || data.status === "accepted" || Boolean(data.accepted_at)
   const ecosystemOffers = lineItems.filter(isEcosystemOffer)
   const selectedEcosystemCount = ecosystemOffers.filter(item => isEcosystemOfferSelected(item, accepted)).length
@@ -99,11 +94,13 @@ export default async function PreventivoPage({
   ) : (
     <QuoteView token={token} quote={displayQuote} expired={expired} />
   )
+  const virtual = data.presentation_mode === "virtual"
 
   return (
     <>
       <AnnualDiscountLabelFix />
       <QuoteSalesBadgeHydrator items={visibleLineItems} />
+      {virtual ? <VirtualQuoteIntro token={token} clientName={data.client_name} /> : null}
       {quoteView}
       {structuredQuote ? (
         <QuoteOneTimeInvestmentDetails
