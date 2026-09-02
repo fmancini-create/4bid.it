@@ -24,6 +24,13 @@ function validateTieredQuantity(item: QuoteLineItem): string | null {
   return null
 }
 
+function presentationMode(request: NextRequest, body: Record<string, unknown>): "classic" | "virtual" {
+  if (body.presentation_mode === "virtual") return "virtual"
+  if (body.presentation_mode === "classic") return "classic"
+  const fromCookie = request.cookies.get("quote_presentation_mode")?.value
+  return fromCookie === "virtual" ? "virtual" : "classic"
+}
+
 export async function GET() {
   const supabase = createAdminClient()
   const { data, error } = await supabase
@@ -37,7 +44,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
-  const body = await request.json()
+  const body = await request.json() as Record<string, any>
 
   let quoteNumber: string | null = null
   const { data: numData, error: numError } = await supabase.rpc("next_quote_number")
@@ -68,16 +75,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "La scadenza del preventivo deve essere futura" }, { status: 400 })
   }
   const expiresAt = requestedExpiry?.toISOString() ?? new Date(Date.now() + 7 * 86400000).toISOString()
-  // La validita' vive in expires_at: la colonna valid_days non esiste in tabella
-  // e il suo inserimento faceva fallire con 500 ogni creazione di preventivo.
 
-  // Le condizioni seguono i prodotti: si copiano dai progetti presenti nel
-  // preventivo, come gia' avviene per listini e moduli.
   const contractTerms = await fetchContractTerms(quoteTermsProjects(lineItems))
 
-  // Precompilazione dalla visura: si accettano SOLO le chiavi previste dal
-  // modulo di fatturazione. Copiare l'oggetto cosi' com'e' lascerebbe scrivere
-  // campi arbitrari dentro una colonna che poi viene riletta e stampata.
   const CHIAVI_FATTURAZIONE = ["company", "vat", "tax_code", "address", "zip", "city", "province", "sdi_code", "pec", "reference"] as const
   const billingIn = body.billing_details && typeof body.billing_details === "object" && !Array.isArray(body.billing_details)
     ? (body.billing_details as Record<string, unknown>)
@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
     currency: body.currency || "eur",
     requested_fields: Array.isArray(body.requested_fields) ? body.requested_fields : [],
     expires_at: expiresAt,
+    presentation_mode: presentationMode(request, body),
     status: "draft",
     provisioning_status: "not_required",
     token: randomUUID(),
