@@ -13,13 +13,13 @@ import { DIGITAL_SALES_AGENT_PROMPT } from "@/lib/quotes/digital-sales-agent"
 const CORE_4BID_PROJECTS = ["hotelaccelerator", "santaddeo", "hotelprofitai", "manubot"] as const
 
 export interface QuoteChatContext {
-  /** Testo da aggiungere al prompt: descrive l'offerta al posto di "non ho informazioni". */
   prompt: string
-  /** Intestatario del preventivo: serve a NON richiedere dati che abbiamo gia'. */
+  quoteId: string | null
   clientName: string | null
   clientCompany: string | null
   clientEmail: string | null
   quoteNumber: string | null
+  quotedProjects: string[]
 }
 
 export function extractQuoteToken(pathname: string | null | undefined): string | null {
@@ -33,204 +33,113 @@ function describeLine(item: QuoteLineItem, currency: string): string {
   const meta = getCommercialMeta(item)
   const benefits = quoteBenefits(item, 5)
   const credits = getIncludedCredits(item)
-  const nome = item.name || item.description || "Voce"
-  const parti = [`- ${nome}: ${formatQuoteAmount(calc.amount, currency)}`]
-
+  const name = item.name || item.description || "Voce"
+  const parts = [`- ${name}: ${formatQuoteAmount(calc.amount, currency)}`]
   if (item.billing_period && item.billing_period !== "one_time") {
-    const periodi: Record<string, string> = {
-      monthly: "al mese",
-      quarterly: "a trimestre",
-      yearly: "all'anno",
-    }
-    parti.push(periodi[item.billing_period] || item.billing_period)
+    const periods: Record<string, string> = { monthly: "al mese", quarterly: "a trimestre", yearly: "all'anno" }
+    parts.push(periods[item.billing_period] || item.billing_period)
   }
-  if (item.optional) parti.push(isQuoteLineSelected(item) ? "(opzionale, selezionata)" : "(opzionale, non selezionata)")
-  else parti.push("(inclusa nella proposta)")
-  if (item.trial_days) parti.push(`con ${item.trial_days} giorni di prova`)
-
-  let riga = parti.join(" ")
-
-  if (item.name && item.description && item.description !== item.name) {
-    riga += `\n  Descrizione: ${item.description}`
-  }
-  if (item.features?.length) {
-    riga += `\n  Funzionalita: ${item.features.join("; ")}`
-  }
-  if (benefits.length) {
-    riga += `\n  Benefici commerciali da spiegare: ${benefits.join("; ")}`
-  }
+  parts.push(item.optional ? (isQuoteLineSelected(item) ? "(opzionale, selezionata)" : "(opzionale, non selezionata)") : "(inclusa nella proposta)")
+  if (item.trial_days) parts.push(`con ${item.trial_days} giorni di prova`)
+  let row = parts.join(" ")
+  if (item.name && item.description && item.description !== item.name) row += `\n  Descrizione: ${item.description}`
+  if (item.features?.length) row += `\n  Funzionalita: ${item.features.join("; ")}`
+  if (benefits.length) row += `\n  Benefici commerciali da spiegare: ${benefits.join("; ")}`
   if (item.support) {
-    const s = item.support
-    const dettagli = [
-      s.level && `livello ${s.level}`,
-      s.response_time && `risposta ${s.response_time}`,
-      s.availability,
-      s.onboarding && `avvio: ${s.onboarding}`,
-      typeof s.training_hours === "number" && `formazione ${s.training_hours} ore`,
-      s.channels?.length && `canali: ${s.channels.join(", ")}`,
-      s.notes,
-    ].filter(Boolean)
-    if (dettagli.length) riga += `\n  Assistenza: ${dettagli.join(", ")}`
+    const support = item.support
+    const details = [support.level && `livello ${support.level}`, support.response_time && `risposta ${support.response_time}`, support.availability, support.onboarding && `avvio: ${support.onboarding}`, typeof support.training_hours === "number" && `formazione ${support.training_hours} ore`, support.channels?.length && `canali: ${support.channels.join(", ")}`, support.notes].filter(Boolean)
+    if (details.length) row += `\n  Assistenza: ${details.join(", ")}`
   }
   if (item.discount) {
-    const sconto = item.discount.type === "percentage"
-      ? `${item.discount.value}%`
-      : formatQuoteAmount(item.discount.value, currency)
-    riga += `\n  Sconto applicato: ${sconto}${item.discount.reason ? ` (${item.discount.reason})` : ""}`
+    const discount = item.discount.type === "percentage" ? `${item.discount.value}%` : formatQuoteAmount(item.discount.value, currency)
+    row += `\n  Sconto applicato: ${discount}${item.discount.reason ? ` (${item.discount.reason})` : ""}`
   }
-  if (credits) {
-    riga += `\n  Crediti inclusi: ${formatQuoteAmount(credits.amount, currency)} (${credits.recharge === "recurring" ? "ricaricati a ogni rinnovo" : "una tantum"})`
-  }
-
+  if (credits) row += `\n  Crediti inclusi: ${formatQuoteAmount(credits.amount, currency)} (${credits.recharge === "recurring" ? "ricaricati a ogni rinnovo" : "una tantum"})`
   const monthly = meta.billing_options?.monthly
   const yearly = meta.billing_options?.yearly
-  if (monthly?.unit_amount) {
-    riga += `\n  Formula mensile: ${formatQuoteAmount(monthly.unit_amount * (item.quantity || 1), currency)}`
-  }
-  if (yearly?.unit_amount) {
-    riga += `\n  Formula annuale: ${formatQuoteAmount(yearly.unit_amount * (item.quantity || 1), currency)}${yearly.discount_pct ? `, sconto ${yearly.discount_pct}%` : ""}`
-  }
-
+  if (monthly?.unit_amount) row += `\n  Formula mensile: ${formatQuoteAmount(monthly.unit_amount * (item.quantity || 1), currency)}`
+  if (yearly?.unit_amount) row += `\n  Formula annuale: ${formatQuoteAmount(yearly.unit_amount * (item.quantity || 1), currency)}${yearly.discount_pct ? `, sconto ${yearly.discount_pct}%` : ""}`
   const config = (item.configuration || {}) as Record<string, any>
-  const struttura = config.structure_type
-  const sistemazioni = config.accommodations
-  const stelle = config.star_rating
-  const unita = config.unit_label
-  const dettagliStruttura = [
-    struttura && `tipo struttura: ${struttura}`,
-    sistemazioni && `${sistemazioni} ${unita || "sistemazioni"}`,
-    stelle && `${stelle} stelle`,
-  ].filter(Boolean)
-  if (dettagliStruttura.length) riga += `\n  Parametri usati per questa offerta: ${dettagliStruttura.join(", ")}`
-
-  if (meta.service_type) riga += `\n  Tipo servizio: ${meta.service_type}`
-  if (meta.parent_line_id) riga += `\n  Collegato alla voce principale: ${meta.parent_line_id}`
-  if (meta.free_on_annual) riga += `\n  Con formula annuale: servizio/setup in omaggio secondo le condizioni del preventivo`
-  if (meta.annual_setup_discount_pct) riga += `\n  Sconto setup con formula annuale: ${meta.annual_setup_discount_pct}%`
-
-  return riga
+  const structure = [config.structure_type && `tipo struttura: ${config.structure_type}`, config.accommodations && `${config.accommodations} ${config.unit_label || "sistemazioni"}`, config.star_rating && `${config.star_rating} stelle`].filter(Boolean)
+  if (structure.length) row += `\n  Parametri usati per questa offerta: ${structure.join(", ")}`
+  if (meta.service_type) row += `\n  Tipo servizio: ${meta.service_type}`
+  if (meta.parent_line_id) row += `\n  Collegato alla voce principale: ${meta.parent_line_id}`
+  if (meta.free_on_annual) row += "\n  Con formula annuale: servizio/setup in omaggio secondo le condizioni del preventivo"
+  if (meta.annual_setup_discount_pct) row += `\n  Sconto setup con formula annuale: ${meta.annual_setup_discount_pct}%`
+  return row
 }
 
 function describeComplementaryProducts(quotedProjects: string[]): string[] {
   const quoted = new Set(quotedProjects)
-  return CORE_4BID_PROJECTS
-    .filter((project) => !quoted.has(project))
-    .map((project) => {
-      const brand = QUOTE_BRANDS[project]
-      return `- ${brand.name}: ${brand.promise} [NON incluso nel preventivo attuale]`
-    })
+  return CORE_4BID_PROJECTS.filter((project) => !quoted.has(project)).map((project) => {
+    const brand = QUOTE_BRANDS[project]
+    return `- ${brand.name}: ${brand.promise} [NON incluso nel preventivo attuale]`
+  })
 }
 
 export async function buildQuoteChatContext(token: string): Promise<QuoteChatContext | null> {
   try {
     const supabase = createAdminClient()
-
-    const { data, error } = await supabase
-      .from("sales_channel_quotes")
-      .select(
-        "quote_number, title, description, line_items, total_amount, deposit_amount, vat_included, currency, payment_terms, client_name, client_company, client_email, status, payment_status, expires_at, expired_at, accepted_at, paid_at",
-      )
-      .eq("token", token)
-      .maybeSingle<Partial<SalesChannelQuote>>()
-
+    const { data, error } = await supabase.from("sales_channel_quotes")
+      .select("id, quote_number, title, description, line_items, total_amount, deposit_amount, vat_included, currency, payment_terms, client_name, client_company, client_email, status, payment_status, expires_at, expired_at, accepted_at, paid_at")
+      .eq("token", token).maybeSingle<Partial<SalesChannelQuote>>()
     if (error || !data) return null
 
     const currency = data.currency || "eur"
     const lineItems = (data.line_items || []) as QuoteLineItem[]
-    const quotedProjects = Array.from(
-      new Set(lineItems.map((item) => (item.project || "").trim().toLowerCase()).filter(Boolean)),
-    )
-    const quotedNames = Array.from(
-      new Set(lineItems.map((item) => (item.name || "").trim()).filter(Boolean)),
-    )
+    const quotedProjects = Array.from(new Set(lineItems.map((item) => (item.project || "").trim().toLowerCase()).filter(Boolean)))
+    const quotedNames = Array.from(new Set(lineItems.map((item) => (item.name || "").trim()).filter(Boolean)))
     const complementaryProducts = describeComplementaryProducts(quotedProjects)
+    const paid = data.payment_status === "paid" || data.status === "paid"
+    const expired = paid ? false : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
+    const status = paid ? "pagato" : expired ? "decaduto (serve una riapertura da parte nostra)" : data.accepted_at ? "accettato, in attesa di pagamento" : "in attesa di accettazione"
 
-    const pagato = data.payment_status === "paid" || data.status === "paid"
-    const scaduto = pagato
-      ? false
-      : Boolean(data.expired_at) || (data.expires_at ? new Date(data.expires_at) < new Date() : false)
-
-    const stato = pagato
-      ? "pagato"
-      : scaduto
-        ? "decaduto (serve una riapertura da parte nostra)"
-        : data.accepted_at
-          ? "accettato, in attesa di pagamento"
-          : "in attesa di accettazione"
-
-    const righe: string[] = []
-    righe.push(`Numero preventivo: ${data.quote_number || "non assegnato"}`)
-    righe.push(`Nome destinatario: ${data.client_name || "non indicato"}`)
-    righe.push(`Azienda/struttura destinataria: ${data.client_company || "non indicata"}`)
-    righe.push(`Intestato a: ${[data.client_name, data.client_company].filter(Boolean).join(" - ") || "non indicato"}`)
-    righe.push(`Oggetto: ${data.title || "non indicato"}`)
-    if (data.description) righe.push(`Descrizione: ${data.description}`)
-    righe.push(`Stato attuale: ${stato}`)
-    if (quotedProjects.length) righe.push(`Prodotti/progetti inclusi o proposti in questo preventivo: ${quotedProjects.join(", ")}`)
-    if (quotedNames.length) righe.push(`Nomi delle voci del preventivo: ${quotedNames.join("; ")}`)
-
+    const rows: string[] = [`Numero preventivo: ${data.quote_number || "non assegnato"}`, `Nome destinatario: ${data.client_name || "non indicato"}`, `Azienda/struttura destinataria: ${data.client_company || "non indicata"}`, `Intestato a: ${[data.client_name, data.client_company].filter(Boolean).join(" - ") || "non indicato"}`, `Oggetto: ${data.title || "non indicato"}`]
+    if (data.description) rows.push(`Descrizione: ${data.description}`)
+    rows.push(`Stato attuale: ${status}`)
+    if (quotedProjects.length) rows.push(`Prodotti/progetti inclusi o proposti in questo preventivo: ${quotedProjects.join(", ")}`)
+    if (quotedNames.length) rows.push(`Nomi delle voci del preventivo: ${quotedNames.join("; ")}`)
     if (lineItems.length) {
-      righe.push("", "Voci del preventivo:")
-      for (const item of lineItems) righe.push(describeLine(item, currency))
+      rows.push("", "Voci del preventivo:")
+      for (const item of lineItems) rows.push(describeLine(item, currency))
     }
+    rows.push("", `Totale: ${formatQuoteAmount(data.total_amount, currency)}`)
+    rows.push(data.vat_included ? "Gli importi indicati sono IVA INCLUSA." : "Gli importi indicati sono IVA ESCLUSA (l'IVA va aggiunta).")
+    if (data.deposit_amount) rows.push(`Acconto previsto: ${formatQuoteAmount(data.deposit_amount, currency)}`)
+    if (data.payment_terms) rows.push(`Condizioni di pagamento: ${data.payment_terms}`)
+    if (data.expires_at && !paid) rows.push(`Valido fino al: ${new Date(data.expires_at).toLocaleDateString("it-IT")}`)
 
-    righe.push("")
-    righe.push(`Totale: ${formatQuoteAmount(data.total_amount, currency)}`)
-    righe.push(
-      data.vat_included
-        ? "Gli importi indicati sono IVA INCLUSA."
-        : "Gli importi indicati sono IVA ESCLUSA (l'IVA va aggiunta).",
-    )
-    if (data.deposit_amount) righe.push(`Acconto previsto: ${formatQuoteAmount(data.deposit_amount, currency)}`)
-    if (data.payment_terms) righe.push(`Condizioni di pagamento: ${data.payment_terms}`)
-    if (data.expires_at && !pagato) {
-      righe.push(`Valido fino al: ${new Date(data.expires_at).toLocaleDateString("it-IT")}`)
-    }
-
-    const ecosystemBlock = complementaryProducts.length
-      ? `\n\n=== ECOSISTEMA 4BID COMPLEMENTARE ===\nQuesti prodotti NON sono inclusi nel preventivo attuale, ma puoi presentarli come possibili estensioni quando sono pertinenti:\n${complementaryProducts.join("\n")}`
-      : ""
-
+    const ecosystemBlock = complementaryProducts.length ? `\n\n=== ECOSISTEMA 4BID COMPLEMENTARE ===\nQuesti prodotti NON sono inclusi nel preventivo attuale, ma puoi presentarli come possibili estensioni quando sono pertinenti:\n${complementaryProducts.join("\n")}` : ""
     const prompt = `
 ${DIGITAL_SALES_AGENT_PROMPT}
 
 === PREVENTIVO CHE L'UTENTE STA GUARDANDO IN QUESTO MOMENTO ===
-ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI
-risposta relativa al preventivo e prevale su qualunque knowledge base generica
-riportata prima nel prompt.
+ISTRUZIONE PRIORITARIA: questa sezione e' la fonte di verita' per QUALSIASI risposta relativa al preventivo e prevale su qualunque knowledge base generica riportata prima nel prompt.
 
-${righe.join("\n")}${ecosystemBlock}
+${rows.join("\n")}${ecosystemBlock}
 
 REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
 - Sai esattamente a chi e' intestata l'offerta. Quando e' naturale, rivolgiti al destinatario per nome e ragiona sulla sua azienda/struttura.
 - Interpreta domande brevi o generiche come "Perche conviene?", "Cosa e' incluso?", "Mensile o annuale?" e "Raccontami la proposta" come riferite PRIMA DI TUTTO a questo preventivo.
 - Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di configurazione riportati qui sopra.
-- Non limitarti a elencare funzioni: collega sempre la funzione al problema che risolve e al vantaggio operativo/economico per questa specifica struttura.
+- Non limitarti a elencare funzioni: collega sempre funzione -> problema -> vantaggio concreto per questa struttura.
 - Distingui sempre fra voce inclusa, opzionale selezionata e opzionale non selezionata. Non presentare come acquistato cio' che e' solo un'opzione.
 - Se l'utente chiede un confronto mensile/annuale, usa esclusivamente gli importi e gli sconti riportati nel preventivo.
-- Per la parte principale della risposta NON sostituire mai i prodotti del preventivo con altri prodotti 4BID e NON usare altri prodotti per spiegare funzioni, prezzi o condizioni dell'offerta corrente.
-- Gli altri prodotti dell'ecosistema 4BID possono essere presentati SOLO come estensioni complementari e devono essere sempre dichiarati chiaramente come NON inclusi nel preventivo attuale.
-- Se il contesto lo rende naturale, dopo aver risposto completamente alla domanda suggerisci al massimo 1-2 prodotti complementari, spiegando perche' potrebbero avere senso per quella specifica struttura.
-- Nelle risposte di panoramica puoi chiudere con un breve richiamo all'ecosistema 4BID piu' ampio, senza trasformare la risposta in un catalogo.
-- Su domande fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi prima in modo netto; il cross-sell, se utile, viene dopo e resta separato.
-- Per gli altri prodotti 4BID non inventare prezzi, sconti, funzioni o condizioni: usa soltanto dati presenti nel contesto.
-- NON mostrare come fonte URL di un altro prodotto come se supportasse una voce del preventivo.
-- L'utente e' gia' un cliente con un'offerta in mano: NON trattarlo come un contatto da acquisire e non chiedergli dati che sono gia' qui sopra.
-- Gestisci le obiezioni come un venditore senior: capisci il vero dubbio, rispondi con fatti e valore, poi proponi una micro-azione naturale. Mai pressione, mai urgenza inventata.
-- Se una cosa NON compare qui sopra, dillo chiaramente invece di dedurla.
+- Per la parte principale della risposta NON sostituire mai i prodotti del preventivo con altri prodotti 4BID.
+- Gli altri prodotti 4BID possono essere presentati SOLO come estensioni complementari, chiaramente NON incluse. Massimo 1-2 quando hanno un nesso concreto.
+- Su domande fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi prima in modo netto; l'eventuale cross-sell viene dopo.
+- Per gli altri prodotti 4BID non inventare prezzi, sconti, funzioni o condizioni.
+- L'utente e' gia' un cliente con un'offerta in mano: NON chiedergli dati gia' presenti qui.
+- Ricorda dubbi, obiezioni, preferenze e prodotti discussi nella cronologia: non ripetere da zero cio' che e' gia' stato chiarito.
+- Gestisci le obiezioni come un venditore senior: individua il vero dubbio, rispondi con fatti e valore, poi proponi una sola micro-azione naturale.
+- Se una cosa NON compare qui sopra o nella knowledge base, dillo chiaramente invece di dedurla.
 - Non rivelare mai credenziali, password o dati di accesso.
 === FINE PREVENTIVO ===
 `.trim()
 
-    return {
-      prompt,
-      clientName: data.client_name || null,
-      clientCompany: data.client_company || null,
-      clientEmail: data.client_email || null,
-      quoteNumber: data.quote_number || null,
-    }
-  } catch (e) {
-    console.error("[v0] buildQuoteChatContext error:", e)
+    return { prompt, quoteId: data.id || null, clientName: data.client_name || null, clientCompany: data.client_company || null, clientEmail: data.client_email || null, quoteNumber: data.quote_number || null, quotedProjects }
+  } catch (error) {
+    console.error("[v0] buildQuoteChatContext error:", error)
     return null
   }
 }
