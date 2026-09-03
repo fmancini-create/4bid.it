@@ -33,6 +33,13 @@ type ExistingPullRequest = {
   base: { ref: string }
 }
 
+type PackageManifest = {
+  packageManager?: string
+  scripts?: Record<string, string>
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+}
+
 export const AUTO_REMEDIATION_CODES = new Set(["ENV_NOT_IGNORED", "NO_CI"])
 
 function fixToken() {
@@ -103,10 +110,30 @@ function scriptStep(name: string, script: string, runner: "npm" | "pnpm") {
   return `      - name: ${name}\n        shell: bash\n        run: |\n          if node -e \"process.exit(require('./package.json').scripts?.['${script}'] ? 0 : 1)\"; then ${runner} run ${script}; fi\n`
 }
 
+function lintStep(packageJson: string | null, runner: "npm" | "pnpm") {
+  if (!packageJson) return { step: scriptStep("Lint", "lint", runner), review: null as string | null }
+
+  try {
+    const pkg = JSON.parse(packageJson) as PackageManifest
+    const lintScript = pkg.scripts?.lint || ""
+    const dependencies = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) }
+    if (/^eslint(?:\s|$)/.test(lintScript.trim()) && !dependencies.eslint) {
+      return {
+        step: `      - name: Lint configuration check\n        shell: bash\n        run: |\n          echo \"::warning::Lint non eseguito: package.json richiama eslint ma eslint non e' installato. Il problema resta da correggere separatamente.\"\n`,
+        review: "Lint non eseguito dalla baseline CI: package.json richiama eslint, ma eslint non e' installato nel repository. Correggere la configurazione lint in un intervento separato.",
+      }
+    }
+  } catch {
+    // Il package.json non valido viene gia' segnalato dall'audit.
+  }
+
+  return { step: scriptStep("Lint", "lint", runner), review: null as string | null }
+}
+
 function detectPnpmVersion(packageJson: string | null, lockfile: string) {
   if (packageJson) {
     try {
-      const pkg = JSON.parse(packageJson) as { packageManager?: string }
+      const pkg = JSON.parse(packageJson) as PackageManifest
       const match = pkg.packageManager?.match(/^pnpm@(\d+)/)
       if (match?.[1]) return match[1]
     } catch {
@@ -153,7 +180,8 @@ async function buildCiChange(project: AuditProject) {
     return { change: null, review: "CI non creata automaticamente: non e' stato rilevato un lockfile npm/pnpm. Serve scegliere il package manager prima di generare la pipeline." }
   }
 
-  const workflow = `name: Control Center CI\n\non:\n  pull_request:\n  push:\n    branches:\n      - ${project.branch}\n\npermissions:\n  contents: read\n\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n${setup}${install}${scriptStep("Lint", "lint", runner)}${scriptStep("Test", "test", runner)}${scriptStep("Build", "build", runner)}`
+  const lint = lintStep(packageJson?.text || null, runner)
+  const workflow = `name: Control Center CI\n\non:\n  pull_request:\n  push:\n    branches:\n      - ${project.branch}\n\npermissions:\n  contents: read\n\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n${setup}${install}${lint.step}${scriptStep("Test", "test", runner)}${scriptStep("Build", "build", runner)}`
 
   return {
     change: {
@@ -161,7 +189,7 @@ async function buildCiChange(project: AuditProject) {
       content: workflow,
       message: "ci: add baseline validation workflow",
     } satisfies FileChange,
-    review: null,
+    review: lint.review,
   }
 }
 
@@ -191,6 +219,7 @@ async function buildChanges(project: AuditProject, findings: FindingRow[]): Prom
     if (ci.change) {
       changes.push(ci.change)
       appliedCodes.push("NO_CI")
+      if (ci.review) reviewMessages.push(ci.review)
     } else if (ci.review) {
       reviewMessages.push(ci.review)
     }
