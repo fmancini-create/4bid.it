@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import AdminNavigation from "@/components/admin-navigation"
-import QuoteCommerceBuilder from "./quote-commerce-builder"
+import QuoteCommerceAiWrapper from "./quote-commerce-ai-wrapper"
 import QuotePresentationModePicker from "./quote-presentation-mode-picker"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
@@ -19,7 +19,7 @@ export default async function QuoteCommercePage() {
         <div className="mx-auto mb-6 max-w-7xl">
           <QuotePresentationModePicker />
         </div>
-        <QuoteCommerceBuilder />
+        <QuoteCommerceAiWrapper />
       </main>
     </div>
   )
