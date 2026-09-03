@@ -19,16 +19,24 @@ function corporateDossierIsUnlocked() {
 }
 
 function findPresentationCard() {
-  const title = Array.from(document.querySelectorAll<HTMLElement>("h1,h2,h3,h4")).find(
-    (node) => node.textContent?.trim() === "Presentazione prodotti",
-  )
+  const title = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[data-slot="card-title"], [class*="card-title"], h1, h2, h3, h4, div, p',
+    ),
+  ).find((node) => node.textContent?.trim() === "Presentazione prodotti")
 
   if (!title) return null
 
   let node: HTMLElement | null = title
   while (node && node !== document.body) {
     const text = node.textContent || ""
-    if (text.includes("Presentazione prodotti") && node.querySelector("button")) return node
+    const looksLikeCard =
+      node.dataset.slot === "card" ||
+      node.getAttribute("data-slot") === "card" ||
+      node.className.includes("rounded") ||
+      node.className.includes("shadow")
+
+    if (looksLikeCard && text.includes("Presentazione prodotti")) return node
     node = node.parentElement
   }
 
@@ -62,9 +70,10 @@ export default function DossierAvatarGate({ token }: { token: string }) {
 
       card.style.position = "relative"
       card.style.overflow = "hidden"
-      card.style.minHeight = "360px"
+      card.style.minHeight = "430px"
       card.style.padding = "0"
       card.style.background = "#000"
+      card.style.borderColor = "rgba(255,255,255,.10)"
 
       host = document.createElement("div")
       host.dataset.dossierAvatarHost = "true"
@@ -79,10 +88,9 @@ export default function DossierAvatarGate({ token }: { token: string }) {
       card.appendChild(host)
       setPortalHost(host)
 
-      // Il player nasce come componente riutilizzabile full-width. Qui lo forziamo
-      // a riempire esclusivamente il riquadro Presentazione prodotti.
       const styleEmbeddedPlayer = () => {
         if (!host) return
+
         const section = host.querySelector<HTMLElement>("section")
         if (section) {
           Object.assign(section.style, {
@@ -110,7 +118,7 @@ export default function DossierAvatarGate({ token }: { token: string }) {
         const video = host.querySelector<HTMLVideoElement>("video")
         if (video) {
           video.style.objectFit = "cover"
-          video.style.objectPosition = "center 32%"
+          video.style.objectPosition = "center 18%"
         }
       }
 
