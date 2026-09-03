@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "crypto"
 import { NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { buildQuoteChatContext, type QuoteChatContext } from "@/lib/quotes/chat-context"
@@ -175,18 +176,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .single()
     if (chatError || !chat?.id) throw chatError || new Error("Impossibile creare la conversazione")
 
-    const callbackSecret = process.env.TAVUS_WEBHOOK_SECRET || ""
-    const callbackUrl = callbackSecret
-      ? `${request.nextUrl.origin}/api/integrations/tavus/quote-callback?secret=${encodeURIComponent(callbackSecret)}`
-      : undefined
+    // Every live call gets its own callback credential. This removes the hidden dependency
+    // on a global webhook env var and keeps the credential useless outside this session.
+    const callbackSecret = randomBytes(32).toString("base64url")
+    const callbackSecretHash = createHash("sha256").update(callbackSecret).digest("hex")
+    const callbackUrl = `${request.nextUrl.origin}/api/integrations/tavus/quote-callback?secret=${encodeURIComponent(callbackSecret)}`
 
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
     const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
 
-    // Best effort: the live-sales PAL is dedicated to this experience, so keep its TTS pacing slow.
-    // If the current Tavus account exposes only the newer PAL surface and does not support profile patching,
-    // the call still proceeds and the spoken prompt below remains the fallback.
     await ensureVoiceTuning(palId)
 
     const tavusBody: Record<string, unknown> = {
@@ -196,6 +195,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       audio_only: false,
       require_auth: true,
       max_participants: 2,
+      callback_url: callbackUrl,
       properties: {
         language: "italian",
         enable_closed_captions: false,
@@ -203,7 +203,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         participant_left_timeout: 15,
         participant_absent_timeout: 90,
       },
-      ...(callbackUrl ? { callback_url: callbackUrl } : {}),
       ...(usesPalNaming ? { pal_id: palId, face_id: faceId } : { persona_id: palId, replica_id: faceId }),
     }
 
@@ -248,6 +247,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         max_call_duration_seconds: MAX_CALL_DURATION_SECONDS,
         captions_enabled: false,
         requested_language: "italian",
+        callback_secret_hash: callbackSecretHash,
       },
     })
     if (sessionError) console.error("[live-avatar] session persistence error", sessionError)
