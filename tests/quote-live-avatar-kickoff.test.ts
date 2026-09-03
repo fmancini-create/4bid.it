@@ -16,19 +16,21 @@ test("live quote API exposes the same opening greeting it sends to Tavus", () =>
   assert.match(route, /openingMessage,/)
 })
 
-test("custom Daily UI forces the opening greeting if Tavus stays silent", () => {
+test("remote Tavus voice is routed directly through the native audio element", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /sendAppMessage/)
-  assert.match(component, /event_type:\s*"conversation\.echo"/)
-  assert.match(component, /OPENING_GREETING_FALLBACK_MS/)
-  assert.match(component, /conversation\.started_speaking/)
-  assert.match(component, /conversation\.replica\.started_speaking/)
+  assert.match(component, /remoteAudioRef/)
+  assert.match(component, /audio\.srcObject = new MediaStream\(\[track\]\)/)
+  assert.match(component, /audio\.muted = false/)
+  assert.match(component, /audio\.volume = 1/)
+  assert.match(component, /await audio\.play\(\)/)
+  assert.doesNotMatch(component, /createMediaStreamSource/)
 })
 
-test("ecosystem strip contains the 4BID mark and explicit HotelAccelerator and HotelProfit labels", () => {
+test("live call shows only the compact 4BID corner logo", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /includeFourBid = true/)
-  assert.match(component, /HotelAccelerator/)
-  assert.match(component, /HotelProfit AI/)
-  assert.match(component, /BrandChip brand=\{FOUR_BID_BRAND\}/)
+  assert.match(component, /absolute left-3 top-3/)
+  assert.match(component, /src="\/logo\.png"/)
+  assert.doesNotMatch(component, /BrandStrip/)
+  assert.doesNotMatch(component, /HotelAccelerator/)
+  assert.doesNotMatch(component, /HotelProfit AI/)
 })
