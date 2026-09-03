@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import bcrypt from "bcryptjs"
 import {
   BUSINESS_PLAN_SHARE_COOKIE,
   createBusinessPlanShareSession,
@@ -13,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const body = await request.json()
 
-  const password = typeof body.password === "string" ? body.password : ""
+  const password = typeof body.password === "string" ? body.password.trim() : ""
   const visitorName = typeof body.visitorName === "string" ? body.visitorName.trim() : ""
   const visitorEmail = typeof body.visitorEmail === "string" ? body.visitorEmail.trim().toLowerCase() : ""
   const visitorCompany = typeof body.visitorCompany === "string" ? body.visitorCompany.trim() : ""
@@ -28,7 +27,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Link scaduto" }, { status: 410 })
   }
 
-  const isValid = await bcrypt.compare(password, share.password_hash)
+  const { data: isValid, error: passwordError } = await supabase.rpc("verify_business_plan_share_password", {
+    p_token: token,
+    p_password: password,
+  })
+
+  if (passwordError) {
+    console.error("Business plan password verification failed", passwordError)
+    return NextResponse.json({ error: "Impossibile verificare la password" }, { status: 500 })
+  }
+
   if (!isValid) return NextResponse.json({ error: "Password non corretta" }, { status: 401 })
 
   const now = new Date().toISOString()
