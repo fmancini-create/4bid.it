@@ -29,6 +29,12 @@ function providerConversationId(payload: any): string | null {
   return payload?.conversation_id || payload?.data?.conversation_id || payload?.properties?.conversation_id || null
 }
 
+function isEndedEvent(eventType: string) {
+  if (eventType === "system.shutdown") return true
+  if (eventType === "application.transcription_ready") return true
+  return eventType.includes("end") || eventType.includes("complete")
+}
+
 export async function POST(request: NextRequest) {
   try {
     const expected = process.env.TAVUS_WEBHOOK_SECRET
@@ -50,16 +56,26 @@ export async function POST(request: NextRequest) {
 
     const transcript = normalizeTranscript(payload)
     const eventType = String(payload?.event_type || payload?.event || payload?.type || "").toLowerCase()
-    const ended = eventType.includes("end") || eventType.includes("complete") || eventType.includes("transcript")
+    const ended = isEndedEvent(eventType)
+    const now = new Date().toISOString()
+    const shutdownReason = payload?.properties?.shutdown_reason || payload?.properties?.reason || payload?.shutdown_reason || null
 
     await supabase.from("quote_live_sales_sessions").update({
       status: ended ? "ended" : "active",
       transcript: transcript.length ? transcript : undefined,
-      ended_at: ended ? new Date().toISOString() : undefined,
-      last_event_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      metadata: { ...(session.metadata || {}), last_provider_event: eventType || "unknown" },
+      ended_at: ended ? now : undefined,
+      last_event_at: now,
+      updated_at: now,
+      metadata: {
+        ...(session.metadata || {}),
+        last_provider_event: eventType || "unknown",
+        ...(shutdownReason ? { shutdown_reason: String(shutdownReason) } : {}),
+      },
     }).eq("id", session.id)
+
+    if (ended) {
+      await supabase.from("chat_conversations").update({ status: "closed" }).eq("id", session.chat_conversation_id)
+    }
 
     if (transcript.length) {
       await supabase.from("chat_messages").delete().eq("conversation_id", session.chat_conversation_id)
@@ -70,7 +86,7 @@ export async function POST(request: NextRequest) {
       })))
       await supabase.from("chat_conversations").update({
         message_count: transcript.length,
-        last_message_at: new Date().toISOString(),
+        last_message_at: now,
         status: ended ? "closed" : "active",
       }).eq("id", session.chat_conversation_id)
 

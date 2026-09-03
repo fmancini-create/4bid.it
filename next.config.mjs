@@ -32,10 +32,8 @@ const nextConfig = {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
+          // Permissions-Policy is intentionally set in proxy.ts so camera and
+          // microphone remain denied everywhere except the virtual quote call.
           {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains; preload",
