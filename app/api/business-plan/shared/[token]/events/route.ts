@@ -10,6 +10,8 @@ const ALLOWED_EVENTS = new Set([
   "scenarios_viewed",
   "products_viewed",
   "corporate_report_opened",
+  "avatar_connected",
+  "avatar_ended",
 ])
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {

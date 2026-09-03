@@ -217,7 +217,7 @@ export async function proxy(request: NextRequest) {
 
   // Add security headers to all responses
   const response = NextResponse.next()
-  const isVirtualQuoteExperience = pathname.startsWith("/preventivo/")
+  const allowsRealtimeAdvisor = pathname.startsWith("/preventivo/") || pathname.startsWith("/business-plan/")
 
   // Content Security Policy
   response.headers.set(
@@ -230,7 +230,7 @@ export async function proxy(request: NextRequest) {
       // Yandex Metrika loads its tag from mc.yandex.ru but talks to
       // mc.yandex.com at runtime (verified in production: the /watch calls all
       // land on the .com host). Both hosts must be listed.
-      // The pinned Daily SDK is loaded only by the virtual quote call surface.
+      // The pinned Daily SDK is loaded only by first-party realtime advisor surfaces.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://cdn.vercel-insights.com",
       "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -255,12 +255,12 @@ export async function proxy(request: NextRequest) {
     ].join("; "),
   )
 
-  // Keep camera and microphone denied across the rest of 4bid.it. The public
-  // virtual-quote experience is the only surface that intentionally starts a
-  // realtime advisor from the first-party page through Daily's SDK.
+  // Keep camera and microphone denied across the rest of 4bid.it. Only the
+  // virtual quote and authenticated corporate dossier experiences intentionally
+  // start a realtime advisor from the first-party page through Daily's SDK.
   response.headers.set(
     "Permissions-Policy",
-    isVirtualQuoteExperience
+    allowsRealtimeAdvisor
       ? 'camera=(self "https://tavus.daily.co" "https://*.daily.co"), microphone=(self "https://tavus.daily.co" "https://*.daily.co"), geolocation=()'
       : "camera=(), microphone=(), geolocation=()",
   )
