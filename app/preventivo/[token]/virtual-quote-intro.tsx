@@ -15,6 +15,37 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
   const [liveState, setLiveState] = useState<LiveAdvisorState | null>(null)
 
   useEffect(() => {
+    const hiddenElements = new Map<HTMLElement, string>()
+
+    const hideElement = (element: HTMLElement) => {
+      if (!hiddenElements.has(element)) hiddenElements.set(element, element.style.display)
+      element.style.setProperty("display", "none", "important")
+    }
+
+    const hideGlobalAiChat = () => {
+      document
+        .querySelectorAll<HTMLElement>('button[aria-label="Apri la chat di supporto"]')
+        .forEach(hideElement)
+
+      document
+        .querySelectorAll<HTMLButtonElement>('button[aria-label="Chiudi chat"]')
+        .forEach((closeButton) => closeButton.click())
+    }
+
+    hideGlobalAiChat()
+    const observer = new MutationObserver(hideGlobalAiChat)
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+      hiddenElements.forEach((previousDisplay, element) => {
+        if (previousDisplay) element.style.display = previousDisplay
+        else element.style.removeProperty("display")
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     void fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, { cache: "no-store" })
       .then((response) => response.json())
