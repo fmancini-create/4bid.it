@@ -45,31 +45,30 @@ export default function QuoteSendDialog({
 
   async function invia() {
     if (!quote) return
+    if (!quote.client_email?.trim()) {
+      setError("Destinatario mancante: salva prima l'email del cliente.")
+      return
+    }
     setSending(true)
     setError(null)
     try {
       const res = await fetch(`/api/quotes/${quote.id}/send`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cc, bcc }),
+        // Il destinatario visualizzato viene inviato esplicitamente al server.
+        // Il backend lo confronta con il valore realmente salvato nel DB e
+        // blocca l'invio se nel frattempo e' cambiato o la schermata e' obsoleta.
+        body: JSON.stringify({ client_email: quote.client_email.trim(), cc, bcc }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(data.error || "Invio fallito")
         return
       }
-      // Le copie non recapitate vanno elencate PER INDIRIZZO, non contate.
-      // L'email al cliente dichiara gia' i destinatari in copia visibile: se una
-      // copia non parte, il cliente crede informato un collega che non ha
-      // ricevuto nulla. Un "1 non recapitate" non dice a chi riscrivere, e la
-      // finestra si chiude portandosi via l'unica occasione di saperlo.
       const nonRecapitate: string[] = (data.copies?.failed || [])
         .map((f: { email?: string }) => f?.email)
         .filter(Boolean)
       const inviate = data.copies?.sent || 0
-      // La gravita' deve corrispondere all'esito: un avviso verde con la spunta
-      // dice "tutto a posto" a colpo d'occhio, e chi non legge il testo non si
-      // accorge che una copia non e' partita.
       if (nonRecapitate.length) {
         onSent(
           `Preventivo inviato a ${quote.client_email}, ma la copia NON è arrivata a: ${nonRecapitate.join(", ")} — avvisali tu, il cliente li crede informati.`,
@@ -102,6 +101,10 @@ export default function QuoteSendDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+            <strong>Controllo destinatario attivo.</strong> Prima di spedire, il server verifica che questo indirizzo coincida con quello salvato nel preventivo. Se i dati non coincidono, l'invio viene bloccato.
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="quote-cc">Copia visibile (CC)</Label>
             <Textarea
@@ -137,8 +140,7 @@ export default function QuoteSendDialog({
             </p>
             <p className="mt-1 flex items-start gap-2 text-xs text-amber-800">
               <Paperclip className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-              Chi è in copia riceve il PDF, ma non il link personale: solo il cliente può accettare e impegnare la sua
-              azienda.
+              Chi è in copia riceve il PDF, ma non il link personale: solo il cliente può accettare e impegnare la sua azienda.
             </p>
           </div>
 
@@ -153,7 +155,7 @@ export default function QuoteSendDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Annulla
           </Button>
-          <Button onClick={invia} disabled={sending}>
+          <Button onClick={invia} disabled={sending || !quote.client_email?.trim()}>
             {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
             {sending ? "Invio in corso..." : "Invia preventivo"}
           </Button>
