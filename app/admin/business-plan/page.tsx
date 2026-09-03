@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { ExternalLink } from "lucide-react"
+import { BarChart3, ExternalLink } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import AdminNavigation from "@/components/admin-navigation"
 import { Button } from "@/components/ui/button"
@@ -30,7 +30,6 @@ export default async function BusinessPlanPage() {
     )
   }
 
-  // Carica i business plan esistenti
   const { data: businessPlans, error } = await supabase
     .from("business_plans")
     .select("*")
@@ -49,6 +48,12 @@ export default async function BusinessPlanPage() {
         {bankDossier && (
           <div className="container mx-auto px-4 sm:px-8 pb-2 flex flex-wrap justify-end gap-2">
             <BankDossierShareButton planId={bankDossier.id} />
+            <Button asChild variant="outline">
+              <a href={`/admin/business-plan/${bankDossier.id}/analytics`}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Statistiche
+              </a>
+            </Button>
             <Button asChild variant="outline">
               <a href="/api/business-plan/admin-preview" target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4 mr-2" />
