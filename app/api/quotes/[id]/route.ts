@@ -7,6 +7,8 @@ import { ensureDependentServiceLines } from "@/lib/quotes/dependent-lines"
 import { mergeContractTerms, parseContractTerms, quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
+const MAX_AI_NOTES = 2000
+
 type QuoteLineWithBadge = QuoteLineItem & { sales_badge?: string | null }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +21,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 const EDITABLE_FIELDS = [
   "client_name", "client_company", "client_email", "client_vat", "client_address",
-  "title", "description", "payment_terms", "deposit_amount", "vat_included", "currency",
+  "title", "description", "ai_important_notes", "payment_terms", "deposit_amount", "vat_included", "currency",
   "requested_fields", "expires_at", "presentation_mode",
   // Tabelle comparative: materiale di posizionamento, non parte dell'accordo
   // economico -> restano modificabili anche dopo l'accettazione.
@@ -43,6 +45,12 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {}
+}
+
+function normalizeAiImportantNotes(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const note = value.trim().slice(0, MAX_AI_NOTES)
+  return note || null
 }
 
 /**
@@ -153,6 +161,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const key of EDITABLE_FIELDS) if (key in body) update[key] = body[key]
+  if ("ai_important_notes" in body) update.ai_important_notes = normalizeAiImportantNotes(body.ai_important_notes)
 
   if ("expires_at" in body && body.expires_at) {
     const expiry = new Date(String(body.expires_at))
