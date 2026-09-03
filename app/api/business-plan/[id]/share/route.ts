@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import bcrypt from "bcryptjs"
 import { randomUUID } from "crypto"
 import { sendEmail } from "@/lib/email-smtp"
+import { createBusinessPlanShareSession } from "@/lib/business-plan-share-session"
 
 function escapeHtml(value: string) {
   return value
@@ -11,6 +12,13 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;")
+}
+
+function randomPassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+  let password = ""
+  for (let index = 0; index < 12; index += 1) password += chars.charAt(Math.floor(Math.random() * chars.length))
+  return password
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,42 +37,88 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params
   const supabase = createAdminClient()
   const body = await request.json()
-  if (!body.email || !body.password) return NextResponse.json({ error: "Email e password sono obbligatori" }, { status: 400 })
 
-  const email = String(body.email).trim().toLowerCase()
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
   const recipientName = typeof body.recipient_name === "string" ? body.recipient_name.trim() : ""
+  const cc = typeof body.cc === "string" ? body.cc.trim() : ""
+  const customMessage = typeof body.message === "string" ? body.message.trim() : ""
+
+  if (!email) return NextResponse.json({ error: "Email obbligatoria" }, { status: 400 })
+
   const { data: plan } = await supabase
     .from("business_plans")
     .select("name, client_name, project_type")
     .eq("id", id)
     .single()
-  const passwordHash = await bcrypt.hash(body.password, 10)
+
+  const isBankDossier = plan?.project_type === "corporate_saas"
+  if (!isBankDossier && !body.password) {
+    return NextResponse.json({ error: "Email e password sono obbligatori" }, { status: 400 })
+  }
+  if (isBankDossier && !recipientName) {
+    return NextResponse.json({ error: "Nome e cognome del destinatario obbligatori" }, { status: 400 })
+  }
+  if (isBankDossier && !customMessage) {
+    return NextResponse.json({ error: "Messaggio obbligatorio" }, { status: 400 })
+  }
+
+  const password = String(body.password || randomPassword())
+  const passwordHash = await bcrypt.hash(password, 10)
   const token = randomUUID()
 
   const { data, error } = await supabase
     .from("business_plan_shares")
-    .upsert({ business_plan_id: id, email, password_hash: passwordHash, token, can_edit: body.can_edit ?? false, can_download: body.can_download ?? true, expires_at: body.expires_at || null, access_count: 0, email_open_count: 0, view_count: 0 }, { onConflict: "business_plan_id,email" })
+    .upsert(
+      {
+        business_plan_id: id,
+        email,
+        password_hash: passwordHash,
+        token,
+        can_edit: body.can_edit ?? false,
+        can_download: body.can_download ?? true,
+        expires_at: body.expires_at || null,
+        access_count: 0,
+        email_open_count: 0,
+        view_count: 0,
+      },
+      { onConflict: "business_plan_id,email" },
+    )
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
-  const link = `${baseUrl}/business-plan/${data.token}`
+  const standardLink = `${baseUrl}/business-plan/${data.token}`
   const pixel = `${baseUrl}/api/business-plan/shared/${data.token}/track/open`
   const planName = plan?.client_name || plan?.name || "Business Plan"
-  const isBankDossier = plan?.project_type === "corporate_saas"
-  const safePassword = escapeHtml(String(body.password))
-  const safeName = escapeHtml(recipientName)
-  const salutation = safeName ? `<p>Buongiorno ${safeName},</p>` : ""
+
+  const bankEmailSession = isBankDossier
+    ? createBusinessPlanShareSession(
+        {
+          shareId: data.id,
+          token: data.token,
+          visitorName: recipientName,
+          visitorEmail: email,
+        },
+        60 * 60 * 24 * 14,
+      )
+    : null
+  const emailLink = bankEmailSession
+    ? `${baseUrl}/api/business-plan/shared/${data.token}/email-access?session=${encodeURIComponent(bankEmailSession)}`
+    : standardLink
+
+  const safePassword = escapeHtml(password)
+  const messageHtml = escapeHtml(customMessage).replace(/\n/g, "<br />")
 
   const emailHtml = isBankDossier
-    ? `<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;color:#1f2937"><div style="max-width:620px;margin:auto;background:#fff;border-radius:12px;padding:34px;border:1px solid #e5e7eb"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;font-weight:bold">4BID S.r.l.</div><h2 style="margin:8px 0 18px">Dossier Banca &amp; Investitori</h2>${salutation}<p>Filippo Mancini ti ha condiviso il dossier riservato 4BID, con piano industriale, scenari economico-finanziari e presentazione interattiva.</p><p>Per accedere utilizza la password personale qui sotto.</p><div style="margin:22px 0;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px"><div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.06em">Password</div><div style="font-family:monospace;font-size:22px;font-weight:bold;margin-top:4px">${safePassword}</div></div><p style="margin:28px 0"><a href="${link}" style="display:inline-block;background:#0f172a;color:#fff;padding:14px 24px;text-decoration:none;border-radius:8px;font-weight:bold">Apri il dossier</a></p><p style="font-size:13px;color:#64748b">All'accesso verranno richiesti nome e cognome, email e società. Il link è personale; aperture e visualizzazioni possono essere registrate per la gestione della condivisione.</p><img src="${pixel}" width="1" height="1" alt="" style="display:block;border:0" /></div></body></html>`
-    : `<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;color:#333"><div style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:32px"><h2>${escapeHtml(planName)}</h2><p>Ti è stato condiviso l'accesso al preventivo/business plan.</p><p><strong>Password:</strong> <span style="font-family:monospace;font-size:20px;color:#f59e0b">${safePassword}</span></p><p style="margin:28px 0"><a href="${link}" style="display:inline-block;background:#f59e0b;color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold">Visualizza preventivo</a></p><p style="font-size:13px;color:#777">Il link è personale. Le aperture dell'email e le visualizzazioni del documento possono essere registrate per finalità di gestione commerciale.</p><img src="${pixel}" width="1" height="1" alt="" style="display:block;border:0" /></div></body></html>`
+    ? `<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;color:#1f2937"><div style="max-width:620px;margin:auto;background:#fff;border-radius:12px;padding:34px;border:1px solid #e5e7eb"><div style="font-size:16px;line-height:1.65">${messageHtml}</div><p style="margin:30px 0 4px"><a href="${emailLink}" style="display:inline-block;background:#0f172a;color:#fff;padding:14px 26px;text-decoration:none;border-radius:8px;font-weight:bold">Apri il piano</a></p><img src="${pixel}" width="1" height="1" alt="" style="display:block;border:0" /></div></body></html>`
+    : `<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;color:#333"><div style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:32px"><h2>${escapeHtml(planName)}</h2><p>Ti è stato condiviso l'accesso al preventivo/business plan.</p><p><strong>Password:</strong> <span style="font-family:monospace;font-size:20px;color:#f59e0b">${safePassword}</span></p><p style="margin:28px 0"><a href="${standardLink}" style="display:inline-block;background:#f59e0b;color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold">Visualizza preventivo</a></p><p style="font-size:13px;color:#777">Il link è personale. Le aperture dell'email e le visualizzazioni del documento possono essere registrate per finalità di gestione commerciale.</p><img src="${pixel}" width="1" height="1" alt="" style="display:block;border:0" /></div></body></html>`
 
   let emailSent = false
   try {
     const emailResult = await sendEmail({
       to: email,
+      ...(isBankDossier && cc ? { cc } : {}),
       subject: isBankDossier ? "4BID S.r.l. — Dossier Banca & Investitori" : `Business Plan: ${planName} - Accesso Condiviso`,
       html: emailHtml,
     })
@@ -75,14 +129,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         business_plan_id: id,
         event_type: "email_sent",
         recipient_email: email,
-        metadata: isBankDossier && recipientName ? { recipient_name: recipientName, dossier: "bank" } : undefined,
+        metadata: isBankDossier
+          ? { recipient_name: recipientName, cc: cc || null, dossier: "bank", personalized_message: true }
+          : undefined,
       })
     }
   } catch (emailError) {
     console.error("[share] email exception", emailError)
   }
 
-  return NextResponse.json({ ...data, link, shareLink: link, emailSent })
+  if (isBankDossier && !emailSent) {
+    return NextResponse.json({ error: "Il server email non ha confermato l'invio" }, { status: 502 })
+  }
+
+  return NextResponse.json({ ...data, link: standardLink, shareLink: standardLink, emailSent })
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
