@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import DossierLiveAvatar from "./dossier-live-avatar"
 
 function corporateDossierIsUnlocked() {
@@ -17,17 +18,113 @@ function corporateDossierIsUnlocked() {
   return authenticatedHeaderVisible && !loginVisible
 }
 
+function findPresentationCard() {
+  const title = Array.from(document.querySelectorAll<HTMLElement>("h1,h2,h3,h4")).find(
+    (node) => node.textContent?.trim() === "Presentazione prodotti",
+  )
+
+  if (!title) return null
+
+  let node: HTMLElement | null = title
+  while (node && node !== document.body) {
+    const text = node.textContent || ""
+    if (text.includes("Presentazione prodotti") && node.querySelector("button")) return node
+    node = node.parentElement
+  }
+
+  return null
+}
+
 export default function DossierAvatarGate({ token }: { token: string }) {
-  const [unlocked, setUnlocked] = useState(false)
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
     let frame: number | null = null
+    let host: HTMLDivElement | null = null
+    let card: HTMLElement | null = null
+    let originalCardStyle: string | null = null
+    const hiddenChildren = new Map<HTMLElement, string>()
+
+    const mountInsidePresentationCard = () => {
+      if (host || !corporateDossierIsUnlocked()) return
+
+      const target = findPresentationCard()
+      if (!target) return
+
+      card = target
+      originalCardStyle = card.getAttribute("style")
+
+      Array.from(card.children).forEach((child) => {
+        if (!(child instanceof HTMLElement)) return
+        hiddenChildren.set(child, child.style.display)
+        child.style.display = "none"
+      })
+
+      card.style.position = "relative"
+      card.style.overflow = "hidden"
+      card.style.minHeight = "360px"
+      card.style.padding = "0"
+      card.style.background = "#000"
+
+      host = document.createElement("div")
+      host.dataset.dossierAvatarHost = "true"
+      Object.assign(host.style, {
+        position: "absolute",
+        inset: "0",
+        width: "100%",
+        height: "100%",
+        background: "#000",
+        zIndex: "10",
+      })
+      card.appendChild(host)
+      setPortalHost(host)
+
+      // Il player nasce come componente riutilizzabile full-width. Qui lo forziamo
+      // a riempire esclusivamente il riquadro Presentazione prodotti.
+      const styleEmbeddedPlayer = () => {
+        if (!host) return
+        const section = host.querySelector<HTMLElement>("section")
+        if (section) {
+          Object.assign(section.style, {
+            width: "100%",
+            height: "100%",
+            padding: "0",
+            border: "0",
+            background: "#000",
+          })
+        }
+
+        const frameElement = section?.firstElementChild
+        if (frameElement instanceof HTMLElement) {
+          Object.assign(frameElement.style, {
+            width: "100%",
+            maxWidth: "none",
+            height: "100%",
+            minHeight: "100%",
+            border: "0",
+            borderRadius: "0",
+            boxShadow: "none",
+          })
+        }
+
+        const video = host.querySelector<HTMLVideoElement>("video")
+        if (video) {
+          video.style.objectFit = "cover"
+          video.style.objectPosition = "center 32%"
+        }
+      }
+
+      styleEmbeddedPlayer()
+      const hostObserver = new MutationObserver(styleEmbeddedPlayer)
+      hostObserver.observe(host, { childList: true, subtree: true })
+      ;(host as HTMLDivElement & { __avatarObserver?: MutationObserver }).__avatarObserver = hostObserver
+    }
 
     const sync = () => {
       if (frame !== null) window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         frame = null
-        setUnlocked(corporateDossierIsUnlocked())
+        mountInsidePresentationCard()
       })
     }
 
@@ -43,10 +140,23 @@ export default function DossierAvatarGate({ token }: { token: string }) {
     return () => {
       observer.disconnect()
       if (frame !== null) window.cancelAnimationFrame(frame)
+
+      if (host) {
+        ;(host as HTMLDivElement & { __avatarObserver?: MutationObserver }).__avatarObserver?.disconnect()
+        host.remove()
+      }
+
+      hiddenChildren.forEach((display, child) => {
+        child.style.display = display
+      })
+
+      if (card) {
+        if (originalCardStyle === null) card.removeAttribute("style")
+        else card.setAttribute("style", originalCardStyle)
+      }
     }
   }, [])
 
-  if (!unlocked) return null
-
-  return <DossierLiveAvatar token={token} />
+  if (!portalHost) return null
+  return createPortal(<DossierLiveAvatar token={token} />, portalHost)
 }
