@@ -27,6 +27,7 @@ function warningSummary(event: any) {
   const props = event?.properties && typeof event.properties === "object" ? event.properties : {}
   const raw = props.message || props.warning || props.error || props.detail || event?.message || event?.warning || event?.error || ""
   return {
+    warn_reason: cleanWarning(props.warn_reason),
     message: cleanWarning(raw),
     code: typeof props.code === "string" || typeof props.code === "number" ? props.code : null,
     property_keys: Object.keys(props).filter((key) => !/token|secret|key|url|id/i.test(key)).slice(0, 20),
