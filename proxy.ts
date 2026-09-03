@@ -147,7 +147,6 @@ export async function proxy(request: NextRequest) {
   // decided per request by requireProjectAccess against the database.
   if (pathname.startsWith("/area-riservata") && !isProjectRoomPublicPath(pathname)) {
     let response = NextResponse.next({ request: { headers: request.headers } })
-
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -196,9 +195,7 @@ export async function proxy(request: NextRequest) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-            response = NextResponse.next({
-              request,
-            })
+            response = NextResponse.next({ request })
             cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
           },
         },
@@ -233,16 +230,20 @@ export async function proxy(request: NextRequest) {
       // Yandex Metrika loads its tag from mc.yandex.ru but talks to
       // mc.yandex.com at runtime (verified in production: the /watch calls all
       // land on the .com host). Both hosts must be listed.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://cdn.vercel-insights.com",
+      // The pinned Daily SDK is loaded only by the virtual quote call surface.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://cdn.vercel-insights.com",
       "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
+      "media-src 'self' blob:",
       "font-src 'self' https://fonts.gstatic.com",
       // Google Analytics can route collection requests through regional
       // subdomains such as region1.analytics.google.com. Keep both apex and
       // wildcard hosts so CSP does not block present or future regional GA4
       // endpoints while remaining scoped to Google's analytics domains.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
+      // Daily transports cover the Tavus WebRTC room plus Daily's failover
+      // signaling hosts. Permissions remain separately scoped below.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.daily.co wss://*.daily.co https://*.dailywebrtc.com wss://*.dailywebrtc.com https://*.dailywebrtc.net wss://*.dailywebrtc.net https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://mc.yandex.ru https://mc.yandex.com https://yastatic.net https://api.resend.com https://fal.ai https://*.fal.ai https://api.linkedin.com https://graph.facebook.com https://vitals.vercel-insights.com",
       // youtube-nocookie.com e' il dominio "privacy-enhanced" usato dalla facade
       // dei video (Video guide): senza di esso Chrome blocca l'iframe al click.
       // Tavus CVI serves the real-time WebRTC room through Daily; allow those
@@ -255,8 +256,8 @@ export async function proxy(request: NextRequest) {
   )
 
   // Keep camera and microphone denied across the rest of 4bid.it. The public
-  // virtual-quote experience is the only surface that intentionally embeds a
-  // WebRTC advisor, and its iframe also carries an explicit allow attribute.
+  // virtual-quote experience is the only surface that intentionally starts a
+  // realtime advisor from the first-party page through Daily's SDK.
   response.headers.set(
     "Permissions-Policy",
     isVirtualQuoteExperience
