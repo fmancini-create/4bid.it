@@ -13,6 +13,7 @@ import EcosystemInvite from "./ecosystem-invite"
 import AnnualDiscountLabelFix from "./annual-discount-label-fix"
 import QuoteSalesBadgeHydrator from "./quote-sales-badge-hydrator"
 import VirtualQuoteIntro from "./virtual-quote-intro"
+import CollapsibleTraditionalQuote from "./collapsible-traditional-quote"
 
 const PREVENTIVO_TITLE = "Il tuo preventivo 4BID"
 const PREVENTIVO_DESCRIPTION =
@@ -95,12 +96,8 @@ export default async function PreventivoPage({
     <QuoteView token={token} quote={displayQuote} expired={expired} />
   )
   const virtual = data.presentation_mode === "virtual"
-
-  return (
+  const traditionalQuote = (
     <>
-      <AnnualDiscountLabelFix />
-      <QuoteSalesBadgeHydrator items={visibleLineItems} />
-      {virtual ? <VirtualQuoteIntro token={token} clientName={data.client_name} /> : null}
       {quoteView}
       {structuredQuote ? (
         <QuoteOneTimeInvestmentDetails
@@ -113,6 +110,19 @@ export default async function PreventivoPage({
         <EcosystemInvite token={token} offersCount={ecosystemOffers.length} selectedCount={selectedEcosystemCount} />
       ) : null}
       {expired && !alreadyPaid && <ReactivationRequest token={token} />}
+    </>
+  )
+
+  return (
+    <>
+      <AnnualDiscountLabelFix />
+      <QuoteSalesBadgeHydrator items={visibleLineItems} />
+      {virtual ? (
+        <>
+          <VirtualQuoteIntro token={token} clientName={data.client_name} />
+          <CollapsibleTraditionalQuote>{traditionalQuote}</CollapsibleTraditionalQuote>
+        </>
+      ) : traditionalQuote}
       <ForwardQuoteButton token={token} />
     </>
   )

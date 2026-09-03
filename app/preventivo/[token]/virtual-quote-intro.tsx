@@ -45,7 +45,7 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
               <h2 className="text-lg font-bold">Preventivo virtuale 4BID</h2>
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Sparkles className="h-3 w-3" /> Interattivo</span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Puoi entrare in videochiamata con la consulente AI 4BID, farti raccontare la proposta oppure farle domande specifiche. Il preventivo completo con opzioni, condizioni, accettazione e pagamento resta disponibile subito sotto.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Puoi entrare in videochiamata con la consulente AI 4BID, farti raccontare la proposta oppure farle domande specifiche. Il preventivo completo resta disponibile nel riquadro espandibile subito sotto, chiuso di default per lasciare spazio alla consulente.</p>
           </div>
         </div>
       </section>

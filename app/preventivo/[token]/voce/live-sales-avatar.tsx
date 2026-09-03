@@ -61,11 +61,6 @@ type LiveSession = {
   maxCallDurationSeconds: number
 }
 
-type Caption = {
-  role: "user" | "replica"
-  text: string
-}
-
 const BRAND_DEFINITIONS: Brand[] = [
   {
     id: "santaddeo",
@@ -100,7 +95,7 @@ const BRAND_DEFINITIONS: Brand[] = [
 const FOUR_BID_BRAND: Brand = {
   id: "4bid",
   name: "4BID",
-  logo: "/4bid-colorful-logo-white.jpg",
+  logo: "/logo.png",
   slogan: "Tecnologia costruita intorno alla tua struttura.",
   keys: [],
 }
@@ -191,7 +186,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   const [session, setSession] = useState<LiveSession | null>(null)
   const [status, setStatus] = useState<"idle" | "starting" | "connecting" | "joined" | "ended" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
-  const [caption, setCaption] = useState<Caption | null>(null)
   const [sloganIndex, setSloganIndex] = useState(0)
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(false)
@@ -222,12 +216,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
     let cancelled = false
     let call: DailyCall | null = null
-    let captionTimer: number | null = null
-
-    const clearCaptionLater = (delay = 2600) => {
-      if (captionTimer) window.clearTimeout(captionTimer)
-      captionTimer = window.setTimeout(() => setCaption(null), delay)
-    }
 
     const syncTracks = () => {
       if (!call) return
@@ -241,23 +229,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       attachTrack(remoteAudioRef.current, participantTrack(remote, "audio"))
       attachTrack(localVideoRef.current, participantTrack(local, "video"))
       setHasRemoteVideo(Boolean(remoteVideoTrack))
-    }
-
-    const handleAppMessage = (event: DailyEvent) => {
-      const payload = event?.data || event
-      const eventType = String(payload?.event_type || "")
-      if (eventType !== "conversation.utterance.streaming" && eventType !== "conversation.utterance") return
-
-      const role = payload?.properties?.role === "user" ? "user" : "replica"
-      const text = String(payload?.properties?.speech || payload?.properties?.text || "").trim()
-      if (!text) return
-
-      setCaption({ role, text })
-      if (eventType === "conversation.utterance") {
-        clearCaptionLater(3600)
-      } else if (payload?.properties?.final || payload?.properties?.done || payload?.properties?.is_final) {
-        clearCaptionLater()
-      }
     }
 
     const connect = async () => {
@@ -286,7 +257,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           .on("participant-updated", syncTracks)
           .on("track-started", syncTracks)
           .on("track-stopped", syncTracks)
-          .on("app-message", handleAppMessage)
           .on("left-meeting", () => {
             if (!cancelled) setStatus("ended")
           })
@@ -314,7 +284,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
     return () => {
       cancelled = true
-      if (captionTimer) window.clearTimeout(captionTimer)
       const activeCall = call || callRef.current
       if (activeCall) {
         if (callRef.current === activeCall) callRef.current = null
@@ -330,7 +299,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   const start = async () => {
     setStatus("starting")
     setError(null)
-    setCaption(null)
     setMicOn(true)
     setCameraOn(false)
 
@@ -434,7 +402,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-slate-950/85 via-slate-950/35 to-transparent px-3 pb-12 pt-3 sm:px-5 sm:pt-5">
             <div className="flex items-start justify-between gap-3">
               <div className="rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
-                <img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-7 w-auto object-contain sm:h-9" />
+                <img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-8 w-auto object-contain sm:h-10" />
               </div>
               {productBrands.length ? (
                 <div className="flex max-w-[68%] flex-wrap justify-end gap-1.5 sm:gap-2">
@@ -453,17 +421,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
               <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" aria-label="La tua videocamera" />
             </div>
           ) : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
-
-          {caption ? (
-            <div className="pointer-events-none absolute inset-x-3 bottom-40 z-30 flex justify-center sm:inset-x-10 sm:bottom-36">
-              <div className="max-w-3xl rounded-2xl bg-slate-950/82 px-4 py-3 text-center text-white shadow-xl ring-1 ring-white/10 backdrop-blur-md sm:px-6">
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200">
-                  {caption.role === "replica" ? "Consulente 4BID" : "Tu"}
-                </div>
-                <p className="text-sm leading-relaxed sm:text-base">{caption.text}</p>
-              </div>
-            </div>
-          ) : null}
 
           <div className="pointer-events-none absolute inset-x-3 bottom-24 z-30 sm:inset-x-5 sm:bottom-24">
             <div className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/72 px-4 py-3 text-white shadow-xl backdrop-blur-md">
@@ -527,7 +484,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       <section className="rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-6 text-center shadow-sm sm:p-8">
         <Sparkles className="mx-auto h-7 w-7 text-violet-600" />
         <h3 className="mt-3 text-xl font-bold">Grazie per la conversazione</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi continuare a leggere il preventivo qui sotto oppure riaprire la consulente se hai ancora una domanda importante.</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi aprire il preventivo completo qui sotto oppure riaprire la consulente se hai ancora una domanda importante.</p>
         <Button onClick={() => void start()} className="mt-5 bg-violet-600 text-white hover:bg-violet-700">Parla di nuovo con la consulente</Button>
       </section>
     )
@@ -543,7 +500,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           <h3 className="text-2xl font-black tracking-tight sm:text-3xl">Parla adesso con la consulente 4BID</h3>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">Una conversazione vera, in tempo reale: chiedi chiarimenti, confronta le opzioni e approfondisci i moduli del tuo preventivo. Dopo il click il collegamento parte direttamente.</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="rounded-lg bg-white px-2.5 py-1.5"><img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-6 w-auto object-contain" /></div>
+            <div className="rounded-lg bg-white px-2.5 py-1.5"><img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-7 w-auto object-contain" /></div>
             {productBrands.map((brand) => (
               <div key={brand.id} className="rounded-lg bg-white px-2.5 py-1.5"><img src={brand.logo} alt={brand.name} className="h-6 max-w-28 object-contain" /></div>
             ))}
@@ -552,8 +509,8 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         </div>
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
           <div className="flex items-center gap-3 text-sm text-slate-200"><Mic className="h-4 w-4 text-violet-300" /> Il browser chiederà solo i permessi necessari</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Sparkles className="h-4 w-4 text-violet-300" /> Sottotitoli e contenuti legati alla proposta</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> Sessione guidata fino a 15 minuti</div>
+          <div className="flex items-center gap-3 text-sm text-slate-200"><Sparkles className="h-4 w-4 text-violet-300" /> Risposte costruite sul contenuto della proposta</div>
+          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> Conversazione guidata fino a 15 minuti</div>
           <Button onClick={() => void start()} disabled={status === "starting"} className="mt-1 h-12 bg-violet-500 font-bold text-white hover:bg-violet-400">
             {status === "starting" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparazione consulente…</> : "Parla con la consulente"}
           </Button>

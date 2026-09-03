@@ -8,6 +8,9 @@ export const maxDuration = 30
 const sessionWindows = new Map<string, number[]>()
 const REQUESTS_PER_MINUTE = 3
 const MAX_CALL_DURATION_SECONDS = 15 * 60
+const TAVUS_VOICE_TUNING_TIMEOUT_MS = 2500
+
+let voiceTuningPromise: Promise<void> | null = null
 
 function configured() {
   const explicitlyEnabled = process.env.TAVUS_LIVE_ENABLED === "true"
@@ -29,7 +32,7 @@ function rateLimited(key: string) {
 }
 
 function buildGreeting() {
-  return "Ciao, sono la consulente digitale 4BID. Prima di iniziare, come posso chiamarti?"
+  return "Buongiorno. Sono la consulente digitale di 4BID. Prima di iniziare, mi dice come posso chiamarla?"
 }
 
 function recipientIdentityInstruction(context: QuoteChatContext) {
@@ -59,7 +62,77 @@ function creatorNoteInstruction(context: QuoteChatContext) {
 }
 
 function spokenContext(context: QuoteChatContext) {
-  return `${context.prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- La persona indicata come destinatario del preventivo NON e' necessariamente chi e' entrato in videochiamata. Il primo nome che l'interlocutore ti dichiara all'inizio e' il nome da usare durante QUESTA call. Non sostituirlo mai con il nome dell'intestatario salvo che l'interlocutore dica esplicitamente di essere quella persona.\n${recipientIdentityInstruction(context)}\n${creatorNoteInstruction(context)}\n- Parla con ritmo calmo e professionale, circa il 20% piu' lentamente di una normale risposta sintetica. Fai micro-pause dopo nomi, numeri, prezzi e concetti importanti. Non correre per riempire i silenzi.\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- La sessione ha una durata massima di 15 minuti. Tra il minuto 11 e il minuto 12, quando e' naturale, inizia a convergere verso un riepilogo dei punti chiave e chiedi se rimane un dubbio importante. Non troncare una risposta a meta' e non creare urgenza artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
+  return `${context.prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- LINGUA E PRONUNCIA: parla SEMPRE in italiano standard madrelingua, con fonetica, cadenza e prosodia italiane naturali. Evita tassativamente inflessioni, vocali o ritmo da inglese americano quando pronunci parole italiane. I termini tecnici inglesi possono essere pronunciati come e' normale nel settore hospitality italiano, ma il resto della frase deve suonare inequivocabilmente italiano.\n- VELOCITA': parla sensibilmente piu' lentamente del parlato sintetico standard, circa il 30-35% piu' piano. Preferisci frasi brevi, pause vere tra i concetti e micro-pause dopo nomi, numeri, prezzi e parole importanti. Non accelerare a fine frase e non comprimere le pause.\n- TONO: voce calda, elegante, rassicurante e commerciale, mai concitata. Deve sembrare una consulente italiana senior che sta parlando con calma a una persona davanti a lei.\n- La persona indicata come destinatario del preventivo NON e' necessariamente chi e' entrato in videochiamata. Il primo nome che l'interlocutore ti dichiara all'inizio e' il nome da usare durante QUESTA call. Non sostituirlo mai con il nome dell'intestatario salvo che l'interlocutore dica esplicitamente di essere quella persona.\n${recipientIdentityInstruction(context)}\n${creatorNoteInstruction(context)}\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- La sessione ha una durata massima di 15 minuti. Tra il minuto 11 e il minuto 12, quando e' naturale, inizia a convergere verso un riepilogo dei punti chiave e chiedi se rimane un dubbio importante. Non troncare una risposta a meta' e non creare urgenza artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
+}
+
+function tavusAgentEndpoints(agentId: string) {
+  const encoded = encodeURIComponent(agentId)
+  return process.env.TAVUS_PAL_ID
+    ? [`https://tavusapi.com/v2/pals/${encoded}`, `https://tavusapi.com/v2/personas/${encoded}`]
+    : [`https://tavusapi.com/v2/personas/${encoded}`]
+}
+
+async function tuneVoiceProfile(agentId: string) {
+  const apiKey = process.env.TAVUS_API_KEY
+  if (!apiKey) return
+
+  for (const endpoint of tavusAgentEndpoints(agentId)) {
+    try {
+      const profileResponse = await fetch(endpoint, {
+        headers: { "x-api-key": apiKey },
+        cache: "no-store",
+        signal: AbortSignal.timeout(TAVUS_VOICE_TUNING_TIMEOUT_MS),
+      })
+      if (!profileResponse.ok) continue
+
+      const profile = await profileResponse.json().catch(() => ({})) as {
+        layers?: {
+          tts?: {
+            tts_engine?: string
+            voice_settings?: Record<string, unknown>
+          }
+        }
+      }
+      const tts = profile?.layers?.tts
+      if (!tts?.tts_engine) return
+
+      const engine = String(tts.tts_engine).toLowerCase()
+      const speed = engine.includes("eleven") ? 0.78 : -0.35
+      const nextSettings = { ...(tts.voice_settings || {}), speed }
+      const patchResponse = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+        },
+        body: JSON.stringify([
+          {
+            op: tts.voice_settings ? "replace" : "add",
+            path: "/layers/tts/voice_settings",
+            value: nextSettings,
+          },
+        ]),
+        cache: "no-store",
+        signal: AbortSignal.timeout(TAVUS_VOICE_TUNING_TIMEOUT_MS),
+      })
+
+      if (!patchResponse.ok) {
+        console.warn("[live-avatar] Tavus voice pacing tune skipped", patchResponse.status)
+      }
+      return
+    } catch (error) {
+      console.warn("[live-avatar] Tavus voice pacing tune unavailable", error instanceof Error ? error.message : "unknown")
+    }
+  }
+}
+
+async function ensureVoiceTuning(agentId: string) {
+  if (!voiceTuningPromise) {
+    voiceTuningPromise = tuneVoiceProfile(agentId).catch((error) => {
+      console.warn("[live-avatar] Tavus voice tuning failed", error)
+    })
+  }
+  await voiceTuningPromise
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -110,6 +183,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
     const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
+
+    // Best effort: the live-sales PAL is dedicated to this experience, so keep its TTS pacing slow.
+    // If the current Tavus account exposes only the newer PAL surface and does not support profile patching,
+    // the call still proceeds and the spoken prompt below remains the fallback.
+    await ensureVoiceTuning(palId)
+
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID ${quoteContext.quoteNumber || "Preventivo"} - ${quoteContext.clientCompany || quoteContext.clientName || "Cliente"}`.slice(0, 120),
       conversational_context: spokenContext(quoteContext),
@@ -119,7 +198,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       max_participants: 2,
       properties: {
         language: "italian",
-        enable_closed_captions: true,
+        enable_closed_captions: false,
         max_call_duration: MAX_CALL_DURATION_SECONDS,
         participant_left_timeout: 15,
         participant_absent_timeout: 90,
@@ -167,6 +246,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         creator_last_name: quoteContext.creatorLastName,
         has_personal_note: Boolean(quoteContext.description),
         max_call_duration_seconds: MAX_CALL_DURATION_SECONDS,
+        captions_enabled: false,
+        requested_language: "italian",
       },
     })
     if (sessionError) console.error("[live-avatar] session persistence error", sessionError)
