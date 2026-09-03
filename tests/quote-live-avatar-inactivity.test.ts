@@ -16,7 +16,7 @@ test("live quote avatar closes after 15 seconds of conversational inactivity", (
   assert.match(component, /\.on\("app-message", handleAppMessage\)/)
   assert.match(component, /conversation\.started_speaking/)
   assert.match(component, /conversation\.stopped_speaking/)
-  assert.match(component, /speaking\.role === "replica"/)
+  assert.match(component, /speaking\.role === "pal" \|\| speaking\.role === "replica"/)
   assert.match(component, /armInactivityTimer\(\)/)
 })
 
