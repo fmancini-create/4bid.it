@@ -30,6 +30,12 @@ test("inactive live quote avatar says goodbye before leaving the Daily room", ()
   assert.match(component, /activeCall\.destroy\(\)/)
 })
 
+test("Tavus session ends immediately after the participant leaves", () => {
+  const route = read("app/api/quotes/shared/[token]/live-avatar/route.ts")
+
+  assert.match(route, /participant_left_timeout:\s*0/)
+})
+
 test("starting a new live quote session retains Tavus conversation id for interactions", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
 
