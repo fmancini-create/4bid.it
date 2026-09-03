@@ -40,6 +40,10 @@ interface DossierData {
   exit?: string
 }
 
+function bankFaceId() {
+  return process.env.TAVUS_FACE_BANK_ID || ""
+}
+
 function configured() {
   const explicitlyEnabled = process.env.TAVUS_LIVE_ENABLED === "true"
   const safePreview = process.env.VERCEL_ENV === "preview"
@@ -47,7 +51,7 @@ function configured() {
     (explicitlyEnabled || safePreview) &&
       process.env.TAVUS_API_KEY &&
       (process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID) &&
-      (process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID),
+      bankFaceId(),
   )
 }
 
@@ -79,11 +83,29 @@ function formatProducts(items: DossierProduct[]) {
     .join("\n")
 }
 
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+}
+
 function buildGreeting(name: string) {
-  const firstName = name.trim().split(/\s+/)[0]
+  const normalized = normalizeName(name)
+  const firstName = name.trim().split(/\s+/)[0] || ""
+
+  if (normalized.includes("giovanni") && (normalized.includes("salvadori") || normalized === "giovanni")) {
+    return "Buongiorno Giovanni, sono Anna, la consulente digitale di Four Bid. Ho già letto il dossier preparato per UniCredit e posso accompagnarti tra struttura del finanziamento, scenari e capacità di rimborso. Prima di iniziare, Filippo mi ha lasciato una nota rigorosamente fuori bilancio: se l'operazione andrà in porto, sostiene che ti presenterà la mia controfigura vera, in carne e ossa, e giura che sia perfino molto più sexy di me. Naturalmente non è una garanzia del finanziamento. Ora torniamo alle cose serie."
+  }
+
+  if (normalized.includes("michele") && (normalized.includes("gheri") || normalized === "michele")) {
+    return "Buongiorno Michele, sono Anna, la consulente digitale di Four Bid. Ho già letto il dossier preparato per ChiantiBanca e posso accompagnarti tra struttura del finanziamento, scenari e capacità di rimborso. Prima dei numeri, Filippo mi ha lasciato una nota decisamente fuori bilancio: se l'operazione andrà in porto, dice che ti farà conoscere la mia controfigura vera, in carne e ossa, che a suo dire dal vivo è perfino più affascinante di me. Io non la metterei tra le garanzie, quindi torniamo al piano."
+  }
+
   return firstName
-    ? `Buongiorno ${firstName}, sono la consulente digitale di Four Bid. Ho già letto il dossier. Posso presentarti in breve il core hospitality, gli altri asset digitali e i numeri del piano, oppure rispondere direttamente alle tue domande.`
-    : "Buongiorno, sono la consulente digitale di Four Bid. Ho già letto il dossier. Posso presentarti in breve il core hospitality, gli altri asset digitali e i numeri del piano, oppure rispondere direttamente alle tue domande."
+    ? `Buongiorno ${firstName}, sono Anna, la consulente digitale di Four Bid. Ho già letto il dossier. Posso presentarti in breve il core hospitality, gli altri asset digitali e i numeri del piano, oppure rispondere direttamente alle tue domande.`
+    : "Buongiorno, sono Anna, la consulente digitale di Four Bid. Ho già letto il dossier. Posso presentarti in breve il core hospitality, gli altri asset digitali e i numeri del piano, oppure rispondere direttamente alle tue domande."
 }
 
 function buildDossierContext(
@@ -169,10 +191,10 @@ EXIT / OPZIONALITÀ STRATEGICA:
 ${dossier.exit || "L'exit è un'opzione strategica e non una condizione necessaria per il rimborso del finanziamento."}
 
 === REGOLE DELLA CONVERSAZIONE LIVE ===
-- Sei una consulente DIGITALE/AI di 4BID in una conversazione video e voce realtime.
+- Sei Anna, una consulente DIGITALE/AI di 4BID in una conversazione video e voce realtime.
 - Parla sempre in italiano naturale, elegante e molto chiaro, con frasi brevi.
 - Mantieni un ritmo appena più lento del parlato normale, circa il 5-8% più lento: deve risultare più comprensibile ma mai artificiosamente rallentato. Inserisci micro-pause tra i concetti e scandisci bene numeri e nomi propri.
-- Il nome dell'azienda si scrive 4BID ma si pronuncia sempre esattamente "Four Bid", in due parole distinte. Scandisci leggermente "Four" e "Bid" con una brevissima separazione tra le due parole. Non pronunciarlo mai "quattro bid", "fourbid" tutto attaccato, "4 bid" letto in italiano o semplicemente "Bid".
+- Il nome dell'azienda si scrive 4BID ma si pronuncia sempre esattamente "Four Bid", in due parole distinte. Non pronunciarlo mai "quattro bid", "fourbid" tutto attaccato o semplicemente "Bid".
 - Il pubblico è banca, investitore, advisor o partner: privilegia chiarezza economico-finanziaria e sostanza, non slogan.
 - Se ti viene chiesto "quante piattaforme ha 4BID?", non rispondere mai semplicemente "quattro": spiega che quattro sono quelle hospitality e che il portafoglio comprende anche altri asset digitali proprietari.
 - Presenta MyPetSenseAI, AutoExel, DayNext e RisparmioCompulsivo come portafoglio aggiuntivo/diversificazione, senza confonderli con le quattro piattaforme hospitality.
@@ -180,6 +202,9 @@ ${dossier.exit || "L'exit è un'opzione strategica e non una condizione necessar
 - Non inventare ricavi, clienti, contratti, trattative, integrazioni, prezzi, risultati o manifestazioni di interesse.
 - Se un dato non è nel dossier, dillo chiaramente.
 - Fai una domanda alla volta e lascia spazio all'interlocutore. Se viene interrotta, segui subito il nuovo punto.
+- Non riempire i silenzi: dopo una tua risposta attendi sempre un nuovo intervento dell'interlocutore. Non riaprire spontaneamente argomenti e non fare follow-up solo perché l'utente tace.
+- Se l'interlocutore dice ciao, arrivederci, a presto, buona giornata, buona serata, "possiamo chiudere", "chiudiamo qui" o un equivalente inequivocabile, rispondi con UN solo saluto breve e conclusivo. Non fare domande, non introdurre nuovi temi e non continuare a parlare dopo il saluto.
+- Le eventuali battute personali contenute nel saluto iniziale vanno pronunciate una sola volta e non vanno ripetute spontaneamente durante la conversazione.
 - Puoi offrire tre percorsi: sintesi in 60-90 secondi, presentazione portafoglio, oppure Q&A libero sul dossier.
 - Non chiedere password, credenziali o dati di accesso.
 - Non effettuare inferenze su emozioni, salute o altre caratteristiche sensibili osservando il video.
@@ -248,14 +273,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { supabase, share, plan } = loaded
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
-    const faceId = process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
-    const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID)
+    const faceId = bankFaceId()
+    const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_BANK_ID)
     const openingMessage = buildGreeting(session.visitorName)
+    const callbackUrl = new URL("/api/business-plan/tavus-callback", request.url).toString()
 
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID Dossier - ${session.visitorCompany || session.visitorName || "Visitatore"}`.slice(0, 120),
       conversational_context: buildDossierContext(plan, session),
       custom_greeting: openingMessage,
+      callback_url: callbackUrl,
       audio_only: false,
       require_auth: true,
       max_participants: 2,
@@ -291,20 +318,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       throw new Error(tavus.error || tavus.message || `Consulente live non disponibile (${tavusResponse.status})`)
     }
 
-    await supabase.from("business_plan_share_events").insert({
+    const { error: eventError } = await supabase.from("business_plan_share_events").insert({
       share_id: share.id,
       business_plan_id: plan.id,
       event_type: "avatar_started",
       recipient_email: session.visitorEmail,
       metadata: {
+        conversation_id: tavus.conversation_id,
         visitor_name: session.visitorName,
         visitor_email: session.visitorEmail,
         visitor_company: session.visitorCompany || null,
         mode: "realtime_video",
         scope: "corporate_dossier",
+        face_scope: "bank",
         user_agent: request.headers.get("user-agent"),
       },
     })
+
+    if (eventError) console.error("[dossier-live-avatar] avatar_started tracking failed", eventError)
 
     return NextResponse.json(
       {
@@ -322,5 +353,69 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       { error: error instanceof Error ? error.message : "Errore nell'avvio della consulente live" },
       { status: 500 },
     )
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  try {
+    const { token } = await params
+    const session = getBusinessPlanShareSession(request, token)
+    if (!session) return NextResponse.json({ error: "Accesso non autorizzato" }, { status: 401 })
+
+    const body = await request.json().catch(() => ({}))
+    const conversationId = typeof body.conversationId === "string" ? body.conversationId.trim() : ""
+    const reason = typeof body.reason === "string" ? body.reason.slice(0, 80) : "client_end"
+    if (!conversationId) return NextResponse.json({ error: "Conversation ID mancante" }, { status: 400 })
+
+    const loaded = await loadCorporatePlan(token, session.shareId)
+    if ("error" in loaded) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
+
+    const { supabase, share, plan } = loaded
+    const { data: startedEvent } = await supabase
+      .from("business_plan_share_events")
+      .select("id")
+      .eq("share_id", share.id)
+      .eq("event_type", "avatar_started")
+      .eq("metadata->>conversation_id", conversationId)
+      .limit(1)
+      .maybeSingle()
+
+    if (!startedEvent) return NextResponse.json({ error: "Conversazione non associata a questo dossier" }, { status: 403 })
+
+    const tavusResponse = await fetch(
+      `https://tavusapi.com/v2/conversations/${encodeURIComponent(conversationId)}/end`,
+      {
+        method: "POST",
+        headers: { "x-api-key": process.env.TAVUS_API_KEY! },
+        cache: "no-store",
+      },
+    )
+
+    if (!tavusResponse.ok && tavusResponse.status !== 400) {
+      const data = await tavusResponse.json().catch(() => ({}))
+      return NextResponse.json(
+        { error: String(data?.error || data?.message || "Impossibile terminare la conversazione") },
+        { status: tavusResponse.status },
+      )
+    }
+
+    await supabase.from("business_plan_share_events").insert({
+      share_id: share.id,
+      business_plan_id: plan.id,
+      event_type: "avatar_ended",
+      recipient_email: session.visitorEmail,
+      metadata: {
+        conversation_id: conversationId,
+        reason,
+        visitor_name: session.visitorName,
+        visitor_email: session.visitorEmail,
+        visitor_company: session.visitorCompany || null,
+      },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("[dossier-live-avatar:end]", error)
+    return NextResponse.json({ error: "Errore durante la chiusura della conversazione" }, { status: 500 })
   }
 }
