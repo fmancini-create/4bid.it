@@ -5,6 +5,10 @@ import { ArrowRight, Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
+const INACTIVITY_TIMEOUT_MS = 10_000
+const GOODBYE_FALLBACK_MS = 6_000
+const INACTIVITY_GOODBYE = "Non la trattengo oltre. Grazie per il tempo che mi ha dedicato. Arrivederci e buona giornata."
+const FINAL_FAREWELL = "arrivederci e buona giornata"
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
@@ -22,6 +26,7 @@ type DailyParticipant = {
 type DailyEvent = {
   participant?: DailyParticipant
   errorMsg?: string
+  data?: unknown
 }
 
 type DailyCall = {
@@ -30,6 +35,7 @@ type DailyCall = {
   destroy(): Promise<unknown> | void
   on(event: string, handler: (event: DailyEvent) => void): DailyCall
   participants(): Record<string, DailyParticipant>
+  sendAppMessage(message: Record<string, unknown>, recipient?: string): void
   setLocalAudio(enabled: boolean): Promise<unknown> | void
   setLocalVideo(enabled: boolean): Promise<unknown> | void
 }
@@ -48,6 +54,19 @@ type LiveSession = {
   conversationId: string
   conversationUrl: string
   meetingToken?: string | null
+}
+
+type TavusAppMessage = {
+  message_type?: string
+  event_type?: string
+  conversation_id?: string
+  properties?: {
+    role?: string
+    speech?: string
+    interrupted?: boolean
+    duration?: number | null
+    [key: string]: unknown
+  }
 }
 
 let dailySdkPromise: Promise<void> | null = null
@@ -103,6 +122,41 @@ function attachVideoTrack(element: HTMLVideoElement | null, track: MediaStreamTr
   if (current instanceof MediaStream && current.getTracks().some((item) => item.id === track.id)) return
   element.srcObject = new MediaStream([track])
   void element.play().catch(() => undefined)
+}
+
+function parseTavusAppMessage(data: unknown): TavusAppMessage | null {
+  if (!data) return null
+  if (typeof data === "string") {
+    try {
+      const parsed = JSON.parse(data)
+      return parsed && typeof parsed === "object" ? parsed as TavusAppMessage : null
+    } catch {
+      return null
+    }
+  }
+  return typeof data === "object" ? data as TavusAppMessage : null
+}
+
+function speakingEvent(message: TavusAppMessage) {
+  const eventType = message.event_type || ""
+  const role = message.properties?.role
+
+  if (eventType === "conversation.started_speaking") return { phase: "started" as const, role }
+  if (eventType === "conversation.stopped_speaking") return { phase: "stopped" as const, role }
+  if (eventType === "conversation.user.started_speaking") return { phase: "started" as const, role: "user" }
+  if (eventType === "conversation.user.stopped_speaking") return { phase: "stopped" as const, role: "user" }
+  if (eventType === "conversation.replica.started_speaking") return { phase: "started" as const, role: "replica" }
+  if (eventType === "conversation.replica.stopped_speaking") return { phase: "stopped" as const, role: "replica" }
+  return null
+}
+
+function isFinalFarewell(speech: string | undefined) {
+  if (!speech) return false
+  const normalized = speech
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("it-IT")
+  return normalized.includes(FINAL_FAREWELL)
 }
 
 function friendlyStartError(status: number, rawMessage: string) {
@@ -201,6 +255,111 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
 
     let cancelled = false
     let call: DailyCall | null = null
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = null
+    let goodbyeFallbackTimer: ReturnType<typeof setTimeout> | null = null
+    let closingForInactivity = false
+    let closeAfterReplicaStops = false
+
+    const clearInactivityTimer = () => {
+      if (!inactivityTimer) return
+      clearTimeout(inactivityTimer)
+      inactivityTimer = null
+    }
+
+    const clearGoodbyeFallback = () => {
+      if (!goodbyeFallbackTimer) return
+      clearTimeout(goodbyeFallbackTimer)
+      goodbyeFallbackTimer = null
+    }
+
+    const finishCall = async () => {
+      clearInactivityTimer()
+      clearGoodbyeFallback()
+      if (!call) {
+        if (!cancelled) setStatus("ended")
+        return
+      }
+
+      const activeCall = call
+      if (callRef.current === activeCall) callRef.current = null
+
+      try {
+        await Promise.resolve(activeCall.leave())
+      } catch {
+        // La room può essere già in chiusura.
+      }
+      try {
+        await Promise.resolve(activeCall.destroy())
+      } catch {
+        // La UI deve comunque chiudersi se Daily ha già distrutto la call.
+      }
+
+      remoteAudioRef.current?.pause()
+      if (!cancelled) setStatus("ended")
+    }
+
+    const sayGoodbyeAndClose = () => {
+      if (!call || closingForInactivity || cancelled) return
+      closingForInactivity = true
+      closeAfterReplicaStops = true
+      clearInactivityTimer()
+
+      try {
+        call.sendAppMessage({
+          message_type: "conversation",
+          event_type: "conversation.echo",
+          conversation_id: session.conversationId,
+          properties: {
+            modality: "text",
+            text: INACTIVITY_GOODBYE,
+            done: true,
+          },
+        }, "*")
+      } catch {
+        void finishCall()
+        return
+      }
+
+      goodbyeFallbackTimer = setTimeout(() => {
+        void finishCall()
+      }, GOODBYE_FALLBACK_MS)
+    }
+
+    const armInactivityTimer = () => {
+      if (closingForInactivity || closeAfterReplicaStops || cancelled) return
+      clearInactivityTimer()
+      inactivityTimer = setTimeout(sayGoodbyeAndClose, INACTIVITY_TIMEOUT_MS)
+    }
+
+    const handleAppMessage = (event: DailyEvent) => {
+      const message = parseTavusAppMessage(event.data)
+      if (!message || message.message_type !== "conversation") return
+
+      if (message.event_type === "conversation.utterance") {
+        const role = message.properties?.role
+        const speech = message.properties?.speech
+        if ((role === "replica" || role === "pal") && isFinalFarewell(speech)) {
+          closeAfterReplicaStops = true
+          clearInactivityTimer()
+        }
+      }
+
+      const speaking = speakingEvent(message)
+      if (!speaking) return
+
+      if (speaking.phase === "started") {
+        clearInactivityTimer()
+        return
+      }
+
+      if (speaking.role === "replica" || speaking.role === "pal") {
+        if (closingForInactivity || closeAfterReplicaStops) {
+          void finishCall()
+        } else {
+          armInactivityTimer()
+        }
+      }
+    }
 
     const syncTracks = () => {
       if (!call) return
@@ -245,10 +404,15 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
           .on("participant-updated", () => syncTracks())
           .on("track-started", () => syncTracks())
           .on("track-stopped", () => syncTracks())
+          .on("app-message", handleAppMessage)
           .on("left-meeting", () => {
+            clearInactivityTimer()
+            clearGoodbyeFallback()
             if (!cancelled) setStatus("ended")
           })
           .on("error", (event) => {
+            clearInactivityTimer()
+            clearGoodbyeFallback()
             if (!cancelled) {
               setError(friendlyConnectionError(event?.errorMsg ? new Error(event.errorMsg) : event))
               setStatus("error")
@@ -261,6 +425,8 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
         })
         syncTracks()
       } catch (connectionError) {
+        clearInactivityTimer()
+        clearGoodbyeFallback()
         if (!cancelled) {
           setError(friendlyConnectionError(connectionError))
           setStatus("error")
@@ -272,6 +438,8 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
 
     return () => {
       cancelled = true
+      clearInactivityTimer()
+      clearGoodbyeFallback()
       const activeCall = call || callRef.current
       if (activeCall) {
         if (callRef.current === activeCall) callRef.current = null
@@ -352,12 +520,18 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
   }
 
   const leaveCall = async () => {
-    const call = callRef.current
-    if (call) {
+    const activeCall = callRef.current
+    if (activeCall) {
+      callRef.current = null
       try {
-        await Promise.resolve(call.leave())
+        await Promise.resolve(activeCall.leave())
       } catch {
         // La room può essere già in chiusura.
+      }
+      try {
+        await Promise.resolve(activeCall.destroy())
+      } catch {
+        // Daily può aver già distrutto la call.
       }
     }
     remoteAudioRef.current?.pause()
