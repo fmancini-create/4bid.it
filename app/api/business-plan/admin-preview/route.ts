@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     .from("business_plans")
     .select("id")
     .eq("project_type", "corporate_saas")
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1)
 
   if (planError) {
