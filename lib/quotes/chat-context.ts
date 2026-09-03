@@ -6,7 +6,12 @@ import {
   type QuoteLineItem,
   type SalesChannelQuote,
 } from "@/lib/quotes/types"
-import { getCommercialMeta, getIncludedCredits } from "@/lib/quotes/commercial"
+import {
+  applyBillingPreference,
+  getCommercialMeta,
+  getIncludedCredits,
+  hasAnnualBillingOption,
+} from "@/lib/quotes/commercial"
 import { QUOTE_BRANDS, quoteBenefits } from "@/lib/quotes/branding"
 import { DIGITAL_SALES_AGENT_PROMPT } from "@/lib/quotes/digital-sales-agent"
 
@@ -61,13 +66,16 @@ function describeLine(item: QuoteLineItem, currency: string): string {
   }
   if (item.discount) {
     const discount = item.discount.type === "percentage" ? `${item.discount.value}%` : formatQuoteAmount(item.discount.value, currency)
-    row += `\n  Sconto applicato: ${discount}${item.discount.reason ? ` (${item.discount.reason})` : ""}`
+    const duration = item.discount.duration_months
+      ? ` per ${item.discount.duration_months} ${item.discount.duration_months === 1 ? "mese" : "mesi"}`
+      : ""
+    row += `\n  Sconto applicato: ${discount}${duration}${item.discount.reason ? ` (${item.discount.reason})` : ""}`
   }
   if (credits) row += `\n  Crediti inclusi: ${formatQuoteAmount(credits.amount, currency)} (${credits.recharge === "recurring" ? "ricaricati a ogni rinnovo" : "una tantum"})`
   const monthly = meta.billing_options?.monthly
   const yearly = meta.billing_options?.yearly
-  if (monthly?.unit_amount) row += `\n  Formula mensile: ${formatQuoteAmount(monthly.unit_amount * (item.quantity || 1), currency)}`
-  if (yearly?.unit_amount) row += `\n  Formula annuale: ${formatQuoteAmount(yearly.unit_amount * (item.quantity || 1), currency)}${yearly.discount_pct ? `, sconto ${yearly.discount_pct}%` : ""}`
+  if (monthly?.unit_amount) row += `\n  Formula mensile: ${formatQuoteAmount(monthly.unit_amount * (item.quantity || 1), currency)} al mese`
+  if (yearly?.unit_amount) row += `\n  Formula annuale: ${formatQuoteAmount(yearly.unit_amount * (item.quantity || 1), currency)} all'anno${yearly.discount_pct ? `, sconto ${yearly.discount_pct}%` : ""}`
   const config = (item.configuration || {}) as Record<string, any>
   const structure = [config.structure_type && `tipo struttura: ${config.structure_type}`, config.accommodations && `${config.accommodations} ${config.unit_label || "sistemazioni"}`, config.star_rating && `${config.star_rating} stelle`].filter(Boolean)
   if (structure.length) row += `\n  Parametri usati per questa offerta: ${structure.join(", ")}`
@@ -76,6 +84,51 @@ function describeLine(item: QuoteLineItem, currency: string): string {
   if (meta.free_on_annual) row += "\n  Con formula annuale: servizio/setup in omaggio secondo le condizioni del preventivo"
   if (meta.annual_setup_discount_pct) row += `\n  Sconto setup con formula annuale: ${meta.annual_setup_discount_pct}%`
   return row
+}
+
+function sumLineAmounts(items: QuoteLineItem[]) {
+  return Math.round(items.reduce((sum, item) => sum + calculateQuoteLine(item).amount, 0) * 100) / 100
+}
+
+function pricingSummary(lineItems: QuoteLineItem[], currency: string) {
+  const selected = lineItems.filter(isQuoteLineSelected)
+  if (!selected.length) return [] as string[]
+
+  const monthlyView = selected.map((item) => applyBillingPreference(item, "monthly"))
+  const annualView = selected.map((item) => applyBillingPreference(item, "yearly"))
+  const monthlyRecurring = monthlyView.filter((item) => item.billing_period === "monthly")
+  const monthlyOneTime = monthlyView.filter((item) => item.billing_period === "one_time")
+  const annualRecurring = annualView.filter((item) => item.billing_period === "yearly")
+  const annualOneTime = annualView.filter((item) => item.billing_period === "one_time")
+
+  const monthlyRecurringAmount = sumLineAmounts(monthlyRecurring)
+  const monthlyOneTimeAmount = sumLineAmounts(monthlyOneTime)
+  const monthlyFirstAmount = Math.round((monthlyRecurringAmount + monthlyOneTimeAmount) * 100) / 100
+  const annualRecurringAmount = sumLineAmounts(annualRecurring)
+  const annualOneTimeAmount = sumLineAmounts(annualOneTime)
+  const annualFirstAmount = Math.round((annualRecurringAmount + annualOneTimeAmount) * 100) / 100
+
+  const annualUnsupported = selected.filter((item) => {
+    if (item.billing_period === "one_time") return false
+    const calc = calculateQuoteLine(item)
+    return calc.amount > 0 && !hasAnnualBillingOption(item) && item.billing_period !== "yearly"
+  })
+  const limitedPromos = selected.filter((item) => Number(item.discount?.duration_months) > 0)
+  const lines = ["RIEPILOGO ECONOMICO CALCOLATO SULLE VOCI ATTUALMENTE SELEZIONATE:"]
+
+  if (monthlyRecurringAmount > 0 || monthlyOneTimeAmount > 0) {
+    lines.push(`- Formula mensile: canoni ricorrenti ${formatQuoteAmount(monthlyRecurringAmount, currency)} al mese; voci una tantum all'attivazione ${formatQuoteAmount(monthlyOneTimeAmount, currency)}; primo esborso della configurazione corrente ${formatQuoteAmount(monthlyFirstAmount, currency)}.`)
+  }
+  if (!annualUnsupported.length && (annualRecurringAmount > 0 || annualOneTimeAmount > 0)) {
+    lines.push(`- Formula annuale: canoni ricorrenti pagati annualmente ${formatQuoteAmount(annualRecurringAmount, currency)} all'anno; voci una tantum dovute con l'annuale ${formatQuoteAmount(annualOneTimeAmount, currency)}; esborso iniziale della formula annuale ${formatQuoteAmount(annualFirstAmount, currency)}.`)
+  } else if (annualRecurringAmount > 0) {
+    lines.push(`- Formula annuale parziale calcolabile dalle voci che prevedono l'annuale: ${formatQuoteAmount(annualRecurringAmount, currency)} all'anno. Non presentarla come totale annuale completo perché alcune voci ricorrenti selezionate non hanno una formula annuale esplicita.`)
+  }
+  if (limitedPromos.length) {
+    lines.push(`- Promozioni a durata limitata: ${limitedPromos.map((item) => `${item.name || item.description}: ${item.discount?.type === "percentage" ? `${item.discount.value}%` : formatQuoteAmount(item.discount?.value || 0, currency)} per ${item.discount?.duration_months} ${item.discount?.duration_months === 1 ? "mese" : "mesi"}`).join("; ")}. Non descriverle mai come gratuite/scontate per sempre.`)
+  }
+  lines.push('- REGOLA PREZZI: il campo "Totale" del preventivo puo sommare canoni ricorrenti e voci una tantum. NON chiamarlo mai "costo mensile" o "costo annuale" senza usare il riepilogo calcolato qui sopra e senza separare ricorrenti, una tantum e promozioni temporanee.')
+  return lines
 }
 
 function describeComplementaryProducts(quotedProjects: string[]): string[] {
@@ -133,8 +186,9 @@ export async function buildQuoteChatContext(token: string): Promise<QuoteChatCon
     if (lineItems.length) {
       rows.push("", "Voci del preventivo:")
       for (const item of lineItems) rows.push(describeLine(item, currency))
+      rows.push("", ...pricingSummary(lineItems, currency))
     }
-    rows.push("", `Totale: ${formatQuoteAmount(data.total_amount, currency)}`)
+    rows.push("", `Totale visualizzato nel preventivo per la configurazione corrente: ${formatQuoteAmount(data.total_amount, currency)}`)
     rows.push(data.vat_included ? "Gli importi indicati sono IVA INCLUSA." : "Gli importi indicati sono IVA ESCLUSA (l'IVA va aggiunta).")
     if (data.deposit_amount) rows.push(`Acconto previsto: ${formatQuoteAmount(data.deposit_amount, currency)}`)
     if (data.payment_terms) rows.push(`Condizioni di pagamento: ${data.payment_terms}`)
@@ -158,7 +212,8 @@ REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
 - Conosci ogni modulo tramite descrizione, funzionalita, benefici, stato di selezione, prova, assistenza, prezzi, formule mensile/annuale e parametri di configurazione riportati qui sopra.
 - Non limitarti a elencare funzioni: collega sempre funzione -> problema -> vantaggio concreto per questa struttura.
 - Distingui sempre fra voce inclusa, opzionale selezionata e opzionale non selezionata. Non presentare come acquistato cio' che e' solo un'opzione.
-- Se l'utente chiede un confronto mensile/annuale, usa esclusivamente gli importi e gli sconti riportati nel preventivo.
+- Se l'utente chiede un confronto mensile/annuale, usa PRIMA il RIEPILOGO ECONOMICO CALCOLATO e poi, se serve, le singole voci. Non usare mai il campo Totale come se fosse automaticamente un canone mensile o annuale.
+- Se una promozione ha una durata in mesi, dichiarala quando e' rilevante e non far credere che il prezzo promozionale duri indefinitamente.
 - Per la parte principale della risposta NON sostituire mai i prodotti del preventivo con altri prodotti 4BID.
 - Gli altri prodotti 4BID possono essere presentati SOLO come estensioni complementari, chiaramente NON incluse. Massimo 1-2 quando hanno un nesso concreto.
 - Su domande fattuali (prezzo, IVA, scadenza, cosa e' incluso) rispondi prima in modo netto; l'eventuale cross-sell viene dopo.
@@ -166,6 +221,8 @@ REGOLE VINCOLANTI SU QUESTO PREVENTIVO:
 - L'utente e' gia' un cliente con un'offerta in mano: NON chiedergli dati gia' presenti qui.
 - Ricorda dubbi, obiezioni, preferenze e prodotti discussi nella cronologia: non ripetere da zero cio' che e' gia' stato chiarito.
 - Gestisci le obiezioni come un venditore senior: individua il vero dubbio, rispondi con fatti e valore, poi proponi una sola micro-azione naturale.
+- ONBOARDING: una dashboard multi-struttura o un'offerta di gruppo NON implica automaticamente un unico onboarding tecnico. Se il preventivo non specifica quante configurazioni o onboarding servono, dillo chiaramente e non inventare una semplificazione operativa non scritta.
+- CAPACITA' OPERATIVE: non affermare mai di aver inviato messaggi, notifiche, email, segnalazioni, accettazioni o di aver cliccato/aperto link se non hai realmente eseguito e ricevuto conferma di quell'azione tramite uno strumento disponibile. Se non puoi eseguirla, dillo in una frase e indica l'azione reale che il cliente puo fare nella pagina o chiedere a 4BID.
 - Se una cosa NON compare qui sopra o nella knowledge base, dillo chiaramente invece di dedurla.
 - Non rivelare mai credenziali, password o dati di accesso.
 === FINE PREVENTIVO ===
