@@ -65,26 +65,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const password = String(body.password || randomPassword())
   const passwordHash = await bcrypt.hash(password, 10)
   const token = randomUUID()
+  const shareValues = {
+    business_plan_id: id,
+    email,
+    password_hash: passwordHash,
+    token,
+    can_edit: body.can_edit ?? false,
+    can_download: body.can_download ?? true,
+    expires_at: body.expires_at || null,
+    access_count: 0,
+    email_open_count: 0,
+    view_count: 0,
+  }
 
-  const { data, error } = await supabase
+  const { data: existingShare, error: existingShareError } = await supabase
     .from("business_plan_shares")
-    .upsert(
-      {
-        business_plan_id: id,
-        email,
-        password_hash: passwordHash,
-        token,
-        can_edit: body.can_edit ?? false,
-        can_download: body.can_download ?? true,
-        expires_at: body.expires_at || null,
-        access_count: 0,
-        email_open_count: 0,
-        view_count: 0,
-      },
-      { onConflict: "business_plan_id,email" },
-    )
-    .select()
-    .single()
+    .select("id")
+    .eq("business_plan_id", id)
+    .eq("email", email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existingShareError) {
+    return NextResponse.json({ error: existingShareError.message }, { status: 500 })
+  }
+
+  const shareQuery = existingShare
+    ? supabase.from("business_plan_shares").update(shareValues).eq("id", existingShare.id).select().single()
+    : supabase.from("business_plan_shares").insert(shareValues).select().single()
+
+  const { data, error } = await shareQuery
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://4bid.it"
