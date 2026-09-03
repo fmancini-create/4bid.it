@@ -201,7 +201,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         language: "italian",
         enable_closed_captions: false,
         max_call_duration: MAX_CALL_DURATION_SECONDS,
-        participant_left_timeout: 15,
+        participant_left_timeout: 0,
         participant_absent_timeout: 90,
       },
       ...(usesPalNaming ? { pal_id: palId, face_id: faceId } : { persona_id: palId, replica_id: faceId }),
