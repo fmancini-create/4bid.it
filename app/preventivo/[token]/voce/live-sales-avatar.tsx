@@ -1,17 +1,20 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2 } from "lucide-react"
+import { Camera, CameraOff, Check, Clock3, Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
 const INACTIVITY_TIMEOUT_MS = 15_000
 const INACTIVITY_GOODBYE_FALLBACK_MS = 8_000
+const GREETING_FALLBACK_MS = 3_500
 const INACTIVITY_GOODBYE = "Non la trattengo oltre. La ringrazio per il tempo che ci ha dedicato e le auguro una buona giornata."
+const DEFAULT_OPENING_MESSAGE = "Buongiorno, sono la consulente digitale di 4BID. Ho già analizzato il suo preventivo e posso spiegarle in pochi secondi i punti più importanti. Vuole che inizi dai moduli consigliati?"
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
   track?: MediaStreamTrack | null
+  state?: string
 }
 
 type DailyParticipant = {
@@ -52,16 +55,14 @@ type LiveSession = {
   conversationId: string
   conversationUrl: string
   meetingToken?: string | null
+  openingMessage: string
 }
 
 type TavusAppMessage = {
   message_type?: string
   event_type?: string
-  conversation_id?: string
   properties?: {
     role?: "pal" | "replica" | "user" | string
-    interrupted?: boolean
-    duration?: number | null
     [key: string]: unknown
   }
 }
@@ -74,12 +75,8 @@ function loadDailySdk() {
   if (dailySdkPromise) return dailySdkPromise
 
   dailySdkPromise = new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[data-4bid-daily-sdk="true"]`)
-    const finish = () => {
-      if (window.Daily) resolve()
-      else reject(new Error("SDK video non inizializzato"))
-    }
-
+    const existing = document.querySelector<HTMLScriptElement>('script[data-4bid-daily-sdk="true"]')
+    const finish = () => window.Daily ? resolve() : reject(new Error("SDK video non inizializzato"))
     if (existing) {
       existing.addEventListener("load", finish, { once: true })
       existing.addEventListener("error", () => reject(new Error("SDK video non disponibile")), { once: true })
@@ -111,10 +108,9 @@ function participantTrack(participant: DailyParticipant | undefined, kind: "vide
 function attachVideoTrack(element: HTMLVideoElement | null, track: MediaStreamTrack | null) {
   if (!element) return
   if (!track) {
-    if (element.srcObject) element.srcObject = null
+    element.srcObject = null
     return
   }
-
   const current = element.srcObject
   if (current instanceof MediaStream && current.getTracks().some((item) => item.id === track.id)) return
   element.srcObject = new MediaStream([track])
@@ -136,9 +132,9 @@ function parseTavusAppMessage(data: unknown): TavusAppMessage | null {
 
 function speakingEvent(message: TavusAppMessage) {
   const eventType = message.event_type || ""
-  const roleFromProperties = message.properties?.role
-  if (eventType === "conversation.started_speaking") return { phase: "started" as const, role: roleFromProperties }
-  if (eventType === "conversation.stopped_speaking") return { phase: "stopped" as const, role: roleFromProperties }
+  const role = message.properties?.role
+  if (eventType === "conversation.started_speaking") return { phase: "started" as const, role }
+  if (eventType === "conversation.stopped_speaking") return { phase: "stopped" as const, role }
   if (eventType === "conversation.user.started_speaking") return { phase: "started" as const, role: "user" }
   if (eventType === "conversation.user.stopped_speaking") return { phase: "stopped" as const, role: "user" }
   if (eventType === "conversation.replica.started_speaking") return { phase: "started" as const, role: "replica" }
@@ -149,18 +145,18 @@ function speakingEvent(message: TavusAppMessage) {
 function friendlyStartError(status: number, rawMessage: string) {
   const message = rawMessage.toLowerCase()
   if (status === 429 || /quota|credit|concurr|limit|busy|occupat/.test(message)) {
-    return "La consulente è momentaneamente impegnata. Riprova tra qualche minuto oppure continua con la chat del preventivo."
+    return "La consulente è momentaneamente impegnata. Riprova tra qualche minuto."
   }
-  if (status === 503) return "La consulente video non è disponibile in questo momento. Puoi continuare subito con la chat del preventivo."
-  return "Non riesco ad avviare la videochiamata in questo momento. Puoi riprovare oppure continuare con la chat del preventivo."
+  if (status === 503) return "La consulente video non è disponibile in questo momento."
+  return "Non riesco ad avviare la videochiamata in questo momento. Riprova tra poco."
 }
 
 function friendlyConnectionError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : ""
   if (/permission|notallowed|denied|microphone|microfono/.test(message)) {
-    return "Per parlare con la consulente serve l'accesso al microfono. Consenti il microfono dal browser e riprova il collegamento."
+    return "Per conversare serve il microfono. Consenti l'accesso dal browser e riprova."
   }
-  return "Il collegamento video non è riuscito. Puoi riprovare senza creare una nuova sessione."
+  return "Il collegamento non è riuscito. Riprova senza ricaricare la pagina."
 }
 
 export default function LiveSalesAvatar({ token }: { token: string; quotedProjects?: string[] }) {
@@ -172,6 +168,8 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false)
   const [needsAudioActivation, setNeedsAudioActivation] = useState(false)
+  const [assistantSpeaking, setAssistantSpeaking] = useState(false)
+  const [userSpeaking, setUserSpeaking] = useState(false)
 
   const callRef = useRef<DailyCall | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -182,11 +180,9 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
     setHasRemoteAudio(Boolean(track))
     const audio = remoteAudioRef.current
     if (!audio) return
-
     if (!track) {
       audio.pause()
-      if (audio.srcObject) audio.srcObject = null
-      setNeedsAudioActivation(false)
+      audio.srcObject = null
       return
     }
 
@@ -194,29 +190,19 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
     if (!(current instanceof MediaStream) || !current.getTracks().some((item) => item.id === track.id)) {
       audio.srcObject = new MediaStream([track])
     }
-
     audio.muted = false
     audio.volume = 1
-    void audio.play()
-      .then(() => setNeedsAudioActivation(false))
-      .catch(() => setNeedsAudioActivation(true))
+    void audio.play().then(() => setNeedsAudioActivation(false)).catch(() => setNeedsAudioActivation(true))
   }
 
   const activateAudio = async () => {
     const call = callRef.current
     if (call) {
-      const participants = Object.values(call.participants())
-      const remote = participants.find((participant) => !participant.local && participantTrack(participant, "audio"))
-        || participants.find((participant) => !participant.local)
+      const remote = Object.values(call.participants()).find((participant) => !participant.local && participantTrack(participant, "audio"))
       routeRemoteAudio(participantTrack(remote, "audio"))
     }
-
     const audio = remoteAudioRef.current
-    if (!audio?.srcObject) {
-      setNeedsAudioActivation(true)
-      return
-    }
-
+    if (!audio?.srcObject) return setNeedsAudioActivation(true)
     try {
       audio.muted = false
       audio.volume = 1
@@ -229,79 +215,44 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
 
   useEffect(() => {
     if (!session) return
-
     let cancelled = false
     let call: DailyCall | null = null
+    let greetingTimer: ReturnType<typeof setTimeout> | null = null
     let inactivityTimer: ReturnType<typeof setTimeout> | null = null
-    let goodbyeFallbackTimer: ReturnType<typeof setTimeout> | null = null
-    let closingForInactivity = false
+    let goodbyeTimer: ReturnType<typeof setTimeout> | null = null
+    let palHasSpoken = false
+    let closing = false
 
-    const clearInactivityTimer = () => {
-      if (!inactivityTimer) return
-      clearTimeout(inactivityTimer)
-      inactivityTimer = null
+    const clearTimer = (timer: ReturnType<typeof setTimeout> | null) => timer && clearTimeout(timer)
+    const sendEcho = (text: string) => {
+      if (!call) return
+      call.sendAppMessage({
+        message_type: "conversation",
+        event_type: "conversation.echo",
+        conversation_id: session.conversationId,
+        properties: { modality: "text", text, done: true },
+      }, "*")
     }
 
-    const clearGoodbyeFallback = () => {
-      if (!goodbyeFallbackTimer) return
-      clearTimeout(goodbyeFallbackTimer)
-      goodbyeFallbackTimer = null
-    }
-
-    const finishInactiveCall = async () => {
-      clearInactivityTimer()
-      clearGoodbyeFallback()
-      if (!call) {
-        if (!cancelled) setStatus("ended")
-        return
-      }
+    const finishCall = async () => {
+      if (!call) return setStatus("ended")
       const activeCall = call
-      if (callRef.current === activeCall) callRef.current = null
-      try {
-        await Promise.resolve(activeCall.leave())
-      } catch {
-        // La room può essersi già chiusa mentre la consulente terminava il saluto.
-      }
-      try {
-        await Promise.resolve(activeCall.destroy())
-      } catch {
-        // La UI deve comunque risultare chiusa anche se Daily ha già distrutto la call.
-      }
+      callRef.current = null
+      try { await Promise.resolve(activeCall.leave()) } catch {}
+      try { await Promise.resolve(activeCall.destroy()) } catch {}
       remoteAudioRef.current?.pause()
       if (!cancelled) setStatus("ended")
     }
 
-    const sayGoodbyeAndClose = () => {
-      if (!call || closingForInactivity || cancelled) return
-      closingForInactivity = true
-      clearInactivityTimer()
-
-      try {
-        call.sendAppMessage({
-          message_type: "conversation",
-          event_type: "conversation.echo",
-          conversation_id: session.conversationId,
-          properties: {
-            modality: "text",
-            text: INACTIVITY_GOODBYE,
-            done: true,
-          },
-        }, "*")
-      } catch {
-        void finishInactiveCall()
-        return
-      }
-
-      // Se per qualunque motivo non arriva l'evento di fine parlato, non lasciamo la sessione aperta.
-      goodbyeFallbackTimer = setTimeout(() => {
-        void finishInactiveCall()
-      }, INACTIVITY_GOODBYE_FALLBACK_MS)
-    }
-
-    const armInactivityTimer = () => {
-      if (closingForInactivity || cancelled) return
-      clearInactivityTimer()
-      inactivityTimer = setTimeout(sayGoodbyeAndClose, INACTIVITY_TIMEOUT_MS)
+    const armInactivity = () => {
+      clearTimer(inactivityTimer)
+      if (closing || cancelled) return
+      inactivityTimer = setTimeout(() => {
+        if (!call || closing) return
+        closing = true
+        try { sendEcho(INACTIVITY_GOODBYE) } catch { void finishCall(); return }
+        goodbyeTimer = setTimeout(() => void finishCall(), INACTIVITY_GOODBYE_FALLBACK_MS)
+      }, INACTIVITY_TIMEOUT_MS)
     }
 
     const handleAppMessage = (event: DailyEvent) => {
@@ -310,19 +261,25 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
       const speaking = speakingEvent(message)
       if (!speaking) return
 
+      const isPal = speaking.role === "pal" || speaking.role === "replica"
+      const isUser = speaking.role === "user"
       if (speaking.phase === "started") {
-        if (!closingForInactivity) clearInactivityTimer()
+        clearTimer(inactivityTimer)
+        if (isPal) {
+          palHasSpoken = true
+          clearTimer(greetingTimer)
+          setAssistantSpeaking(true)
+        }
+        if (isUser) setUserSpeaking(true)
         return
       }
 
-      if (speaking.role === "pal" || speaking.role === "replica") {
-        if (closingForInactivity) {
-          void finishInactiveCall()
-        } else {
-          // I 15 secondi iniziano solo quando la consulente ha finito di parlare.
-          armInactivityTimer()
-        }
+      if (isPal) {
+        setAssistantSpeaking(false)
+        if (closing) void finishCall()
+        else armInactivity()
       }
+      if (isUser) setUserSpeaking(false)
     }
 
     const syncTracks = () => {
@@ -331,66 +288,55 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
       const remote = participants.find((participant) => !participant.local && participantTrack(participant, "video"))
         || participants.find((participant) => !participant.local)
       const local = participants.find((participant) => participant.local)
-      const remoteVideoTrack = participantTrack(remote, "video")
-      const remoteAudioTrack = participantTrack(remote, "audio")
-
-      attachVideoTrack(remoteVideoRef.current, remoteVideoTrack)
-      routeRemoteAudio(remoteAudioTrack)
+      const remoteVideo = participantTrack(remote, "video")
+      const remoteAudio = participantTrack(remote, "audio")
+      attachVideoTrack(remoteVideoRef.current, remoteVideo)
+      routeRemoteAudio(remoteAudio)
       attachVideoTrack(localVideoRef.current, participantTrack(local, "video"))
-      setHasRemoteVideo(Boolean(remoteVideoTrack))
+      setHasRemoteVideo(Boolean(remoteVideo))
+    }
+
+    const ensureMicrophonePublished = async () => {
+      if (!call) return
+      await Promise.resolve(call.setLocalAudio(true))
+      setMicOn(true)
+      await new Promise((resolve) => setTimeout(resolve, 450))
+      const local = Object.values(call.participants()).find((participant) => participant.local)
+      if (!participantTrack(local, "audio")) {
+        await Promise.resolve(call.setLocalAudio(false))
+        await Promise.resolve(call.setLocalAudio(true))
+      }
+      setMicOn(true)
     }
 
     const connect = async () => {
       setStatus("connecting")
       setError(null)
-      setHasRemoteVideo(false)
-      setHasRemoteAudio(false)
-      setNeedsAudioActivation(false)
-
       try {
         await loadDailySdk()
         if (cancelled || !window.Daily) return
-
-        call = window.Daily.createCallObject({
-          startVideoOff: true,
-          startAudioOff: false,
-          subscribeToTracksAutomatically: true,
-        })
+        call = window.Daily.createCallObject({ startVideoOff: true, startAudioOff: false, subscribeToTracksAutomatically: true })
         callRef.current = call
-
         call
-          .on("joined-meeting", () => {
-            if (cancelled) return
-            setStatus("joined")
-            syncTracks()
-          })
+          .on("joined-meeting", () => { if (!cancelled) { setStatus("joined"); syncTracks() } })
           .on("participant-joined", syncTracks)
           .on("participant-updated", syncTracks)
           .on("track-started", syncTracks)
           .on("track-stopped", syncTracks)
           .on("app-message", handleAppMessage)
-          .on("left-meeting", () => {
-            clearInactivityTimer()
-            clearGoodbyeFallback()
-            if (!cancelled) setStatus("ended")
-          })
-          .on("error", (event) => {
-            clearInactivityTimer()
-            clearGoodbyeFallback()
-            if (!cancelled) {
-              setError(friendlyConnectionError(event))
-              setStatus("error")
-            }
-          })
+          .on("left-meeting", () => { if (!cancelled) setStatus("ended") })
+          .on("error", (event) => { if (!cancelled) { setError(friendlyConnectionError(event)); setStatus("error") } })
 
-        await call.join({
-          url: session.conversationUrl,
-          ...(session.meetingToken ? { token: session.meetingToken } : {}),
-        })
+        await call.join({ url: session.conversationUrl, ...(session.meetingToken ? { token: session.meetingToken } : {}) })
+        await ensureMicrophonePublished()
         syncTracks()
+
+        greetingTimer = setTimeout(() => {
+          if (!cancelled && !closing && !palHasSpoken) {
+            try { sendEcho(session.openingMessage) } catch {}
+          }
+        }, GREETING_FALLBACK_MS)
       } catch (connectionError) {
-        clearInactivityTimer()
-        clearGoodbyeFallback()
         if (!cancelled) {
           setError(friendlyConnectionError(connectionError))
           setStatus("error")
@@ -399,14 +345,14 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
     }
 
     void connect()
-
     return () => {
       cancelled = true
-      clearInactivityTimer()
-      clearGoodbyeFallback()
+      clearTimer(greetingTimer)
+      clearTimer(inactivityTimer)
+      clearTimer(goodbyeTimer)
       const activeCall = call || callRef.current
       if (activeCall) {
-        if (callRef.current === activeCall) callRef.current = null
+        callRef.current = null
         void Promise.resolve(activeCall.leave()).catch(() => undefined)
         void Promise.resolve(activeCall.destroy()).catch(() => undefined)
       }
@@ -421,77 +367,49 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
     setError(null)
     setMicOn(true)
     setCameraOn(false)
-    setHasRemoteAudio(false)
     setNeedsAudioActivation(false)
-
     try {
-      const response = await fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      })
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("microphone unavailable")
+      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      permissionStream.getTracks().forEach((track) => track.stop())
+
+      const response = await fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, { method: "POST", headers: { "Content-Type": "application/json" } })
       const data = await response.json().catch(() => ({}))
       const conversationId = String(data?.conversationId || "")
       const conversationUrl = String(data?.conversationUrl || data?.joinUrl || "")
-      if (!response.ok || !conversationId || !conversationUrl) {
-        throw new Error(friendlyStartError(response.status, String(data?.error || "")))
-      }
-
+      if (!response.ok || !conversationId || !conversationUrl) throw new Error(friendlyStartError(response.status, String(data?.error || "")))
       setSession({
         conversationId,
         conversationUrl,
-        meetingToken: data?.conversationUrl && data?.meetingToken ? String(data.meetingToken) : null,
+        meetingToken: data?.meetingToken ? String(data.meetingToken) : null,
+        openingMessage: String(data?.openingMessage || DEFAULT_OPENING_MESSAGE),
       })
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : friendlyStartError(500, ""))
+      setError(startError instanceof Error && startError.message.startsWith("La consulente") ? startError.message : friendlyConnectionError(startError))
       setStatus("error")
       setSession(null)
     }
-  }
-
-  const retryConnection = () => {
-    if (!session) {
-      void start()
-      return
-    }
-    setError(null)
-    setStatus("connecting")
-    setNeedsAudioActivation(false)
-    setSession({ ...session })
   }
 
   const toggleMic = async () => {
     const call = callRef.current
     if (!call) return
     const next = !micOn
-    try {
-      await Promise.resolve(call.setLocalAudio(next))
-      setMicOn(next)
-    } catch {
-      setError("Non riesco a modificare il microfono. Controlla i permessi del browser.")
-    }
+    try { await Promise.resolve(call.setLocalAudio(next)); setMicOn(next) }
+    catch { setError("Non riesco a modificare il microfono. Controlla i permessi del browser.") }
   }
 
   const toggleCamera = async () => {
     const call = callRef.current
     if (!call) return
     const next = !cameraOn
-    try {
-      await Promise.resolve(call.setLocalVideo(next))
-      setCameraOn(next)
-    } catch {
-      setError("Non riesco ad attivare la videocamera. Controlla i permessi del browser.")
-    }
+    try { await Promise.resolve(call.setLocalVideo(next)); setCameraOn(next) }
+    catch { setError("Non riesco ad attivare la videocamera. Controlla i permessi del browser.") }
   }
 
   const leaveCall = async () => {
     const call = callRef.current
-    if (call) {
-      try {
-        await Promise.resolve(call.leave())
-      } catch {
-        // La room può essere già in chiusura; l'interfaccia deve comunque terminare pulita.
-      }
-    }
+    if (call) try { await Promise.resolve(call.leave()) } catch {}
     remoteAudioRef.current?.pause()
     setStatus("ended")
   }
@@ -500,148 +418,80 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
     return (
       <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
         <div className="relative h-[68svh] min-h-[430px] max-h-[760px] overflow-hidden bg-slate-950 sm:h-[min(72vh,720px)] sm:min-h-[520px]">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-            aria-label="Consulente digitale 4BID"
-          />
-          <audio ref={remoteAudioRef} autoPlay className="hidden" aria-hidden="true" />
+          <video ref={remoteVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" aria-label="Consulente digitale 4BID" />
+          <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" aria-hidden="true" />
 
           {!hasRemoteVideo && status !== "error" ? (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-slate-950 text-center text-white">
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15">
-                <Loader2 className="h-10 w-10 animate-spin text-violet-300" />
-                <span className="absolute inset-0 animate-ping rounded-full border border-violet-400/30" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold">Sto collegando la consulente…</p>
-                <p className="mt-1 text-sm text-slate-400">La conversazione parte automaticamente appena è pronta.</p>
-              </div>
+              <Loader2 className="h-10 w-10 animate-spin text-violet-300" />
+              <div><p className="text-lg font-semibold">Sto collegando la consulente…</p><p className="mt-1 text-sm text-slate-400">Microfono e conversazione vengono verificati automaticamente.</p></div>
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute left-3 top-3 z-30 rounded-lg bg-white/90 px-2 py-1.5 shadow-md backdrop-blur sm:left-5 sm:top-5">
-            <img src="/logo.png" alt="4BID" className="h-6 w-auto object-contain sm:h-7" />
+          <div className="pointer-events-none absolute left-4 top-4 z-30 opacity-75 drop-shadow-lg sm:left-5 sm:top-5">
+            <img src="/logo.png" alt="4BID" className="h-7 w-auto object-contain sm:h-8" />
           </div>
 
-          {cameraOn ? (
-            <div className="absolute right-3 top-3 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:right-5 sm:top-5 sm:h-40 sm:w-28">
-              <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" aria-label="La tua videocamera" />
-            </div>
-          ) : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
+          {cameraOn ? <div className="absolute right-4 top-4 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl"><video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" /></div> : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
 
           {needsAudioActivation ? (
             <div className="absolute inset-x-4 top-1/2 z-50 flex -translate-y-1/2 justify-center">
-              <div className="rounded-2xl border border-violet-300/30 bg-slate-950/92 p-4 text-center text-white shadow-2xl backdrop-blur">
-                <Volume2 className="mx-auto h-6 w-6 text-violet-300" />
-                <p className="mt-2 text-sm font-semibold">Il browser ha bloccato l'audio della consulente</p>
-                <Button onClick={() => void activateAudio()} className="mt-3 bg-violet-500 text-white hover:bg-violet-400">
-                  <Volume2 className="mr-2 h-4 w-4" /> Attiva audio
-                </Button>
+              <div className="max-w-sm rounded-2xl border border-violet-300/30 bg-slate-950/95 p-5 text-center text-white shadow-2xl backdrop-blur">
+                <Volume2 className="mx-auto h-7 w-7 text-violet-300" />
+                <p className="mt-2 font-semibold">La consulente sta parlando</p>
+                <p className="mt-1 text-sm text-slate-300">Il browser ha bloccato la riproduzione automatica.</p>
+                <Button onClick={() => void activateAudio()} className="mt-4 bg-violet-500 text-white hover:bg-violet-400"><Volume2 className="mr-2 h-4 w-4" /> Ascolta la consulente</Button>
               </div>
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute inset-x-3 bottom-24 z-30 sm:inset-x-5">
-            <div className="mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/72 px-4 py-3 text-white shadow-xl backdrop-blur-md">
-              <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
-              <p className="min-w-0 flex-1 truncate text-xs text-slate-100 sm:text-sm">Consulente digitale 4BID · conversazione in tempo reale</p>
-              {status === "joined" ? (
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${hasRemoteAudio ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200"}`}>
-                  {hasRemoteAudio ? "Audio collegato" : "Audio in arrivo"}
-                </span>
-              ) : null}
+          <div className="pointer-events-none absolute inset-x-4 bottom-24 z-30">
+            <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-slate-950/78 px-4 py-3 text-white shadow-xl backdrop-blur-md">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium sm:text-sm">{assistantSpeaking ? "La consulente sta parlando…" : userSpeaking ? "Ti sto ascoltando…" : status === "joined" ? "Puoi parlare normalmente" : "Connessione in corso…"}</p>
+                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${micOn ? "bg-emerald-400/15 text-emerald-200" : "bg-red-400/15 text-red-200"}`}>{micOn ? "Microfono attivo" : "Microfono spento"}</span>
+              </div>
+              {status === "joined" && !assistantSpeaking ? <p className="mt-2 text-xs leading-relaxed text-slate-300">{session.openingMessage}</p> : null}
             </div>
           </div>
 
           <div className="absolute inset-x-0 bottom-0 z-40 flex items-center justify-center gap-3 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent px-4 pb-5 pt-9">
-            <button
-              type="button"
-              onClick={() => void toggleMic()}
-              aria-label={micOn ? "Disattiva microfono" : "Attiva microfono"}
-              title={micOn ? "Disattiva microfono" : "Attiva microfono"}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20"
-            >
-              {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => void toggleCamera()}
-              aria-label={cameraOn ? "Disattiva videocamera" : "Attiva videocamera"}
-              title={cameraOn ? "Disattiva videocamera" : "Attiva videocamera"}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20"
-            >
-              {cameraOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => void activateAudio()}
-              aria-label="Riattiva audio consulente"
-              title="Riattiva audio consulente"
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20"
-            >
-              <Volume2 className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => void leaveCall()}
-              aria-label="Termina conversazione"
-              title="Termina conversazione"
-              className="flex h-12 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-500"
-            >
-              <PhoneOff className="h-5 w-5" />
-            </button>
+            <button onClick={() => void toggleMic()} aria-label={micOn ? "Disattiva microfono" : "Attiva microfono"} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white">{micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button>
+            <button onClick={() => void toggleCamera()} aria-label={cameraOn ? "Disattiva videocamera" : "Attiva videocamera"} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white">{cameraOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}</button>
+            <button onClick={() => void activateAudio()} aria-label="Riattiva audio consulente" className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white"><Volume2 className="h-5 w-5" /></button>
+            <button onClick={() => void leaveCall()} aria-label="Termina conversazione" className="flex h-12 w-14 items-center justify-center rounded-full bg-red-600 text-white"><PhoneOff className="h-5 w-5" /></button>
           </div>
 
-          {status === "error" ? (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/92 p-6 text-center text-white backdrop-blur-sm">
-              <div className="max-w-md">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-400/10 text-amber-200 ring-1 ring-amber-300/20">
-                  <Volume2 className="h-6 w-6" />
-                </div>
-                <h3 className="text-xl font-semibold">Collegamento da completare</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-300">{error}</p>
-                <Button onClick={retryConnection} className="mt-5 bg-violet-600 text-white hover:bg-violet-500">Riprova collegamento</Button>
-              </div>
-            </div>
-          ) : null}
+          {status === "error" ? <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-6 text-center text-white"><div className="max-w-md"><h3 className="text-xl font-semibold">Collegamento da completare</h3><p className="mt-2 text-sm text-slate-300">{error}</p><Button onClick={() => { setSession(null); setStatus("idle"); setError(null) }} className="mt-5 bg-violet-600 text-white hover:bg-violet-500">Riprova</Button></div></div> : null}
         </div>
       </section>
     )
   }
 
   if (status === "ended") {
-    return (
-      <section className="rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-6 text-center shadow-sm sm:p-8">
-        <Sparkles className="mx-auto h-7 w-7 text-violet-600" />
-        <h3 className="mt-3 text-xl font-bold">Grazie per la conversazione</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi aprire il preventivo completo qui sotto oppure riaprire la consulente se hai ancora una domanda importante.</p>
-        <Button onClick={() => void start()} className="mt-5 bg-violet-600 text-white hover:bg-violet-700">Parla di nuovo con la consulente</Button>
-      </section>
-    )
+    return <section className="rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-7 text-center shadow-sm"><Sparkles className="mx-auto h-7 w-7 text-violet-600" /><h3 className="mt-3 text-xl font-bold">Grazie per la conversazione</h3><p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi continuare a leggere la proposta oppure riaprire la consulenza.</p><Button onClick={() => void start()} className="mt-5 bg-violet-600 text-white hover:bg-violet-700">Riapri la consulente</Button></section>
   }
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950 text-white shadow-xl">
-      <div className="grid gap-5 p-5 sm:p-7 md:grid-cols-[1.15fr_0.85fr] md:items-center">
+    <section className="overflow-hidden rounded-3xl border border-violet-300/30 bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950 text-white shadow-2xl">
+      <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[1.15fr_0.85fr] md:items-center">
         <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-100">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Consulente AI live
-          </div>
-          <h3 className="text-2xl font-black tracking-tight sm:text-3xl">Parla adesso con la consulente 4BID</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">Una conversazione vera, in tempo reale: chiedi chiarimenti, confronta le opzioni e approfondisci i moduli del tuo preventivo. Dopo il click il collegamento parte direttamente.</p>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-100"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Consulente AI disponibile ora</div>
+          <h3 className="text-2xl font-black tracking-tight sm:text-4xl">Ti spiego questo preventivo in 60 secondi</h3>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">La consulente digitale 4BID ha già analizzato la proposta. Può mostrarti subito i punti più importanti, confrontare le opzioni e rispondere alle tue domande.</p>
+          <div className="mt-5 rounded-2xl border border-violet-300/20 bg-white/5 p-4 text-sm italic text-violet-100">“Vuole che le mostri in un minuto quali moduli le convengono davvero?”</div>
           {error ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">{error}</p> : null}
         </div>
-        <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Mic className="h-4 w-4 text-violet-300" /> Il browser chiederà solo i permessi necessari</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Sparkles className="h-4 w-4 text-violet-300" /> Risposte costruite sul contenuto della proposta</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> La consulente si presenta appena si collega</div>
-          <Button onClick={() => void start()} disabled={status === "starting"} className="mt-1 h-12 bg-violet-500 font-bold text-white hover:bg-violet-400">
-            {status === "starting" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparazione consulente…</> : "Parla con la consulente"}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+          <div className="grid gap-3 text-sm text-slate-200">
+            <div className="flex items-center gap-3"><Clock3 className="h-4 w-4 text-violet-300" /> Circa 60 secondi per capire la proposta</div>
+            <div className="flex items-center gap-3"><Check className="h-4 w-4 text-violet-300" /> Personalizzata sul tuo preventivo</div>
+            <div className="flex items-center gap-3"><Mic className="h-4 w-4 text-violet-300" /> Puoi interrompere e fare domande a voce</div>
+          </div>
+          <Button onClick={() => void start()} disabled={status === "starting"} className="mt-5 h-14 w-full bg-violet-500 text-base font-black text-white shadow-lg shadow-violet-950/30 hover:bg-violet-400">
+            {status === "starting" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sto preparando la consulente…</> : <><Sparkles className="mr-2 h-5 w-5" /> Fatti spiegare il preventivo in 60 secondi</>}
           </Button>
+          <p className="mt-3 text-center text-xs text-slate-400">Nessun impegno · conversazione in tempo reale</p>
         </div>
       </div>
     </section>
