@@ -14,19 +14,19 @@ test("Tavus session ends immediately after the embedded participant leaves", () 
   assert.match(route, /participant_left_timeout:\s*0/)
 })
 
-test("closing the hosted conversation unloads the embedded room", () => {
+test("closing the Daily Prebuilt conversation leaves and destroys the room", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /const closeCall = \(\) => \{/)
+  assert.match(component, /const closeCall = async \(\) => \{/)
+  assert.match(component, /activeCall\.leave\(\)/)
+  assert.match(component, /activeCall\.destroy\(\)/)
   assert.match(component, /setSession\(null\)/)
   assert.match(component, /setStatus\("ended"\)/)
-  assert.doesNotMatch(component, /activeCall\.leave\(\)/)
-  assert.doesNotMatch(component, /activeCall\.destroy\(\)/)
 })
 
-test("hosted conversation keeps the authenticated Tavus join URL", () => {
+test("authenticated Tavus join URL is passed directly to Daily Prebuilt join", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
   assert.match(component, /joinUrl:\s*string/)
   assert.match(component, /setSession\(\{/)
   assert.match(component, /joinUrl,/)
-  assert.match(component, /src=\{session\.joinUrl\}/)
+  assert.match(component, /await call\.join\(\{ url: session\.joinUrl \}\)/)
 })
