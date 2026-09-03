@@ -3,12 +3,39 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 export const runtime = "nodejs"
 export const maxDuration = 30
 
+function eventType(event: any) {
+  return String(event?.event_type || event?.type || event?.event || "")
+}
+
 function eventSummary(event: any) {
   return {
-    event_type: String(event?.event_type || event?.type || event?.event || ""),
+    event_type: eventType(event),
     role: event?.properties?.role || event?.role || null,
     shutdown_reason: event?.properties?.shutdown_reason || event?.shutdown_reason || null,
   }
+}
+
+function cleanWarning(value: unknown) {
+  const text = typeof value === "string" ? value : value ? JSON.stringify(value) : ""
+  return text
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/[A-Za-z0-9_-]{24,}/g, "[redacted]")
+    .slice(0, 500)
+}
+
+function warningSummary(event: any) {
+  const props = event?.properties && typeof event.properties === "object" ? event.properties : {}
+  const raw = props.message || props.warning || props.error || props.detail || event?.message || event?.warning || event?.error || ""
+  return {
+    message: cleanWarning(raw),
+    code: typeof props.code === "string" || typeof props.code === "number" ? props.code : null,
+    property_keys: Object.keys(props).filter((key) => !/token|secret|key|url|id/i.test(key)).slice(0, 20),
+  }
+}
+
+function hostFrom(value: unknown) {
+  if (typeof value !== "string" || !value) return null
+  try { return new URL(value).host } catch { return null }
 }
 
 async function getJson(url: string, apiKey: string) {
@@ -64,6 +91,8 @@ export async function GET() {
   const personaTts = persona.body?.layers?.tts || null
   const convo = conversation.body
   const transcript = Array.isArray(convo?.transcript) ? convo.transcript : []
+  const events = Array.isArray(convo?.events) ? convo.events : []
+  const warnings = events.filter((event: any) => eventType(event) === "log.warn").map(warningSummary)
 
   return Response.json({
     ok: true,
@@ -87,10 +116,12 @@ export async function GET() {
     latestConversation: convo ? {
       lookup_status: conversation.status,
       status: convo?.status || null,
+      room_host: hostFrom(convo?.conversation_url),
       replica_matches_config: Boolean(visualId && convo?.replica_id === visualId),
       persona_matches_config: Boolean(agentId && convo?.persona_id === agentId),
       shutdown_reason: convo?.shutdown_reason || null,
-      event_types: Array.isArray(convo?.events) ? convo.events.map(eventSummary) : [],
+      event_types: events.map(eventSummary),
+      warnings,
       transcript_count: transcript.length,
       transcript_roles: transcript.map((item: any) => item?.role || item?.speaker || null),
     } : null,
