@@ -17,10 +17,24 @@ export type AiPrMeta = {
   model: string
   files: string[]
   iteration: number
+  signature: string
 }
 
 const META_PREFIX = "<!-- CONTROL_CENTER_AI_META "
 const META_SUFFIX = " -->"
+
+export function canonicalAiMetaPayload(meta: Omit<AiPrMeta, "signature"> | AiPrMeta) {
+  return JSON.stringify({
+    version: meta.version,
+    project: meta.project,
+    findingId: meta.findingId,
+    code: meta.code,
+    risk: meta.risk,
+    model: meta.model,
+    files: [...meta.files].sort(),
+    iteration: meta.iteration,
+  })
+}
 
 export function serializeAiMeta(meta: AiPrMeta) {
   return `${META_PREFIX}${JSON.stringify(meta)}${META_SUFFIX}`
@@ -43,7 +57,9 @@ export function parseAiMeta(body?: string | null): AiPrMeta | null {
       typeof parsed.model !== "string" ||
       !Array.isArray(parsed.files) ||
       !parsed.files.every((file) => typeof file === "string") ||
-      !Number.isInteger(parsed.iteration)
+      !Number.isInteger(parsed.iteration) ||
+      typeof parsed.signature !== "string" ||
+      !/^[a-f0-9]{64}$/i.test(parsed.signature)
     ) return null
     return parsed as AiPrMeta
   } catch {
@@ -78,6 +94,11 @@ const TEST_CONFIG_RE = /^(vitest|jest|playwright)\.config\.(ts|js|mjs|cjs)$/i
 const ESLINT_CONFIG_RE = /^(eslint\.config\.(ts|js|mjs|cjs)|\.eslintrc(?:\.(json|js|cjs|yml|yaml))?)$/i
 const SOURCE_PATH_RE = /^(app|components|lib|hooks|scripts|src)\/.*\.(ts|tsx|js|jsx|mjs|cjs)$/i
 const NEXT_CONFIG_RE = /^next\.config\.(ts|js|mjs|cjs)$/i
+const SENSITIVE_SOURCE_RE = /(^|\/)(?:auth|authentication|authorization|security|permissions?|roles?|stripe|payments?|billing|subscriptions?|webhooks?|secrets?|credentials?)(?:[\/._-]|$)/i
+
+export function isSensitiveAiSourcePath(path: string) {
+  return SOURCE_PATH_RE.test(path) && SENSITIVE_SOURCE_RE.test(path)
+}
 
 export function isAiPathAllowedForCode(code: string, path: string) {
   if (isAiPathForbidden(path)) return false
@@ -87,6 +108,7 @@ export function isAiPathAllowedForCode(code: string, path: string) {
     return path === "package.json" || TEST_PATH_RE.test(path) || TEST_CONFIG_RE.test(path)
   }
   if (code === "BUILD_ERRORS_IGNORED") {
+    if (isSensitiveAiSourcePath(path)) return false
     return path === "package.json" || path === "tsconfig.json" || NEXT_CONFIG_RE.test(path) || SOURCE_PATH_RE.test(path)
   }
   return false
