@@ -17,15 +17,21 @@ test("live quote API exposes the same opening greeting it sends to Tavus", () =>
   assert.match(route, /joinUrl,/)
 })
 
-test("live quote uses Tavus hosted conversation instead of a custom Daily audio bridge", () => {
+test("live quote auto-joins Tavus through Daily Prebuilt", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /const joinUrl = String\(data\?\.joinUrl \|\| data\?\.conversationUrl \|\| ""\)/)
-  assert.match(component, /src=\{session\.joinUrl\}/)
-  assert.match(component, /allow="microphone \*; camera \*; autoplay \*; fullscreen \*; display-capture \*"/)
+  assert.match(component, /const DAILY_SDK_URL = "https:\/\/unpkg\.com\/@daily-co\/daily-js@0\.92\.2"/)
+  assert.match(component, /window\.Daily\.createFrame\(frameContainerRef\.current/)
+  assert.match(component, /await call\.join\(\{ url: session\.joinUrl \}\)/)
+  assert.match(component, /showLeaveButton:\s*false/)
+  assert.doesNotMatch(component, /src=\{session\.joinUrl\}/)
   assert.doesNotMatch(component, /createCallObject/)
   assert.doesNotMatch(component, /remoteAudioRef/)
-  assert.doesNotMatch(component, /sendAppMessage/)
-  assert.doesNotMatch(component, /DAILY_SDK_URL/)
+})
+
+test("live quote requests microphone permission before starting the provider session", () => {
+  const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
+  assert.match(component, /navigator\.mediaDevices\.getUserMedia\(\{ audio: true, video: false \}\)/)
+  assert.match(component, /permissionStream\.getTracks\(\)\.forEach/)
 })
 
 test("live call keeps one compact 4BID corner mark without a white panel", () => {
@@ -38,9 +44,10 @@ test("live call keeps one compact 4BID corner mark without a white panel", () =>
   assert.doesNotMatch(component, /HotelProfit AI/)
 })
 
-test("quote CTA is benefit-led instead of generic", () => {
+test("quote CTA is benefit-led and promises direct connection", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
   assert.match(component, /Ti spiego questo preventivo in 60 secondi/)
   assert.match(component, /Fatti spiegare il preventivo in 60 secondi/)
+  assert.match(component, /Nessuna schermata Join/)
   assert.match(component, /Consulente AI live/)
 })
