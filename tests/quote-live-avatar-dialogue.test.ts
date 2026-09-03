@@ -8,7 +8,7 @@ const route = fs.readFileSync(path.join(root, "app/api/quotes/shared/[token]/liv
 const client = fs.readFileSync(path.join(root, "app/preventivo/[token]/voce/live-sales-avatar.tsx"), "utf8")
 
 test("live advisor verifies identity before discussing a quote addressed to someone else", () => {
-  assert.match(route, /Prima di iniziare, mi dice come posso chiamarla\?/) 
+  assert.match(route, /Prima di iniziare, mi dice come posso chiamarla\?/)
   assert.match(route, /CONTROLLO IDENTITA' E RUOLO/)
   assert.match(route, /Se il primo nome dichiarato coincide/i)
   assert.match(route, /quale ruolo ricopre/i)
@@ -28,4 +28,11 @@ test("silence goodbye and spoken final farewell both close the Daily Tavus room"
   assert.match(client, /activeCall\.leave\(\)/)
   assert.match(client, /activeCall\.destroy\(\)/)
   assert.match(client, /closeAfterReplicaStops/)
+})
+
+test("final farewell closes even when the utterance event arrives after stopped_speaking", () => {
+  assert.match(client, /let replicaSpeaking = false/)
+  assert.match(client, /replicaSpeaking = true/)
+  assert.match(client, /replicaSpeaking = false/)
+  assert.match(client, /if \(!replicaSpeaking\) \{\s*void finishCall\(\)/)
 })

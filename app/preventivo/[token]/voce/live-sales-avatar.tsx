@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { ArrowRight, Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -259,6 +260,7 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
     let goodbyeFallbackTimer: ReturnType<typeof setTimeout> | null = null
     let closingForInactivity = false
     let closeAfterReplicaStops = false
+    let replicaSpeaking = false
 
     const clearInactivityTimer = () => {
       if (!inactivityTimer) return
@@ -341,6 +343,9 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
         if ((role === "replica" || role === "pal") && isFinalFarewell(speech)) {
           closeAfterReplicaStops = true
           clearInactivityTimer()
+          if (!replicaSpeaking) {
+            void finishCall()
+          }
         }
       }
 
@@ -349,10 +354,12 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
 
       if (speaking.phase === "started") {
         clearInactivityTimer()
+        if (speaking.role === "replica" || speaking.role === "pal") replicaSpeaking = true
         return
       }
 
       if (speaking.role === "replica" || speaking.role === "pal") {
+        replicaSpeaking = false
         if (closingForInactivity || closeAfterReplicaStops) {
           void finishCall()
         } else {
@@ -560,7 +567,13 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute left-4 top-4 z-30 text-sm font-black tracking-[0.16em] text-white/80 drop-shadow-lg">4BID</div>
+          <Image
+            src="/logo.png"
+            alt="4BID"
+            width={129}
+            height={100}
+            className="pointer-events-none absolute bottom-5 right-4 z-30 h-auto w-14 object-contain drop-shadow-lg sm:right-5 sm:w-20"
+          />
 
           {cameraOn ? (
             <div className="absolute right-4 top-4 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:h-40 sm:w-28">
