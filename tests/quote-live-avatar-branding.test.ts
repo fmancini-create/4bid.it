@@ -7,7 +7,8 @@ const source = fs.readFileSync(path.join(process.cwd(), "app/preventivo/[token]/
 
 test("live quote keeps branding to one compact 4BID corner logo", () => {
   assert.match(source, /src="\/logo\.png"/)
-  assert.match(source, /absolute left-3 top-3/)
+  assert.match(source, /absolute left-4 top-4/)
+  assert.doesNotMatch(source, /bg-white\/90/)
   assert.doesNotMatch(source, /BrandStrip/)
   assert.doesNotMatch(source, /hotel-accelerator-logo/)
   assert.doesNotMatch(source, /hotelprofit-ai-logo/)
