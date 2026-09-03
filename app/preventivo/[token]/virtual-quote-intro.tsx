@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bot, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import InteractiveVideoAssistant from "./voce/interactive-video-assistant"
 import LiveSalesAvatar from "./voce/live-sales-avatar"
 import QuoteNarration from "./quote-narration"
@@ -27,15 +27,12 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 pt-6 sm:px-6">
-      <section className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-background to-blue-50 p-5 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700"><Bot className="h-5 w-5" /></span>
+      <section className="rounded-2xl border border-violet-200/70 bg-gradient-to-r from-violet-50 via-background to-blue-50 px-4 py-3 shadow-sm sm:px-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700"><Sparkles className="h-4 w-4" /></span>
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold">Preventivo virtuale 4BID</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Sparkles className="h-3 w-3" /> Interattivo</span>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">Puoi entrare in videochiamata con la consulente AI 4BID, farti raccontare la proposta oppure farle domande specifiche. Il preventivo completo con opzioni, condizioni, accettazione e pagamento resta disponibile subito sotto.</p>
+            <p className="text-sm font-bold">Questo non è solo un PDF: è un preventivo virtuale.</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Puoi leggerlo normalmente oppure fartelo spiegare dalla consulente digitale che conosce già questa proposta.</p>
           </div>
         </div>
       </section>
