@@ -4,6 +4,8 @@ import { isSuperAdminEmail } from "@/lib/admin-config"
 import { getAuditProject } from "@/lib/control-center/projects"
 import { analyzeProject } from "@/lib/control-center/analyzer"
 import { saveAuditResult } from "@/lib/control-center/storage"
+import { dependencyFingerprint, isAiPathAllowedForCode, parseAiMeta } from "@/lib/control-center/ai-meta"
+import { verifyAiMetaSignature } from "@/lib/control-center/ai-signature"
 
 export const maxDuration = 300
 
@@ -79,6 +81,21 @@ async function github<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`GitHub ${response.status}: ${detail.slice(0, 300)}`)
   }
   return response.json() as Promise<T>
+}
+
+function encodePath(path: string) {
+  return path.split("/").map(encodeURIComponent).join("/")
+}
+
+async function readRepoText(owner: string, repo: string, path: string, ref: string) {
+  const response = await githubResponse(`/repos/${owner}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`)
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new Error(`Impossibile leggere ${path}@${ref} (GitHub ${response.status}): ${detail.slice(0, 180)}`)
+  }
+  const payload = (await response.json()) as { content?: string; encoding?: string }
+  if (payload.encoding !== "base64" || !payload.content) throw new Error(`Contenuto ${path}@${ref} non leggibile.`)
+  return Buffer.from(payload.content.replace(/\n/g, ""), "base64").toString("utf8")
 }
 
 async function readWorkflowRuns(owner: string, repo: string, sha: string) {
@@ -169,7 +186,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "GITHUB_FIX_TOKEN non configurato" }, { status: 503 })
   }
 
-  const body = (await request.json().catch(() => ({}))) as { project?: string; prNumber?: number }
+  const body = (await request.json().catch(() => ({}))) as { project?: string; prNumber?: number; confirmAiRisk?: boolean }
   if (!body.project || !Number.isInteger(body.prNumber) || Number(body.prNumber) <= 0) {
     return NextResponse.json({ error: "Specificare project e prNumber" }, { status: 400 })
   }
@@ -191,7 +208,10 @@ export async function POST(request: Request) {
     if (pr.base.ref !== project.branch) {
       return NextResponse.json({ error: `Merge bloccato: la PR non punta alla branch prevista ${project.branch}.` }, { status: 409 })
     }
-    if (!pr.head.ref.startsWith("control-center/fix-")) {
+
+    const deterministic = pr.head.ref.startsWith("control-center/fix-")
+    const aiGenerated = pr.head.ref.startsWith("control-center/ai-fix-")
+    if (!deterministic && !aiGenerated) {
       return NextResponse.json({ error: "Merge bloccato: questa PR non e' stata creata dal Control Center." }, { status: 409 })
     }
     if (pr.head.repo?.full_name && pr.head.repo.full_name !== project.repository) {
@@ -199,13 +219,54 @@ export async function POST(request: Request) {
     }
 
     const files = await github<PullRequestFile[]>(`/repos/${owner}/${repo}/pulls/${body.prNumber}/files?per_page=100`)
-    const allowedFiles = new Set([".gitignore", ".github/workflows/control-center-ci.yml"])
-    const unexpectedFiles = files.map((file) => file.filename).filter((filename) => !allowedFiles.has(filename))
-    if (unexpectedFiles.length) {
-      return NextResponse.json({
-        error: "Merge automatico bloccato: la PR contiene file che richiedono revisione manuale.",
-        unexpectedFiles,
-      }, { status: 409 })
+    let aiMeta = null as ReturnType<typeof parseAiMeta>
+
+    if (deterministic) {
+      const allowedFiles = new Set([".gitignore", ".github/workflows/control-center-ci.yml"])
+      const unexpectedFiles = files.map((file) => file.filename).filter((filename) => !allowedFiles.has(filename))
+      if (unexpectedFiles.length) {
+        return NextResponse.json({
+          error: "Merge automatico bloccato: la PR contiene file che richiedono revisione manuale.",
+          unexpectedFiles,
+        }, { status: 409 })
+      }
+    } else {
+      aiMeta = parseAiMeta(pr.body)
+      if (!aiMeta || aiMeta.project !== project.slug || !verifyAiMetaSignature(aiMeta)) {
+        return NextResponse.json({ error: "Merge AI bloccato: manifest di sicurezza mancante, alterato o non valido." }, { status: 409 })
+      }
+      if (aiMeta.files.length > 12 || files.length > 12) {
+        return NextResponse.json({ error: "Merge AI bloccato: la PR supera il limite di 12 file." }, { status: 409 })
+      }
+      const manifest = new Set(aiMeta.files)
+      const unexpectedFiles = files
+        .map((file) => file.filename)
+        .filter((filename) => !manifest.has(filename) || !isAiPathAllowedForCode(aiMeta!.code, filename))
+      if (unexpectedFiles.length) {
+        return NextResponse.json({
+          error: "Merge AI bloccato: file fuori dallo scope autorizzato dal finding.",
+          unexpectedFiles,
+        }, { status: 409 })
+      }
+      if (files.some((file) => file.filename === "package.json")) {
+        const [basePackage, headPackage] = await Promise.all([
+          readRepoText(owner, repo, "package.json", project.branch),
+          readRepoText(owner, repo, "package.json", pr.head.ref),
+        ])
+        try {
+          if (dependencyFingerprint(basePackage) !== dependencyFingerprint(headPackage)) {
+            return NextResponse.json({ error: "Merge AI bloccato: package.json modifica dipendenze o package manager." }, { status: 409 })
+          }
+        } catch {
+          return NextResponse.json({ error: "Merge AI bloccato: package.json non e' validabile." }, { status: 409 })
+        }
+      }
+      if (aiMeta.risk === "alto" && body.confirmAiRisk !== true) {
+        return NextResponse.json({
+          error: "Questa remediation AI e' classificata a rischio alto e richiede conferma esplicita prima del merge.",
+          requiresRiskConfirmation: true,
+        }, { status: 409 })
+      }
     }
 
     if (pr.mergeable === false || pr.mergeable_state === "dirty") {
@@ -244,7 +305,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           sha: pr.head.sha,
           merge_method: "squash",
-          commit_title: `Control Center: ${pr.title} (#${pr.number})`,
+          commit_title: `${aiGenerated ? "Control Center AI" : "Control Center"}: ${pr.title} (#${pr.number})`,
         }),
       },
     )
@@ -253,7 +314,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: merge.message || "GitHub non ha completato il merge." }, { status: 409 })
     }
 
-    // Il merge e' gia' concluso: la pulizia della branch non deve mai cambiare l'esito.
     try {
       const encodedRef = pr.head.ref.split("/").map(encodeURIComponent).join("/")
       await githubResponse(`/repos/${owner}/${repo}/git/refs/heads/${encodedRef}`, { method: "DELETE" })
@@ -277,6 +337,8 @@ export async function POST(request: Request) {
       prUrl: pr.html_url,
       audit,
       checks,
+      ai: aiGenerated,
+      aiMeta,
       message: audit
         ? `Merge completato. Nuovo audit: ${audit.status}, punteggio ${audit.score}.`
         : "Merge completato. Il re-audit automatico non e' stato completato; rilanciare Analizza.",
