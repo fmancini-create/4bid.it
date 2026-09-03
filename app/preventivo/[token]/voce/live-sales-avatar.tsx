@@ -59,7 +59,7 @@ type TavusAppMessage = {
   event_type?: string
   conversation_id?: string
   properties?: {
-    role?: "replica" | "user" | string
+    role?: "pal" | "replica" | "user" | string
     interrupted?: boolean
     duration?: number | null
     [key: string]: unknown
@@ -315,7 +315,7 @@ export default function LiveSalesAvatar({ token }: { token: string; quotedProjec
         return
       }
 
-      if (speaking.role === "replica") {
+      if (speaking.role === "pal" || speaking.role === "replica") {
         if (closingForInactivity) {
           void finishInactiveCall()
         } else {
