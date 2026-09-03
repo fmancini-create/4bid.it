@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Download, Eye, Play, Users } from "lucide-react"
+import { ArrowLeft, Download, Eye, Play, Sparkles, Users } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -24,8 +24,9 @@ export default async function BusinessPlanAnalyticsPage({ params }: { params: Pr
   const downloads = rows.filter((event) => event.event_type === "downloaded" || event.event_type === "corporate_report_opened")
   const presentationStarts = rows.filter((event) => event.event_type === "presentation_started")
   const presentationCompleted = rows.filter((event) => event.event_type === "presentation_completed")
+  const avatarStarts = rows.filter((event) => event.event_type === "avatar_started")
 
-  const visitorsMap = new Map<string, { email: string; name: string; company: string; views: number; downloads: number; presentation: number; lastSeen: string }>()
+  const visitorsMap = new Map<string, { email: string; name: string; company: string; views: number; downloads: number; presentation: number; avatar: number; lastSeen: string }>()
   for (const event of rows) {
     const metadata = (event.metadata || {}) as Record<string, unknown>
     const email = String(metadata.visitor_email || event.recipient_email || "non identificato")
@@ -36,11 +37,13 @@ export default async function BusinessPlanAnalyticsPage({ params }: { params: Pr
       views: 0,
       downloads: 0,
       presentation: 0,
+      avatar: 0,
       lastSeen: event.created_at,
     }
     if (event.event_type === "page_viewed") current.views += 1
     if (event.event_type === "downloaded" || event.event_type === "corporate_report_opened") current.downloads += 1
     if (event.event_type === "presentation_completed") current.presentation += 1
+    if (event.event_type === "avatar_started") current.avatar += 1
     if (new Date(event.created_at) > new Date(current.lastSeen)) current.lastSeen = event.created_at
     if (current.name === "—" && metadata.visitor_name) current.name = String(metadata.visitor_name)
     if (current.company === "—" && metadata.visitor_company) current.company = String(metadata.visitor_company)
@@ -55,15 +58,16 @@ export default async function BusinessPlanAnalyticsPage({ params }: { params: Pr
         <Badge variant="secondary">{plan.project_type === "corporate_saas" ? "Corporate Room" : "Business Plan"}</Badge>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card><CardContent className="p-5"><Eye className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Accessi identificati</p><p className="text-2xl font-semibold">{views.length}</p></CardContent></Card>
         <Card><CardContent className="p-5"><Users className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Visitatori unici</p><p className="text-2xl font-semibold">{visitors.length}</p></CardContent></Card>
         <Card><CardContent className="p-5"><Download className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Download / report</p><p className="text-2xl font-semibold">{downloads.length}</p></CardContent></Card>
         <Card><CardContent className="p-5"><Play className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Presentazioni avviate</p><p className="text-2xl font-semibold">{presentationStarts.length}</p></CardContent></Card>
         <Card><CardContent className="p-5"><Play className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Presentazioni completate</p><p className="text-2xl font-semibold">{presentationCompleted.length}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><Sparkles className="mb-2 h-5 w-5 text-amber-500" /><p className="text-xs text-muted-foreground">Avatar live avviati</p><p className="text-2xl font-semibold">{avatarStarts.length}</p></CardContent></Card>
       </div>
 
-      <Card><CardHeader><CardTitle>Visitatori</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b bg-slate-50"><th className="p-3 text-left">Nome</th><th className="p-3 text-left">Azienda / Istituto</th><th className="p-3 text-left">Email</th><th className="p-3 text-center">Accessi</th><th className="p-3 text-center">Download</th><th className="p-3 text-center">Presentazione</th><th className="p-3 text-left">Ultima attività</th></tr></thead><tbody>{visitors.map((visitor) => <tr key={visitor.email} className="border-b"><td className="p-3 font-medium">{visitor.name}</td><td className="p-3">{visitor.company}</td><td className="p-3">{visitor.email}</td><td className="p-3 text-center">{visitor.views}</td><td className="p-3 text-center">{visitor.downloads}</td><td className="p-3 text-center">{visitor.presentation}</td><td className="p-3">{dt(visitor.lastSeen)}</td></tr>)}{visitors.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nessuna attività registrata.</td></tr>}</tbody></table></CardContent></Card>
+      <Card><CardHeader><CardTitle>Visitatori</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="w-full min-w-[860px] text-sm"><thead><tr className="border-b bg-slate-50"><th className="p-3 text-left">Nome</th><th className="p-3 text-left">Azienda / Istituto</th><th className="p-3 text-left">Email</th><th className="p-3 text-center">Accessi</th><th className="p-3 text-center">Download</th><th className="p-3 text-center">Presentazione</th><th className="p-3 text-center">Avatar live</th><th className="p-3 text-left">Ultima attività</th></tr></thead><tbody>{visitors.map((visitor) => <tr key={visitor.email} className="border-b"><td className="p-3 font-medium">{visitor.name}</td><td className="p-3">{visitor.company}</td><td className="p-3">{visitor.email}</td><td className="p-3 text-center">{visitor.views}</td><td className="p-3 text-center">{visitor.downloads}</td><td className="p-3 text-center">{visitor.presentation}</td><td className="p-3 text-center">{visitor.avatar}</td><td className="p-3">{dt(visitor.lastSeen)}</td></tr>)}{visitors.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Nessuna attività registrata.</td></tr>}</tbody></table></CardContent></Card>
 
       <Card><CardHeader><CardTitle>Link condivisi</CardTitle></CardHeader><CardContent className="space-y-3">{(shares || []).map((share) => <div key={share.id} className="flex flex-col justify-between gap-3 rounded-lg border p-4 md:flex-row md:items-center"><div><p className="font-medium">{share.email || "Link dossier"}</p><p className="text-xs text-muted-foreground">Creato {dt(share.created_at)} · ultimo accesso {dt(share.last_accessed_at)} · {share.access_count || share.view_count || 0} accessi</p></div><Button asChild variant="outline" size="sm"><a href={`/business-plan/${share.token}`} target="_blank" rel="noreferrer">Apri link</a></Button></div>)}</CardContent></Card>
 
