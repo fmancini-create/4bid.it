@@ -185,13 +185,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
     const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
+    const openingMessage = buildGreeting()
 
     await ensureVoiceTuning(palId)
 
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID ${quoteContext.quoteNumber || "Preventivo"} - ${quoteContext.clientCompany || quoteContext.clientName || "Cliente"}`.slice(0, 120),
       conversational_context: spokenContext(quoteContext),
-      custom_greeting: buildGreeting(),
+      custom_greeting: openingMessage,
       audio_only: false,
       require_auth: true,
       max_participants: 2,
@@ -265,6 +266,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         joinUrl,
         chatConversationId: chat.id,
         quotedProjects: quoteContext.quotedProjects || [],
+        openingMessage,
         maxCallDurationSeconds: MAX_CALL_DURATION_SECONDS,
       },
       { headers: { "Cache-Control": "private, no-store" } },
