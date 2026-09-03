@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Mic, MicOff, PhoneOff, RotateCcw, Volume2 } from
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
+const FINAL_FAREWELL = "Grazie, è stato un piacere. Se avrai altre domande sul dossier, sarò qui. Arrivederci e buona giornata."
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
@@ -165,8 +166,10 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const autoStartedRef = useRef(false)
   const awaitingUserRef = useRef(false)
   const farewellPendingRef = useRef(false)
+  const farewellSpeechStartedRef = useRef(false)
   const endingRef = useRef(false)
   const farewellFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const farewellRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const track = async (eventType: string, metadata: Record<string, unknown> = {}) => {
     try {
@@ -177,6 +180,17 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       })
     } catch {
       // Il tracking non deve mai bloccare la call.
+    }
+  }
+
+  const clearFarewellTimers = () => {
+    if (farewellFallbackTimerRef.current) {
+      clearTimeout(farewellFallbackTimerRef.current)
+      farewellFallbackTimerRef.current = null
+    }
+    if (farewellRetryTimerRef.current) {
+      clearTimeout(farewellRetryTimerRef.current)
+      farewellRetryTimerRef.current = null
     }
   }
 
@@ -205,11 +219,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const endConversation = async (reason = "manual") => {
     if (endingRef.current) return
     endingRef.current = true
-
-    if (farewellFallbackTimerRef.current) {
-      clearTimeout(farewellFallbackTimerRef.current)
-      farewellFallbackTimerRef.current = null
-    }
+    clearFarewellTimers()
 
     const conversationId = session?.conversationId
     try {
@@ -226,6 +236,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     } finally {
       await teardownLocalCall()
       farewellPendingRef.current = false
+      farewellSpeechStartedRef.current = false
       awaitingUserRef.current = false
       setMicOn(false)
       setHasRemoteVideo(false)
@@ -336,6 +347,27 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       ).catch(() => undefined)
     }
 
+    const speakFinalFarewell = () => {
+      const activeCall = callRef.current
+      if (!activeCall || !session.conversationId || endingRef.current) return
+
+      void Promise.resolve(
+        activeCall.sendAppMessage(
+          {
+            message_type: "conversation",
+            event_type: "conversation.echo",
+            conversation_id: session.conversationId,
+            properties: {
+              modality: "text",
+              text: FINAL_FAREWELL,
+              done: true,
+            },
+          },
+          "*",
+        ),
+      ).catch(() => undefined)
+    }
+
     const handleAppMessage = (dailyEvent: DailyEvent) => {
       const event = dailyEvent.data
       if (!event || event.message_type !== "conversation") return
@@ -347,12 +379,21 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       if (eventType === "conversation.utterance" && role === "user") {
         awaitingUserRef.current = false
         const speech = event.properties?.speech || ""
-        if (isFarewellSpeech(speech)) {
+        if (isFarewellSpeech(speech) && !farewellPendingRef.current) {
           farewellPendingRef.current = true
-          if (farewellFallbackTimerRef.current) clearTimeout(farewellFallbackTimerRef.current)
+          farewellSpeechStartedRef.current = false
+          clearFarewellTimers()
+          speakFinalFarewell()
+
+          // Se il primo echo non viene preso dal data channel, ritentiamo una volta.
+          farewellRetryTimerRef.current = setTimeout(() => {
+            if (farewellPendingRef.current && !farewellSpeechStartedRef.current) speakFinalFarewell()
+          }, 2500)
+
+          // Ultima rete di sicurezza: non lasciare una sessione Tavus appesa indefinitamente.
           farewellFallbackTimerRef.current = setTimeout(() => {
             void endConversation("farewell_timeout")
-          }, 12_000)
+          }, 20_000)
         }
         return
       }
@@ -368,7 +409,16 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
           return
         }
 
-        if (role === "replica" && awaitingUserRef.current && !farewellPendingRef.current) {
+        if (role === "replica" && farewellPendingRef.current) {
+          farewellSpeechStartedRef.current = true
+          if (farewellRetryTimerRef.current) {
+            clearTimeout(farewellRetryTimerRef.current)
+            farewellRetryTimerRef.current = null
+          }
+          return
+        }
+
+        if (role === "replica" && awaitingUserRef.current) {
           // Tavus Idle Engagement: Anna non deve riaprire da sola il discorso mentre la banca legge o pensa.
           interruptIdleEngagement()
         }
@@ -381,9 +431,10 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
         eventType === "conversation.user.stopped_speaking"
 
       if (stoppedSpeaking && role === "replica") {
-        if (farewellPendingRef.current) {
-          window.setTimeout(() => void endConversation("farewell"), 250)
-        } else {
+        if (farewellPendingRef.current && farewellSpeechStartedRef.current) {
+          // Chiudiamo SOLO dopo che Anna ha effettivamente pronunciato tutto il saluto.
+          window.setTimeout(() => void endConversation("farewell"), 650)
+        } else if (!farewellPendingRef.current) {
           awaitingUserRef.current = true
         }
       }
@@ -466,7 +517,9 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     setStatus("starting")
     setError(null)
     farewellPendingRef.current = false
+    farewellSpeechStartedRef.current = false
     awaitingUserRef.current = false
+    clearFarewellTimers()
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
@@ -516,9 +569,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   }, [checking, enabled, session, status])
 
   useEffect(() => {
-    return () => {
-      if (farewellFallbackTimerRef.current) clearTimeout(farewellFallbackTimerRef.current)
-    }
+    return () => clearFarewellTimers()
   }, [])
 
   const activateAudio = async () => {
@@ -556,10 +607,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   }
 
   const retry = async () => {
-    if (farewellFallbackTimerRef.current) {
-      clearTimeout(farewellFallbackTimerRef.current)
-      farewellFallbackTimerRef.current = null
-    }
+    clearFarewellTimers()
     await teardownLocalCall()
     setSession(null)
     setHasRemoteVideo(false)
@@ -568,6 +616,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     setError(null)
     endingRef.current = false
     farewellPendingRef.current = false
+    farewellSpeechStartedRef.current = false
     awaitingUserRef.current = false
     autoStartedRef.current = false
   }
