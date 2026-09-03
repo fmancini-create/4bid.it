@@ -126,8 +126,8 @@ async function syncTranscriptToChat(supabase: any, session: LiveSessionRow, tran
     .from("chat_conversations")
     .update({
       status: "closed",
+      message_count: transcript.length,
       last_message_at: transcript[transcript.length - 1]?.createdAt || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .eq("id", conversationId)
 
@@ -181,7 +181,7 @@ export async function persistTavusSessionPayload(supabase: any, session: LiveSes
   else if (ended && session.chat_conversation_id) {
     await supabase
       .from("chat_conversations")
-      .update({ status: "closed", updated_at: now })
+      .update({ status: "closed" })
       .eq("id", session.chat_conversation_id)
   }
 
