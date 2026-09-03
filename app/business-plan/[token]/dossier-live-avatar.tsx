@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Mic, MicOff, RotateCcw, Volume2 } from "lucide-react"
+import { CheckCircle2, Loader2, Mic, MicOff, PhoneOff, RotateCcw, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
@@ -19,7 +19,22 @@ type DailyParticipant = {
   }
 }
 
-type DailyEvent = { errorMsg?: string }
+type TavusConversationEvent = {
+  message_type?: string
+  event_type?: string
+  conversation_id?: string
+  properties?: {
+    role?: "user" | "replica"
+    speech?: string
+    interrupted?: boolean
+    duration?: number | null
+  }
+}
+
+type DailyEvent = {
+  errorMsg?: string
+  data?: TavusConversationEvent
+}
 
 type DailyCall = {
   join(options: { url: string; token?: string }): Promise<unknown>
@@ -28,6 +43,7 @@ type DailyCall = {
   on(event: string, handler: (event: DailyEvent) => void): DailyCall
   participants(): Record<string, DailyParticipant>
   setLocalAudio(enabled: boolean): Promise<unknown> | void
+  sendAppMessage(data: Record<string, unknown>, recipient?: string): Promise<unknown> | void
 }
 
 type DailyGlobal = {
@@ -45,6 +61,8 @@ type LiveSession = {
   conversationUrl: string
   meetingToken?: string | null
 }
+
+type LiveStatus = "idle" | "starting" | "connecting" | "joined" | "ended" | "error"
 
 let dailySdkPromise: Promise<void> | null = null
 
@@ -95,11 +113,47 @@ function friendlyStartError(status: number, message: string) {
   return message || "Non riesco ad avviare la presentazione live in questo momento."
 }
 
+function normalizeSpeech(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[!?.,;:]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function isFarewellSpeech(value: string) {
+  const speech = normalizeSpeech(value)
+  if (!speech) return false
+
+  if (
+    speech.includes("possiamo chiudere") ||
+    speech.includes("chiudiamo qui") ||
+    speech.includes("devo andare") ||
+    speech.includes("ci sentiamo") ||
+    speech.includes("ci vediamo")
+  ) {
+    return true
+  }
+
+  return /^(?:(?:ok|okay|grazie|perfetto|va bene|benissimo) )*(?:ciao|ciao anna|arrivederci|a presto|buona giornata|buona serata)(?: grazie)?$/.test(
+    speech,
+  )
+}
+
+function roleFromEvent(event: TavusConversationEvent) {
+  if (event.properties?.role) return event.properties.role
+  if (event.event_type?.includes(".replica.")) return "replica" as const
+  if (event.event_type?.includes(".user.")) return "user" as const
+  return undefined
+}
+
 export default function DossierLiveAvatar({ token }: { token: string }) {
   const [enabled, setEnabled] = useState(false)
   const [checking, setChecking] = useState(true)
   const [session, setSession] = useState<LiveSession | null>(null)
-  const [status, setStatus] = useState<"idle" | "starting" | "connecting" | "joined" | "error">("idle")
+  const [status, setStatus] = useState<LiveStatus>("idle")
   const [error, setError] = useState<string | null>(null)
   const [micOn, setMicOn] = useState(false)
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
@@ -109,7 +163,10 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const autoStartedRef = useRef(false)
-  const startWithMicRef = useRef(false)
+  const awaitingUserRef = useRef(false)
+  const farewellPendingRef = useRef(false)
+  const endingRef = useRef(false)
+  const farewellFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const track = async (eventType: string, metadata: Record<string, unknown> = {}) => {
     try {
@@ -120,6 +177,62 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       })
     } catch {
       // Il tracking non deve mai bloccare la call.
+    }
+  }
+
+  const clearRemoteMedia = () => {
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.pause()
+      remoteAudioRef.current.srcObject = null
+    }
+  }
+
+  const teardownLocalCall = async () => {
+    const call = callRef.current
+    callRef.current = null
+    if (call) {
+      try {
+        await Promise.resolve(call.leave())
+      } catch {}
+      try {
+        await Promise.resolve(call.destroy())
+      } catch {}
+    }
+    clearRemoteMedia()
+  }
+
+  const endConversation = async (reason = "manual") => {
+    if (endingRef.current) return
+    endingRef.current = true
+
+    if (farewellFallbackTimerRef.current) {
+      clearTimeout(farewellFallbackTimerRef.current)
+      farewellFallbackTimerRef.current = null
+    }
+
+    const conversationId = session?.conversationId
+    try {
+      if (conversationId) {
+        await fetch(`/api/business-plan/shared/${encodeURIComponent(token)}/live-avatar`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId, reason }),
+          keepalive: true,
+        })
+      }
+    } catch {
+      // La chiusura locale deve avvenire comunque.
+    } finally {
+      await teardownLocalCall()
+      farewellPendingRef.current = false
+      awaitingUserRef.current = false
+      setMicOn(false)
+      setHasRemoteVideo(false)
+      setNeedsAudioActivation(false)
+      setSession(null)
+      setStatus("ended")
+      endingRef.current = false
     }
   }
 
@@ -208,6 +321,74 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     let cancelled = false
     let call: DailyCall | null = null
 
+    const interruptIdleEngagement = () => {
+      const activeCall = callRef.current
+      if (!activeCall || !session.conversationId) return
+      void Promise.resolve(
+        activeCall.sendAppMessage(
+          {
+            message_type: "conversation",
+            event_type: "conversation.interrupt",
+            conversation_id: session.conversationId,
+          },
+          "*",
+        ),
+      ).catch(() => undefined)
+    }
+
+    const handleAppMessage = (dailyEvent: DailyEvent) => {
+      const event = dailyEvent.data
+      if (!event || event.message_type !== "conversation") return
+      if (event.conversation_id && event.conversation_id !== session.conversationId) return
+
+      const eventType = event.event_type || ""
+      const role = roleFromEvent(event)
+
+      if (eventType === "conversation.utterance" && role === "user") {
+        awaitingUserRef.current = false
+        const speech = event.properties?.speech || ""
+        if (isFarewellSpeech(speech)) {
+          farewellPendingRef.current = true
+          if (farewellFallbackTimerRef.current) clearTimeout(farewellFallbackTimerRef.current)
+          farewellFallbackTimerRef.current = setTimeout(() => {
+            void endConversation("farewell_timeout")
+          }, 12_000)
+        }
+        return
+      }
+
+      const startedSpeaking =
+        eventType === "conversation.started_speaking" ||
+        eventType === "conversation.replica.started_speaking" ||
+        eventType === "conversation.user.started_speaking"
+
+      if (startedSpeaking) {
+        if (role === "user") {
+          awaitingUserRef.current = false
+          return
+        }
+
+        if (role === "replica" && awaitingUserRef.current && !farewellPendingRef.current) {
+          // Tavus Idle Engagement: Anna non deve riaprire da sola il discorso mentre la banca legge o pensa.
+          interruptIdleEngagement()
+        }
+        return
+      }
+
+      const stoppedSpeaking =
+        eventType === "conversation.stopped_speaking" ||
+        eventType === "conversation.replica.stopped_speaking" ||
+        eventType === "conversation.user.stopped_speaking"
+
+      if (stoppedSpeaking && role === "replica") {
+        if (farewellPendingRef.current) {
+          window.setTimeout(() => void endConversation("farewell"), 250)
+        } else {
+          awaitingUserRef.current = true
+        }
+      }
+    }
+
     const connect = async () => {
       setStatus("connecting")
       setError(null)
@@ -220,7 +401,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
 
         call = window.Daily.createCallObject({
           startVideoOff: true,
-          startAudioOff: !startWithMicRef.current,
+          startAudioOff: false,
           subscribeToTracksAutomatically: true,
         })
         callRef.current = call
@@ -229,15 +410,18 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
           .on("joined-meeting", () => {
             if (cancelled) return
             setStatus("joined")
-            if (startWithMicRef.current) {
-              void Promise.resolve(call?.setLocalAudio(true)).catch(() => undefined)
-            }
+            setMicOn(true)
+            awaitingUserRef.current = false
+            void Promise.resolve(call?.setLocalAudio(true)).catch(() => undefined)
             syncRemoteMedia()
             void track("avatar_connected", {
+              conversation_id: session.conversationId,
               mode: "realtime_video",
-              autoplay: !startWithMicRef.current,
+              autoplay: true,
+              microphone: "on",
             })
           })
+          .on("app-message", handleAppMessage)
           .on("participant-joined", syncRemoteMedia)
           .on("participant-updated", syncRemoteMedia)
           .on("track-started", syncRemoteMedia)
@@ -271,29 +455,27 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
         void Promise.resolve(activeCall.leave()).catch(() => undefined)
         void Promise.resolve(activeCall.destroy()).catch(() => undefined)
       }
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.pause()
-        remoteAudioRef.current.srcObject = null
-      }
+      clearRemoteMedia()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  const start = async (withMic = false) => {
+  const start = async () => {
     if (status === "starting" || status === "connecting" || status === "joined") return
 
     setStatus("starting")
     setError(null)
-    setMicOn(withMic)
-    startWithMicRef.current = withMic
+    farewellPendingRef.current = false
+    awaitingUserRef.current = false
 
     try {
-      if (withMic) {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
-        const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        permissionStream.getTracks().forEach((track) => track.stop())
-      }
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
+
+      // Il dossier bancario è bidirezionale per definizione: chiediamo il microfono prima
+      // di creare una sessione Tavus, così non parte mai una conversazione muta.
+      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      permissionStream.getTracks().forEach((track) => track.stop())
+      setMicOn(true)
 
       const response = await fetch(`/api/business-plan/shared/${encodeURIComponent(token)}/live-avatar`, {
         method: "POST",
@@ -314,9 +496,10 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       })
     } catch (startError) {
       const message = startError instanceof Error ? startError.message : "Non riesco ad avviare la consulente digitale."
+      setMicOn(false)
       setError(
         /permission|notallowed|denied|microfono|microphone/i.test(message)
-          ? "Per parlare con la consulente serve il microfono. Consenti l'accesso dal browser e riprova."
+          ? "Per parlare con Anna serve il microfono. Consenti l'accesso dal browser e premi Riprova."
           : message,
       )
       setStatus("error")
@@ -327,10 +510,16 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   useEffect(() => {
     if (checking || !enabled || session || status !== "idle" || autoStartedRef.current) return
     autoStartedRef.current = true
-    void start(false)
+    void start()
     // L'autoplay deve avvenire una sola volta appena il dossier autorizzato è pronto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checking, enabled, session, status])
+
+  useEffect(() => {
+    return () => {
+      if (farewellFallbackTimerRef.current) clearTimeout(farewellFallbackTimerRef.current)
+    }
+  }, [])
 
   const activateAudio = async () => {
     syncRemoteMedia()
@@ -367,26 +556,19 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   }
 
   const retry = async () => {
-    const call = callRef.current
-    callRef.current = null
-    if (call) {
-      try {
-        await Promise.resolve(call.leave())
-      } catch {}
-      try {
-        await Promise.resolve(call.destroy())
-      } catch {}
+    if (farewellFallbackTimerRef.current) {
+      clearTimeout(farewellFallbackTimerRef.current)
+      farewellFallbackTimerRef.current = null
     }
-
-    remoteAudioRef.current?.pause()
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null
-
+    await teardownLocalCall()
     setSession(null)
     setHasRemoteVideo(false)
     setNeedsAudioActivation(false)
     setStatus("idle")
     setError(null)
+    endingRef.current = false
+    farewellPendingRef.current = false
+    awaitingUserRef.current = false
     autoStartedRef.current = false
   }
 
@@ -404,28 +586,28 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
 
   return (
     <section className="border-b border-amber-200/30 bg-slate-950 px-4 py-5">
-      <div className="group relative mx-auto h-[300px] max-w-7xl overflow-hidden rounded-[28px] border border-amber-300/20 bg-black shadow-2xl sm:h-[340px] lg:h-[360px]">
+      <div className="relative mx-auto h-[300px] max-w-7xl overflow-hidden rounded-[28px] border border-amber-300/20 bg-black shadow-2xl sm:h-[340px] lg:h-[360px]">
         <video
           ref={remoteVideoRef}
           autoPlay
           playsInline
           muted
           className="h-full w-full object-cover object-center"
-          aria-label="Consulente digitale 4BID"
+          aria-label="Anna, consulente digitale 4BID"
         />
         <audio ref={remoteAudioRef} autoPlay className="hidden" aria-hidden="true" />
 
-        {(!session || !hasRemoteVideo) && status !== "error" ? (
+        {(!session || !hasRemoteVideo) && status !== "error" && status !== "ended" ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
             <Loader2 className="h-10 w-10 animate-spin text-amber-300" />
           </div>
         ) : null}
 
-        {needsAudioActivation ? (
+        {needsAudioActivation && status === "joined" ? (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20">
             <Button
               onClick={() => void activateAudio()}
-              className="h-12 rounded-full bg-black/70 px-5 text-white backdrop-blur hover:bg-black/80"
+              className="h-12 rounded-full bg-black/75 px-5 text-white shadow-xl backdrop-blur hover:bg-black/85"
             >
               <Volume2 className="mr-2 h-5 w-5" />
               Attiva audio
@@ -438,28 +620,63 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
             <div className="max-w-md">
               <p className="text-sm text-slate-300">{error || "Collegamento non riuscito."}</p>
               <Button
-                size="icon"
                 onClick={() => void retry()}
-                className="mt-4 h-11 w-11 rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300"
-                aria-label="Riprova avatar"
+                className="mt-4 rounded-full bg-amber-400 px-5 text-slate-950 hover:bg-amber-300"
               >
-                <RotateCcw className="h-5 w-5" />
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Riprova
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {status === "ended" ? (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/95 p-6 text-center text-white">
+            <div>
+              <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-400" />
+              <p className="mt-3 font-medium">Conversazione conclusa</p>
+              <Button
+                variant="outline"
+                onClick={() => void retry()}
+                className="mt-4 rounded-full border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              >
+                Nuova conversazione
               </Button>
             </div>
           </div>
         ) : null}
 
         {status === "joined" ? (
-          <div className="absolute bottom-4 right-4 z-30 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="absolute bottom-3 right-3 z-30 flex items-center gap-2">
+            <div
+              className={`hidden h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold shadow-xl backdrop-blur sm:flex ${
+                micOn ? "bg-emerald-500/90 text-white" : "bg-red-500/90 text-white"
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-white" />
+              {micOn ? "Microfono attivo" : "Microfono disattivato"}
+            </div>
+
             <Button
               size="icon"
               onClick={() => void toggleMic()}
-              className={`h-11 w-11 rounded-full shadow-xl backdrop-blur ${
-                micOn ? "bg-white/20 text-white hover:bg-white/30" : "bg-black/55 text-white hover:bg-black/70"
+              className={`h-11 w-11 rounded-full border border-white/30 shadow-xl backdrop-blur ${
+                micOn ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-red-500 text-white hover:bg-red-600"
               }`}
               aria-label={micOn ? "Disattiva microfono" : "Attiva microfono"}
+              title={micOn ? "Microfono attivo" : "Microfono disattivato"}
             >
               {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            </Button>
+
+            <Button
+              size="icon"
+              onClick={() => void endConversation("manual")}
+              className="h-11 w-11 rounded-full border border-white/30 bg-red-600 text-white shadow-xl hover:bg-red-700"
+              aria-label="Termina conversazione"
+              title="Termina conversazione"
+            >
+              <PhoneOff className="h-5 w-5" />
             </Button>
           </div>
         ) : null}
