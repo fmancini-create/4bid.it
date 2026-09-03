@@ -11,10 +11,6 @@ import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  // La sessione va verificata QUI: `proxy.ts` protegge le pagine /admin ma non
-  // le rotte /api. Senza questo controllo, chiunque conoscesse l'id di un
-  // preventivo potrebbe farselo spedire indicando il proprio indirizzo fra i
-  // destinatari in copia, allegato PDF compreso.
   const auth = await createServerClient()
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: "Accesso riservato: effettua l'accesso." }, { status: 401 })
@@ -34,10 +30,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Email cliente mancante: impostala prima di inviare" }, { status: 400 })
   }
 
-  // Prima della partenza le condizioni vengono riallineate ai progetti inclusi.
-  // Se un progetto non ne ha nessuna (ne' fresca ne' gia' copiata) l'invio si
-  // ferma: il cliente si troverebbe una casella che dichiara di aver letto
-  // condizioni che non esistono a schermo.
+  const body = await request.json().catch(() => ({}))
+  const requestedRecipient =
+    body && typeof body === "object" && typeof (body as any).client_email === "string"
+      ? (body as any).client_email.trim().toLowerCase()
+      : ""
+  const savedRecipient = quote.client_email.trim().toLowerCase()
+
+  // Blocco di sicurezza: il destinatario mostrato all'operatore deve coincidere
+  // con quello realmente salvato nel DB al momento dell'invio. Se la pagina ha
+  // dati obsoleti o un salvataggio non e' ancora arrivato, NON spediamo nulla.
+  if (!requestedRecipient || requestedRecipient !== savedRecipient) {
+    return NextResponse.json(
+      {
+        error: `Invio bloccato: il destinatario visualizzato non coincide con quello salvato. Ricarica il preventivo e verifica l'email prima di inviare.`,
+        code: "RECIPIENT_MISMATCH",
+      },
+      { status: 409 },
+    )
+  }
+
   const freshTerms = await fetchContractTerms(quoteTermsProjects(quote.line_items))
   const contractTerms = mergeContractTerms(parseContractTerms(quote.contract_terms), freshTerms)
   const missing = missingTermsProjects(quote.line_items || [], contractTerms)
@@ -50,10 +62,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }, { status: 502 })
   }
 
-  // Destinatari in copia. Se l'operatore non li indica nella richiesta si
-  // riusano quelli gia' salvati sul preventivo, cosi' un secondo invio non
-  // perde silenziosamente i collaboratori impostati la prima volta.
-  const body = await request.json().catch(() => ({}))
   const richiesteCopie = body && typeof body === "object" && ("cc" in body || "bcc" in body)
   const copie = parseCopyRecipients(
     richiesteCopie ? { cc: (body as any).cc, bcc: (body as any).bcc } : { cc: quote.copy_cc, bcc: quote.copy_bcc },
@@ -79,6 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
+    .eq("client_email", quote.client_email)
     .select()
     .single<SalesChannelQuote>()
 
@@ -91,9 +100,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: `Invio email fallito: ${result.error}`, link }, { status: 500 })
   }
 
-  // Le copie partono DOPO l'email al cliente e non possono farla fallire: se
-  // un indirizzo di un collaboratore e' sbagliato, il preventivo resta inviato
-  // e a schermo compare comunque l'avviso di cosa non e' partito.
   const esitoCopie = await sendQuoteCopies(updated, copie.cc, copie.bcc)
   if (esitoCopie.fallite.length) {
     console.error("[quotes] copie non inviate:", esitoCopie.fallite)
