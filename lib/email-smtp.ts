@@ -8,14 +8,15 @@ interface EmailAttachment {
 
 interface EmailOptions {
   to: string
+  cc?: string
   subject: string
   html: string
   replyTo?: string
   attachments?: EmailAttachment[]
 }
 
-export async function sendEmail({ to, subject, html, replyTo, attachments }: EmailOptions) {
-  console.log("[v0] sendEmail called - to:", to, "subject:", subject)
+export async function sendEmail({ to, cc, subject, html, replyTo, attachments }: EmailOptions) {
+  console.log("[v0] sendEmail called - to:", to, "cc:", cc || "-", "subject:", subject)
 
   try {
     console.log("[v0] Attempting to send email via Gmail SMTP to:", to)
@@ -58,6 +59,7 @@ export async function sendEmail({ to, subject, html, replyTo, attachments }: Ema
     const info = await transporter.sendMail({
       from: `"4BID.IT" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to,
+      ...(cc ? { cc } : {}),
       subject,
       html,
       replyTo: replyTo || process.env.SMTP_FROM || process.env.SMTP_USER,
