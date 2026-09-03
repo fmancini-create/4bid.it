@@ -6,18 +6,28 @@ import InteractiveVideoAssistant from "./voce/interactive-video-assistant"
 import LiveSalesAvatar from "./voce/live-sales-avatar"
 import QuoteNarration from "./quote-narration"
 
+type LiveAdvisorState = {
+  enabled: boolean
+  quotedProjects: string[]
+}
+
 export default function VirtualQuoteIntro({ token, clientName }: { token: string; clientName?: string | null }) {
-  const [liveEnabled, setLiveEnabled] = useState<boolean | null>(null)
+  const [liveState, setLiveState] = useState<LiveAdvisorState | null>(null)
 
   useEffect(() => {
     let cancelled = false
     void fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
-        if (!cancelled) setLiveEnabled(Boolean(data.enabled))
+        if (!cancelled) {
+          setLiveState({
+            enabled: Boolean(data.enabled),
+            quotedProjects: Array.isArray(data.quotedProjects) ? data.quotedProjects.map(String) : [],
+          })
+        }
       })
       .catch(() => {
-        if (!cancelled) setLiveEnabled(false)
+        if (!cancelled) setLiveState({ enabled: false, quotedProjects: [] })
       })
 
     return () => {
@@ -40,9 +50,9 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
         </div>
       </section>
 
-      {liveEnabled !== false ? <LiveSalesAvatar token={token} /> : null}
-      {liveEnabled === false ? <InteractiveVideoAssistant token={token} clientName={clientName} /> : null}
-      {liveEnabled === false ? <QuoteNarration token={token} label="Ascolta il tuo preventivo" /> : null}
+      {liveState?.enabled !== false ? <LiveSalesAvatar token={token} quotedProjects={liveState?.quotedProjects || []} /> : null}
+      {liveState?.enabled === false ? <InteractiveVideoAssistant token={token} clientName={clientName} /> : null}
+      {liveState?.enabled === false ? <QuoteNarration token={token} label="Ascolta il tuo preventivo" /> : null}
     </div>
   )
 }
