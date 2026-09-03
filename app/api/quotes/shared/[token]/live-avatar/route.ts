@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
-import { buildQuoteChatContext } from "@/lib/quotes/chat-context"
+import { buildQuoteChatContext, type QuoteChatContext } from "@/lib/quotes/chat-context"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -27,15 +27,40 @@ function rateLimited(key: string) {
   return recent.length > REQUESTS_PER_MINUTE
 }
 
-function buildGreeting(name: string | null) {
-  const firstName = name?.trim().split(/\s+/)[0]
-  return firstName
-    ? `Ciao ${firstName}, sono la consulente digitale di Four Bid. Ho già letto il tuo preventivo. Se vuoi, in un minuto ti dico da dove partirei io e poi mi fai tutte le domande che vuoi.`
-    : "Ciao, sono la consulente digitale di Four Bid. Ho già letto il tuo preventivo. Se vuoi, in un minuto ti dico da dove partirei io e poi mi fai tutte le domande che vuoi."
+function buildGreeting() {
+  return "Buongiorno. Sono la consulente digitale di Four Bid. Prima di iniziare, mi dice come posso chiamarla?"
 }
 
-function spokenContext(prompt: string) {
-  return `${prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- LINGUA: parla sempre in italiano naturale, chiaro ed elegante.\n- RITMO: parla con calma, circa il 10-15% più lentamente del parlato sintetico standard. Usa frasi brevi, pause reali tra i concetti e non accelerare alla fine delle frasi.\n- PRONUNCIA DEL BRAND: quando pronunci il marchio scritto 4BID, devi sempre leggerlo come \"Four Bid\". Non dire \"quattro bid\", non scandire le lettere e non pronunciarlo come una parola italiana.\n- TONO: caldo, competente, curioso e commerciale, mai concitato e mai aggressivo.\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI di 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- SOFT CROSS-SELL, UNA SOLA VOLTA: dopo che il cliente ha interagito davvero con la proposta, preferibilmente verso la fine o quando manifesta apprezzamento, puoi dire in modo naturale: \"Se ti e' piaciuto questo modo di ricevere e capire un preventivo, Four Bid puo' integrare la stessa esperienza anche nella tua struttura, collegata ai tuoi preventivi e al tuo brand.\" Non dirlo nei primissimi secondi, non interrompere il flusso per inserirlo e non ripeterlo. Se il cliente mostra interesse, spiegalo brevemente; altrimenti torna subito al preventivo.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
+function recipientIdentityInstruction(context: QuoteChatContext) {
+  const recipientName = context.clientName?.trim() || ""
+  const recipientFirstName = recipientName.split(/\s+/)[0] || ""
+
+  if (!recipientFirstName) {
+    return "- CONTROLLO IDENTITA' E RUOLO: il preventivo non ha un destinatario persona chiaramente indicato. Usa il nome dichiarato dall'interlocutore e, prima di entrare nel merito, chiedi quale ruolo ricopre rispetto alla struttura o azienda destinataria se questo non e' gia' evidente."
+  }
+
+  const roleTarget = context.clientCompany?.trim()
+    ? context.clientCompany.trim()
+    : `il preventivo intestato a ${recipientName}`
+
+  return `- CONTROLLO IDENTITA' E RUOLO: il preventivo e' intestato a ${recipientName}. La tua PRIMA priorita' dopo la presentazione e' capire chi hai davanti. Dopo che l'interlocutore ti ha detto come si chiama, confronta il PRIMO NOME dichiarato con ${recipientFirstName}. Se il primo nome dichiarato coincide con ${recipientFirstName}, non fare altre domande sull'identita' e prosegui normalmente. Se il nome e' diverso, salutalo usando il nome che ha dichiarato e chiedi subito, UNA DOMANDA ALLA VOLTA, quale ruolo ricopre rispetto a ${roleTarget} e in che veste sta valutando questa proposta. Non trattarlo mai come ${recipientFirstName}, non presumere deleghe o poteri di firma e non chiedere documenti. Se serve per il contesto, dopo aver chiarito il ruolo puoi chiedere se ${recipientFirstName} e' presente o verra' coinvolto nella decisione. Completa questo mini-check PRIMA del messaggio personale del commerciale e PRIMA di discutere prezzi, moduli o vantaggi.`
+}
+
+function creatorNoteInstruction(context: QuoteChatContext) {
+  if (!context.description) {
+    return "- MESSAGGIO DI CHI HA CREATO IL PREVENTIVO: non e' presente alcuna premessa personale. Dopo l'eventuale controllo identita'/ruolo passa naturalmente alla proposta."
+  }
+
+  const creator = [context.creatorName, context.creatorLastName].filter(Boolean).join(" ").trim()
+  const attribution = creator
+    ? `${creator}, che ha preparato questa proposta`
+    : "chi ha preparato questa proposta"
+
+  return `- MESSAGGIO DI CHI HA CREATO IL PREVENTIVO, OBBLIGATORIO UNA SOLA VOLTA: dopo aver appreso chi e' l'interlocutore e, se e' diverso dal destinatario, aver chiarito il suo ruolo, introduci la descrizione generale come un messaggio personale di ${attribution}. Usa una frase naturale equivalente a: "Prima di entrare nel merito, c'e' un messaggio da parte di ${attribution}: ${context.description}". Mantieni fedelmente il significato della premessa, senza inventare dettagli, promesse o condizioni e senza chiamarla "descrizione", "campo" o "testo del preventivo".`
+}
+
+function spokenContext(context: QuoteChatContext) {
+  return `${context.prompt}\n\n=== REGOLE SPECIFICHE DELLA VIDEOCHIAMATA LIVE ===\n- Sei in una conversazione VOCALE in tempo reale: parla come una persona, non leggere il preventivo.\n- LINGUA: parla sempre in italiano naturale, chiaro ed elegante.\n- RITMO: parla con calma, circa il 10-15% piu' lentamente del parlato sintetico standard. Usa frasi brevi, pause reali tra i concetti e non accelerare alla fine delle frasi.\n- PRONUNCIA DEL BRAND: quando pronunci il marchio scritto 4BID, devi sempre leggerlo come \"Four Bid\". Non dire \"quattro bid\", non scandire le lettere e non pronunciarlo come una parola italiana.\n- TONO: caldo, competente, curioso e commerciale, mai concitato e mai aggressivo.\n- La persona indicata come destinatario del preventivo NON e' necessariamente chi e' entrato in videochiamata. Il nome dichiarato dall'interlocutore e' quello da usare durante questa call.\n${recipientIdentityInstruction(context)}\n${creatorNoteInstruction(context)}\n- Risposte normalmente di 1-4 frasi; approfondisci solo quando il cliente lo chiede.\n- Fai una domanda alla volta e lascia spazio alla risposta.\n- Se il cliente ti interrompe, fermati e segui il nuovo punto senza lamentarti o ricominciare da capo.\n- Ricorda quello che e' gia' stato detto durante questa call e costruisci sopra la conversazione.\n- Gestisci obiezioni e dubbi come una consulente commerciale hospitality senior: fatti, esempi pertinenti, nessuna pressione artificiale.\n- Non inventare ROI, risultati, funzioni, integrazioni, prezzi o condizioni.\n- Presentati sempre come consulente DIGITALE/AI di 4BID: devi essere estremamente umana nel dialogo, ma non fingere di essere una persona reale.\n- SOFT CROSS-SELL, UNA SOLA VOLTA: dopo che il cliente ha interagito davvero con la proposta, preferibilmente verso la fine o quando manifesta apprezzamento, puoi dire in modo naturale: \"Se ti e' piaciuto questo modo di ricevere e capire un preventivo, Four Bid puo' integrare la stessa esperienza anche nella tua struttura, collegata ai tuoi preventivi e al tuo brand.\" Non dirlo nei primissimi secondi, non interrompere il flusso per inserirlo e non ripeterlo. Se il cliente mostra interesse, spiegalo brevemente; altrimenti torna subito al preventivo.\n- CHIUSURA CONVERSAZIONE: se l'interlocutore segnala chiaramente che vuole terminare, ti saluta, dice che e' tutto o che non ha altre domande, rispondi brevemente e termina SEMPRE con la frase esatta \"Arrivederci e buona giornata.\" Non aggiungere nessuna parola dopo. Non usare questa frase durante la conversazione se non stai realmente chiudendo.\n- Non chiedere credenziali, password o dati di accesso durante la videochiamata.\n- Non effettuare inferenze su emozioni, salute, etnia o altre caratteristiche sensibili osservando il video del cliente.\n=== FINE REGOLE VIDEO LIVE ===`
 }
 
 export async function GET() {
@@ -74,10 +99,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
     const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
+    const openingMessage = buildGreeting()
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID ${quoteContext.quoteNumber || "Preventivo"} - ${quoteContext.clientCompany || quoteContext.clientName || "Cliente"}`.slice(0, 120),
-      conversational_context: spokenContext(quoteContext.prompt),
-      custom_greeting: buildGreeting(quoteContext.clientName),
+      conversational_context: spokenContext(quoteContext),
+      custom_greeting: openingMessage,
       audio_only: false,
       require_auth: true,
       max_participants: 2,
@@ -85,7 +111,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         language: "italian",
         enable_closed_captions: true,
         max_call_duration: 1800,
-        participant_left_timeout: 30,
+        participant_left_timeout: 0,
         participant_absent_timeout: 120,
       },
       ...(callbackUrl ? { callback_url: callbackUrl } : {}),
@@ -127,6 +153,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         client_name: quoteContext.clientName,
         client_company: quoteContext.clientCompany,
         quoted_projects: quoteContext.quotedProjects,
+        creator_name: quoteContext.creatorName,
+        creator_last_name: quoteContext.creatorLastName,
+        has_personal_note: Boolean(quoteContext.description),
+        inactivity_timeout_seconds: 10,
       },
     })
     if (sessionError) console.error("[live-avatar] session persistence error", sessionError)
@@ -142,6 +172,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         conversationUrl: tavus.conversation_url,
         meetingToken: tavus.meeting_token || null,
         joinUrl,
+        openingMessage,
         chatConversationId: chat.id,
       },
       { headers: { "Cache-Control": "private, no-store" } },
