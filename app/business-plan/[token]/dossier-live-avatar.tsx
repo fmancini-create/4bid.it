@@ -25,7 +25,7 @@ type TavusConversationEvent = {
   event_type?: string
   conversation_id?: string
   properties?: {
-    role?: "user" | "replica"
+    role?: "user" | "pal" | "replica"
     speech?: string
     interrupted?: boolean
     duration?: number | null
@@ -144,8 +144,10 @@ function isFarewellSpeech(value: string) {
 }
 
 function roleFromEvent(event: TavusConversationEvent) {
-  if (event.properties?.role) return event.properties.role
-  if (event.event_type?.includes(".replica.")) return "replica" as const
+  const role = event.properties?.role
+  if (role === "pal" || role === "replica") return "replica" as const
+  if (role === "user") return "user" as const
+  if (event.event_type?.includes(".replica.") || event.event_type?.includes(".pal.")) return "replica" as const
   if (event.event_type?.includes(".user.")) return "user" as const
   return undefined
 }
