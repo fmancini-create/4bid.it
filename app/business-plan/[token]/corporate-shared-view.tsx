@@ -99,6 +99,7 @@ interface CorporateDossierData {
 }
 
 const YEARS = [2027, 2028, 2029, 2030, 2031]
+const ADMIN_PREVIEW_EMAIL = "superadmin-preview@4bid.it"
 
 const money = (value: number) =>
   new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value || 0)
@@ -155,6 +156,35 @@ export default function CorporateSharedBusinessPlanView({ share, token }: { shar
     setPlan(await contentRes.json())
     if (commentsRes.ok) setComments(await commentsRes.json())
   }
+
+  useEffect(() => {
+    let active = true
+
+    const restoreAuthenticatedSession = async () => {
+      try {
+        await loadProtectedData()
+        if (!active) return
+
+        if (share.email === ADMIN_PREVIEW_EMAIL) {
+          setVisitorName("Superadmin 4BID")
+          setVisitorEmail("f.mancini@4bid.it")
+          setVisitorCompany("4BID S.r.l.")
+        } else {
+          setVisitorName("Accesso verificato")
+        }
+        setAuthenticated(true)
+      } catch {
+        // No active share session: keep the normal password gate for external recipients.
+      }
+    }
+
+    void restoreAuthenticatedSession()
+    return () => {
+      active = false
+    }
+    // The token identifies the share session that can be restored.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, share.email])
 
   const login = async () => {
     setLoading(true)
