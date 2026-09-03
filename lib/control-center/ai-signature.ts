@@ -1,5 +1,5 @@
 import "server-only"
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { createHmac } from "node:crypto"
 import { canonicalAiMetaPayload, type AiPrMeta } from "./ai-meta"
 
 function signingKey() {
@@ -17,7 +17,5 @@ export function signAiMeta(meta: Omit<AiPrMeta, "signature">): AiPrMeta {
 }
 
 export function verifyAiMetaSignature(meta: AiPrMeta) {
-  const expected = Buffer.from(digest(meta), "hex")
-  const actual = Buffer.from(meta.signature, "hex")
-  return expected.length === actual.length && timingSafeEqual(expected, actual)
+  return digest(meta) === meta.signature
 }
