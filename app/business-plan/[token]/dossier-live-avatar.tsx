@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2, X } from "lucide-react"
+import { Loader2, Mic, MicOff, RotateCcw, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
@@ -101,13 +101,15 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const [session, setSession] = useState<LiveSession | null>(null)
   const [status, setStatus] = useState<"idle" | "starting" | "connecting" | "joined" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
-  const [micOn, setMicOn] = useState(true)
+  const [micOn, setMicOn] = useState(false)
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
   const [needsAudioActivation, setNeedsAudioActivation] = useState(false)
 
   const callRef = useRef<DailyCall | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+  const autoStartedRef = useRef(false)
+  const startWithMicRef = useRef(false)
 
   const track = async (eventType: string, metadata: Record<string, unknown> = {}) => {
     try {
@@ -129,7 +131,9 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     const probe = async () => {
       attempts += 1
       try {
-        const response = await fetch(`/api/business-plan/shared/${encodeURIComponent(token)}/live-avatar`, { cache: "no-store" })
+        const response = await fetch(`/api/business-plan/shared/${encodeURIComponent(token)}/live-avatar`, {
+          cache: "no-store",
+        })
         const data = await response.json().catch(() => ({}))
         if (cancelled) return
 
@@ -139,17 +143,15 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
           return
         }
 
-        // Prima del login il cookie HttpOnly non esiste ancora. Continuiamo a
-        // controllare senza mostrare nulla; appena il login riesce la CTA appare.
         if (response.status === 401 && attempts < 90) {
-          timer = setTimeout(probe, 2000)
+          timer = setTimeout(probe, 1500)
           return
         }
 
         setEnabled(false)
         setChecking(false)
       } catch {
-        if (!cancelled && attempts < 30) timer = setTimeout(probe, 3000)
+        if (!cancelled && attempts < 30) timer = setTimeout(probe, 2500)
         else if (!cancelled) setChecking(false)
       }
     }
@@ -164,13 +166,16 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const syncRemoteMedia = () => {
     const call = callRef.current
     if (!call) return
+
     const participants = Object.values(call.participants())
-    const remote = participants.find((participant) => !participant.local && participantTrack(participant, "video"))
-      || participants.find((participant) => !participant.local)
+    const remote =
+      participants.find((participant) => !participant.local && participantTrack(participant, "video")) ||
+      participants.find((participant) => !participant.local)
     const videoTrack = participantTrack(remote, "video")
     const audioTrack = participantTrack(remote, "audio")
 
     setHasRemoteVideo(Boolean(videoTrack))
+
     if (remoteVideoRef.current) {
       if (videoTrack) {
         const current = remoteVideoRef.current.srcObject
@@ -190,7 +195,8 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
       }
       remoteAudioRef.current.muted = false
       remoteAudioRef.current.volume = 1
-      void remoteAudioRef.current.play()
+      void remoteAudioRef.current
+        .play()
         .then(() => setNeedsAudioActivation(false))
         .catch(() => setNeedsAudioActivation(true))
     }
@@ -198,6 +204,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
 
   useEffect(() => {
     if (!session) return
+
     let cancelled = false
     let call: DailyCall | null = null
 
@@ -213,7 +220,7 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
 
         call = window.Daily.createCallObject({
           startVideoOff: true,
-          startAudioOff: false,
+          startAudioOff: !startWithMicRef.current,
           subscribeToTracksAutomatically: true,
         })
         callRef.current = call
@@ -222,9 +229,14 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
           .on("joined-meeting", () => {
             if (cancelled) return
             setStatus("joined")
-            void Promise.resolve(call?.setLocalAudio(true)).catch(() => undefined)
+            if (startWithMicRef.current) {
+              void Promise.resolve(call?.setLocalAudio(true)).catch(() => undefined)
+            }
             syncRemoteMedia()
-            void track("avatar_connected", { mode: "realtime_video" })
+            void track("avatar_connected", {
+              mode: "realtime_video",
+              autoplay: !startWithMicRef.current,
+            })
           })
           .on("participant-joined", syncRemoteMedia)
           .on("participant-updated", syncRemoteMedia)
@@ -268,16 +280,20 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  const start = async () => {
-    if (status === "starting") return
+  const start = async (withMic = false) => {
+    if (status === "starting" || status === "connecting" || status === "joined") return
+
     setStatus("starting")
     setError(null)
-    setMicOn(true)
+    setMicOn(withMic)
+    startWithMicRef.current = withMic
 
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
-      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      permissionStream.getTracks().forEach((track) => track.stop())
+      if (withMic) {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
+        const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        permissionStream.getTracks().forEach((track) => track.stop())
+      }
 
       const response = await fetch(`/api/business-plan/shared/${encodeURIComponent(token)}/live-avatar`, {
         method: "POST",
@@ -308,10 +324,19 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
     }
   }
 
+  useEffect(() => {
+    if (checking || !enabled || session || status !== "idle" || autoStartedRef.current) return
+    autoStartedRef.current = true
+    void start(false)
+    // L'autoplay deve avvenire una sola volta appena il dossier autorizzato è pronto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checking, enabled, session, status])
+
   const activateAudio = async () => {
     syncRemoteMedia()
     const audio = remoteAudioRef.current
     if (!audio?.srcObject) return setNeedsAudioActivation(true)
+
     try {
       audio.muted = false
       audio.volume = 1
@@ -325,116 +350,120 @@ export default function DossierLiveAvatar({ token }: { token: string }) {
   const toggleMic = async () => {
     const call = callRef.current
     if (!call) return
+
     const next = !micOn
     try {
+      if (next) {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microfono non disponibile in questo browser.")
+        const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        permissionStream.getTracks().forEach((track) => track.stop())
+      }
+
       await Promise.resolve(call.setLocalAudio(next))
       setMicOn(next)
     } catch {
-      setError("Non riesco a modificare il microfono. Controlla i permessi del browser.")
+      setError("Non riesco ad attivare il microfono. Controlla i permessi del browser.")
     }
   }
 
-  const leaveCall = async () => {
+  const retry = async () => {
     const call = callRef.current
     callRef.current = null
     if (call) {
-      try { await Promise.resolve(call.leave()) } catch {}
-      try { await Promise.resolve(call.destroy()) } catch {}
+      try {
+        await Promise.resolve(call.leave())
+      } catch {}
+      try {
+        await Promise.resolve(call.destroy())
+      } catch {}
     }
+
     remoteAudioRef.current?.pause()
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null
+
     setSession(null)
+    setHasRemoteVideo(false)
+    setNeedsAudioActivation(false)
     setStatus("idle")
     setError(null)
-    setHasRemoteVideo(false)
-    void track("avatar_ended", { mode: "realtime_video" })
+    autoStartedRef.current = false
   }
 
-  if (checking || !enabled) return null
-
-  if (status === "starting") {
+  if (checking) {
     return (
-      <div className="fixed bottom-5 left-5 z-[80] rounded-2xl bg-slate-950 px-5 py-4 text-white shadow-2xl ring-1 ring-white/10">
-        <div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin text-amber-400" /><span className="text-sm">Avvio consulente digitale…</span></div>
-      </div>
-    )
-  }
-
-  if (status === "error" && !session) {
-    return (
-      <div className="fixed bottom-5 left-5 z-[80] max-w-sm rounded-2xl border border-red-500/20 bg-slate-950 p-4 text-white shadow-2xl">
-        <p className="text-sm font-semibold">Presentazione live non avviata</p>
-        <p className="mt-1 text-xs text-slate-300">{error || "Riprova tra poco."}</p>
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" onClick={() => void start()} className="bg-amber-400 text-slate-950 hover:bg-amber-300">Riprova</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setStatus("idle"); setError(null) }} className="text-white hover:bg-white/10 hover:text-white">Chiudi</Button>
+      <section className="border-b border-amber-200/30 bg-slate-950 px-4 py-5">
+        <div className="mx-auto flex h-[300px] max-w-7xl items-center justify-center overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-2xl sm:h-[340px] lg:h-[360px]">
+          <Loader2 className="h-10 w-10 animate-spin text-amber-300" />
         </div>
-      </div>
+      </section>
     )
   }
 
-  if (!session) {
-    return (
-      <div className="fixed bottom-5 left-5 z-[70] max-w-[calc(100vw-2.5rem)]">
-        <Button
-          onClick={() => void start()}
-          className="h-auto rounded-full bg-slate-950 px-5 py-3 text-white shadow-2xl ring-1 ring-white/10 hover:bg-slate-800"
-        >
-          <span className="mr-3 flex h-9 w-9 items-center justify-center rounded-full bg-amber-400 text-slate-950"><Sparkles className="h-5 w-5" /></span>
-          <span className="text-left">
-            <span className="block text-sm font-semibold">Presentazione AI live</span>
-            <span className="block text-[11px] font-normal text-slate-300">Avatar realtime · puoi fare domande</span>
-          </span>
-        </Button>
-      </div>
-    )
-  }
+  if (!enabled) return null
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/85 p-0 backdrop-blur-sm sm:p-5">
-      <div className="relative mx-auto h-full max-w-6xl overflow-hidden bg-slate-950 shadow-2xl sm:rounded-3xl sm:border sm:border-white/10">
-        <video ref={remoteVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" aria-label="Consulente digitale 4BID" />
+    <section className="border-b border-amber-200/30 bg-slate-950 px-4 py-5">
+      <div className="group relative mx-auto h-[300px] max-w-7xl overflow-hidden rounded-[28px] border border-amber-300/20 bg-black shadow-2xl sm:h-[340px] lg:h-[360px]">
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover object-center"
+          aria-label="Consulente digitale 4BID"
+        />
         <audio ref={remoteAudioRef} autoPlay className="hidden" aria-hidden="true" />
 
-        {!hasRemoteVideo && status !== "error" ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950 text-center text-white">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15"><Loader2 className="h-10 w-10 animate-spin text-amber-300" /></div>
-            <div><p className="text-lg font-semibold">Sto collegando la consulente…</p><p className="mt-1 text-sm text-slate-400">La presentazione parte appena l'avatar è pronto.</p></div>
+        {(!session || !hasRemoteVideo) && status !== "error" ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
+            <Loader2 className="h-10 w-10 animate-spin text-amber-300" />
           </div>
         ) : null}
 
-        <div className="absolute left-4 top-4 z-30 rounded-full bg-black/45 px-4 py-2 text-white backdrop-blur">
-          <p className="text-xs font-black tracking-[0.16em]">4BID</p>
-          <p className="text-[10px] text-white/70">Dossier banca & investitori</p>
-        </div>
-
-        <Button variant="ghost" size="icon" onClick={() => void leaveCall()} className="absolute right-4 top-4 z-40 rounded-full bg-black/45 text-white hover:bg-black/70 hover:text-white" aria-label="Chiudi presentazione live"><X className="h-5 w-5" /></Button>
-
         {needsAudioActivation ? (
-          <div className="absolute inset-x-4 top-1/2 z-50 flex -translate-y-1/2 justify-center">
-            <div className="rounded-2xl border border-amber-300/30 bg-slate-950/95 p-5 text-center text-white shadow-2xl backdrop-blur">
-              <Volume2 className="mx-auto h-6 w-6 text-amber-300" />
-              <p className="mt-2 text-sm font-semibold">Il browser ha bloccato l'audio</p>
-              <Button onClick={() => void activateAudio()} className="mt-3 bg-amber-400 text-slate-950 hover:bg-amber-300"><Volume2 className="mr-2 h-4 w-4" /> Attiva audio</Button>
-            </div>
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20">
+            <Button
+              onClick={() => void activateAudio()}
+              className="h-12 rounded-full bg-black/70 px-5 text-white backdrop-blur hover:bg-black/80"
+            >
+              <Volume2 className="mr-2 h-5 w-5" />
+              Attiva audio
+            </Button>
           </div>
         ) : null}
 
         {status === "error" ? (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-6 text-center text-white">
-            <div className="max-w-md"><p className="text-xl font-semibold">Collegamento non riuscito</p><p className="mt-2 text-sm text-slate-300">{error || "Riprova tra poco."}</p><Button onClick={() => void leaveCall()} className="mt-5 bg-amber-400 text-slate-950 hover:bg-amber-300">Chiudi</Button></div>
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/95 p-6 text-center text-white">
+            <div className="max-w-md">
+              <p className="text-sm text-slate-300">{error || "Collegamento non riuscito."}</p>
+              <Button
+                size="icon"
+                onClick={() => void retry()}
+                className="mt-4 h-11 w-11 rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+                aria-label="Riprova avatar"
+              >
+                <RotateCcw className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         ) : null}
 
-        <div className="absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-5 pt-20 text-white sm:px-8 sm:pb-7">
-          <div className="mx-auto flex max-w-4xl flex-col items-center gap-4">
-            <p className="text-center text-sm text-white/80">Interrompi pure l'avatar e fai domande in qualsiasi momento.</p>
-            <div className="flex items-center gap-3">
-              <Button size="icon" onClick={() => void toggleMic()} className={`h-12 w-12 rounded-full ${micOn ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-500 text-white hover:bg-red-400"}`} aria-label={micOn ? "Disattiva microfono" : "Attiva microfono"}>{micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</Button>
-              <Button size="icon" onClick={() => void leaveCall()} className="h-12 w-12 rounded-full bg-red-600 text-white hover:bg-red-500" aria-label="Termina presentazione"><PhoneOff className="h-5 w-5" /></Button>
-            </div>
+        {status === "joined" ? (
+          <div className="absolute bottom-4 right-4 z-30 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <Button
+              size="icon"
+              onClick={() => void toggleMic()}
+              className={`h-11 w-11 rounded-full shadow-xl backdrop-blur ${
+                micOn ? "bg-white/20 text-white hover:bg-white/30" : "bg-black/55 text-white hover:bg-black/70"
+              }`}
+              aria-label={micOn ? "Disattiva microfono" : "Attiva microfono"}
+            >
+              {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            </Button>
           </div>
-        </div>
+        ) : null}
       </div>
-    </div>
+    </section>
   )
 }
