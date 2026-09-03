@@ -5,6 +5,8 @@ import { Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2 } 
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
+const OPENING_GREETING_FALLBACK_MS = 3200
+const OPENING_GREETING_CONFIRM_MS = 5200
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
@@ -24,6 +26,8 @@ type DailyParticipant = {
 type DailyEvent = {
   participant?: DailyParticipant
   data?: any
+  event_type?: string
+  properties?: Record<string, any>
 }
 
 type DailyCall = {
@@ -34,6 +38,7 @@ type DailyCall = {
   participants(): Record<string, DailyParticipant>
   setLocalAudio(enabled: boolean): Promise<unknown> | void
   setLocalVideo(enabled: boolean): Promise<unknown> | void
+  sendAppMessage(message: Record<string, unknown>, recipient?: string): Promise<unknown> | void
 }
 
 type DailyGlobal = {
@@ -59,6 +64,7 @@ type LiveSession = {
   conversationId: string
   conversationUrl: string
   meetingToken?: string | null
+  openingMessage: string
   maxCallDurationSeconds: number
 }
 
@@ -186,32 +192,81 @@ function friendlyConnectionError(error: unknown) {
   return "Il collegamento video non è riuscito. Puoi riprovare senza creare una nuova sessione."
 }
 
-function brandLogoClass(brand: Brand, prominent = false) {
-  if (brand.id === "hotelaccelerator") {
-    return prominent
-      ? "h-10 w-auto max-w-48 scale-[1.28] object-contain sm:h-12 sm:max-w-56"
-      : "h-8 w-auto max-w-40 scale-[1.25] object-contain"
-  }
-  return prominent
-    ? "h-7 w-auto max-w-32 object-contain sm:h-9 sm:max-w-40"
-    : "h-6 w-auto max-w-28 object-contain sm:h-7 sm:max-w-32"
+function appMessagePayload(event: DailyEvent) {
+  if (event?.data && typeof event.data === "object") return event.data as Record<string, any>
+  return event as Record<string, any>
 }
 
-function BrandStrip({ prominent = false }: { prominent?: boolean }) {
+function isReplicaSpeechEvent(event: DailyEvent) {
+  const payload = appMessagePayload(event)
+  const eventType = String(payload?.event_type || payload?.type || "")
+  const role = String(payload?.properties?.role || "").toLowerCase()
+  return (
+    eventType === "conversation.replica.started_speaking" ||
+    (eventType === "conversation.started_speaking" && role === "replica") ||
+    (eventType === "conversation.utterance" && role === "replica")
+  )
+}
+
+function brandImage(brand: Brand, prominent: boolean) {
+  if (brand.id === "4bid") {
+    return (
+      <img
+        src={brand.logo}
+        alt="Logo 4BID"
+        className={prominent ? "h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10" : "h-7 w-7 shrink-0 object-contain"}
+      />
+    )
+  }
+
+  if (brand.id === "hotelaccelerator") {
+    return (
+      <span className={prominent ? "flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden" : "flex h-8 w-10 shrink-0 items-center justify-center overflow-hidden"}>
+        <img src={brand.logo} alt="Logo HotelAccelerator" className="h-full w-full scale-[2.05] object-contain" />
+      </span>
+    )
+  }
+
+  if (brand.id === "hotelprofit") {
+    return (
+      <span className={prominent ? "flex h-10 w-11 shrink-0 items-center justify-center overflow-hidden" : "flex h-8 w-9 shrink-0 items-center justify-center overflow-hidden"}>
+        <img src={brand.logo} alt="Logo HotelProfit AI" className="h-full w-full scale-[1.35] object-contain" />
+      </span>
+    )
+  }
+
+  if (brand.id === "santaddeo") {
+    return <img src={brand.logo} alt="Santaddeo" className={prominent ? "h-9 w-auto max-w-44 object-contain" : "h-7 w-auto max-w-36 object-contain"} />
+  }
+
+  return <img src={brand.logo} alt="ManuBot" className={prominent ? "h-9 w-auto max-w-48 object-contain" : "h-7 w-auto max-w-40 object-contain"} />
+}
+
+function BrandChip({ brand, prominent = false }: { brand: Brand; prominent?: boolean }) {
+  const explicitLabel = ["4bid", "hotelaccelerator", "hotelprofit"].includes(brand.id)
+  const label = brand.id === "hotelprofit" ? "HotelProfit AI" : brand.name
+
+  return (
+    <div
+      className={`flex items-center justify-center gap-2.5 rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-black/5 ${
+        prominent ? "min-h-14 px-3.5 py-2" : "min-h-11 px-3 py-1.5"
+      } ${brand.id === "hotelaccelerator" ? "min-w-[190px] sm:min-w-[220px]" : ""}`}
+    >
+      {brandImage(brand, prominent)}
+      {explicitLabel ? (
+        <span className={`${prominent ? "text-sm sm:text-base" : "text-sm"} whitespace-nowrap font-extrabold tracking-tight text-slate-800`}>
+          {label}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+function BrandStrip({ prominent = false, includeFourBid = true }: { prominent?: boolean; includeFourBid?: boolean }) {
+  const brands = includeFourBid ? [FOUR_BID_BRAND, ...BRAND_DEFINITIONS] : BRAND_DEFINITIONS
   return (
     <div className="flex flex-wrap items-center gap-2" aria-label="Ecosistema software 4BID">
-      {BRAND_DEFINITIONS.map((brand) => (
-        <div
-          key={brand.id}
-          className={`flex items-center justify-center overflow-visible rounded-xl bg-white shadow-sm ring-1 ring-black/5 ${
-            brand.id === "hotelaccelerator"
-              ? prominent ? "min-h-14 min-w-40 px-1 py-1 sm:min-w-52" : "min-h-10 min-w-32 px-1 py-1"
-              : prominent ? "min-h-12 px-3 py-2" : "min-h-10 px-2.5 py-1.5"
-          }`}
-        >
-          <img src={brand.logo} alt={brand.name} className={brandLogoClass(brand, prominent)} />
-        </div>
-      ))}
+      {brands.map((brand) => <BrandChip key={brand.id} brand={brand} prominent={prominent} />)}
     </div>
   )
 }
@@ -227,6 +282,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false)
   const [needsAudioActivation, setNeedsAudioActivation] = useState(false)
+  const [needsGreetingKickoff, setNeedsGreetingKickoff] = useState(false)
 
   const callRef = useRef<DailyCall | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -235,6 +291,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   const audioContextRef = useRef<AudioContext | null>(null)
   const remoteAudioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const remoteAudioTrackIdRef = useRef<string | null>(null)
+  const replicaHasSpokenRef = useRef(false)
 
   useEffect(() => {
     setProducts(quotedProjects)
@@ -323,6 +380,29 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
     }
   }
 
+  const forceOpeningGreeting = async () => {
+    const call = callRef.current
+    if (!call || !session?.conversationId || !session.openingMessage) return false
+    try {
+      await Promise.resolve(call.sendAppMessage({
+        message_type: "conversation",
+        event_type: "conversation.echo",
+        conversation_id: session.conversationId,
+        properties: {
+          modality: "text",
+          text: session.openingMessage,
+          done: true,
+        },
+      }, "*"))
+      setNeedsGreetingKickoff(false)
+      return true
+    } catch (kickoffError) {
+      console.warn("[live-avatar] opening greeting fallback failed", kickoffError)
+      setNeedsGreetingKickoff(true)
+      return false
+    }
+  }
+
   useEffect(() => {
     setSloganIndex(0)
     if (status !== "joined" || rotatingBrands.length < 2) return
@@ -344,6 +424,55 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
     let cancelled = false
     let call: DailyCall | null = null
+    let openingTimer: number | null = null
+    let openingConfirmTimer: number | null = null
+    let openingEchoSent = false
+    replicaHasSpokenRef.current = false
+    setNeedsGreetingKickoff(false)
+
+    const clearOpeningTimers = () => {
+      if (openingTimer != null) window.clearTimeout(openingTimer)
+      if (openingConfirmTimer != null) window.clearTimeout(openingConfirmTimer)
+      openingTimer = null
+      openingConfirmTimer = null
+    }
+
+    const markReplicaSpeech = (event: DailyEvent) => {
+      if (!isReplicaSpeechEvent(event)) return
+      replicaHasSpokenRef.current = true
+      setNeedsGreetingKickoff(false)
+      clearOpeningTimers()
+    }
+
+    const scheduleOpeningFallback = () => {
+      if (!call || openingTimer != null || openingEchoSent || replicaHasSpokenRef.current || !session.openingMessage) return
+      const remote = Object.values(call.participants()).find((participant) => !participant.local)
+      if (!remote) return
+
+      openingTimer = window.setTimeout(() => {
+        openingTimer = null
+        if (cancelled || replicaHasSpokenRef.current || openingEchoSent || !call) return
+        openingEchoSent = true
+        void Promise.resolve(call.sendAppMessage({
+          message_type: "conversation",
+          event_type: "conversation.echo",
+          conversation_id: session.conversationId,
+          properties: {
+            modality: "text",
+            text: session.openingMessage,
+            done: true,
+          },
+        }, "*")).catch((kickoffError) => {
+          console.warn("[live-avatar] automatic opening greeting failed", kickoffError)
+          if (!cancelled) setNeedsGreetingKickoff(true)
+        })
+
+        openingConfirmTimer = window.setTimeout(() => {
+          openingConfirmTimer = null
+          if (!cancelled && !replicaHasSpokenRef.current) setNeedsGreetingKickoff(true)
+        }, OPENING_GREETING_CONFIRM_MS)
+      }, OPENING_GREETING_FALLBACK_MS)
+    }
 
     const syncTracks = () => {
       if (!call) return
@@ -358,6 +487,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       routeRemoteAudio(remoteAudioTrack)
       attachTrack(localVideoRef.current, participantTrack(local, "video"))
       setHasRemoteVideo(Boolean(remoteVideoTrack))
+      scheduleOpeningFallback()
     }
 
     const connect = async () => {
@@ -387,6 +517,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           .on("participant-updated", syncTracks)
           .on("track-started", syncTracks)
           .on("track-stopped", syncTracks)
+          .on("app-message", markReplicaSpeech)
           .on("left-meeting", () => {
             if (!cancelled) setStatus("ended")
           })
@@ -414,6 +545,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
     return () => {
       cancelled = true
+      clearOpeningTimers()
       const activeCall = call || callRef.current
       if (activeCall) {
         if (callRef.current === activeCall) callRef.current = null
@@ -427,8 +559,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   }, [session])
 
   const start = async () => {
-    // Resume Web Audio *inside the user's click gesture* before the network request.
-    // This keeps the remote voice audible when the Tavus track arrives a few seconds later.
     await primeAudioOutput()
 
     setStatus("starting")
@@ -436,6 +566,8 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
     setMicOn(true)
     setCameraOn(false)
     setHasRemoteAudio(false)
+    setNeedsGreetingKickoff(false)
+    replicaHasSpokenRef.current = false
 
     try {
       const response = await fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, {
@@ -452,6 +584,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         conversationId: String(data.conversationId || ""),
         conversationUrl: String(data.conversationUrl),
         meetingToken: data.meetingToken ? String(data.meetingToken) : null,
+        openingMessage: String(data.openingMessage || "Buongiorno. Sono la consulente digitale di 4BID. Prima di iniziare, mi dice come posso chiamarla?"),
         maxCallDurationSeconds: Number(data.maxCallDurationSeconds || 900),
       })
     } catch (startError) {
@@ -469,6 +602,8 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
     void primeAudioOutput()
     setError(null)
     setStatus("connecting")
+    setNeedsGreetingKickoff(false)
+    replicaHasSpokenRef.current = false
     setSession({ ...session })
   }
 
@@ -539,11 +674,9 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-slate-950/90 via-slate-950/45 to-transparent px-3 pb-14 pt-3 sm:px-5 sm:pt-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="w-fit rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
-                <img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-8 w-auto object-contain sm:h-10" />
-              </div>
-              <div className="pointer-events-none max-w-full sm:max-w-[78%]">
-                <BrandStrip prominent />
+              <BrandChip brand={FOUR_BID_BRAND} prominent />
+              <div className="pointer-events-none max-w-full sm:max-w-[82%]">
+                <BrandStrip prominent includeFourBid={false} />
               </div>
             </div>
           </div>
@@ -561,6 +694,18 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
                 <p className="mt-2 text-sm font-semibold">Il browser ha bloccato l'audio della consulente</p>
                 <Button onClick={() => void activateAudio()} className="mt-3 bg-violet-500 text-white hover:bg-violet-400">
                   <Volume2 className="mr-2 h-4 w-4" /> Attiva audio
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {needsGreetingKickoff && !needsAudioActivation && status === "joined" ? (
+            <div className="absolute inset-x-4 top-1/2 z-50 flex -translate-y-1/2 justify-center">
+              <div className="rounded-2xl border border-violet-300/30 bg-slate-950/92 p-4 text-center text-white shadow-2xl backdrop-blur">
+                <Sparkles className="mx-auto h-6 w-6 text-violet-300" />
+                <p className="mt-2 text-sm font-semibold">La consulente è collegata. Avvio la presentazione.</p>
+                <Button onClick={() => void forceOpeningGreeting()} className="mt-3 bg-violet-500 text-white hover:bg-violet-400">
+                  Avvia presentazione
                 </Button>
               </div>
             </div>
@@ -667,7 +812,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
           <div className="flex items-center gap-3 text-sm text-slate-200"><Mic className="h-4 w-4 text-violet-300" /> Il browser chiederà solo i permessi necessari</div>
           <div className="flex items-center gap-3 text-sm text-slate-200"><Sparkles className="h-4 w-4 text-violet-300" /> Risposte costruite sul contenuto della proposta</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> Audio predisposto già dal click di avvio</div>
+          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> La consulente si presenta appena si collega</div>
           <Button onClick={() => void start()} disabled={status === "starting"} className="mt-1 h-12 bg-violet-500 font-bold text-white hover:bg-violet-400">
             {status === "starting" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparazione consulente…</> : "Parla con la consulente"}
           </Button>
