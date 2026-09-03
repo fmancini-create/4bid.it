@@ -132,17 +132,19 @@ async function syncTranscriptToChat(supabase: any, session: LiveSessionRow, tran
     .eq("id", conversationId)
 
   try {
-    await saveQuoteSalesIntelligence(supabase, {
+    await saveQuoteSalesIntelligence(
+      supabase,
       conversationId,
-      quoteId: session.quote_id,
-      quoteNumber: typeof session.metadata?.quote_number === "string" ? session.metadata.quote_number : null,
-      recipientEmail: null,
-      messages: transcript.map((message) => ({ role: message.role, content: message.content })),
-      metadata: {
-        source: "tavus_live_quote_call",
-        provider_conversation_id: session.provider_conversation_id,
+      {
+        quoteId: session.quote_id,
+        quoteNumber: typeof session.metadata?.quote_number === "string" ? session.metadata.quote_number : null,
+        recipientEmail: null,
+        quotedProjects: Array.isArray(session.metadata?.quoted_projects)
+          ? (session.metadata?.quoted_projects as unknown[]).map(String)
+          : [],
       },
-    })
+      transcript.map((message) => ({ role: message.role, content: message.content })),
+    )
   } catch (error) {
     console.error("[tavus-transcript] sales intelligence error", error)
   }
