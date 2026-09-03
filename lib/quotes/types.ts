@@ -121,6 +121,7 @@ export interface SalesChannelQuote {
   client_address: string | null
   title: string
   description: string | null
+  ai_important_notes?: string | null
   payment_terms: string | null
   contract_terms?: unknown
   accepted_terms?: unknown
