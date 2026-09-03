@@ -7,8 +7,16 @@ import { calculateQuoteLine, calculateQuoteTotal, type QuoteLineItem } from "@/l
 import { quoteTermsProjects } from "@/lib/quotes/terms"
 import { fetchContractTerms } from "@/lib/quotes/terms-fetch"
 
+const MAX_AI_NOTES = 2000
+
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function normalizeAiImportantNotes(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const note = value.trim().slice(0, MAX_AI_NOTES)
+  return note || null
 }
 
 function validateTieredQuantity(item: QuoteLineItem): string | null {
@@ -134,6 +142,7 @@ export async function POST(request: NextRequest) {
     client_address: body.client_address ?? null,
     title: body.title || "Soluzioni e servizi 4Bid",
     description: body.description ?? null,
+    ai_important_notes: normalizeAiImportantNotes(body.ai_important_notes),
     payment_terms: body.payment_terms ?? null,
     line_items: lineItems,
     total_amount: calculateQuoteTotal(lineItems),
