@@ -47,7 +47,7 @@ function configured() {
     (explicitlyEnabled || safePreview) &&
       process.env.TAVUS_API_KEY &&
       (process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID) &&
-      (process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID),
+      (process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID),
   )
 }
 
@@ -248,8 +248,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { supabase, share, plan } = loaded
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
-    const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
-    const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_ID)
+    const faceId = process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
+    const usesPalNaming = Boolean(process.env.TAVUS_PAL_ID || process.env.TAVUS_FACE_BANK_ID || process.env.TAVUS_FACE_ID)
     const openingMessage = buildGreeting(session.visitorName)
 
     const tavusBody: Record<string, unknown> = {
