@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import QuoteAiNotesEditor from "./quote-ai-notes-editor"
 import QuoteCatalogEditor from "./quote-catalog-editor"
 import QuoteExpansionEditor from "./quote-expansion-editor"
 import QuotePresentationModeEditor from "./quote-presentation-mode-editor"
@@ -20,6 +21,7 @@ export default async function QuoteEditPage({ params }: { params: Promise<{ id: 
       </div>
 
       <QuotePresentationModeEditor quoteId={id} />
+      <QuoteAiNotesEditor quoteId={id} />
       <QuoteStructureEditor quoteId={id} />
 
       <details className="mx-auto max-w-7xl overflow-hidden rounded-2xl border bg-card">
