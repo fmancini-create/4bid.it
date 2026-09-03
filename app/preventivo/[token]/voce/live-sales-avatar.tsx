@@ -43,6 +43,7 @@ type DailyGlobal = {
 declare global {
   interface Window {
     Daily?: DailyGlobal
+    webkitAudioContext?: typeof AudioContext
   }
 }
 
@@ -70,6 +71,13 @@ const BRAND_DEFINITIONS: Brand[] = [
     keys: ["santaddeo"],
   },
   {
+    id: "hotelaccelerator",
+    name: "HotelAccelerator",
+    logo: "/hotel-accelerator-logo.jpg",
+    slogan: "Relazioni, vendite e operatività in un unico ecosistema.",
+    keys: ["hotelaccelerator", "hotel accelerator"],
+  },
+  {
     id: "hotelprofit",
     name: "HotelProfit AI",
     logo: "/hotelprofit-ai-logo.png",
@@ -82,13 +90,6 @@ const BRAND_DEFINITIONS: Brand[] = [
     logo: "/manubot-logo-new.png",
     slogan: "La manutenzione diventa semplice, tracciabile e immediata.",
     keys: ["manubot", "manu bot"],
-  },
-  {
-    id: "hotelaccelerator",
-    name: "HotelAccelerator",
-    logo: "/hotel-accelerator-logo.jpg",
-    slogan: "Relazioni, vendite e operatività in un unico ecosistema.",
-    keys: ["hotelaccelerator", "hotel accelerator"],
   },
 ]
 
@@ -151,7 +152,11 @@ function participantTrack(participant: DailyParticipant | undefined, kind: "vide
   return info?.persistentTrack || info?.track || null
 }
 
-function attachTrack(element: HTMLMediaElement | null, track: MediaStreamTrack | null) {
+function attachTrack(
+  element: HTMLMediaElement | null,
+  track: MediaStreamTrack | null,
+  onPlaybackBlocked?: () => void,
+) {
   if (!element) return
   if (!track) {
     if (element.srcObject) element.srcObject = null
@@ -161,7 +166,7 @@ function attachTrack(element: HTMLMediaElement | null, track: MediaStreamTrack |
   const current = element.srcObject
   if (current instanceof MediaStream && current.getTracks().some((item) => item.id === track.id)) return
   element.srcObject = new MediaStream([track])
-  void element.play().catch(() => undefined)
+  void element.play().catch(() => onPlaybackBlocked?.())
 }
 
 function friendlyStartError(status: number, rawMessage: string) {
@@ -181,6 +186,36 @@ function friendlyConnectionError(error: unknown) {
   return "Il collegamento video non è riuscito. Puoi riprovare senza creare una nuova sessione."
 }
 
+function brandLogoClass(brand: Brand, prominent = false) {
+  if (brand.id === "hotelaccelerator") {
+    return prominent
+      ? "h-10 w-auto max-w-48 scale-[1.28] object-contain sm:h-12 sm:max-w-56"
+      : "h-8 w-auto max-w-40 scale-[1.25] object-contain"
+  }
+  return prominent
+    ? "h-7 w-auto max-w-32 object-contain sm:h-9 sm:max-w-40"
+    : "h-6 w-auto max-w-28 object-contain sm:h-7 sm:max-w-32"
+}
+
+function BrandStrip({ prominent = false }: { prominent?: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2" aria-label="Ecosistema software 4BID">
+      {BRAND_DEFINITIONS.map((brand) => (
+        <div
+          key={brand.id}
+          className={`flex items-center justify-center overflow-visible rounded-xl bg-white shadow-sm ring-1 ring-black/5 ${
+            brand.id === "hotelaccelerator"
+              ? prominent ? "min-h-14 min-w-40 px-1 py-1 sm:min-w-52" : "min-h-10 min-w-32 px-1 py-1"
+              : prominent ? "min-h-12 px-3 py-2" : "min-h-10 px-2.5 py-1.5"
+          }`}
+        >
+          <img src={brand.logo} alt={brand.name} className={brandLogoClass(brand, prominent)} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token: string; quotedProjects?: string[] }) {
   const [products, setProducts] = useState<string[]>(quotedProjects)
   const [session, setSession] = useState<LiveSession | null>(null)
@@ -190,19 +225,103 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(false)
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
+  const [hasRemoteAudio, setHasRemoteAudio] = useState(false)
+  const [needsAudioActivation, setNeedsAudioActivation] = useState(false)
 
   const callRef = useRef<DailyCall | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+  const remoteAudioFallbackRef = useRef<HTMLAudioElement | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const remoteAudioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const remoteAudioTrackIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     setProducts(quotedProjects)
   }, [quotedProjects])
 
-  const productBrands = useMemo(() => brandsForProjects(products), [products])
-  const rotatingBrands = useMemo(() => [FOUR_BID_BRAND, ...productBrands], [productBrands])
+  const quotedBrands = useMemo(() => brandsForProjects(products), [products])
+  const rotatingBrands = useMemo(() => {
+    const quotedIds = new Set(quotedBrands.map((brand) => brand.id))
+    const ordered = [
+      ...quotedBrands,
+      ...BRAND_DEFINITIONS.filter((brand) => !quotedIds.has(brand.id)),
+    ]
+    return [FOUR_BID_BRAND, ...ordered]
+  }, [quotedBrands])
   const activeSlogan = rotatingBrands[sloganIndex % rotatingBrands.length] || FOUR_BID_BRAND
+
+  const primeAudioOutput = async () => {
+    if (typeof window === "undefined") return false
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextConstructor) return false
+
+    try {
+      if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+        audioContextRef.current = new AudioContextConstructor()
+      }
+      if (audioContextRef.current.state !== "running") await audioContextRef.current.resume()
+      setNeedsAudioActivation(false)
+      return audioContextRef.current.state === "running"
+    } catch {
+      setNeedsAudioActivation(true)
+      return false
+    }
+  }
+
+  const routeRemoteAudio = (track: MediaStreamTrack | null) => {
+    setHasRemoteAudio(Boolean(track))
+    if (!track) {
+      remoteAudioSourceRef.current?.disconnect()
+      remoteAudioSourceRef.current = null
+      remoteAudioTrackIdRef.current = null
+      attachTrack(remoteAudioFallbackRef.current, null)
+      return
+    }
+
+    const context = audioContextRef.current
+    if (context && context.state !== "closed") {
+      if (remoteAudioTrackIdRef.current !== track.id) {
+        remoteAudioSourceRef.current?.disconnect()
+        try {
+          const source = context.createMediaStreamSource(new MediaStream([track]))
+          source.connect(context.destination)
+          remoteAudioSourceRef.current = source
+          remoteAudioTrackIdRef.current = track.id
+        } catch {
+          attachTrack(remoteAudioFallbackRef.current, track, () => setNeedsAudioActivation(true))
+        }
+      }
+
+      if (context.state !== "running") {
+        void context.resume()
+          .then(() => setNeedsAudioActivation(false))
+          .catch(() => setNeedsAudioActivation(true))
+      }
+      return
+    }
+
+    attachTrack(remoteAudioFallbackRef.current, track, () => setNeedsAudioActivation(true))
+  }
+
+  const activateAudio = async () => {
+    const audioReady = await primeAudioOutput()
+    if (!audioReady && remoteAudioFallbackRef.current?.srcObject) {
+      try {
+        await remoteAudioFallbackRef.current.play()
+        setNeedsAudioActivation(false)
+      } catch {
+        setNeedsAudioActivation(true)
+      }
+    }
+
+    const call = callRef.current
+    if (call) {
+      const participants = Object.values(call.participants())
+      const remote = participants.find((participant) => !participant.local)
+      routeRemoteAudio(participantTrack(remote, "audio"))
+    }
+  }
 
   useEffect(() => {
     setSloganIndex(0)
@@ -210,6 +329,15 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
     const timer = window.setInterval(() => setSloganIndex((index) => (index + 1) % rotatingBrands.length), 7000)
     return () => window.clearInterval(timer)
   }, [status, rotatingBrands])
+
+  useEffect(() => {
+    return () => {
+      remoteAudioSourceRef.current?.disconnect()
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        void audioContextRef.current.close().catch(() => undefined)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!session) return
@@ -224,9 +352,10 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         || participants.find((participant) => !participant.local)
       const local = participants.find((participant) => participant.local)
       const remoteVideoTrack = participantTrack(remote, "video")
+      const remoteAudioTrack = participantTrack(remote, "audio")
 
       attachTrack(remoteVideoRef.current, remoteVideoTrack)
-      attachTrack(remoteAudioRef.current, participantTrack(remote, "audio"))
+      routeRemoteAudio(remoteAudioTrack)
       attachTrack(localVideoRef.current, participantTrack(local, "video"))
       setHasRemoteVideo(Boolean(remoteVideoTrack))
     }
@@ -235,6 +364,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       setStatus("connecting")
       setError(null)
       setHasRemoteVideo(false)
+      setHasRemoteAudio(false)
 
       try {
         await loadDailySdk()
@@ -291,16 +421,21 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         void Promise.resolve(activeCall.destroy()).catch(() => undefined)
       }
       attachTrack(remoteVideoRef.current, null)
-      attachTrack(remoteAudioRef.current, null)
+      routeRemoteAudio(null)
       attachTrack(localVideoRef.current, null)
     }
   }, [session])
 
   const start = async () => {
+    // Resume Web Audio *inside the user's click gesture* before the network request.
+    // This keeps the remote voice audible when the Tavus track arrives a few seconds later.
+    await primeAudioOutput()
+
     setStatus("starting")
     setError(null)
     setMicOn(true)
     setCameraOn(false)
+    setHasRemoteAudio(false)
 
     try {
       const response = await fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, {
@@ -331,6 +466,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       void start()
       return
     }
+    void primeAudioOutput()
     setError(null)
     setStatus("connecting")
     setSession({ ...session })
@@ -369,6 +505,8 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         // The room can already be shutting down; the UI should still close cleanly.
       }
     }
+    remoteAudioSourceRef.current?.disconnect()
+    remoteAudioSourceRef.current = null
     setStatus("ended")
   }
 
@@ -384,7 +522,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
             className="h-full w-full object-cover"
             aria-label="Consulente digitale 4BID"
           />
-          <audio ref={remoteAudioRef} autoPlay />
+          <audio ref={remoteAudioFallbackRef} autoPlay className="hidden" aria-hidden="true" />
 
           {!hasRemoteVideo && status !== "error" ? (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-slate-950 text-center text-white">
@@ -394,41 +532,52 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
               </div>
               <div>
                 <p className="text-lg font-semibold">Sto collegando la consulente…</p>
-                <p className="mt-1 text-sm text-slate-400">Non serve premere nessun altro pulsante.</p>
+                <p className="mt-1 text-sm text-slate-400">La conversazione parte automaticamente appena è pronta.</p>
               </div>
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-slate-950/85 via-slate-950/35 to-transparent px-3 pb-12 pt-3 sm:px-5 sm:pt-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-slate-950/90 via-slate-950/45 to-transparent px-3 pb-14 pt-3 sm:px-5 sm:pt-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="w-fit rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
                 <img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-8 w-auto object-contain sm:h-10" />
               </div>
-              {productBrands.length ? (
-                <div className="flex max-w-[68%] flex-wrap justify-end gap-1.5 sm:gap-2">
-                  {productBrands.map((brand) => (
-                    <div key={brand.id} className="rounded-lg bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur sm:px-3 sm:py-2">
-                      <img src={brand.logo} alt={brand.name} className="h-5 max-w-24 object-contain sm:h-7 sm:max-w-32" />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <div className="pointer-events-none max-w-full sm:max-w-[78%]">
+                <BrandStrip prominent />
+              </div>
             </div>
           </div>
 
           {cameraOn ? (
-            <div className="absolute right-3 top-20 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:right-5 sm:top-24 sm:h-40 sm:w-28">
+            <div className="absolute right-3 top-36 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:right-5 sm:top-32 sm:h-40 sm:w-28">
               <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" aria-label="La tua videocamera" />
             </div>
           ) : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
 
+          {needsAudioActivation ? (
+            <div className="absolute inset-x-4 top-1/2 z-50 flex -translate-y-1/2 justify-center">
+              <div className="rounded-2xl border border-violet-300/30 bg-slate-950/92 p-4 text-center text-white shadow-2xl backdrop-blur">
+                <Volume2 className="mx-auto h-6 w-6 text-violet-300" />
+                <p className="mt-2 text-sm font-semibold">Il browser ha bloccato l'audio della consulente</p>
+                <Button onClick={() => void activateAudio()} className="mt-3 bg-violet-500 text-white hover:bg-violet-400">
+                  <Volume2 className="mr-2 h-4 w-4" /> Attiva audio
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="pointer-events-none absolute inset-x-3 bottom-24 z-30 sm:inset-x-5 sm:bottom-24">
             <div className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/72 px-4 py-3 text-white shadow-xl backdrop-blur-md">
               <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-200">{activeSlogan.name}</div>
                 <p className="truncate text-xs text-slate-100 sm:text-sm">{activeSlogan.slogan}</p>
               </div>
+              {status === "joined" ? (
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${hasRemoteAudio ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200"}`}>
+                  {hasRemoteAudio ? "Audio collegato" : "Audio in arrivo"}
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -450,6 +599,15 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
               className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20"
             >
               {cameraOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => void activateAudio()}
+              aria-label="Riattiva audio consulente"
+              title="Riattiva audio consulente"
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20"
+            >
+              <Volume2 className="h-5 w-5" />
             </button>
             <button
               type="button"
@@ -485,6 +643,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         <Sparkles className="mx-auto h-7 w-7 text-violet-600" />
         <h3 className="mt-3 text-xl font-bold">Grazie per la conversazione</h3>
         <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi aprire il preventivo completo qui sotto oppure riaprire la consulente se hai ancora una domanda importante.</p>
+        <div className="mx-auto mt-4 w-fit"><BrandStrip /></div>
         <Button onClick={() => void start()} className="mt-5 bg-violet-600 text-white hover:bg-violet-700">Parla di nuovo con la consulente</Button>
       </section>
     )
@@ -492,25 +651,23 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
   return (
     <section className="overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950 text-white shadow-xl">
-      <div className="grid gap-5 p-5 sm:p-7 md:grid-cols-[1.25fr_0.75fr] md:items-center">
+      <div className="grid gap-5 p-5 sm:p-7 md:grid-cols-[1.15fr_0.85fr] md:items-center">
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-100">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Consulente AI live
           </div>
           <h3 className="text-2xl font-black tracking-tight sm:text-3xl">Parla adesso con la consulente 4BID</h3>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">Una conversazione vera, in tempo reale: chiedi chiarimenti, confronta le opzioni e approfondisci i moduli del tuo preventivo. Dopo il click il collegamento parte direttamente.</p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="rounded-lg bg-white px-2.5 py-1.5"><img src={FOUR_BID_BRAND.logo} alt="4BID" className="h-7 w-auto object-contain" /></div>
-            {productBrands.map((brand) => (
-              <div key={brand.id} className="rounded-lg bg-white px-2.5 py-1.5"><img src={brand.logo} alt={brand.name} className="h-6 max-w-28 object-contain" /></div>
-            ))}
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Ecosistema 4BID</p>
+            <BrandStrip />
           </div>
           {error ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">{error}</p> : null}
         </div>
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
           <div className="flex items-center gap-3 text-sm text-slate-200"><Mic className="h-4 w-4 text-violet-300" /> Il browser chiederà solo i permessi necessari</div>
           <div className="flex items-center gap-3 text-sm text-slate-200"><Sparkles className="h-4 w-4 text-violet-300" /> Risposte costruite sul contenuto della proposta</div>
-          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> Conversazione guidata fino a 15 minuti</div>
+          <div className="flex items-center gap-3 text-sm text-slate-200"><Volume2 className="h-4 w-4 text-violet-300" /> Audio predisposto già dal click di avvio</div>
           <Button onClick={() => void start()} disabled={status === "starting"} className="mt-1 h-12 bg-violet-500 font-bold text-white hover:bg-violet-400">
             {status === "starting" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparazione consulente…</> : "Parla con la consulente"}
           </Button>
