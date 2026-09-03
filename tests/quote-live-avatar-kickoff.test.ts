@@ -14,33 +14,21 @@ test("live quote API exposes the same opening greeting it sends to Tavus", () =>
   assert.match(route, /const openingMessage = buildGreeting\(\)/)
   assert.match(route, /custom_greeting:\s*openingMessage/)
   assert.match(route, /openingMessage,/)
+  assert.match(route, /joinUrl,/)
 })
 
-test("remote Tavus voice is routed through the native audio element", () => {
+test("live quote uses Tavus hosted conversation instead of a custom Daily audio bridge", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /remoteAudioRef/)
-  assert.match(component, /audio\.srcObject = new MediaStream\(\[track\]\)/)
-  assert.match(component, /audio\.muted = false/)
-  assert.match(component, /audio\.volume = 1/)
-  assert.match(component, /await audio\.play\(\)/)
-  assert.doesNotMatch(component, /createMediaStreamSource/)
+  assert.match(component, /const joinUrl = String\(data\?\.joinUrl \|\| data\?\.conversationUrl \|\| ""\)/)
+  assert.match(component, /src=\{session\.joinUrl\}/)
+  assert.match(component, /allow="microphone \*; camera \*; autoplay \*; fullscreen \*; display-capture \*"/)
+  assert.doesNotMatch(component, /createCallObject/)
+  assert.doesNotMatch(component, /remoteAudioRef/)
+  assert.doesNotMatch(component, /sendAppMessage/)
+  assert.doesNotMatch(component, /DAILY_SDK_URL/)
 })
 
-test("live avatar explicitly republishes the microphone after joining", () => {
-  const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /navigator\.mediaDevices\.getUserMedia\(\{ audio: true, video: false \}\)/)
-  assert.match(component, /call\.setLocalAudio\(true\)/)
-  assert.match(component, /ensureMicrophonePublished\(\)/)
-})
-
-test("live avatar has a one-shot spoken greeting fallback", () => {
-  const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
-  assert.match(component, /const GREETING_FALLBACK_MS = 3_500/)
-  assert.match(component, /!palHasSpoken/)
-  assert.match(component, /sendEcho\(session\.openingMessage\)/)
-})
-
-test("live call shows only a transparent-style 4BID corner mark", () => {
+test("live call keeps one compact 4BID corner mark without a white panel", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
   assert.match(component, /absolute left-4 top-4/)
   assert.match(component, /src="\/logo\.png"/)
@@ -54,5 +42,5 @@ test("quote CTA is benefit-led instead of generic", () => {
   const component = read("app/preventivo/[token]/voce/live-sales-avatar.tsx")
   assert.match(component, /Ti spiego questo preventivo in 60 secondi/)
   assert.match(component, /Fatti spiegare il preventivo in 60 secondi/)
-  assert.match(component, /Consulente AI disponibile ora/)
+  assert.match(component, /Consulente AI live/)
 })
