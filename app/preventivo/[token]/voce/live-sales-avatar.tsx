@@ -1,12 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
-const OPENING_GREETING_FALLBACK_MS = 3200
-const OPENING_GREETING_CONFIRM_MS = 5200
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
@@ -15,8 +13,6 @@ type DailyTrackInfo = {
 
 type DailyParticipant = {
   local?: boolean
-  session_id?: string
-  user_name?: string
   tracks?: {
     video?: DailyTrackInfo
     audio?: DailyTrackInfo
@@ -25,9 +21,7 @@ type DailyParticipant = {
 
 type DailyEvent = {
   participant?: DailyParticipant
-  data?: any
-  event_type?: string
-  properties?: Record<string, any>
+  data?: unknown
 }
 
 type DailyCall = {
@@ -38,7 +32,6 @@ type DailyCall = {
   participants(): Record<string, DailyParticipant>
   setLocalAudio(enabled: boolean): Promise<unknown> | void
   setLocalVideo(enabled: boolean): Promise<unknown> | void
-  sendAppMessage(message: Record<string, unknown>, recipient?: string): Promise<unknown> | void
 }
 
 type DailyGlobal = {
@@ -48,63 +41,12 @@ type DailyGlobal = {
 declare global {
   interface Window {
     Daily?: DailyGlobal
-    webkitAudioContext?: typeof AudioContext
   }
 }
 
-type Brand = {
-  id: string
-  name: string
-  logo: string
-  slogan: string
-  keys: string[]
-}
-
 type LiveSession = {
-  conversationId: string
   conversationUrl: string
   meetingToken?: string | null
-  openingMessage: string
-  maxCallDurationSeconds: number
-}
-
-const BRAND_DEFINITIONS: Brand[] = [
-  {
-    id: "santaddeo",
-    name: "Santaddeo",
-    logo: "/santaddeo-logo.png",
-    slogan: "Prezzi più consapevoli. Decisioni più rapide.",
-    keys: ["santaddeo"],
-  },
-  {
-    id: "hotelaccelerator",
-    name: "HotelAccelerator",
-    logo: "/hotel-accelerator-logo.jpg",
-    slogan: "Relazioni, vendite e operatività in un unico ecosistema.",
-    keys: ["hotelaccelerator", "hotel accelerator"],
-  },
-  {
-    id: "hotelprofit",
-    name: "HotelProfit AI",
-    logo: "/hotelprofit-ai-logo.png",
-    slogan: "Trasforma i numeri della struttura in decisioni operative.",
-    keys: ["hotelprofit", "hotel profit"],
-  },
-  {
-    id: "manubot",
-    name: "ManuBot",
-    logo: "/manubot-logo-new.png",
-    slogan: "La manutenzione diventa semplice, tracciabile e immediata.",
-    keys: ["manubot", "manu bot"],
-  },
-]
-
-const FOUR_BID_BRAND: Brand = {
-  id: "4bid",
-  name: "4BID",
-  logo: "/logo.png",
-  slogan: "Tecnologia costruita intorno alla tua struttura.",
-  keys: [],
 }
 
 let dailySdkPromise: Promise<void> | null = null
@@ -144,25 +86,12 @@ function loadDailySdk() {
   return dailySdkPromise
 }
 
-function normalize(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
-}
-
-function brandsForProjects(projects: string[]) {
-  const haystack = projects.map(normalize)
-  return BRAND_DEFINITIONS.filter((brand) => haystack.some((project) => brand.keys.some((key) => project.includes(key))))
-}
-
 function participantTrack(participant: DailyParticipant | undefined, kind: "video" | "audio") {
   const info = participant?.tracks?.[kind]
   return info?.persistentTrack || info?.track || null
 }
 
-function attachTrack(
-  element: HTMLMediaElement | null,
-  track: MediaStreamTrack | null,
-  onPlaybackBlocked?: () => void,
-) {
+function attachVideoTrack(element: HTMLVideoElement | null, track: MediaStreamTrack | null) {
   if (!element) return
   if (!track) {
     if (element.srcObject) element.srcObject = null
@@ -172,7 +101,7 @@ function attachTrack(
   const current = element.srcObject
   if (current instanceof MediaStream && current.getTracks().some((item) => item.id === track.id)) return
   element.srcObject = new MediaStream([track])
-  void element.play().catch(() => onPlaybackBlocked?.())
+  void element.play().catch(() => undefined)
 }
 
 function friendlyStartError(status: number, rawMessage: string) {
@@ -192,287 +121,75 @@ function friendlyConnectionError(error: unknown) {
   return "Il collegamento video non è riuscito. Puoi riprovare senza creare una nuova sessione."
 }
 
-function appMessagePayload(event: DailyEvent) {
-  if (event?.data && typeof event.data === "object") return event.data as Record<string, any>
-  return event as Record<string, any>
-}
-
-function isReplicaSpeechEvent(event: DailyEvent) {
-  const payload = appMessagePayload(event)
-  const eventType = String(payload?.event_type || payload?.type || "")
-  const role = String(payload?.properties?.role || "").toLowerCase()
-  return (
-    eventType === "conversation.replica.started_speaking" ||
-    (eventType === "conversation.started_speaking" && role === "replica") ||
-    (eventType === "conversation.utterance" && role === "replica")
-  )
-}
-
-function brandImage(brand: Brand, prominent: boolean) {
-  if (brand.id === "4bid") {
-    return (
-      <img
-        src={brand.logo}
-        alt="Logo 4BID"
-        className={prominent ? "h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10" : "h-7 w-7 shrink-0 object-contain"}
-      />
-    )
-  }
-
-  if (brand.id === "hotelaccelerator") {
-    return (
-      <span className={prominent ? "flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden" : "flex h-8 w-10 shrink-0 items-center justify-center overflow-hidden"}>
-        <img src={brand.logo} alt="Logo HotelAccelerator" className="h-full w-full scale-[2.05] object-contain" />
-      </span>
-    )
-  }
-
-  if (brand.id === "hotelprofit") {
-    return (
-      <span className={prominent ? "flex h-10 w-11 shrink-0 items-center justify-center overflow-hidden" : "flex h-8 w-9 shrink-0 items-center justify-center overflow-hidden"}>
-        <img src={brand.logo} alt="Logo HotelProfit AI" className="h-full w-full scale-[1.35] object-contain" />
-      </span>
-    )
-  }
-
-  if (brand.id === "santaddeo") {
-    return <img src={brand.logo} alt="Santaddeo" className={prominent ? "h-9 w-auto max-w-44 object-contain" : "h-7 w-auto max-w-36 object-contain"} />
-  }
-
-  return <img src={brand.logo} alt="ManuBot" className={prominent ? "h-9 w-auto max-w-48 object-contain" : "h-7 w-auto max-w-40 object-contain"} />
-}
-
-function BrandChip({ brand, prominent = false }: { brand: Brand; prominent?: boolean }) {
-  const explicitLabel = ["4bid", "hotelaccelerator", "hotelprofit"].includes(brand.id)
-  const label = brand.id === "hotelprofit" ? "HotelProfit AI" : brand.name
-
-  return (
-    <div
-      className={`flex items-center justify-center gap-2.5 rounded-xl bg-white text-slate-900 shadow-sm ring-1 ring-black/5 ${
-        prominent ? "min-h-14 px-3.5 py-2" : "min-h-11 px-3 py-1.5"
-      } ${brand.id === "hotelaccelerator" ? "min-w-[190px] sm:min-w-[220px]" : ""}`}
-    >
-      {brandImage(brand, prominent)}
-      {explicitLabel ? (
-        <span className={`${prominent ? "text-sm sm:text-base" : "text-sm"} whitespace-nowrap font-extrabold tracking-tight text-slate-800`}>
-          {label}
-        </span>
-      ) : null}
-    </div>
-  )
-}
-
-function BrandStrip({ prominent = false, includeFourBid = true }: { prominent?: boolean; includeFourBid?: boolean }) {
-  const brands = includeFourBid ? [FOUR_BID_BRAND, ...BRAND_DEFINITIONS] : BRAND_DEFINITIONS
-  return (
-    <div className="flex flex-wrap items-center gap-2" aria-label="Ecosistema software 4BID">
-      {brands.map((brand) => <BrandChip key={brand.id} brand={brand} prominent={prominent} />)}
-    </div>
-  )
-}
-
-export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token: string; quotedProjects?: string[] }) {
-  const [products, setProducts] = useState<string[]>(quotedProjects)
+export default function LiveSalesAvatar({ token }: { token: string; quotedProjects?: string[] }) {
   const [session, setSession] = useState<LiveSession | null>(null)
   const [status, setStatus] = useState<"idle" | "starting" | "connecting" | "joined" | "ended" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
-  const [sloganIndex, setSloganIndex] = useState(0)
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(false)
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false)
   const [hasRemoteAudio, setHasRemoteAudio] = useState(false)
   const [needsAudioActivation, setNeedsAudioActivation] = useState(false)
-  const [needsGreetingKickoff, setNeedsGreetingKickoff] = useState(false)
 
   const callRef = useRef<DailyCall | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
-  const remoteAudioFallbackRef = useRef<HTMLAudioElement | null>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const remoteAudioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  const remoteAudioTrackIdRef = useRef<string | null>(null)
-  const replicaHasSpokenRef = useRef(false)
-
-  useEffect(() => {
-    setProducts(quotedProjects)
-  }, [quotedProjects])
-
-  const quotedBrands = useMemo(() => brandsForProjects(products), [products])
-  const rotatingBrands = useMemo(() => {
-    const quotedIds = new Set(quotedBrands.map((brand) => brand.id))
-    const ordered = [
-      ...quotedBrands,
-      ...BRAND_DEFINITIONS.filter((brand) => !quotedIds.has(brand.id)),
-    ]
-    return [FOUR_BID_BRAND, ...ordered]
-  }, [quotedBrands])
-  const activeSlogan = rotatingBrands[sloganIndex % rotatingBrands.length] || FOUR_BID_BRAND
-
-  const primeAudioOutput = async () => {
-    if (typeof window === "undefined") return false
-    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext
-    if (!AudioContextConstructor) return false
-
-    try {
-      if (!audioContextRef.current || audioContextRef.current.state === "closed") {
-        audioContextRef.current = new AudioContextConstructor()
-      }
-      if (audioContextRef.current.state !== "running") await audioContextRef.current.resume()
-      setNeedsAudioActivation(false)
-      return audioContextRef.current.state === "running"
-    } catch {
-      setNeedsAudioActivation(true)
-      return false
-    }
-  }
 
   const routeRemoteAudio = (track: MediaStreamTrack | null) => {
     setHasRemoteAudio(Boolean(track))
+    const audio = remoteAudioRef.current
+    if (!audio) return
+
     if (!track) {
-      remoteAudioSourceRef.current?.disconnect()
-      remoteAudioSourceRef.current = null
-      remoteAudioTrackIdRef.current = null
-      attachTrack(remoteAudioFallbackRef.current, null)
+      audio.pause()
+      if (audio.srcObject) audio.srcObject = null
+      setNeedsAudioActivation(false)
       return
     }
 
-    const context = audioContextRef.current
-    if (context && context.state !== "closed") {
-      if (remoteAudioTrackIdRef.current !== track.id) {
-        remoteAudioSourceRef.current?.disconnect()
-        try {
-          const source = context.createMediaStreamSource(new MediaStream([track]))
-          source.connect(context.destination)
-          remoteAudioSourceRef.current = source
-          remoteAudioTrackIdRef.current = track.id
-        } catch {
-          attachTrack(remoteAudioFallbackRef.current, track, () => setNeedsAudioActivation(true))
-        }
-      }
-
-      if (context.state !== "running") {
-        void context.resume()
-          .then(() => setNeedsAudioActivation(false))
-          .catch(() => setNeedsAudioActivation(true))
-      }
-      return
+    const current = audio.srcObject
+    if (!(current instanceof MediaStream) || !current.getTracks().some((item) => item.id === track.id)) {
+      audio.srcObject = new MediaStream([track])
     }
 
-    attachTrack(remoteAudioFallbackRef.current, track, () => setNeedsAudioActivation(true))
+    audio.muted = false
+    audio.volume = 1
+    void audio.play()
+      .then(() => setNeedsAudioActivation(false))
+      .catch(() => setNeedsAudioActivation(true))
   }
 
   const activateAudio = async () => {
-    const audioReady = await primeAudioOutput()
-    if (!audioReady && remoteAudioFallbackRef.current?.srcObject) {
-      try {
-        await remoteAudioFallbackRef.current.play()
-        setNeedsAudioActivation(false)
-      } catch {
-        setNeedsAudioActivation(true)
-      }
-    }
-
     const call = callRef.current
     if (call) {
       const participants = Object.values(call.participants())
-      const remote = participants.find((participant) => !participant.local)
+      const remote = participants.find((participant) => !participant.local && participantTrack(participant, "audio"))
+        || participants.find((participant) => !participant.local)
       routeRemoteAudio(participantTrack(remote, "audio"))
     }
-  }
 
-  const forceOpeningGreeting = async () => {
-    const call = callRef.current
-    if (!call || !session?.conversationId || !session.openingMessage) return false
+    const audio = remoteAudioRef.current
+    if (!audio?.srcObject) {
+      setNeedsAudioActivation(true)
+      return
+    }
+
     try {
-      await Promise.resolve(call.sendAppMessage({
-        message_type: "conversation",
-        event_type: "conversation.echo",
-        conversation_id: session.conversationId,
-        properties: {
-          modality: "text",
-          text: session.openingMessage,
-          done: true,
-        },
-      }, "*"))
-      setNeedsGreetingKickoff(false)
-      return true
-    } catch (kickoffError) {
-      console.warn("[live-avatar] opening greeting fallback failed", kickoffError)
-      setNeedsGreetingKickoff(true)
-      return false
+      audio.muted = false
+      audio.volume = 1
+      await audio.play()
+      setNeedsAudioActivation(false)
+    } catch {
+      setNeedsAudioActivation(true)
     }
   }
-
-  useEffect(() => {
-    setSloganIndex(0)
-    if (status !== "joined" || rotatingBrands.length < 2) return
-    const timer = window.setInterval(() => setSloganIndex((index) => (index + 1) % rotatingBrands.length), 7000)
-    return () => window.clearInterval(timer)
-  }, [status, rotatingBrands])
-
-  useEffect(() => {
-    return () => {
-      remoteAudioSourceRef.current?.disconnect()
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        void audioContextRef.current.close().catch(() => undefined)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (!session) return
 
     let cancelled = false
     let call: DailyCall | null = null
-    let openingTimer: number | null = null
-    let openingConfirmTimer: number | null = null
-    let openingEchoSent = false
-    replicaHasSpokenRef.current = false
-    setNeedsGreetingKickoff(false)
-
-    const clearOpeningTimers = () => {
-      if (openingTimer != null) window.clearTimeout(openingTimer)
-      if (openingConfirmTimer != null) window.clearTimeout(openingConfirmTimer)
-      openingTimer = null
-      openingConfirmTimer = null
-    }
-
-    const markReplicaSpeech = (event: DailyEvent) => {
-      if (!isReplicaSpeechEvent(event)) return
-      replicaHasSpokenRef.current = true
-      setNeedsGreetingKickoff(false)
-      clearOpeningTimers()
-    }
-
-    const scheduleOpeningFallback = () => {
-      if (!call || openingTimer != null || openingEchoSent || replicaHasSpokenRef.current || !session.openingMessage) return
-      const remote = Object.values(call.participants()).find((participant) => !participant.local)
-      if (!remote) return
-
-      openingTimer = window.setTimeout(() => {
-        openingTimer = null
-        if (cancelled || replicaHasSpokenRef.current || openingEchoSent || !call) return
-        openingEchoSent = true
-        void Promise.resolve(call.sendAppMessage({
-          message_type: "conversation",
-          event_type: "conversation.echo",
-          conversation_id: session.conversationId,
-          properties: {
-            modality: "text",
-            text: session.openingMessage,
-            done: true,
-          },
-        }, "*")).catch((kickoffError) => {
-          console.warn("[live-avatar] automatic opening greeting failed", kickoffError)
-          if (!cancelled) setNeedsGreetingKickoff(true)
-        })
-
-        openingConfirmTimer = window.setTimeout(() => {
-          openingConfirmTimer = null
-          if (!cancelled && !replicaHasSpokenRef.current) setNeedsGreetingKickoff(true)
-        }, OPENING_GREETING_CONFIRM_MS)
-      }, OPENING_GREETING_FALLBACK_MS)
-    }
 
     const syncTracks = () => {
       if (!call) return
@@ -483,11 +200,10 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       const remoteVideoTrack = participantTrack(remote, "video")
       const remoteAudioTrack = participantTrack(remote, "audio")
 
-      attachTrack(remoteVideoRef.current, remoteVideoTrack)
+      attachVideoTrack(remoteVideoRef.current, remoteVideoTrack)
       routeRemoteAudio(remoteAudioTrack)
-      attachTrack(localVideoRef.current, participantTrack(local, "video"))
+      attachVideoTrack(localVideoRef.current, participantTrack(local, "video"))
       setHasRemoteVideo(Boolean(remoteVideoTrack))
-      scheduleOpeningFallback()
     }
 
     const connect = async () => {
@@ -495,6 +211,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       setError(null)
       setHasRemoteVideo(false)
       setHasRemoteAudio(false)
+      setNeedsAudioActivation(false)
 
       try {
         await loadDailySdk()
@@ -517,7 +234,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           .on("participant-updated", syncTracks)
           .on("track-started", syncTracks)
           .on("track-stopped", syncTracks)
-          .on("app-message", markReplicaSpeech)
           .on("left-meeting", () => {
             if (!cancelled) setStatus("ended")
           })
@@ -545,29 +261,25 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
 
     return () => {
       cancelled = true
-      clearOpeningTimers()
       const activeCall = call || callRef.current
       if (activeCall) {
         if (callRef.current === activeCall) callRef.current = null
         void Promise.resolve(activeCall.leave()).catch(() => undefined)
         void Promise.resolve(activeCall.destroy()).catch(() => undefined)
       }
-      attachTrack(remoteVideoRef.current, null)
+      attachVideoTrack(remoteVideoRef.current, null)
       routeRemoteAudio(null)
-      attachTrack(localVideoRef.current, null)
+      attachVideoTrack(localVideoRef.current, null)
     }
   }, [session])
 
   const start = async () => {
-    await primeAudioOutput()
-
     setStatus("starting")
     setError(null)
     setMicOn(true)
     setCameraOn(false)
     setHasRemoteAudio(false)
-    setNeedsGreetingKickoff(false)
-    replicaHasSpokenRef.current = false
+    setNeedsAudioActivation(false)
 
     try {
       const response = await fetch(`/api/quotes/shared/${encodeURIComponent(token)}/live-avatar`, {
@@ -575,17 +287,14 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         headers: { "Content-Type": "application/json" },
       })
       const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data?.conversationUrl) {
+      const conversationUrl = String(data?.conversationUrl || data?.joinUrl || "")
+      if (!response.ok || !conversationUrl) {
         throw new Error(friendlyStartError(response.status, String(data?.error || "")))
       }
 
-      if (Array.isArray(data.quotedProjects)) setProducts(data.quotedProjects.map(String))
       setSession({
-        conversationId: String(data.conversationId || ""),
-        conversationUrl: String(data.conversationUrl),
-        meetingToken: data.meetingToken ? String(data.meetingToken) : null,
-        openingMessage: String(data.openingMessage || "Buongiorno. Sono la consulente digitale di 4BID. Prima di iniziare, mi dice come posso chiamarla?"),
-        maxCallDurationSeconds: Number(data.maxCallDurationSeconds || 900),
+        conversationUrl,
+        meetingToken: data?.conversationUrl && data?.meetingToken ? String(data.meetingToken) : null,
       })
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : friendlyStartError(500, ""))
@@ -599,11 +308,9 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       void start()
       return
     }
-    void primeAudioOutput()
     setError(null)
     setStatus("connecting")
-    setNeedsGreetingKickoff(false)
-    replicaHasSpokenRef.current = false
+    setNeedsAudioActivation(false)
     setSession({ ...session })
   }
 
@@ -637,11 +344,10 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
       try {
         await Promise.resolve(call.leave())
       } catch {
-        // The room can already be shutting down; the UI should still close cleanly.
+        // La room può essere già in chiusura; l'interfaccia deve comunque terminare pulita.
       }
     }
-    remoteAudioSourceRef.current?.disconnect()
-    remoteAudioSourceRef.current = null
+    remoteAudioRef.current?.pause()
     setStatus("ended")
   }
 
@@ -657,7 +363,7 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
             className="h-full w-full object-cover"
             aria-label="Consulente digitale 4BID"
           />
-          <audio ref={remoteAudioFallbackRef} autoPlay className="hidden" aria-hidden="true" />
+          <audio ref={remoteAudioRef} autoPlay className="hidden" aria-hidden="true" />
 
           {!hasRemoteVideo && status !== "error" ? (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-slate-950 text-center text-white">
@@ -672,17 +378,12 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-slate-950/90 via-slate-950/45 to-transparent px-3 pb-14 pt-3 sm:px-5 sm:pt-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <BrandChip brand={FOUR_BID_BRAND} prominent />
-              <div className="pointer-events-none max-w-full sm:max-w-[82%]">
-                <BrandStrip prominent includeFourBid={false} />
-              </div>
-            </div>
+          <div className="pointer-events-none absolute left-3 top-3 z-30 rounded-lg bg-white/90 px-2 py-1.5 shadow-md backdrop-blur sm:left-5 sm:top-5">
+            <img src="/logo.png" alt="4BID" className="h-6 w-auto object-contain sm:h-7" />
           </div>
 
           {cameraOn ? (
-            <div className="absolute right-3 top-36 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:right-5 sm:top-32 sm:h-40 sm:w-28">
+            <div className="absolute right-3 top-3 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:right-5 sm:top-5 sm:h-40 sm:w-28">
               <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" aria-label="La tua videocamera" />
             </div>
           ) : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
@@ -699,25 +400,10 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
             </div>
           ) : null}
 
-          {needsGreetingKickoff && !needsAudioActivation && status === "joined" ? (
-            <div className="absolute inset-x-4 top-1/2 z-50 flex -translate-y-1/2 justify-center">
-              <div className="rounded-2xl border border-violet-300/30 bg-slate-950/92 p-4 text-center text-white shadow-2xl backdrop-blur">
-                <Sparkles className="mx-auto h-6 w-6 text-violet-300" />
-                <p className="mt-2 text-sm font-semibold">La consulente è collegata. Avvio la presentazione.</p>
-                <Button onClick={() => void forceOpeningGreeting()} className="mt-3 bg-violet-500 text-white hover:bg-violet-400">
-                  Avvia presentazione
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="pointer-events-none absolute inset-x-3 bottom-24 z-30 sm:inset-x-5 sm:bottom-24">
-            <div className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/72 px-4 py-3 text-white shadow-xl backdrop-blur-md">
+          <div className="pointer-events-none absolute inset-x-3 bottom-24 z-30 sm:inset-x-5">
+            <div className="mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/72 px-4 py-3 text-white shadow-xl backdrop-blur-md">
               <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-200">{activeSlogan.name}</div>
-                <p className="truncate text-xs text-slate-100 sm:text-sm">{activeSlogan.slogan}</p>
-              </div>
+              <p className="min-w-0 flex-1 truncate text-xs text-slate-100 sm:text-sm">Consulente digitale 4BID · conversazione in tempo reale</p>
               {status === "joined" ? (
                 <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${hasRemoteAudio ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200"}`}>
                   {hasRemoteAudio ? "Audio collegato" : "Audio in arrivo"}
@@ -788,7 +474,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
         <Sparkles className="mx-auto h-7 w-7 text-violet-600" />
         <h3 className="mt-3 text-xl font-bold">Grazie per la conversazione</h3>
         <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Puoi aprire il preventivo completo qui sotto oppure riaprire la consulente se hai ancora una domanda importante.</p>
-        <div className="mx-auto mt-4 w-fit"><BrandStrip /></div>
         <Button onClick={() => void start()} className="mt-5 bg-violet-600 text-white hover:bg-violet-700">Parla di nuovo con la consulente</Button>
       </section>
     )
@@ -803,10 +488,6 @@ export default function LiveSalesAvatar({ token, quotedProjects = [] }: { token:
           </div>
           <h3 className="text-2xl font-black tracking-tight sm:text-3xl">Parla adesso con la consulente 4BID</h3>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">Una conversazione vera, in tempo reale: chiedi chiarimenti, confronta le opzioni e approfondisci i moduli del tuo preventivo. Dopo il click il collegamento parte direttamente.</p>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Ecosistema 4BID</p>
-            <BrandStrip />
-          </div>
           {error ? <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">{error}</p> : null}
         </div>
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
