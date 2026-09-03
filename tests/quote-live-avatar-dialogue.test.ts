@@ -20,11 +20,28 @@ test("quote description is introduced as the creator's personal message", () => 
   assert.match(route, /ha preparato questa proposta/)
 })
 
-test("silence goodbye and spoken final farewell both close the Daily Tavus room", () => {
-  assert.match(client, /INACTIVITY_TIMEOUT_MS = 10_000/)
-  assert.match(client, /conversation\.utterance/)
+test("unclear speech asks the customer to repeat instead of guessing", () => {
+  assert.match(route, /INPUT NON COMPRESO/)
+  assert.match(route, /NON inventare e NON restare in silenzio/)
+  assert.match(route, /non ho capito bene/i)
+})
+
+test("silence reprompts twice before the inactivity goodbye", () => {
+  assert.match(client, /FIRST_REPROMPT_TIMEOUT_MS = 7_000/)
+  assert.match(client, /SECOND_REPROMPT_TIMEOUT_MS = 10_000/)
+  assert.match(client, /RESPONSE_REPROMPT_TIMEOUT_MS = 6_000/)
+  assert.match(client, /FINAL_SILENCE_TIMEOUT_MS = 15_000/)
+  assert.match(client, /Mi scusi, forse non ho sentito bene\. Può ripetermelo\?/)
+  assert.match(client, /Mi sente\? Se vuole, può ripetere con calma/)
+  assert.match(client, /let silenceRepromptCount = 0/)
+  assert.match(client, /promptForRepeat/)
+  assert.match(client, /armInactivityTimer\(RESPONSE_REPROMPT_TIMEOUT_MS\)/)
+  assert.match(client, /conversation\.echo/)
   assert.match(client, /arrivederci e buona giornata/i)
-  assert.match(client, /sendAppMessage/)
+})
+
+test("spoken final farewell closes the Daily Tavus room", () => {
+  assert.match(client, /conversation\.utterance/)
   assert.match(client, /activeCall\.leave\(\)/)
   assert.match(client, /activeCall\.destroy\(\)/)
   assert.match(client, /closeAfterReplicaStops/)
