@@ -50,7 +50,7 @@ export default function VirtualQuoteIntro({ token, clientName }: { token: string
         </div>
       </section>
 
-      {liveState?.enabled !== false ? <LiveSalesAvatar token={token} quotedProjects={liveState?.quotedProjects || []} /> : null}
+      {liveState?.enabled === true ? <LiveSalesAvatar token={token} quotedProjects={liveState.quotedProjects} /> : null}
       {liveState?.enabled === false ? <InteractiveVideoAssistant token={token} clientName={clientName} /> : null}
       {liveState?.enabled === false ? <QuoteNarration token={token} label="Ascolta il tuo preventivo" /> : null}
     </div>
