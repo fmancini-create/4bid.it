@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import AdminNavigation from "@/components/admin-navigation"
 import { Button } from "@/components/ui/button"
 import BusinessPlanDashboard from "./business-plan-dashboard"
+import BankDossierShareButton from "./bank-dossier-share-button"
 
 const SUPER_ADMIN_EMAIL = "f.mancini@4bid.it"
 
@@ -39,14 +40,15 @@ export default async function BusinessPlanPage() {
     console.error("Error fetching business plans:", error)
   }
 
-  const hasBankDossier = (businessPlans || []).some((plan) => plan.project_type === "corporate_saas")
+  const bankDossier = (businessPlans || []).find((plan) => plan.project_type === "corporate_saas")
 
   return (
     <div className="min-h-screen bg-background">
       <AdminNavigation userEmail={user.email || ""} />
       <div className="lg:ml-64 pt-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
-        {hasBankDossier && (
-          <div className="container mx-auto px-4 sm:px-8 pb-2 flex justify-end">
+        {bankDossier && (
+          <div className="container mx-auto px-4 sm:px-8 pb-2 flex flex-wrap justify-end gap-2">
+            <BankDossierShareButton planId={bankDossier.id} />
             <Button asChild variant="outline">
               <a href="/api/business-plan/admin-preview" target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4 mr-2" />
