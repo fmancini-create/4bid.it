@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import DossierAvatarSpotlight from "./dossier-avatar-spotlight"
 import DossierLiveAvatar from "./dossier-live-avatar"
 
 function corporateDossierIsUnlocked() {
@@ -49,10 +48,5 @@ export default function DossierAvatarGate({ token }: { token: string }) {
 
   if (!unlocked) return null
 
-  return (
-    <>
-      <DossierAvatarSpotlight token={token} />
-      <DossierLiveAvatar token={token} />
-    </>
-  )
+  return <DossierLiveAvatar token={token} />
 }
