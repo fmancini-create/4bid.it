@@ -5,6 +5,7 @@ import { getAuditProject } from "@/lib/control-center/projects"
 import { analyzeProject } from "@/lib/control-center/analyzer"
 import { saveAuditResult } from "@/lib/control-center/storage"
 import { dependencyFingerprint, isAiPathAllowedForCode, parseAiMeta } from "@/lib/control-center/ai-meta"
+import { verifyAiMetaSignature } from "@/lib/control-center/ai-signature"
 
 export const maxDuration = 300
 
@@ -231,8 +232,8 @@ export async function POST(request: Request) {
       }
     } else {
       aiMeta = parseAiMeta(pr.body)
-      if (!aiMeta || aiMeta.project !== project.slug) {
-        return NextResponse.json({ error: "Merge AI bloccato: metadati di sicurezza mancanti o non validi." }, { status: 409 })
+      if (!aiMeta || aiMeta.project !== project.slug || !verifyAiMetaSignature(aiMeta)) {
+        return NextResponse.json({ error: "Merge AI bloccato: manifest di sicurezza mancante, alterato o non valido." }, { status: 409 })
       }
       if (aiMeta.files.length > 12 || files.length > 12) {
         return NextResponse.json({ error: "Merge AI bloccato: la PR supera il limite di 12 file." }, { status: 409 })
