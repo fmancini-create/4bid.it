@@ -6,8 +6,13 @@ import { ArrowRight, Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
-const INACTIVITY_TIMEOUT_MS = 10_000
+const FIRST_REPROMPT_TIMEOUT_MS = 7_000
+const SECOND_REPROMPT_TIMEOUT_MS = 10_000
+const RESPONSE_REPROMPT_TIMEOUT_MS = 6_000
+const FINAL_SILENCE_TIMEOUT_MS = 15_000
 const GOODBYE_FALLBACK_MS = 6_000
+const FIRST_REPROMPT = "Mi scusi, forse non ho sentito bene. Può ripetermelo?"
+const SECOND_REPROMPT = "Mi sente? Se vuole, può ripetere con calma o farmi la domanda in un altro modo."
 const INACTIVITY_GOODBYE = "Non la trattengo oltre. Grazie per il tempo che mi ha dedicato. Arrivederci e buona giornata."
 const FINAL_FAREWELL = "arrivederci e buona giornata"
 
@@ -261,6 +266,7 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
     let closingForInactivity = false
     let closeAfterReplicaStops = false
     let replicaSpeaking = false
+    let silenceRepromptCount = 0
 
     const clearInactivityTimer = () => {
       if (!inactivityTimer) return
@@ -300,6 +306,20 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       if (!cancelled) setStatus("ended")
     }
 
+    const echoToCustomer = (text: string) => {
+      if (!call) throw new Error("Call non disponibile")
+      call.sendAppMessage({
+        message_type: "conversation",
+        event_type: "conversation.echo",
+        conversation_id: session.conversationId,
+        properties: {
+          modality: "text",
+          text,
+          done: true,
+        },
+      }, "*")
+    }
+
     const sayGoodbyeAndClose = () => {
       if (!call || closingForInactivity || cancelled) return
       closingForInactivity = true
@@ -307,16 +327,7 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       clearInactivityTimer()
 
       try {
-        call.sendAppMessage({
-          message_type: "conversation",
-          event_type: "conversation.echo",
-          conversation_id: session.conversationId,
-          properties: {
-            modality: "text",
-            text: INACTIVITY_GOODBYE,
-            done: true,
-          },
-        }, "*")
+        echoToCustomer(INACTIVITY_GOODBYE)
       } catch {
         void finishCall()
         return
@@ -327,10 +338,36 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       }, GOODBYE_FALLBACK_MS)
     }
 
-    const armInactivityTimer = () => {
+    const promptForRepeat = () => {
+      if (!call || closingForInactivity || closeAfterReplicaStops || cancelled) return
+      clearInactivityTimer()
+
+      if (silenceRepromptCount >= 2) {
+        sayGoodbyeAndClose()
+        return
+      }
+
+      const message = silenceRepromptCount === 0 ? FIRST_REPROMPT : SECOND_REPROMPT
+      silenceRepromptCount += 1
+      try {
+        echoToCustomer(message)
+      } catch {
+        void finishCall()
+      }
+    }
+
+    const armInactivityTimer = (overrideDelay?: number) => {
       if (closingForInactivity || closeAfterReplicaStops || cancelled) return
       clearInactivityTimer()
-      inactivityTimer = setTimeout(sayGoodbyeAndClose, INACTIVITY_TIMEOUT_MS)
+
+      const timeout = overrideDelay
+        ?? (silenceRepromptCount === 0
+          ? FIRST_REPROMPT_TIMEOUT_MS
+          : silenceRepromptCount === 1
+            ? SECOND_REPROMPT_TIMEOUT_MS
+            : FINAL_SILENCE_TIMEOUT_MS)
+      const action = silenceRepromptCount >= 2 ? sayGoodbyeAndClose : promptForRepeat
+      inactivityTimer = setTimeout(action, timeout)
     }
 
     const handleAppMessage = (event: DailyEvent) => {
@@ -340,6 +377,12 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       if (message.event_type === "conversation.utterance") {
         const role = message.properties?.role
         const speech = message.properties?.speech
+
+        if (role === "user") {
+          silenceRepromptCount = 0
+          armInactivityTimer(RESPONSE_REPROMPT_TIMEOUT_MS)
+        }
+
         if ((role === "replica" || role === "pal") && isFinalFarewell(speech)) {
           closeAfterReplicaStops = true
           clearInactivityTimer()
@@ -354,7 +397,13 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
 
       if (speaking.phase === "started") {
         clearInactivityTimer()
+        if (speaking.role === "user") silenceRepromptCount = 0
         if (speaking.role === "replica" || speaking.role === "pal") replicaSpeaking = true
+        return
+      }
+
+      if (speaking.role === "user") {
+        armInactivityTimer(RESPONSE_REPROMPT_TIMEOUT_MS)
         return
       }
 
