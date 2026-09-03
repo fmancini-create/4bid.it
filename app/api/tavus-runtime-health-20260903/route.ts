@@ -20,6 +20,12 @@ async function getJson(url: string, apiKey: string) {
   return { status: response.status, body: await response.json().catch(() => null) }
 }
 
+function speedFrom(settings: unknown) {
+  if (!settings || typeof settings !== "object") return null
+  const value = (settings as Record<string, unknown>).speed
+  return typeof value === "number" || typeof value === "string" ? value : null
+}
+
 export async function GET() {
   const apiKey = process.env.TAVUS_API_KEY || ""
   const agentId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID || ""
@@ -70,13 +76,13 @@ export async function GET() {
       status: pal.status,
       tts_engine: palTts?.tts_engine || null,
       tts_model_name: palTts?.tts_model_name || null,
-      voice_settings: palTts?.voice_settings || null,
+      speed: speedFrom(palTts?.voice_settings),
     },
     persona: {
       status: persona.status,
       tts_engine: personaTts?.tts_engine || null,
       tts_model_name: personaTts?.tts_model_name || null,
-      voice_settings: personaTts?.voice_settings || null,
+      speed: speedFrom(personaTts?.voice_settings),
     },
     latestConversation: convo ? {
       lookup_status: conversation.status,
