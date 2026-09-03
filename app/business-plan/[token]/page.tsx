@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server-admin"
 import SecureSharedBusinessPlanView from "./secure-shared-view"
 import CorporateSharedBusinessPlanView from "./corporate-shared-view"
 import DossierLiveAvatar from "./dossier-live-avatar"
+import DossierAvatarSpotlight from "./dossier-avatar-spotlight"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
@@ -50,6 +51,7 @@ export default async function SharedBusinessPlanPage({ params }: { params: Promi
   if (planMeta?.project_type === "corporate_saas") {
     return (
       <>
+        <DossierAvatarSpotlight token={token} />
         <CorporateSharedBusinessPlanView share={normalizedShare} token={token} />
         <DossierLiveAvatar token={token} />
       </>
