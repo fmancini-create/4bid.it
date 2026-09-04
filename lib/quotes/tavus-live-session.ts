@@ -50,26 +50,81 @@ function transcriptArray(payload: any): any[] {
   return []
 }
 
-export function normalizeTavusTranscript(payload: any): TranscriptMessage[] {
-  return transcriptArray(payload)
-    .map((entry: any) => {
-      const rawRole = String(entry?.role || entry?.speaker || entry?.sender || "").toLowerCase()
-      if (["system", "tool", "developer"].includes(rawRole)) return null
+function transcriptEntry(entry: any): TranscriptMessage | null {
+  const rawRole = String(entry?.role || entry?.speaker || entry?.sender || "").toLowerCase()
+  if (["system", "tool", "developer"].includes(rawRole)) return null
 
-      const role: "user" | "assistant" = ["assistant", "replica", "pal", "ai", "agent"].includes(rawRole)
-        ? "assistant"
-        : "user"
-      const rawContent = String(entry?.content ?? entry?.text ?? entry?.message ?? "").trim()
-      const content = role === "user" ? cleanUserSpeech(rawContent) : rawContent
-      if (!content) return null
+  const role: "user" | "assistant" = ["assistant", "replica", "pal", "ai", "agent"].includes(rawRole)
+    ? "assistant"
+    : "user"
+  const rawContent = String(entry?.content ?? entry?.text ?? entry?.message ?? entry?.speech ?? "").trim()
+  const content = role === "user" ? cleanUserSpeech(rawContent) : rawContent
+  if (!content) return null
 
-      return {
-        role,
-        content,
-        createdAt: isoFromTimestamp(entry?.timestamp || entry?.created_at || entry?.createdAt),
-      }
-    })
+  return {
+    role,
+    content,
+    createdAt: isoFromTimestamp(entry?.timestamp || entry?.created_at || entry?.createdAt),
+  }
+}
+
+function utteranceEntries(payload: any): TranscriptMessage[] {
+  const candidates = [
+    ...(String(payload?.event_type || "") === "conversation.utterance" ? [payload] : []),
+    ...(Array.isArray(payload?.events)
+      ? payload.events.filter((event: any) => String(event?.event_type || "") === "conversation.utterance")
+      : []),
+  ]
+
+  return candidates
+    .map((event: any) =>
+      transcriptEntry({
+        role: event?.properties?.role,
+        speech: event?.properties?.speech,
+        timestamp: event?.timestamp,
+      }),
+    )
     .filter(Boolean) as TranscriptMessage[]
+}
+
+export function normalizeTavusTranscript(payload: any): TranscriptMessage[] {
+  const finalTranscript = transcriptArray(payload)
+    .map((entry: any) => transcriptEntry(entry))
+    .filter(Boolean) as TranscriptMessage[]
+
+  if (finalTranscript.length) return finalTranscript
+  return utteranceEntries(payload)
+}
+
+function existingTranscript(value: unknown): TranscriptMessage[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((entry) => transcriptEntry(entry))
+    .filter(Boolean) as TranscriptMessage[]
+}
+
+function mergeTranscripts(current: TranscriptMessage[], incoming: TranscriptMessage[]) {
+  const merged = [...current]
+
+  for (const next of incoming) {
+    const nextTime = new Date(next.createdAt).getTime()
+    const similarIndex = merged.findIndex((item) => {
+      if (item.role !== next.role) return false
+      const itemTime = new Date(item.createdAt).getTime()
+      const closeInTime = Number.isFinite(itemTime) && Number.isFinite(nextTime) && Math.abs(itemTime - nextTime) <= 2500
+      const sameText = item.content === next.content
+      const sameUtterance = item.content.startsWith(next.content) || next.content.startsWith(item.content)
+      return sameText || (closeInTime && sameUtterance)
+    })
+
+    if (similarIndex >= 0) {
+      if (next.content.length > merged[similarIndex].content.length) merged[similarIndex] = next
+      continue
+    }
+    merged.push(next)
+  }
+
+  return merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 }
 
 export function tavusConversationId(payload: any) {
@@ -105,7 +160,12 @@ function isEndedPayload(payload: any) {
   )
 }
 
-async function syncTranscriptToChat(supabase: any, session: LiveSessionRow, transcript: TranscriptMessage[]) {
+async function syncTranscriptToChat(
+  supabase: any,
+  session: LiveSessionRow,
+  transcript: TranscriptMessage[],
+  ended: boolean,
+) {
   if (!session.chat_conversation_id || !transcript.length) return
 
   const conversationId = session.chat_conversation_id
@@ -122,14 +182,15 @@ async function syncTranscriptToChat(supabase: any, session: LiveSessionRow, tran
   )
   if (insertError) console.error("[tavus-transcript] chat insert error", insertError)
 
-  await supabase
-    .from("chat_conversations")
-    .update({
-      status: "closed",
-      message_count: transcript.length,
-      last_message_at: transcript[transcript.length - 1]?.createdAt || new Date().toISOString(),
-    })
-    .eq("id", conversationId)
+  const conversationUpdate: Record<string, unknown> = {
+    message_count: transcript.length,
+    last_message_at: transcript[transcript.length - 1]?.createdAt || new Date().toISOString(),
+  }
+  if (ended) conversationUpdate.status = "closed"
+
+  await supabase.from("chat_conversations").update(conversationUpdate).eq("id", conversationId)
+
+  if (!ended) return
 
   try {
     await saveQuoteSalesIntelligence(
@@ -153,7 +214,8 @@ async function syncTranscriptToChat(supabase: any, session: LiveSessionRow, tran
 export async function persistTavusSessionPayload(supabase: any, session: LiveSessionRow, payload: any) {
   const now = new Date().toISOString()
   const eventType = tavusEventType(payload) || "conversation.reconciled"
-  const transcript = normalizeTavusTranscript(payload)
+  const incomingTranscript = normalizeTavusTranscript(payload)
+  const transcript = mergeTranscripts(existingTranscript(session.transcript), incomingTranscript)
   const ended = isEndedPayload(payload)
   const shutdownReason = tavusShutdownReason(payload)
   const currentMetadata = session.metadata && typeof session.metadata === "object" ? session.metadata : {}
@@ -177,7 +239,7 @@ export async function persistTavusSessionPayload(supabase: any, session: LiveSes
   const { error } = await supabase.from("quote_live_sales_sessions").update(update).eq("id", session.id)
   if (error) throw error
 
-  if (transcript.length) await syncTranscriptToChat(supabase, session, transcript)
+  if (transcript.length) await syncTranscriptToChat(supabase, session, transcript, ended)
   else if (ended && session.chat_conversation_id) {
     await supabase
       .from("chat_conversations")
