@@ -38,6 +38,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   )
 
+  // Solo URL canonici: le varianti consolidate via 301 non devono comparire
+  // nella sitemap, altrimenti invieremmo a Google segnali contraddittori.
   const landingPages = [
     "consulenza-revenue-management-hotel",
     "software-revenue-management-santaddeo",
@@ -48,8 +50,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "gestione-canali-distribuzione-hotel",
     "yield-management-hotel",
     "analisi-competitiva-hotel-firenze",
-    "strategie-prenotazioni-dirette-hotel",
-    "strategie-vendita-diretta-hotel",
     "formazione-revenue-management-hotel",
     "revenue-management-resort-lusso",
     "kpi-metriche-hotel",
@@ -59,11 +59,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "revenue-management-boutique-hotel",
     "ottimizzazione-ota-hotel",
     "revenue-management-catene-hotel",
-    "adr-hotel-come-aumentarlo",
     "preventivi-progetti-personalizzati-hotel",
     "prenotazioni-dirette-hotel",
     "consulenza-personalizzata-hotel",
-    "kpi-hotel-revenue-management",
     "strategie-pricing-hotel",
     "revenue-manager-hotel-toscana",
     "webmarketing-hotel-prenotazioni",
