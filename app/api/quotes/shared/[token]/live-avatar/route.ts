@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "crypto"
 import { NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server-admin"
 import { buildQuoteChatContext, type QuoteChatContext } from "@/lib/quotes/chat-context"
@@ -25,6 +26,10 @@ function rateLimited(key: string) {
   recent.push(now)
   sessionWindows.set(key, recent)
   return recent.length > REQUESTS_PER_MINUTE
+}
+
+function hashSecret(value: string) {
+  return createHash("sha256").update(value).digest("hex")
 }
 
 function buildGreeting() {
@@ -91,10 +96,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .single()
     if (chatError || !chat?.id) throw chatError || new Error("Impossibile creare la conversazione")
 
-    const callbackSecret = process.env.TAVUS_WEBHOOK_SECRET || ""
-    const callbackUrl = callbackSecret
-      ? `${request.nextUrl.origin}/api/integrations/tavus/quote-callback?secret=${encodeURIComponent(callbackSecret)}`
-      : undefined
+    const globalCallbackSecret = process.env.TAVUS_WEBHOOK_SECRET?.trim() || ""
+    const callbackSecret = globalCallbackSecret || randomBytes(24).toString("hex")
+    const callbackSecretHash = globalCallbackSecret ? null : hashSecret(callbackSecret)
+    const callbackUrl = `${request.nextUrl.origin}/api/integrations/tavus/quote-callback?secret=${encodeURIComponent(callbackSecret)}`
 
     const palId = process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID!
     const faceId = process.env.TAVUS_FACE_ID || process.env.TAVUS_REPLICA_ID!
@@ -114,7 +119,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         participant_left_timeout: 0,
         participant_absent_timeout: 120,
       },
-      ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+      callback_url: callbackUrl,
       ...(usesPalNaming ? { pal_id: palId, face_id: faceId } : { persona_id: palId, replica_id: faceId }),
     }
 
@@ -156,10 +161,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         creator_name: quoteContext.creatorName,
         creator_last_name: quoteContext.creatorLastName,
         has_personal_note: Boolean(quoteContext.description),
-        first_reprompt_seconds: 7,
-        second_reprompt_seconds: 10,
-        final_silence_seconds: 15,
+        first_reprompt_seconds: 18,
+        second_reprompt_seconds: 25,
+        final_silence_seconds: 45,
         quote_persona_override: true,
+        callback_mode: globalCallbackSecret ? "global" : "per_session",
+        ...(callbackSecretHash ? { callback_secret_hash: callbackSecretHash } : {}),
       },
     })
     if (sessionError) console.error("[live-avatar] session persistence error", sessionError)
