@@ -7,6 +7,7 @@ export const maxDuration = 30
 
 const sessionWindows = new Map<string, number[]>()
 const REQUESTS_PER_MINUTE = 3
+let palNoiseGuardPromise: Promise<void> | null = null
 
 interface DossierProduct {
   name?: string
@@ -40,6 +41,12 @@ interface DossierData {
   exit?: string
 }
 
+type UnknownRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
 function bankFaceId() {
   return process.env.TAVUS_FACE_BANK_ID || ""
 }
@@ -53,6 +60,83 @@ function configured() {
       (process.env.TAVUS_PAL_ID || process.env.TAVUS_PERSONA_ID) &&
       bankFaceId(),
   )
+}
+
+async function configureBankPalNoiseGuard() {
+  const palId = process.env.TAVUS_PAL_ID
+  const apiKey = process.env.TAVUS_API_KEY
+  if (!palId || !apiKey) return
+
+  // Tavus recommends voice_isolation="near" when the PAL reacts to background
+  // sounds. We also make turn-taking patient and disable autonomous idle chatter.
+  const palResponse = await fetch(`https://tavusapi.com/v2/pals/${encodeURIComponent(palId)}?source=draft`, {
+    headers: { "x-api-key": apiKey },
+    cache: "no-store",
+  })
+
+  if (!palResponse.ok) {
+    console.warn("[dossier-live-avatar] unable to inspect Tavus PAL noise settings", palResponse.status)
+    return
+  }
+
+  const pal = (await palResponse.json().catch(() => ({}))) as UnknownRecord
+
+  // Never wipe or auto-publish edits someone is still making in PAL Maker.
+  if (pal.is_draft_view === true && pal.has_unpublished_changes === true) {
+    console.warn("[dossier-live-avatar] Tavus PAL has unpublished draft changes; automatic noise guard skipped")
+    return
+  }
+
+  const layers = isRecord(pal.layers) ? pal.layers : {}
+  const existingFlow = isRecord(layers.conversational_flow) ? layers.conversational_flow : {}
+  const nextFlow: UnknownRecord = {
+    ...existingFlow,
+    turn_detection_model: "sparrow-1",
+    turn_taking_patience: "high",
+    voice_isolation: "near",
+    idle_engagement: "off",
+  }
+
+  if (
+    existingFlow.turn_detection_model === nextFlow.turn_detection_model &&
+    existingFlow.turn_taking_patience === nextFlow.turn_taking_patience &&
+    existingFlow.voice_isolation === nextFlow.voice_isolation &&
+    existingFlow.idle_engagement === nextFlow.idle_engagement
+  ) {
+    return
+  }
+
+  const operation = Object.prototype.hasOwnProperty.call(layers, "conversational_flow")
+    ? { op: "replace", path: "/layers/conversational_flow", value: nextFlow }
+    : Object.keys(layers).length
+      ? { op: "add", path: "/layers/conversational_flow", value: nextFlow }
+      : { op: "add", path: "/layers", value: { conversational_flow: nextFlow } }
+
+  const patchResponse = await fetch(`https://tavusapi.com/v2/pals/${encodeURIComponent(palId)}?target=live`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify([operation]),
+    cache: "no-store",
+  })
+
+  if (!patchResponse.ok && patchResponse.status !== 304) {
+    const payload = await patchResponse.json().catch(() => ({}))
+    console.warn("[dossier-live-avatar] Tavus PAL noise guard patch failed", patchResponse.status, payload)
+  }
+}
+
+async function ensureBankPalNoiseGuard() {
+  if (!process.env.TAVUS_PAL_ID) return
+  if (!palNoiseGuardPromise) {
+    palNoiseGuardPromise = configureBankPalNoiseGuard().catch((error) => {
+      palNoiseGuardPromise = null
+      console.warn("[dossier-live-avatar] Tavus PAL noise guard failed", error)
+    })
+  }
+  await palNoiseGuardPromise
 }
 
 function rateLimited(key: string) {
@@ -203,6 +287,7 @@ ${dossier.exit || "L'exit è un'opzione strategica e non una condizione necessar
 - Se un dato non è nel dossier, dillo chiaramente.
 - Fai una domanda alla volta e lascia spazio all'interlocutore. Se viene interrotta, segui subito il nuovo punto.
 - Non riempire i silenzi: dopo una tua risposta attendi sempre un nuovo intervento dell'interlocutore. Non riaprire spontaneamente argomenti e non fare follow-up solo perché l'utente tace.
+- I rumori di fondo, colpi, fruscii, respiri, sillabe isolate o frammenti senza una frase intelligibile NON sono domande. In questi casi resta in silenzio: non dire "scusa", "non ho capito" o formule simili. Rispondi soltanto quando l'interlocutore ha pronunciato parole comprensibili con un intento conversazionale chiaro.
 - Se l'interlocutore dice ciao, arrivederci, a presto, buona giornata, buona serata, "possiamo chiudere", "chiudiamo qui" o un equivalente inequivocabile, rispondi con UN solo saluto breve e conclusivo. Non fare domande, non introdurre nuovi temi e non continuare a parlare dopo il saluto.
 - Le eventuali battute personali contenute nel saluto iniziale vanno pronunciate una sola volta e non vanno ripetute spontaneamente durante la conversazione.
 - Puoi offrire tre percorsi: sintesi in 60-90 secondi, presentazione portafoglio, oppure Q&A libero sul dossier.
@@ -278,6 +363,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const openingMessage = buildGreeting(session.visitorName)
     const callbackUrl = new URL("/api/business-plan/tavus-callback", request.url).toString()
 
+    await ensureBankPalNoiseGuard()
+
     const tavusBody: Record<string, unknown> = {
       conversation_name: `4BID Dossier - ${session.visitorCompany || session.visitorName || "Visitatore"}`.slice(0, 120),
       conversational_context: buildDossierContext(plan, session),
@@ -331,6 +418,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         mode: "realtime_video",
         scope: "corporate_dossier",
         face_scope: "bank",
+        noise_policy: "voice_isolation_near_patient",
         user_agent: request.headers.get("user-agent"),
       },
     })
