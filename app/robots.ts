@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { PRIVATE_AREA_PREFIXES } from "@/lib/is-private-area"
 
 // User-agent AI esplicitamente ammessi (GEO / AI discovery).
 // OAI-SearchBot e' il crawler di OpenAI usato per la discovery in ChatGPT
@@ -14,6 +15,13 @@ const AI_CRAWLERS = [
   "Bytespider",
 ]
 
+// IMPORTANT: use the exact same source of truth used by GA/GTM/Yandex.
+// If a route is private for analytics it must also be private for crawlers;
+// otherwise Google Tag Coverage can discover that URL from public navigation,
+// crawl it, and correctly report it as "without tag" even though we deliberately
+// never initialise marketing analytics there.
+const PRIVATE_CRAWL_PATHS = [...PRIVATE_AREA_PREFIXES]
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -21,25 +29,22 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         // CSS and JS must stay crawlable. Both Google and Bing render pages
         // before ranking them, so blocking stylesheets and scripts leaves every
-        // engine except Googlebot (which had its own allow-rule below) looking
-        // at an unstyled, non-hydrated page. The previous rule disallowed
-        // "/*.js$" and "/*.css$" for "*", which is exactly the configuration
-        // Google's own guidance warns against.
+        // engine except Googlebot looking at an unstyled, non-hydrated page.
+        // Private application areas are excluded at the route-prefix level.
         allow: ["/", "/llms.txt"],
-        disallow: ["/admin/", "/api/", "/scripts/", "/*.json$"],
+        disallow: [...PRIVATE_CRAWL_PATHS, "/api/", "/scripts/", "/*.json$"],
       },
       {
         userAgent: "Googlebot",
         allow: "/",
-        // "/_next/static/" and "/_next/image" used to be disallowed here too,
-        // which blocked Googlebot from the very chunks and optimised images it
-        // needs to render the page. Only genuinely private paths stay blocked.
-        disallow: ["/admin/", "/api/"],
+        // Keep public Next.js assets crawlable; block the same private route
+        // prefixes that are excluded from public analytics.
+        disallow: [...PRIVATE_CRAWL_PATHS, "/api/"],
       },
       ...AI_CRAWLERS.map((userAgent) => ({
         userAgent,
         allow: ["/", "/llms.txt"],
-        disallow: ["/admin/", "/api/"],
+        disallow: [...PRIVATE_CRAWL_PATHS, "/api/"],
       })),
     ],
     sitemap: "https://www.4bid.it/sitemap.xml",
