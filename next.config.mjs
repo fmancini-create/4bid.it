@@ -115,6 +115,29 @@ const nextConfig = {
         destination: '/yield-management-hotel',
         permanent: true, // 301
       },
+      // Direct-booking pages targeted the same search intent. Keep one strong URL.
+      {
+        source: '/strategie-prenotazioni-dirette-hotel',
+        destination: '/prenotazioni-dirette-hotel',
+        permanent: true, // 301
+      },
+      {
+        source: '/strategie-vendita-diretta-hotel',
+        destination: '/prenotazioni-dirette-hotel',
+        permanent: true, // 301
+      },
+      // ADR pages overlapped on the same informational/commercial intent.
+      {
+        source: '/adr-hotel-come-aumentarlo',
+        destination: '/ottimizzazione-adr-hotel',
+        permanent: true, // 301
+      },
+      // KPI pages competed for the same hotel/revenue KPI queries.
+      {
+        source: '/kpi-hotel-revenue-management',
+        destination: '/kpi-metriche-hotel',
+        permanent: true, // 301
+      },
     ]
   },
 }
