@@ -76,14 +76,14 @@ export const SOLUTIONS: Solution[] = [
   // Software & Tecnologia
   {
     slug: "software-revenue-management-santaddeo",
-    title: "Santaddeo: Software Revenue",
-    short: "Il nostro software AI per il pricing automatico.",
+    title: "SANTADDEO RMS",
+    short: "Pagina prodotto del nostro RMS con AI spiegabile e pricing automatico.",
     cluster: "Software & Tecnologia",
   },
   {
     slug: "software-revenue-management-hotel",
     title: "Software Revenue Management",
-    short: "Tecnologia per automatizzare prezzi e distribuzione.",
+    short: "Panoramica delle funzioni RMS per automatizzare pricing, forecast e distribuzione.",
     cluster: "Software & Tecnologia",
   },
 
@@ -109,13 +109,7 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: "ottimizzazione-adr-hotel",
     title: "Ottimizzazione ADR",
-    short: "Aumenta la tariffa media giornaliera.",
-    cluster: "Pricing & Tariffe",
-  },
-  {
-    slug: "adr-hotel-come-aumentarlo",
-    title: "Come Aumentare l'ADR",
-    short: "Tecniche pratiche per alzare l'ADR.",
+    short: "Guida operativa per aumentare la tariffa media giornaliera.",
     cluster: "Pricing & Tariffe",
   },
   {
@@ -143,25 +137,13 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: "prenotazioni-dirette-hotel",
     title: "Prenotazioni Dirette",
-    short: "Riduci le commissioni aumentando il diretto.",
-    cluster: "Prenotazioni Dirette",
-  },
-  {
-    slug: "strategie-prenotazioni-dirette-hotel",
-    title: "Strategie Prenotazioni Dirette",
-    short: "Un piano per spostare volume sul tuo sito.",
-    cluster: "Prenotazioni Dirette",
-  },
-  {
-    slug: "strategie-vendita-diretta-hotel",
-    title: "Strategie di Vendita Diretta",
-    short: "Vendi di più senza intermediari.",
+    short: "Pagina principale per aumentare il diretto e ridurre le commissioni OTA.",
     cluster: "Prenotazioni Dirette",
   },
   {
     slug: "webmarketing-hotel-prenotazioni",
     title: "Web Marketing per Prenotazioni",
-    short: "Campagne e funnel per il canale diretto.",
+    short: "Campagne e funnel per portare domanda qualificata sul canale diretto.",
     cluster: "Prenotazioni Dirette",
   },
 
@@ -201,13 +183,7 @@ export const SOLUTIONS: Solution[] = [
   {
     slug: "kpi-metriche-hotel",
     title: "KPI e Metriche Hotel",
-    short: "Le metriche che contano per decidere.",
-    cluster: "KPI, Analisi & Formazione",
-  },
-  {
-    slug: "kpi-hotel-revenue-management",
-    title: "KPI del Revenue Management",
-    short: "Misura le performance con i giusti indicatori.",
+    short: "Guida unica a RevPAR, ADR, occupazione, TRevPAR, RGI e pickup.",
     cluster: "KPI, Analisi & Formazione",
   },
   {
