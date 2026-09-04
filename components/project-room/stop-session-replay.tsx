@@ -9,27 +9,44 @@ declare global {
 }
 
 /**
- * Closes the last gap in keeping session replay out of the document room.
+ * Chiude il gap delle navigazioni client-side verso aree private.
  *
- * The scripts in the root layout already refuse to initialise Yandex Metrika
- * (which runs with `webvisor: true`, i.e. DOM session replay) when the initial
- * document is a reserved-area URL. That guard runs once per document load, so it
- * does NOT help when the visitor was on a public page - where the recorder did
- * start - and then reached the reserved area through a client-side navigation.
- * In that case the recorder is already live and would capture confidential
- * document contents.
- *
- * Metrika exposes no reliable way to stop an active webvisor recording, so the
- * only dependable remedy is to reload the page as a fresh document: the head
- * guard then sees a reserved-area path and never starts the recorder. A
- * sessionStorage marker makes this happen at most once, so a mis-set flag can
- * never turn into a reload loop.
+ * Il root layout evita di caricare analytics quando il documento nasce gia' su
+ * una route privata. Se pero' il browser arriva da una pagina pubblica tramite
+ * Next.js navigation, GA/GTM/Yandex/Vercel possono essere gia' caricati nel
+ * documento corrente. Non esiste un modo affidabile per "disattivare" tutti i
+ * tracker gia' inizializzati, soprattutto Yandex Webvisor: in quel caso la
+ * soluzione sicura e' ricaricare la route privata come documento nuovo.
  */
-const RELOAD_MARKER = "pr-replay-reload"
+const RELOAD_MARKER = "private-analytics-reload"
+
+function hasPublicAnalyticsLoaded(): boolean {
+  if (window.yandexMetrikaLoaded) return true
+
+  return Array.from(document.scripts).some((script) => {
+    const src = script.src || ""
+    return (
+      src.includes("googletagmanager.com/gtm.js") ||
+      src.includes("googletagmanager.com/gtag/js") ||
+      src.includes("mc.yandex.ru/metrika/tag.js") ||
+      src.includes("/_vercel/insights/script") ||
+      src.includes("vercel-scripts.com")
+    )
+  })
+}
 
 export function StopSessionReplay() {
   useEffect(() => {
-    if (!window.yandexMetrikaLoaded) return
+    const analyticsActive = hasPublicAnalyticsLoaded()
+
+    // Dopo il reload pulito della route privata i tracker non esistono piu'.
+    // Rimuoviamo il marker cosi' una futura navigazione public -> private nella
+    // stessa tab potra' essere nuovamente protetta.
+    if (!analyticsActive) {
+      sessionStorage.removeItem(RELOAD_MARKER)
+      return
+    }
+
     if (sessionStorage.getItem(RELOAD_MARKER)) return
 
     sessionStorage.setItem(RELOAD_MARKER, "1")
