@@ -1,10 +1,12 @@
 import { redirect, notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server-admin"
+import { reconcileTavusSession } from "@/lib/quotes/tavus-live-session"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Video } from "lucide-react"
 import Link from "next/link"
 import AdminReplyForm from "@/components/admin-reply-form"
 import { formatDateIT } from "@/lib/date-utils"
@@ -25,8 +27,9 @@ export default async function ConversationDetailPage({ params }: PageProps) {
     redirect("/admin/login")
   }
 
-  // Fetch conversation
-  const { data: conversation, error: convError } = await supabase
+  const admin = createAdminClient()
+
+  let { data: conversation, error: convError } = await admin
     .from("chat_conversations")
     .select("*")
     .eq("id", id)
@@ -36,15 +39,37 @@ export default async function ConversationDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // Fetch messages
-  const { data: messages, error: msgError } = await supabase
+  let { data: messages, error: msgError } = await admin
     .from("chat_messages")
     .select("*")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true })
 
   if (msgError) {
-    console.error("[v0] Error fetching messages:", msgError)
+    console.error("[chat-conversation] Error fetching messages:", msgError)
+  }
+
+  const { data: tavusSession } = await admin
+    .from("quote_live_sales_sessions")
+    .select("id, quote_id, chat_conversation_id, provider_conversation_id, status, transcript, created_at, ended_at, metadata")
+    .eq("provider", "tavus")
+    .eq("chat_conversation_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // I callback Tavus possono mancare o arrivare tardi. Se il provider ha già la
+  // trascrizione, la recuperiamo direttamente qui e la riversiamo in chat_messages.
+  if (tavusSession && (!messages?.length || tavusSession.status !== "ended")) {
+    await reconcileTavusSession(admin, tavusSession)
+
+    const [conversationResult, messagesResult] = await Promise.all([
+      admin.from("chat_conversations").select("*").eq("id", id).single(),
+      admin.from("chat_messages").select("*").eq("conversation_id", id).order("created_at", { ascending: true }),
+    ])
+
+    if (conversationResult.data) conversation = conversationResult.data
+    if (messagesResult.data) messages = messagesResult.data
   }
 
   const allMessages = messages || []
@@ -72,15 +97,19 @@ export default async function ConversationDetailPage({ params }: PageProps) {
           </Button>
         </Link>
 
-        {/* Conversation Info */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-2xl mb-2">{conversation.user_email}</CardTitle>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   {getStatusBadge(conversation.status)}
                   <Badge variant="outline">{conversation.account_type.toUpperCase()}</Badge>
+                  {tavusSession ? (
+                    <Badge variant="outline" className="gap-1 border-violet-200 bg-violet-50 text-violet-700">
+                      <Video className="h-3 w-3" /> Video Tavus
+                    </Badge>
+                  ) : null}
                   <span className="text-sm text-muted-foreground">{conversation.message_count} messaggi</span>
                 </div>
               </div>
@@ -104,15 +133,17 @@ export default async function ConversationDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        {/* Messages */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Cronologia Messaggi</CardTitle>
+            <CardTitle>{tavusSession ? "Trascrizione conversazione video" : "Cronologia Messaggi"}</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[500px] pr-4">
               {allMessages.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nessun messaggio</p>
+                <div className="text-center text-muted-foreground py-8">
+                  <p>{tavusSession ? "La trascrizione non è ancora disponibile da Tavus." : "Nessun messaggio"}</p>
+                  {tavusSession ? <p className="mt-2 text-xs">Ricarica questa pagina dopo la chiusura della videochiamata: la sincronizzazione è automatica.</p> : null}
+                </div>
               ) : (
                 <div className="space-y-4">
                   {allMessages.map((message) => (
@@ -131,15 +162,17 @@ export default async function ConversationDetailPage({ params }: PageProps) {
                                 : "bg-muted text-foreground"
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between mb-1 gap-4">
                           <span className="text-xs font-semibold opacity-80">
                             {message.role === "user"
-                              ? "Utente"
+                              ? "Cliente"
                               : message.role === "admin"
                                 ? "👤 Admin"
                                 : message.role === "system"
                                   ? "🔔 Sistema"
-                                  : "🤖 AI Assistant"}
+                                  : tavusSession
+                                    ? "Anna · AI 4BID"
+                                    : "🤖 AI Assistant"}
                           </span>
                           <span className="text-xs opacity-70">
                             {formatDateIT(message.created_at, { dateStyle: "short", timeStyle: "short" })}
@@ -155,8 +188,7 @@ export default async function ConversationDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        {/* Admin Reply Form */}
-        {conversation.status !== "closed" && (
+        {conversation.status !== "closed" && !tavusSession && (
           <Card>
             <CardHeader>
               <CardTitle>Rispondi come Admin</CardTitle>
