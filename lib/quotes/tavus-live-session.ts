@@ -56,7 +56,7 @@ export function normalizeTavusTranscript(payload: any): TranscriptMessage[] {
       const rawRole = String(entry?.role || entry?.speaker || entry?.sender || "").toLowerCase()
       if (["system", "tool", "developer"].includes(rawRole)) return null
 
-      const role: "user" | "assistant" = ["assistant", "replica", "ai", "agent"].includes(rawRole)
+      const role: "user" | "assistant" = ["assistant", "replica", "pal", "ai", "agent"].includes(rawRole)
         ? "assistant"
         : "user"
       const rawContent = String(entry?.content ?? entry?.text ?? entry?.message ?? "").trim()
