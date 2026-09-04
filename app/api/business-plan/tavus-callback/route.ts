@@ -48,6 +48,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: false, pending: true }, { status: 202 })
   }
 
+  // Tavus can retry the same webhook. Keep one canonical lifecycle event per
+  // conversation so the admin transcript list never shows duplicates.
+  const { data: existingEvent, error: duplicateLookupError } = await supabase
+    .from("business_plan_share_events")
+    .select("id")
+    .eq("event_type", mappedEvent)
+    .eq("metadata->>conversation_id", conversationId)
+    .limit(1)
+    .maybeSingle()
+
+  if (duplicateLookupError) {
+    console.error("[tavus-callback] duplicate lookup failed", duplicateLookupError)
+    return NextResponse.json({ error: "Duplicate lookup failed" }, { status: 500 })
+  }
+
+  if (existingEvent) {
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+
   const properties = body.properties && typeof body.properties === "object" ? body.properties : {}
   const metadata: Record<string, unknown> = {
     conversation_id: conversationId,
