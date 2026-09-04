@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { SonnerToasterProvider } from "@/components/ui/sonner"
 import { CookieConsent } from "@/components/cookie-consent"
@@ -9,6 +8,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
+import { PublicAnalytics } from "@/components/public-analytics"
 import { IS_PRIVATE_AREA_JS } from "@/lib/is-private-area"
 import { Suspense } from "react"
 
@@ -93,14 +93,23 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               }}
             />
 
-            <script async src="https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3" />
+            {/*
+              GA4 viene caricato solo sulle pagine pubbliche. Prima il file
+              gtag.js veniva scaricato anche nelle aree private e veniva evitato
+              soltanto gtag('config'): questo generava comunque una richiesta
+              verso Google da URL che devono restare fuori dagli analytics.
+            */}
             <script
               dangerouslySetInnerHTML={{
-                __html: `window.dataLayer = window.dataLayer || [];
+                __html: `if(!${IS_PRIVATE_AREA_JS}){
+window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
-if(!${IS_PRIVATE_AREA_JS}){
 gtag('js', new Date());
 gtag('config', 'G-S6YEEXE4C3');
+var ga=document.createElement('script');
+ga.async=true;
+ga.src='https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3';
+(document.head||document.documentElement).appendChild(ga);
 }`,
               }}
             />
@@ -197,29 +206,13 @@ gtag('config', 'G-S6YEEXE4C3');
         )}
       </head>
       <body className={`${inter.className} antialiased`}>
-        {isProduction && (
-          <noscript>
-            <iframe
-              src="https://www.googletagmanager.com/ns.html?id=GTM-K8PFZCBS"
-              height="0"
-              width="0"
-              style={{ display: "none", visibility: "hidden" }}
-            />
-          </noscript>
-        )}
-
-        {isProduction && (
-          <noscript>
-            <div>
-              <img
-                src="https://mc.yandex.ru/watch/105859080"
-                style={{ position: "absolute", left: "-9999px" }}
-                alt=""
-              />
-            </div>
-          </noscript>
-        )}
-
+        {/*
+          Nessun fallback analytics <noscript>: il root layout non conosce il
+          pathname lato server. Un fallback globale contatterebbe GTM/Yandex
+          anche su /admin, /area-riservata e /business-plan quando JS e' spento.
+          Meglio perdere il tracking di quel caso marginale che violare il
+          confine delle aree private.
+        */}
         {isProduction && (
           <Suspense fallback={null}>
             <YandexMetrika />
@@ -227,7 +220,7 @@ gtag('config', 'G-S6YEEXE4C3');
         )}
         <ScrollToTop />
         {children}
-        {isProduction && <Analytics />}
+        {isProduction && <PublicAnalytics />}
         <Toaster />
         <SonnerToasterProvider />
         <CookieConsent />
