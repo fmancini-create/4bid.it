@@ -58,9 +58,10 @@ export default async function ConversationDetailPage({ params }: PageProps) {
     .limit(1)
     .maybeSingle()
 
-  // I callback Tavus possono mancare o arrivare tardi. Se il provider ha già la
-  // trascrizione, la recuperiamo direttamente qui e la riversiamo in chat_messages.
-  if (tavusSession && (!messages?.length || tavusSession.status !== "ended")) {
+  // Tavus mantiene il transcript completo sul provider. Lo rileggiamo ogni volta
+  // che apri una video-conversazione: così recuperiamo anche sessioni storiche
+  // che avevano ricevuto un callback parziale o nessun callback.
+  if (tavusSession) {
     await reconcileTavusSession(admin, tavusSession)
 
     const [conversationResult, messagesResult] = await Promise.all([
