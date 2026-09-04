@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { SonnerToasterProvider } from "@/components/ui/sonner"
 import { CookieConsent } from "@/components/cookie-consent"
@@ -9,6 +8,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import AISupportChat from "@/components/ai-support-chat"
 import "./globals.css"
 import { YandexMetrika } from "@/components/yandex-metrika"
+import { PublicAnalytics } from "@/components/public-analytics"
 import { IS_PRIVATE_AREA_JS } from "@/lib/is-private-area"
 import { Suspense } from "react"
 
@@ -220,7 +220,7 @@ ga.src='https://www.googletagmanager.com/gtag/js?id=G-S6YEEXE4C3';
         )}
         <ScrollToTop />
         {children}
-        {isProduction && <Analytics />}
+        {isProduction && <PublicAnalytics />}
         <Toaster />
         <SonnerToasterProvider />
         <CookieConsent />
