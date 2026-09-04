@@ -6,15 +6,15 @@ import { ArrowRight, Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Sparkles
 import { Button } from "@/components/ui/button"
 
 const DAILY_SDK_URL = "https://unpkg.com/@daily-co/daily-js@0.92.2"
-const FIRST_REPROMPT_TIMEOUT_MS = 7_000
-const SECOND_REPROMPT_TIMEOUT_MS = 10_000
-const RESPONSE_REPROMPT_TIMEOUT_MS = 6_000
-const FINAL_SILENCE_TIMEOUT_MS = 15_000
+const FIRST_REPROMPT_TIMEOUT_MS = 18_000
+const SECOND_REPROMPT_TIMEOUT_MS = 25_000
+const FINAL_SILENCE_TIMEOUT_MS = 45_000
 const GOODBYE_FALLBACK_MS = 6_000
-const FIRST_REPROMPT = "Mi scusi, forse non ho sentito bene. Può ripetermelo?"
-const SECOND_REPROMPT = "Mi sente? Se vuole, può ripetere con calma o farmi la domanda in un altro modo."
+const FIRST_REPROMPT = "Prenda pure il suo tempo. Quando vuole, possiamo continuare."
+const SECOND_REPROMPT = "Se vuole, posso approfondire un punto del preventivo oppure lasciarle ancora un momento per leggerlo."
 const INACTIVITY_GOODBYE = "Non la trattengo oltre. Grazie per il tempo che mi ha dedicato. Arrivederci e buona giornata."
 const FINAL_FAREWELL = "arrivederci e buona giornata"
+const FILLER_ONLY = /^(?:e+h+|ehm+|m+h+|mh+m*|uh+m*|ah+|oh+|mm+|h+m+|ok|okay)[.!?,\s]*$/i
 
 type DailyTrackInfo = {
   persistentTrack?: MediaStreamTrack | null
@@ -165,6 +165,16 @@ function isFinalFarewell(speech: string | undefined) {
   return normalized.includes(FINAL_FAREWELL)
 }
 
+function isMeaningfulUserSpeech(speech: string | undefined) {
+  const normalized = String(speech || "")
+    .replace(/[^\p{L}\p{N}\s'’-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!normalized || FILLER_ONLY.test(normalized)) return false
+  const compact = normalized.replace(/\s/g, "")
+  return compact.length >= 3
+}
+
 function friendlyStartError(status: number, rawMessage: string) {
   const message = rawMessage.toLowerCase()
   if (status === 429 || /quota|credit|concurr|limit|busy|occupat/.test(message)) {
@@ -267,6 +277,7 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
     let closeAfterReplicaStops = false
     let replicaSpeaking = false
     let silenceRepromptCount = 0
+    let sensitivityConfigured = false
 
     const clearInactivityTimer = () => {
       if (!inactivityTimer) return
@@ -306,18 +317,34 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       if (!cancelled) setStatus("ended")
     }
 
-    const echoToCustomer = (text: string) => {
+    const sendConversationMessage = (eventType: string, properties: Record<string, unknown>) => {
       if (!call) throw new Error("Call non disponibile")
       call.sendAppMessage({
         message_type: "conversation",
-        event_type: "conversation.echo",
+        event_type: eventType,
         conversation_id: session.conversationId,
-        properties: {
-          modality: "text",
-          text,
-          done: true,
-        },
+        properties,
       }, "*")
+    }
+
+    const echoToCustomer = (text: string) => {
+      sendConversationMessage("conversation.echo", {
+        modality: "text",
+        text,
+        done: true,
+      })
+    }
+
+    const configureNoiseTolerance = () => {
+      if (!call || sensitivityConfigured || cancelled) return
+      try {
+        // Tavus richiede un solo parametro di sensibilità per messaggio.
+        sendConversationMessage("conversation.sensitivity", { participant_interrupt_sensitivity: "low" })
+        sendConversationMessage("conversation.sensitivity", { participant_pause_sensitivity: "low" })
+        sensitivityConfigured = true
+      } catch {
+        // Un participant-updated successivo ritenterà quando il PAL sarà disponibile.
+      }
     }
 
     const sayGoodbyeAndClose = () => {
@@ -338,7 +365,7 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       }, GOODBYE_FALLBACK_MS)
     }
 
-    const promptForRepeat = () => {
+    const promptAfterSilence = () => {
       if (!call || closingForInactivity || closeAfterReplicaStops || cancelled) return
       clearInactivityTimer()
 
@@ -356,17 +383,16 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
       }
     }
 
-    const armInactivityTimer = (overrideDelay?: number) => {
+    const armInactivityTimer = () => {
       if (closingForInactivity || closeAfterReplicaStops || cancelled) return
       clearInactivityTimer()
 
-      const timeout = overrideDelay
-        ?? (silenceRepromptCount === 0
-          ? FIRST_REPROMPT_TIMEOUT_MS
-          : silenceRepromptCount === 1
-            ? SECOND_REPROMPT_TIMEOUT_MS
-            : FINAL_SILENCE_TIMEOUT_MS)
-      const action = silenceRepromptCount >= 2 ? sayGoodbyeAndClose : promptForRepeat
+      const timeout = silenceRepromptCount === 0
+        ? FIRST_REPROMPT_TIMEOUT_MS
+        : silenceRepromptCount === 1
+          ? SECOND_REPROMPT_TIMEOUT_MS
+          : FINAL_SILENCE_TIMEOUT_MS
+      const action = silenceRepromptCount >= 2 ? sayGoodbyeAndClose : promptAfterSilence
       inactivityTimer = setTimeout(action, timeout)
     }
 
@@ -378,9 +404,9 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
         const role = message.properties?.role
         const speech = message.properties?.speech
 
-        if (role === "user") {
+        if (role === "user" && isMeaningfulUserSpeech(speech)) {
           silenceRepromptCount = 0
-          armInactivityTimer(RESPONSE_REPROMPT_TIMEOUT_MS)
+          clearInactivityTimer()
         }
 
         if ((role === "replica" || role === "pal") && isFinalFarewell(speech)) {
@@ -397,15 +423,13 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
 
       if (speaking.phase === "started") {
         clearInactivityTimer()
-        if (speaking.role === "user") silenceRepromptCount = 0
         if (speaking.role === "replica" || speaking.role === "pal") replicaSpeaking = true
         return
       }
 
-      if (speaking.role === "user") {
-        armInactivityTimer(RESPONSE_REPROMPT_TIMEOUT_MS)
-        return
-      }
+      // Un semplice user.stopped_speaking può essere prodotto da un colpo di microfono,
+      // un respiro o una sillaba: non deve mai innescare un "non ho capito".
+      if (speaking.role === "user") return
 
       if (speaking.role === "replica" || speaking.role === "pal") {
         replicaSpeaking = false
@@ -456,8 +480,14 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
             setStatus("joined")
             syncTracks()
           })
-          .on("participant-joined", () => syncTracks())
-          .on("participant-updated", () => syncTracks())
+          .on("participant-joined", (event) => {
+            syncTracks()
+            if (event.participant && !event.participant.local) configureNoiseTolerance()
+          })
+          .on("participant-updated", (event) => {
+            syncTracks()
+            if (event.participant && !event.participant.local) configureNoiseTolerance()
+          })
           .on("track-started", () => syncTracks())
           .on("track-stopped", () => syncTracks())
           .on("app-message", handleAppMessage)
@@ -480,6 +510,8 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
           ...(session.meetingToken ? { token: session.meetingToken } : {}),
         })
         syncTracks()
+        const remoteAlreadyPresent = Object.values(call.participants()).some((participant) => !participant.local)
+        if (remoteAlreadyPresent) configureNoiseTolerance()
       } catch (connectionError) {
         clearInactivityTimer()
         clearGoodbyeFallback()
@@ -621,11 +653,11 @@ export default function LiveSalesAvatar({ token }: { token: string }) {
             alt="4BID"
             width={129}
             height={100}
-            className="pointer-events-none absolute bottom-5 right-4 z-30 h-auto w-14 object-contain drop-shadow-lg sm:right-5 sm:w-20"
+            className="pointer-events-none absolute right-4 top-4 z-30 h-auto w-14 object-contain drop-shadow-lg sm:right-5 sm:top-5 sm:w-20"
           />
 
           {cameraOn ? (
-            <div className="absolute right-4 top-4 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:h-40 sm:w-28">
+            <div className="absolute left-4 top-4 z-30 h-32 w-24 overflow-hidden rounded-2xl border border-white/25 bg-slate-900 shadow-xl sm:h-40 sm:w-28">
               <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full scale-x-[-1] object-cover" aria-label="La tua videocamera" />
             </div>
           ) : <video ref={localVideoRef} autoPlay playsInline muted className="hidden" aria-hidden="true" />}
