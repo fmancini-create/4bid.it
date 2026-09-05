@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next"
 import { getAllPosts } from "@/lib/blog/posts"
 import { getAllCategories, getPublishedGuides, GLOSSARY } from "@/lib/knowledge-base"
+import { PROBLEMS } from "@/lib/problem-solutions"
+import { getProblemSlug } from "@/lib/problem-seo"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://www.4bid.it"
@@ -73,6 +75,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}/${slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.8,
+  }))
+
+  // Cluster long-tail collegato all'hub /problemi-hotel-soluzioni.
+  // Gli slug sono editoriali e stabili in lib/problem-seo.ts, quindi una
+  // modifica futura alla label del problema non cambia l'URL indicizzato.
+  const problemPages = PROBLEMS.map((problem) => ({
+    url: `${baseUrl}/problemi-hotel/${getProblemSlug(problem)}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
   }))
 
   const progetti = [
@@ -192,6 +203,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...blogPosts,
     ...guidePages,
     ...landingPages,
+    ...problemPages,
     ...progetti,
     ...ecomobility,
     ...hubAndEvents,
