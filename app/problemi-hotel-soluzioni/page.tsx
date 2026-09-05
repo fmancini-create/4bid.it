@@ -17,6 +17,7 @@ import {
   getProblemsForSolution,
   getSolutionsForProblem,
 } from "@/lib/problem-solutions"
+import { getProblemSlug } from "@/lib/problem-seo"
 
 const PAGE_URL = "https://www.4bid.it/problemi-hotel-soluzioni"
 const TITLE = "Problemi Hotel: Soluzioni per Revenue, Costi e Gestione | 4BID.IT"
@@ -219,8 +220,9 @@ export default function ProblemiHotelSoluzioniPage() {
             Guida completa ai {PROBLEMS.length} problemi più frequenti nella gestione di un hotel
           </h2>
           <p className="mb-6 max-w-4xl leading-relaxed text-muted-foreground text-pretty">
-            Questa è la versione completa, leggibile anche dai motori di ricerca: i problemi sono raggruppati per tema
-            e ogni voce porta alle soluzioni 4BID pertinenti. Usa il selettore sopra per una ricerca più veloce.
+            Questa è la versione completa, leggibile anche dai motori di ricerca: i problemi sono raggruppati per tema.
+            Ogni problema ha una guida dedicata e rimanda alle soluzioni 4BID pertinenti; usa il selettore sopra per una
+            ricerca più veloce.
           </p>
 
           <nav aria-label="Indice dei problemi" className="mb-10 flex flex-wrap gap-2">
@@ -266,9 +268,21 @@ export default function ProblemiHotelSoluzioniPage() {
                         key={problem.id}
                         className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
                       >
-                        <h4 className="mb-4 text-base font-bold text-card-foreground sm:text-lg text-pretty">
-                          {problem.label}
+                        <h4 className="mb-2 text-base font-bold text-card-foreground sm:text-lg text-pretty">
+                          <Link
+                            href={`/problemi-hotel/${getProblemSlug(problem)}`}
+                            className="transition-colors hover:text-primary-blue hover:underline"
+                          >
+                            {problem.label}
+                          </Link>
                         </h4>
+                        <Link
+                          href={`/problemi-hotel/${getProblemSlug(problem)}`}
+                          className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-primary-blue hover:underline"
+                        >
+                          Leggi la guida completa
+                          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Link>
                         <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                           Come lo affrontiamo
                         </p>
