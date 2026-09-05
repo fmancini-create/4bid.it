@@ -7,22 +7,27 @@ import {
   Check,
   ExternalLink,
   RotateCcw,
+  Search,
   Sparkles,
   Wand2,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { KIND_LABEL, KIND_STYLE, PROBLEMS, SOLUTIONS } from "@/lib/problem-solutions"
+import {
+  KIND_LABEL,
+  KIND_STYLE,
+  PROBLEMS,
+  PROBLEM_CATEGORIES,
+  SOLUTIONS,
+  type ProblemCategoryId,
+} from "@/lib/problem-solutions"
 
 /**
  * Selettore "qual è il tuo problema?" per la Suite turismo.
- * L'albergatore seleziona uno o più problemi reali e la pagina propone
- * le soluzioni 4BID pertinenti (piattaforme, consulenza, progetti su misura),
- * ordinate per numero di problemi risolti. Nessun form: solo rimandi alle
- * pagine soluzione, alla demo e al preventivo su misura.
- *
- * I dati stanno in lib/problem-solutions.ts perché li usa anche la pagina
- * dedicata /problemi-hotel-soluzioni, che ne rende una versione statica
- * leggibile dai motori di ricerca.
+ * Le domande sono divise in macro-aree per evitare una lista infinita;
+ * la ricerca libera attraversa invece tutte le categorie e i sinonimi SEO.
+ * La selezione resta attiva passando da una tab all'altra e le soluzioni
+ * vengono ordinate per numero di problemi selezionati che risolvono.
  */
 
 type Props = {
@@ -38,6 +43,14 @@ type Props = {
   className?: string
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("it")
+    .trim()
+}
+
 export default function ProblemSolutionFinder({
   titleAs = "h4",
   moreHref,
@@ -45,6 +58,8 @@ export default function ProblemSolutionFinder({
   className = "",
 }: Props) {
   const [selected, setSelected] = useState<string[]>([])
+  const [activeCategory, setActiveCategory] = useState<ProblemCategoryId>(PROBLEM_CATEGORIES[0].id)
+  const [query, setQuery] = useState("")
   const resultsRef = useRef<HTMLDivElement>(null)
   const Title = titleAs
   const ResultsTitle = titleAs === "h2" ? "h3" : "h5"
@@ -53,6 +68,36 @@ export default function ProblemSolutionFinder({
   const toggle = (id: string) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
+
+  const activeCategoryData = PROBLEM_CATEGORIES.find((category) => category.id === activeCategory) ?? PROBLEM_CATEGORIES[0]
+  const normalizedQuery = normalizeSearchText(query)
+
+  const categoryCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        PROBLEM_CATEGORIES.map((category) => [
+          category.id,
+          PROBLEMS.filter((problem) => problem.category === category.id).length,
+        ]),
+      ) as Record<ProblemCategoryId, number>,
+    [],
+  )
+
+  const visibleProblems = useMemo(() => {
+    if (!normalizedQuery) {
+      return PROBLEMS.filter((problem) => problem.category === activeCategory)
+    }
+
+    return PROBLEMS.filter((problem) => {
+      const solutionNames = SOLUTIONS.filter((solution) => problem.solutions.includes(solution.id)).map(
+        (solution) => solution.name,
+      )
+      const searchable = normalizeSearchText(
+        [problem.label, problem.short, ...(problem.keywords ?? []), ...solutionNames].join(" "),
+      )
+      return searchable.includes(normalizedQuery)
+    })
+  }, [activeCategory, normalizedQuery])
 
   /**
    * Punteggio = numero di problemi selezionati che quella soluzione risolve.
@@ -73,11 +118,16 @@ export default function ProblemSolutionFinder({
 
   const showResults = selected.length > 0
 
+  const selectCategory = (categoryId: ProblemCategoryId) => {
+    setActiveCategory(categoryId)
+    setQuery("")
+  }
+
   return (
     <div
       className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-lg sm:rounded-3xl sm:p-6 md:p-10 ${className}`}
     >
-      <div className="mb-6 max-w-3xl md:mb-8">
+      <div className="mb-6 max-w-4xl md:mb-8">
         <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#F4B942]/15 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#946A00]">
           <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
           Trova la tua soluzione
@@ -86,48 +136,151 @@ export default function ProblemSolutionFinder({
           Qual è il problema della tua struttura?
         </Title>
         <p className="leading-relaxed text-gray-600 sm:text-lg text-pretty">
-          Seleziona uno o più problemi che riconosci: ti mostriamo subito quali piattaforme, consulenze o progetti su
-          misura di 4BID li risolvono.
+          Esplora le categorie oppure cerca una parola come <strong>Booking</strong>, <strong>RevPAR</strong>,{" "}
+          <strong>fatture</strong>, <strong>WhatsApp</strong> o <strong>manutenzione</strong>. Seleziona tutti i problemi
+          che riconosci: la selezione resta attiva anche cambiando area.
         </p>
       </div>
 
-      <fieldset>
-        <legend className="sr-only">Seleziona i problemi della tua struttura</legend>
-        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {PROBLEMS.map((problem) => {
-            const isOn = selected.includes(problem.id)
-            return (
-              <li key={problem.id}>
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                    isOn
-                      ? "border-[#5B9BD5] bg-[#5B9BD5]/5"
-                      : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isOn}
-                    onChange={() => toggle(problem.id)}
-                    className="sr-only"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-md border ${
-                      isOn ? "border-[#5B9BD5] bg-[#5B9BD5] text-white" : "border-gray-300 bg-white"
-                    }`}
-                  >
-                    {isOn && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                  <span className={`text-sm leading-relaxed ${isOn ? "text-gray-900" : "text-gray-700"}`}>
-                    {problem.label}
-                  </span>
-                </label>
-              </li>
-            )
-          })}
-        </ul>
-      </fieldset>
+      <div className="mb-6">
+        <label htmlFor="problem-search" className="mb-2 block text-sm font-semibold text-gray-900">
+          Cerca il tuo problema
+        </label>
+        <div className="relative max-w-2xl">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            aria-hidden="true"
+          />
+          <input
+            id="problem-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Es. commissioni OTA, pickup, biancheria, PMS, centri di costo..."
+            className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-10 text-sm text-gray-900 outline-none transition focus:border-[#5B9BD5] focus:ring-2 focus:ring-[#5B9BD5]/20"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Azzera ricerca"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Categorie di problemi dell'hotel"
+        className="mb-5 flex gap-2 overflow-x-auto pb-2 md:flex-wrap md:overflow-visible"
+      >
+        {PROBLEM_CATEGORIES.map((category) => {
+          const isActive = !normalizedQuery && activeCategory === category.id
+          return (
+            <button
+              key={category.id}
+              id={`problem-tab-${category.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls="problem-tabpanel"
+              onClick={() => selectCategory(category.id)}
+              className={`inline-flex flex-none items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                isActive
+                  ? "border-[#5B9BD5] bg-[#5B9BD5] text-white shadow-sm"
+                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100"
+              }`}
+            >
+              <span>{category.shortLabel}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  isActive ? "bg-white/20 text-white" : "bg-white text-gray-500"
+                }`}
+              >
+                {categoryCounts[category.id]}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div
+        id="problem-tabpanel"
+        role="tabpanel"
+        aria-labelledby={normalizedQuery ? undefined : `problem-tab-${activeCategory}`}
+        className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5"
+      >
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div>
+            <p className="font-bold text-gray-900">
+              {normalizedQuery ? `Risultati per “${query.trim()}”` : activeCategoryData.label}
+            </p>
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-gray-600">
+              {normalizedQuery
+                ? "La ricerca attraversa tutte le categorie e anche i sinonimi più usati nel settore."
+                : activeCategoryData.description}
+            </p>
+          </div>
+          <p className="flex-none pt-1 text-xs font-semibold uppercase tracking-wide text-gray-500" aria-live="polite">
+            {visibleProblems.length} {visibleProblems.length === 1 ? "problema" : "problemi"}
+          </p>
+        </div>
+
+        <fieldset>
+          <legend className="sr-only">Seleziona i problemi della tua struttura</legend>
+          {visibleProblems.length > 0 ? (
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {visibleProblems.map((problem) => {
+                const isOn = selected.includes(problem.id)
+                return (
+                  <li key={problem.id}>
+                    <label
+                      className={`flex h-full cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                        isOn
+                          ? "border-[#5B9BD5] bg-[#5B9BD5]/5"
+                          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isOn}
+                        onChange={() => toggle(problem.id)}
+                        className="sr-only"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-md border ${
+                          isOn ? "border-[#5B9BD5] bg-[#5B9BD5] text-white" : "border-gray-300 bg-white"
+                        }`}
+                      >
+                        {isOn && <Check className="h-3.5 w-3.5" />}
+                      </span>
+                      <span className={`text-sm leading-relaxed ${isOn ? "font-medium text-gray-900" : "text-gray-700"}`}>
+                        {problem.label}
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center">
+              <p className="font-semibold text-gray-900">Nessun problema trovato con queste parole.</p>
+              <p className="mt-1 text-sm text-gray-600">Prova un termine più semplice oppure torna alle categorie.</p>
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="mt-4 text-sm font-semibold text-[#3A7AB2] underline-offset-4 hover:underline"
+              >
+                Azzera ricerca
+              </button>
+            </div>
+          )}
+        </fieldset>
+      </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <p className="text-sm text-gray-500" aria-live="polite">
@@ -137,8 +290,6 @@ export default function ProblemSolutionFinder({
         </p>
         {selected.length > 0 && (
           <>
-            {/* Su mobile i risultati finiscono sotto 18 voci: senza questo
-                salto l'utente non vede che qualcosa è comparso. */}
             <button
               type="button"
               onClick={() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
@@ -168,9 +319,6 @@ export default function ProblemSolutionFinder({
         )}
       </div>
 
-      {/* scroll-mt-24: senza margine di scorrimento l'header fisso copre il
-          titolo dei risultati quando si usa "Vai alle soluzioni" (visto in
-          browser a 390px). */}
       <div ref={resultsRef} aria-live="polite" className="scroll-mt-24">
         {showResults && (
           <div className="mt-8 border-t border-gray-200 pt-8 md:mt-10 md:pt-10">
@@ -185,7 +333,7 @@ export default function ProblemSolutionFinder({
                     : `${matches.length} soluzioni 4BID per il tuo caso`}
                 </ResultsTitle>
                 <p className="mt-1 text-gray-600 text-pretty">
-                  In ordine di impatto sui problemi che hai indicato.
+                  In ordine di impatto sui problemi che hai indicato. Puoi continuare a selezionare problemi in altre categorie.
                 </p>
               </div>
             </div>
