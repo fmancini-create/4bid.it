@@ -293,33 +293,36 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
               </div>
 
               <ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {solutions.map((solution) => (
-                  <li key={solution.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm">
-                    <span
-                      className={`mb-4 w-fit rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${KIND_STYLE[solution.kind]}`}
-                    >
-                      {KIND_LABEL[solution.kind]}
-                    </span>
-                    <h3 className="mb-2 text-lg font-bold text-card-foreground">{solution.name}</h3>
-                    <p className="mb-6 leading-relaxed text-muted-foreground">{solution.claim}</p>
-                    <div className="mt-auto space-y-2">
-                      <Button asChild variant="outline" className="w-full justify-between bg-transparent">
-                        <Link href={solution.href}>
-                          <span>Scopri come funziona</span>
-                          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                        </Link>
-                      </Button>
-                      {solution.externalUrl && (
-                        <Button asChild className="w-full justify-between bg-primary-blue hover:bg-primary-blue/90">
-                          <a href={solution.externalUrl} target="_blank" rel="noopener noreferrer">
-                            <span>Visita il sito</span>
-                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                          </a>
+                {solutions.map((solution) => {
+                  const solutionHref = solution.id === "dirette" ? "/prenotazioni-dirette-hotel" : solution.href
+                  return (
+                    <li key={solution.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm">
+                      <span
+                        className={`mb-4 w-fit rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest ${KIND_STYLE[solution.kind]}`}
+                      >
+                        {KIND_LABEL[solution.kind]}
+                      </span>
+                      <h3 className="mb-2 text-lg font-bold text-card-foreground">{solution.name}</h3>
+                      <p className="mb-6 leading-relaxed text-muted-foreground">{solution.claim}</p>
+                      <div className="mt-auto space-y-2">
+                        <Button asChild variant="outline" className="w-full justify-between bg-transparent">
+                          <Link href={solutionHref}>
+                            <span>Scopri come funziona</span>
+                            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                          </Link>
                         </Button>
-                      )}
-                    </div>
-                  </li>
-                ))}
+                        {solution.externalUrl && (
+                          <Button asChild className="w-full justify-between bg-primary-blue hover:bg-primary-blue/90">
+                            <a href={solution.externalUrl} target="_blank" rel="noopener noreferrer">
+                              <span>Visita il sito</span>
+                              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           </div>
