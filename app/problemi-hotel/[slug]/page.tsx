@@ -6,18 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StructuredData } from "@/components/seo-structured-data"
+import { KIND_LABEL, KIND_STYLE, PROBLEMS, getSolutionsForProblem } from "@/lib/problem-solutions"
 import {
-  KIND_LABEL,
-  KIND_STYLE,
-  PROBLEMS,
-  getSolutionsForProblem,
-} from "@/lib/problem-solutions"
-import {
-  CATEGORY_PLAYBOOKS,
   getProblemBySlug,
   getProblemCanonical,
   getProblemCategory,
   getProblemDescription,
+  getProblemSeoContent,
   getProblemSlug,
   getProblemTitle,
   getRelatedProblems,
@@ -41,18 +36,10 @@ export async function generateMetadata({
   const title = getProblemTitle(problem)
   const description = getProblemDescription(problem)
   const url = getProblemCanonical(problem)
-  const keywords = [
-    ...(problem.keywords ?? []),
-    problem.short,
-    "problemi hotel",
-    "gestione hotel",
-    "soluzioni hotel",
-  ]
 
   return {
     title,
     description,
-    keywords: keywords.join(", "),
     alternates: { canonical: url },
     openGraph: {
       title,
@@ -98,7 +85,7 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
   const category = getProblemCategory(problem)
   if (!category) notFound()
 
-  const playbook = CATEGORY_PLAYBOOKS[problem.category]
+  const content = getProblemSeoContent(problem)
   const solutions = getSolutionsForProblem(problem)
   const related = getRelatedProblems(problem, 6)
   const canonical = getProblemCanonical(problem)
@@ -108,17 +95,12 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
 
   const faqs = [
     {
-      question: `Cosa fare se in hotel ho il problema: ${problem.short}?`,
-      answer: `Parti dalla misura del problema e dai dati che lo descrivono. Un primo controllo utile è: ${playbook.checks[0]} Le soluzioni 4BID collegate a questo caso sono ${solutionNames}.`,
+      question: `Cosa devo controllare se ho ${problem.short}?`,
+      answer: content.checks.join(" "),
     },
     {
-      question: "Devo cambiare tutti i software che uso già?",
-      answer:
-        "Non necessariamente. Prima si verifica quali strumenti funzionano, quali dati devono comunicare e dove nasce davvero il collo di bottiglia. Quando possibile integriamo i sistemi esistenti; si sostituisce o sviluppa qualcosa di nuovo solo se serve al processo.",
-    },
-    {
-      question: `Quali controlli conviene fare prima di intervenire su ${problem.short}?`,
-      answer: playbook.checks.slice(0, 3).join(" "),
+      question: `Qual e' un percorso pratico per affrontare ${problem.short}?`,
+      answer: `${content.approach.join(" ")} Le soluzioni 4BID collegate a questo caso sono ${solutionNames}.`,
     },
   ]
 
@@ -139,7 +121,7 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
         howTo={{
           name: `Come affrontare ${problem.short}`,
           description: `Percorso operativo iniziale per affrontare ${problem.short} in una struttura ricettiva.`,
-          steps: playbook.approach.map((step, index) => ({
+          steps: content.approach.map((step, index) => ({
             name: `Passo ${index + 1}`,
             text: step,
           })),
@@ -186,8 +168,7 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
                 {problem.label}
               </h1>
               <p className="mb-7 max-w-3xl text-lg leading-relaxed text-muted-foreground text-pretty md:text-xl">
-                Se ti riconosci in questa situazione, qui trovi cosa controllare per prima cosa, un percorso pratico e
-                le soluzioni 4BID più pertinenti per affrontarla senza aggiungere altro caos operativo.
+                {content.intro}
               </p>
 
               {searchTerms.length > 0 && (
@@ -216,11 +197,11 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
               <article className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-                <p className="mb-3 text-sm font-bold uppercase tracking-widest text-primary-blue">Perché conta</p>
+                <p className="mb-3 text-sm font-bold uppercase tracking-widest text-primary-blue">Perche' conta</p>
                 <h2 className="mb-4 text-2xl font-bold text-card-foreground text-balance">
                   Il costo nascosto di questo problema
                 </h2>
-                <p className="leading-relaxed text-muted-foreground text-pretty">{playbook.impact}</p>
+                <p className="leading-relaxed text-muted-foreground text-pretty">{content.impact}</p>
               </article>
 
               <article
@@ -238,7 +219,7 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
                 </div>
 
                 <ul className="space-y-4">
-                  {playbook.checks.map((check) => (
+                  {content.checks.map((check) => (
                     <li key={check} className="flex items-start gap-3 leading-relaxed text-muted-foreground">
                       <Check className="mt-1 h-5 w-5 flex-none text-primary-blue" aria-hidden="true" />
                       <span>{check}</span>
@@ -259,13 +240,13 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
                   Come affrontare {problem.short}
                 </h2>
                 <p className="mt-3 leading-relaxed text-muted-foreground">
-                  Prima di scegliere uno strumento, conviene mettere in ordine il processo. Questo è il percorso minimo
-                  che usiamo per capire dove intervenire.
+                  Il percorso sotto e' specifico per questa criticita': serve a separare il sintomo dalla causa prima di
+                  scegliere software, consulenza o automazione.
                 </p>
               </div>
 
               <ol className="grid gap-5 md:grid-cols-3">
-                {playbook.approach.map((step, index) => (
+                {content.approach.map((step, index) => (
                   <li key={step} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                     <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-primary-blue text-sm font-bold text-white">
                       {index + 1}
@@ -287,7 +268,7 @@ export default async function ProblemaHotelPage({ params }: { params: Promise<{ 
                   Strumenti e competenze utili per questo caso
                 </h2>
                 <p className="mt-3 leading-relaxed text-muted-foreground">
-                  Non significa che servano tutti: la combinazione corretta dipende dai sistemi che usi già, dai dati
+                  Non significa che servano tutti: la combinazione corretta dipende dai sistemi che usi gia', dai dati
                   disponibili e da dove nasce il problema.
                 </p>
               </div>

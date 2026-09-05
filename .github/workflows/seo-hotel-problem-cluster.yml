@@ -1,0 +1,45 @@
+name: Hotel Problem SEO CI
+
+on:
+  pull_request:
+    branches:
+      - 4bid
+    paths:
+      - 'app/problemi-hotel/**'
+      - 'app/problemi-hotel-soluzioni/**'
+      - 'app/sitemap.ts'
+      - 'lib/problem-seo.ts'
+      - 'lib/problem-seo-content.ts'
+      - 'lib/problem-solutions.ts'
+      - 'next.config.mjs'
+      - 'tests/hotel-problem-seo-cluster.test.ts'
+      - '.github/workflows/seo-hotel-problem-cluster.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  seo-cluster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Hotel problem SEO regression tests
+        run: pnpm exec vitest run tests/hotel-problem-seo-cluster.test.ts --reporter=verbose
