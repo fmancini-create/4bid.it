@@ -82,6 +82,7 @@ export default function ProjectsSection() {
       color: "from-blue-500 to-indigo-600",
       progress: "80%",
       href: "/progetti/hotel-accelerator",
+      externalUrl: "https://www.hotelaccelerator.com",
       blendLogo: true,
     },
     {
@@ -96,6 +97,7 @@ export default function ProjectsSection() {
       progress: "On line",
       href: "/ecomobility/noleggio-mobilita-elettrica-hotel",
       isLive: true,
+      externalUrl: "https://www.4bid.it/ecomobility/piattaforma-ecomobility",
     },
   ]
 
@@ -113,6 +115,7 @@ export default function ProjectsSection() {
       progress: "On line",
       href: "/progetti/autoexel",
       isLive: true,
+      externalUrl: "https://www.autoexel.it",
     },
     {
       id: "mypetsenseai",
@@ -126,6 +129,7 @@ export default function ProjectsSection() {
       progress: "On line",
       href: "/progetti/mypetsenseai",
       isLive: true,
+      externalUrl: "https://www.mypetsenseai.com",
     },
     {
       id: "daynext",
@@ -151,6 +155,7 @@ export default function ProjectsSection() {
       color: "from-green-600 to-emerald-700",
       progress: "70%",
       href: "/progetti/risparmio-compulsivo",
+      externalUrl: "https://www.risparmiocompulsivo.it",
       blendLogo: true,
     },
   ]
@@ -292,7 +297,7 @@ export default function ProjectsSection() {
               </Link>
             </Button>
 
-            {project.isLive && project.externalUrl && (
+            {project.externalUrl && (
               <Button
                 asChild
                 className={`w-full justify-between bg-gradient-to-r ${project.color} text-white hover:opacity-90`}
