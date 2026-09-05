@@ -138,6 +138,49 @@ const nextConfig = {
         destination: '/kpi-metriche-hotel',
         permanent: true, // 301
       },
+
+      // Problem-cluster slugs launched with transactional wording. Redirect them
+      // to diagnostic URLs so they do not compete with the established service pages.
+      {
+        source: '/problemi-hotel/kpi-hotel-revpar-adr-occupazione',
+        destination: '/problemi-hotel/non-capisco-kpi-hotel-revpar-adr',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/forecast-occupazione-domanda-hotel',
+        destination: '/problemi-hotel/prevedere-occupazione-domanda-hotel',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/ridurre-commissioni-booking-expedia-ota',
+        destination: '/problemi-hotel/dipendenza-booking-expedia-commissioni-hotel',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/aumentare-prenotazioni-dirette-hotel',
+        destination: '/problemi-hotel/perche-poche-prenotazioni-dirette-hotel',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/mix-canali-distribuzione-hotel',
+        destination: '/problemi-hotel/quali-canali-vendita-rendono-hotel',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/budget-hotel-forecast-economico',
+        destination: '/problemi-hotel/budget-hotel-poco-affidabile-scostamenti',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/gestione-multi-struttura-hotel',
+        destination: '/problemi-hotel/dati-processi-piu-strutture-hotel',
+        permanent: true,
+      },
+      {
+        source: '/problemi-hotel/software-su-misura-hotel',
+        destination: '/problemi-hotel/software-hotel-non-adatto-al-processo',
+        permanent: true,
+      },
     ]
   },
 }
